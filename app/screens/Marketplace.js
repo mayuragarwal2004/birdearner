@@ -12,7 +12,7 @@ import {
   PanResponder
 } from "react-native";
 import Entypo from "@expo/vector-icons/Entypo";
-import MapView, { Marker } from "react-native-maps";
+import MapView, { PROVIDER_GOOGLE, Marker } from "react-native-maps";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Location from "expo-location";
 import { appwriteConfig, databases } from "../lib/appwrite";
@@ -27,6 +27,7 @@ const colors = {
 const maxDist = 6000;
 
 const MarketplaceScreen = ({ navigation }) => {
+  const mapRef = useRef(null);
   const [distance, setDistance] = useState(600);
   const [location, setLocation] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
@@ -284,6 +285,10 @@ const MarketplaceScreen = ({ navigation }) => {
 
         <MapView
           style={styles.map}
+          provider={PROVIDER_GOOGLE}
+          showsUserLocation
+          showsMyLocationButton
+          ref={mapRef}
           region={
             location
               ? {
