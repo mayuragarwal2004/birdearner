@@ -11,7 +11,7 @@ const CONFIG_STORAGE_KEY = "appwriteConfig";
 
 async function fetchAppwriteConfigFromServer() {
   try {
-    const response = await fetch("http://api.birdearner.com/credentials");
+    const response = await fetch("https://api.birdearner.com/credentials");
     if (!response.ok) {
       throw new Error(`Failed to fetch config: ${response.statusText}`);
     }
