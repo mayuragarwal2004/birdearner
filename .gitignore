@@ -82,3 +82,6 @@ yarn-error.*
 *.tsbuildinfo
 
 # @end expo-cli
+
+.env
+google-services.json

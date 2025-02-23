@@ -59,7 +59,7 @@ const PasswordUpdateScreen = ({ navigation }) => {
       <Text style={styles.label}>Enter your current password</Text>
       <TextInput
         style={styles.input}
-        placeholder="current password"
+        placeholder="Current Password"
         value={oldPassword}
         onChangeText={setOldPassword}
         secureTextEntry={true}
@@ -68,7 +68,7 @@ const PasswordUpdateScreen = ({ navigation }) => {
       <Text style={styles.label}>Enter your new password</Text>
       <TextInput
         style={styles.input}
-        placeholder="new password"
+        placeholder="New Password"
         value={newPassword}
         onChangeText={setNewPassword}
         secureTextEntry={true}
@@ -78,7 +78,7 @@ const PasswordUpdateScreen = ({ navigation }) => {
       <Text style={styles.label}>Confirm your new password</Text>
       <TextInput
         style={styles.input}
-        placeholder="confirm new password"
+        placeholder="Confirm New Password"
         value={confirmPassword}
         onChangeText={setConfirmPassword}
         secureTextEntry={true}
@@ -143,9 +143,9 @@ const getStyles = (currentTheme) =>
       margin: "auto"
     },
     signupButtonText: {
-      color: "white",
-      fontSize: 18,
-      fontWeight: "700",
+      color: "#fff",
+      fontWeight: "bold",
+      fontSize: 20,
     },
   });
 

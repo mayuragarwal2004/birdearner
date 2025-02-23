@@ -169,47 +169,54 @@ export default function App() {
   }
 
   useEffect(() => {
-    if (requestUserPermission()) {
-      messaging()
-        .getToken()
-        .then((token) => {
-          console.log(token);
-        });
-    } else {
-      console.log("Failed Auth Status", authStatus);
-    }
+    try {
+      if (requestUserPermission()) {
+        messaging()
+          .getToken()
+          .then((token) => {
+            console.log(token);
+          });
+      } else {
+        console.log("Failed Auth Status", authStatus);
+      }
 
-    messaging()
-      .getInitialNotification()
-      .then(async (remoteMessage) => {
-        if (remoteMessage) {
-          console.log(
-            "Notification caused app to open from quit state:",
-            remoteMessage
-          );
-        }
+      messaging()
+        .getInitialNotification()
+        .then(async (remoteMessage) => {
+          if (remoteMessage) {
+            console.log(
+              "Notification caused app to open from quit state:",
+              remoteMessage
+            );
+          }
+        });
+
+      messaging().onNotificationOpenedApp(async (remoteMessage) => {
+        console.log(
+          "Notification caused app to open from background state:",
+          remoteMessage.notification
+        );
       });
 
-    messaging().onNotificationOpenedApp(async (remoteMessage) => {
-      console.log(
-        "Notification caused app to open from background state:",
-        remoteMessage.notification
-      );
-    });
+      // Register background handler
+      messaging().setBackgroundMessageHandler(async (remoteMessage) => {
+        console.log(
+          "Message handled in the background!",
+          remoteMessage.notification
+        );
+      });
 
-    // Register background handler
-    messaging().setBackgroundMessageHandler(async (remoteMessage) => {
-      console.log(
-        "Message handled in the background!",
-        remoteMessage.notification
-      );
-    });
+      const unsubscribe = messaging().onMessage(async (remoteMessage) => {
+        Alert.alert(
+          "A new FCM message arrived!",
+          JSON.stringify(remoteMessage)
+        );
+      });
 
-    const unsubscribe = messaging().onMessage(async (remoteMessage) => {
-      Alert.alert("A new FCM message arrived!", JSON.stringify(remoteMessage));
-    });
-
-    return unsubscribe;
+      return unsubscribe;
+    } catch (error) {
+      console.log("Error in App.js", error);
+    }
   }, []);
 
   useEffect(() => {

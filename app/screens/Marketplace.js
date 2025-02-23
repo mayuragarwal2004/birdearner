@@ -9,10 +9,10 @@ import {
   Alert,
   ActivityIndicator,
   Animated,
-  PanResponder
+  PanResponder,
 } from "react-native";
 import Entypo from "@expo/vector-icons/Entypo";
-import MapView, { PROVIDER_GOOGLE, Marker } from "react-native-maps";
+import MapView, { PROVIDER_GOOGLE, Marker, Circle } from "react-native-maps";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Location from "expo-location";
 import { appwriteConfig, databases } from "../lib/appwrite";
@@ -72,9 +72,9 @@ const MarketplaceScreen = ({ navigation }) => {
     const a =
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
       Math.cos(toRad(lat1)) *
-      Math.cos(toRad(lat2)) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
+        Math.cos(toRad(lat2)) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c; // Distance in kilometers
   };
@@ -110,9 +110,10 @@ const MarketplaceScreen = ({ navigation }) => {
       );
       const allJobs = response.documents;
 
-      const remainingJobs = allJobs.filter((job) => job?.assigned_freelancer === null);
+      const remainingJobs = allJobs.filter(
+        (job) => job?.assigned_freelancer === null
+      );
       console.log(remainingJobs);
-      
 
       if (filterByLocation && location) {
         const filteredJobs = remainingJobs.filter((job) => {
@@ -129,11 +130,9 @@ const MarketplaceScreen = ({ navigation }) => {
         setJobs(categorizeJobs(remainingJobs));
       }
     } catch (error) {
-      Alert.alert(
-        "Error",
-        "Failed to fetch jobs. Please try again later.",
-        [{ text: "OK" }]
-      );
+      Alert.alert("Error", "Failed to fetch jobs. Please try again later.", [
+        { text: "OK" },
+      ]);
     } finally {
       setLoading(false);
     }
@@ -164,10 +163,9 @@ const MarketplaceScreen = ({ navigation }) => {
   };
 
   useEffect(() => {
-    getLocation()
+    getLocation();
     fetchJobs();
   }, []);
-
 
   useEffect(() => {
     if (location) {
@@ -245,9 +243,7 @@ const MarketplaceScreen = ({ navigation }) => {
                 {renderLines()}
               </Animated.View> */}
 
-              <View style={styles.linesContainer}>
-                {renderLines()}
-              </View>
+              <View style={styles.linesContainer}>{renderLines()}</View>
 
               <View
                 style={[
@@ -282,7 +278,6 @@ const MarketplaceScreen = ({ navigation }) => {
           </Text>
         </View>
 
-
         <MapView
           style={styles.map}
           provider={PROVIDER_GOOGLE}
@@ -292,28 +287,33 @@ const MarketplaceScreen = ({ navigation }) => {
           region={
             location
               ? {
-                latitude: location.latitude,
-                longitude: location.longitude,
-                latitudeDelta: 0.05,
-                longitudeDelta: 0.05,
-              }
+                  latitude: location.latitude,
+                  longitude: location.longitude,
+                  latitudeDelta: 0.05,
+                  longitudeDelta: 0.05,
+                }
               : {
-                latitude: 22.886473,
-                longitude: 79.610891,
-                latitudeDelta: 1.0,
-                longitudeDelta: 1.0,
-              }
+                  latitude: 22.886473,
+                  longitude: 79.610891,
+                  latitudeDelta: 1.0,
+                  longitudeDelta: 1.0,
+                }
           }
         >
           {location && (
-            <Marker
-              coordinate={{
+            <Circle
+              key={(
+                location.latitude + location.longitude
+              ).toString()}
+              center={{
                 latitude: location.latitude,
                 longitude: location.longitude,
               }}
-              title="Our Location"
-              description="This is our current location"
-              pinColor="blue"
+              radius={distance * 1000}
+              strokeWidth={1}
+              strokeColor={"#1a66ff"}
+              fillColor={"rgba(230,238,255,0.5)"}
+              // onRegionChangeComplete={this.onRegionChangeComplete.bind(this)}
             />
           )}
 
@@ -362,7 +362,6 @@ const MarketplaceScreen = ({ navigation }) => {
             ) : null
           )}
         </MapView>
-
 
         <Text style={styles.jobsAround}>Jobs around...</Text>
 
@@ -440,7 +439,7 @@ const getStyles = (currentTheme) =>
       fontWeight: "bold",
       textAlign: "center",
       marginBottom: 20,
-      color: currentTheme.text
+      color: currentTheme.text,
     },
     sliderContainer: {
       alignItems: "center",
@@ -450,7 +449,7 @@ const getStyles = (currentTheme) =>
       fontSize: 18,
       fontWeight: "bold",
       marginBottom: 10,
-      color: currentTheme.subText
+      color: currentTheme.subText,
     },
     customSliderWrapper: {
       // flexDirection: "row",
@@ -460,7 +459,7 @@ const getStyles = (currentTheme) =>
       height: 24,
       // backgroundColor: "transparent",
       margin: "auto",
-      position: "relative"
+      position: "relative",
     },
     iconButtonContain: {
       justifyContent: "center",
@@ -471,7 +470,7 @@ const getStyles = (currentTheme) =>
       backgroundColor: "white",
       width: 29,
       height: 29,
-      borderRadius: 20
+      borderRadius: 20,
     },
     iconButtonContainminus: {
       justifyContent: "center",
@@ -484,7 +483,7 @@ const getStyles = (currentTheme) =>
       height: 29,
       borderRadius: 20,
       padding: 0,
-      margin: 0
+      margin: 0,
     },
     // iconButton: {
     //   position: "absolute",
@@ -513,7 +512,7 @@ const getStyles = (currentTheme) =>
       width: "100%",
       height: "100%",
       paddingHorizontal: 5,
-      alignItems: "center"
+      alignItems: "center",
     },
     line: {
       width: 3,
@@ -545,7 +544,7 @@ const getStyles = (currentTheme) =>
       fontWeight: "bold",
       textAlign: "center",
       marginVertical: 10,
-      color: currentTheme.text
+      color: currentTheme.text,
     },
     priorityContainer: {
       alignItems: "center",
@@ -597,8 +596,8 @@ const getStyles = (currentTheme) =>
     },
     loadingContainer: {
       flex: 1,
-      justifyContent: "center"
-    }
+      justifyContent: "center",
+    },
   });
 
 export default MarketplaceScreen;

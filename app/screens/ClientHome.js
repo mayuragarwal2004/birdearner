@@ -445,23 +445,24 @@ const ClientHomeScreen = () => {
                     </View>
                   </TouchableOpacity>
                 )
-              })
-            )}
-          </ScrollView>
-        </View>
+                })
+              )}
+              </ScrollView>
+            </View>
 
-        <View style={styles.searchContainer}>
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search"
-            value={search}
-            onChangeText={handleSearch}
-            autoFocus={false}
-          />
-        </View>
+            <View style={styles.searchContainer}>
+              <TextInput
+              style={styles.searchInput}
+              placeholder="Search"
+              value={search}
+              onChangeText={handleSearch}
+              autoFocus={false}
+              />
+              <FontAwesome name="search" size={20} color={currentTheme.subText} style={styles.searchIcon} />
+            </View>
 
-        <View>
-          {/* Freelance Services */}
+            <View>
+              {/* Freelance Services */}
           <FlatList
             data={filteredFreelanceServices}
             renderItem={renderFreelanceService}
@@ -635,14 +636,15 @@ const getStyles = (currentTheme) =>
     },
     header: {
       flexDirection: "row",
-      justifyContent: "space-around",
+      justifyContent: "space-between",
+      marginHorizontal: 20,
       marginBottom: 10,
       marginTop: 30,
       // backgroundColor: "red",
       padding: 4,
       paddingHorizontal: 20,
       alignItems: "center",
-      gap: 140,
+      // gap: 140,
       position: "static"
     },
     gifStyle: {
@@ -653,12 +655,13 @@ const getStyles = (currentTheme) =>
       marginTop: -18,
     },
     welcome: {
-      fontSize: 25,
+      fontFamily: "Poppins-Regular",
+      fontSize: 40,
       fontWeight: "600",
       color: currentTheme.text
     },
     how: {
-      fontSize: 14,
+      fontSize: 25,
       fontWeight: "300",
       color: currentTheme.subText
     },
@@ -667,30 +670,31 @@ const getStyles = (currentTheme) =>
       padding: 14,
     },
     searchContainer: {
+      flexDirection: "row",
+      alignItems: "center",
       marginHorizontal: 20,
       shadowColor: currentTheme.shadow || "#000000",
       shadowOffset: { width: 2, height: 4 },
       shadowOpacity: 0.1,
       shadowRadius: 5,
       elevation: 5,
-      flex: 1,
-      justifyContent: "center",
-      alignContent: "center",
-      alignItems: "center",
       borderRadius: 12,
       marginBottom: 24,
-    },
-    searchInput: {
       backgroundColor: currentTheme.background3 || "#ffffff",
-      paddingHorizontal: 12,
-      borderRadius: 12,
-      marginVertical: 12,
       borderColor: currentTheme.border || "#ddd",
       borderWidth: 1,
-      width: "100%",
-      height: "100%",
-      color: currentTheme.subText
+      paddingHorizontal: 12,
+      height: 45,
     },
+    searchInput: {
+      flex: 1,
+      color: currentTheme.subText,
+      fontSize: 16,
+      marginLeft: 10, // Ensures spacing between the icon and text
+    },
+    searchIcon: {
+      marginRight: 5, // Adjust to fine-tune icon positioning
+    },    
     carousel: {
       marginBottom: 20,
       paddingHorizontal: 20,

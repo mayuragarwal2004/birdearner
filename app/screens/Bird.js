@@ -41,7 +41,7 @@ const Bird = () => {
       
 
       // API request to backend
-      const response = await fetch("http://api.birdearner.com/faq", {
+      const response = await fetch("https://api.birdearner.com/faq", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question: input, history }),

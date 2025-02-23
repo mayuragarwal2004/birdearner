@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -13,7 +13,8 @@ import {
   RefreshControl,
   Alert,
   SafeAreaView,
-  Animated
+  Animated,
+  Easing,
 } from "react-native";
 import { FontAwesome, MaterialIcons } from "@expo/vector-icons";
 // import { SafeAreaView } from "react-native-safe-area-context";
@@ -22,16 +23,28 @@ import ImageViewer from "react-native-image-zoom-viewer";
 import { appwriteConfig, databases } from "../lib/appwrite";
 import Toast from "react-native-toast-message";
 import { useTheme } from "../context/ThemeContext";
+import LottieView from "lottie-react-native";
+
+const AnimatedLottieView = Animated.createAnimatedComponent(LottieView);
 
 export default function ProfileScreen({ navigation }) {
-  const { user, loading, userData, logout, setUserData, roleOptions, handleRoleSelection, fetchUserData } = useAuth();
+  const {
+    user,
+    loading,
+    userData,
+    logout,
+    setUserData,
+    roleOptions,
+    handleRoleSelection,
+    fetchUserData,
+  } = useAuth();
   const [data, setData] = useState(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [images, setImages] = useState([]);
   const [modalVisiblet, setModalVisiblet] = useState(false);
-  const [animation] = useState(new Animated.Value(0));
+  const animationProgress = useRef(new Animated.Value(0));
   const role = userData?.role;
 
   const { theme, themeStyles } = useTheme();
@@ -39,7 +52,7 @@ export default function ProfileScreen({ navigation }) {
 
   const styles = getStyles(currentTheme);
 
-  const createdAt = userData?.$createdAt
+  const createdAt = userData?.$createdAt;
   const date = new Date(createdAt);
 
   // Format the date and time
@@ -51,35 +64,38 @@ export default function ProfileScreen({ navigation }) {
 
   const handleRoleSwitch = (newRoleData) => {
     setModalVisiblet(true);
-    Animated.timing(animation, {
+    Animated.timing(animationProgress.current, {
       toValue: 1,
-      duration: 3000,
-      useNativeDriver: true,
+      duration: 2500,
+      easing: Easing.linear,
+      useNativeDriver: false,
     }).start(() => {
       setModalVisiblet(false);
-      animation.setValue(0); // Reset animation
+      // animation.setValue(0); // Reset animation
+      animationProgress.current.setValue(0);
       handleRoleSelection(newRoleData); // Perform the role switch
     });
   };
 
   const transitionText =
-  userData?.role === "freelancer" ? "Switching to Client" : "Switching to Freelancer";
+    userData?.role === "freelancer"
+      ? "Switching to Client"
+      : "Switching to Freelancer";
 
-const translateX = animation.interpolate({
-  inputRange: [0, 1],
-  outputRange: [0, 300], // Moves horizontally
-});
+  // const translateX = animation.interpolate({
+  //   inputRange: [0, 1],
+  //   outputRange: [0, 300], // Moves horizontally
+  // });
 
   const handleSetupRole = async (roleType) => {
     try {
+      const fullName = userData?.full_name;
+      const email = userData?.email;
+      const role = roleType;
 
-      const fullName = userData?.full_name
-      const email = userData?.email
-      const role = roleType
-
-      navigation.navigate("DescribeRoleCom", { fullName, email, role })
+      navigation.navigate("DescribeRoleCom", { fullName, email, role });
     } catch (error) {
-      Alert.alert("Error setting up role:", error.message)
+      Alert.alert("Error setting up role:", error.message);
     }
   };
 
@@ -87,7 +103,7 @@ const translateX = animation.interpolate({
     try {
       setData(userData);
     } catch (error) {
-      Alert.alert("Failed to fetch freelancer data:", error)
+      Alert.alert("Failed to fetch freelancer data:", error);
     } finally {
       setLoadingProfile(false);
     }
@@ -99,28 +115,30 @@ const translateX = animation.interpolate({
         try {
           const freelancerId = userData?.$id;
 
-          const collectionId = userData?.role === "client" ? appwriteConfig.clientCollectionId : appwriteConfig.freelancerCollectionId
-
+          const collectionId =
+            userData?.role === "client"
+              ? appwriteConfig.clientCollectionId
+              : appwriteConfig.freelancerCollectionId;
 
           const freelancerDoc = await databases.getDocument(
             appwriteConfig.databaseId,
             collectionId,
             freelancerId
           );
-          setUserData(freelancerDoc)
+          setUserData(freelancerDoc);
         } catch (error) {
-          Alert.alert("Error updating flags:", error)
+          Alert.alert("Error updating flags:", error);
         }
       }
-    }
+    };
 
-    flagsData()
-  }, [refreshing])
+    flagsData();
+  }, [refreshing]);
 
   const onRefresh = () => {
     console.log("Refreshing...");
     fetchUserData();
-    
+
     setRefreshing(true);
     setTimeout(() => {
       setRefreshing(false);
@@ -128,16 +146,15 @@ const translateX = animation.interpolate({
   };
 
   const openImageModal = (imageUri) => {
-
     setImages([{ url: imageUri }]);
     setModalVisible(true);
   };
 
   const formatXP = (xp) => {
     if (xp >= 1000000) {
-      return (xp / 1000000).toFixed(1) + 'M'; // For millions
+      return (xp / 1000000).toFixed(1) + "M"; // For millions
     } else if (xp >= 1000) {
-      return (xp / 1000).toFixed(1) + 'K'; // For thousands
+      return (xp / 1000).toFixed(1) + "K"; // For thousands
     } else {
       return xp; // For values less than 1000
     }
@@ -174,10 +191,8 @@ const translateX = animation.interpolate({
     );
   }
 
-
   return (
     <SafeAreaView>
-
       <Modal
         visible={modalVisible}
         transparent={true}
@@ -193,7 +208,9 @@ const translateX = animation.interpolate({
               onPress={() => setModalVisible(false)}
               style={styles.modalHeader}
             >
-              <FontAwesome name="arrow-left" size={24}
+              <FontAwesome
+                name="arrow-left"
+                size={24}
                 color={currentTheme.text || "#fff"}
               />
             </TouchableOpacity>
@@ -201,7 +218,8 @@ const translateX = animation.interpolate({
         />
       </Modal>
 
-      <ScrollView style={styles.container}
+      <ScrollView
+        style={styles.container}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -227,14 +245,18 @@ const translateX = animation.interpolate({
 
         <ImageBackground
           source={
-            data?.cover_photo ? { uri: data.cover_photo } : require("../assets/backGroungBanner.png")
+            data?.cover_photo
+              ? { uri: data.cover_photo }
+              : require("../assets/backGroungBanner.png")
           }
           style={styles.backgroundImg}
         >
           <TouchableOpacity onPress={() => openImageModal(data?.profile_photo)}>
             <Image
               source={
-                data?.profile_photo ? { uri: data.profile_photo } : require("../assets/profile.png")
+                data?.profile_photo
+                  ? { uri: data.profile_photo }
+                  : require("../assets/profile.png")
               }
               style={styles.profileImage}
             />
@@ -243,21 +265,31 @@ const translateX = animation.interpolate({
           <TouchableOpacity
             style={styles.settings}
             onPress={() => {
-              navigation.navigate('Settings');
+              navigation.navigate("Settings");
             }}
           >
-            <MaterialIcons name="settings" size={30} color={currentTheme.text || "black"} />
+            <MaterialIcons
+              name="settings"
+              size={30}
+              color={currentTheme.text || "black"}
+            />
           </TouchableOpacity>
           <TouchableOpacity style={styles.share} onPress={onShare}>
             {/* <FontAwesome name="share" size={24} /> */}
-            <MaterialIcons name="share" size={30} color={currentTheme.text || "black"}/>
+            <MaterialIcons
+              name="share"
+              size={30}
+              color={currentTheme.text || "black"}
+            />
           </TouchableOpacity>
         </ImageBackground>
 
         <View style={styles.userDetails}>
           <Text style={styles.nameText}>{data?.full_name || "User"}</Text>
           {role === "client" ? (
-            <Text style={styles.roleText}>{data?.organization_type || "Not found"}</Text>
+            <Text style={styles.roleText}>
+              {data?.organization_type || "Not found"}
+            </Text>
           ) : (
             <View style={styles.roleWrap}>
               <Text>
@@ -269,35 +301,39 @@ const translateX = animation.interpolate({
                 )) || "No role designation available"}
               </Text>
             </View>
-
           )}
           <Text style={styles.statusText}>
             Status:
             {userData?.currently_available === true ? " Active " : " Inactive "}
-            {userData?.currently_available === true ? (<FontAwesome name="circle" size={12} color="#6BCD2F" />)
-              : (<FontAwesome name="circle" size={12} color="#FF3131" />)}
+            {userData?.currently_available === true ? (
+              <FontAwesome name="circle" size={12} color="#6BCD2F" />
+            ) : (
+              <FontAwesome name="circle" size={12} color="#FF3131" />
+            )}
           </Text>
         </View>
 
-        {
-          userData?.role === "freelancer" && (
-            <View style={styles.levelContainer}>
-              <View style={styles.xpRan}>
-                <View style={styles.xp}>
-                  <Text style={styles.xpText}>{formatXP(userData?.XP) || 0} xp</Text>
-                </View>
-                <Text style={styles.randomText}>Earn xp and promote to next level</Text>
+        {userData?.role === "freelancer" && (
+          <View style={styles.levelContainer}>
+            <View style={styles.xpRan}>
+              <View style={styles.xp}>
+                <Text style={styles.xpText}>
+                  {formatXP(userData?.XP) || 0} xp
+                </Text>
               </View>
-              <View style={styles.level}>
-                <Text style={styles.levelText}>Lev. {userData?.level || 1}</Text>
-              </View>
+              <Text style={styles.randomText}>
+                Earn xp and promote to next level
+              </Text>
             </View>
-          )
-        }
+            <View style={styles.level}>
+              <Text style={styles.levelText}>Lev. {userData?.level || 1}</Text>
+            </View>
+          </View>
+        )}
 
         <Text style={styles.Profile_heading}>
           {role === "client"
-            ? `Company Name: ${data?.company_name}`
+            ? `Company Name: ${data?.company_name || "--"}`
             : data?.profile_heading}
         </Text>
 
@@ -312,8 +348,14 @@ const translateX = animation.interpolate({
             <Text style={styles.sectionTitle}>Portfolio</Text>
             <View style={styles.portfolioImages}>
               {data?.portfolio_images.map((image, index) => (
-                <TouchableOpacity key={index} onPress={() => openImageModal(image)}>
-                  <Image source={{ uri: image }} style={styles.portfolioImage} />
+                <TouchableOpacity
+                  key={index}
+                  onPress={() => openImageModal(image)}
+                >
+                  <Image
+                    source={{ uri: image }}
+                    style={styles.portfolioImage}
+                  />
                 </TouchableOpacity>
               ))}
             </View>
@@ -321,97 +363,123 @@ const translateX = animation.interpolate({
         )}
 
         {/* Experience & Certifications */}
-        {role === "freelancer" && (data?.experience || data?.certifications?.length > 0) && (
-          <View style={styles.section}>
-            {data?.experience && (
-              <>
-                <Text style={styles.sectionTitle}>Experience</Text>
-                <Text style={styles.sectionContent}>
-                  {data?.experience} months of experience
-                </Text>
-              </>
-            )}
-
-            {data?.certifications?.length > 0 && (
-              <>
-                <Text style={[styles.sectionTitle, { marginTop: 20 }]}>Certifications</Text>
-                {data?.certifications.map((cert, index) => (
-                  <Text key={index} style={styles.sectionContent}>
-                    {cert}
+        {role === "freelancer" &&
+          (data?.experience || data?.certifications?.length > 0) && (
+            <View style={styles.section}>
+              {data?.experience && (
+                <>
+                  <Text style={styles.sectionTitle}>Experience</Text>
+                  <Text style={styles.sectionContent}>
+                    {data?.experience} months of experience
                   </Text>
-                ))}
-              </>
-            )}
-          </View>
-        )}
+                </>
+              )}
+
+              {data?.certifications?.length > 0 && (
+                <>
+                  <Text style={[styles.sectionTitle, { marginTop: 20 }]}>
+                    Certifications
+                  </Text>
+                  {data?.certifications.map((cert, index) => (
+                    <Text key={index} style={styles.sectionContent}>
+                      {cert}
+                    </Text>
+                  ))}
+                </>
+              )}
+            </View>
+          )}
 
         <View style={styles.line}></View>
 
         <Text style={styles.locTitle}>Location</Text>
-        <Text style={styles.locSubTitle}> {userData?.city}, {userData?.state} ({userData?.country}) </Text>
+        <Text style={styles.locSubTitle}>
+          {" "}
+          {userData?.city}, {userData?.state} ({userData?.country}){" "}
+        </Text>
 
         <Text style={styles.locTitle}>Member Since</Text>
         <Text style={styles.locSubTitle}>{formattedDate}</Text>
 
         {userData ? (
-        <>
-          {roleOptions?.freelancerData && roleOptions?.clientData ? (
-            <TouchableOpacity
-              style={styles.editProfileButton}
-              onPress={() =>
-                handleRoleSwitch(
-                  userData.role === "freelancer"
-                    ? roleOptions.clientData
-                    : roleOptions.freelancerData
-                )
-              }
-            >
-              <Text style={styles.buttonText}>
-                Switch to {userData.role === "freelancer" ? "Client" : "Freelancer"}
-              </Text>
-            </TouchableOpacity>
-          ) : (
-            <>
-              {roleOptions?.freelancerData ? (
-                <TouchableOpacity
-                  style={styles.editProfileButton}
-                  onPress={() => handleSetupRole("client")}
-                >
-                  <Text style={styles.buttonText}>Setup Client Profile</Text>
-                </TouchableOpacity>
-              ) : (
-                <TouchableOpacity
-                  style={styles.editProfileButton}
-                  onPress={() => handleSetupRole("freelancer")}
-                >
-                  <Text style={styles.buttonText}>Setup Freelancer Profile</Text>
-                </TouchableOpacity>
-              )}
-            </>
-          )}
-        </>
-      ) : (
-        <Text style={styles.infoText}>No user data available</Text>
-      )}
+          <>
+            {roleOptions?.freelancerData && roleOptions?.clientData ? (
+              <TouchableOpacity
+                style={styles.editProfileButton}
+                onPress={() =>
+                  handleRoleSwitch(
+                    userData.role === "freelancer"
+                      ? roleOptions.clientData
+                      : roleOptions.freelancerData
+                  )
+                }
+              >
+                <Text style={styles.buttonText}>
+                  Switch to{" "}
+                  {userData.role === "freelancer" ? "Client" : "Freelancer"}
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <>
+                {roleOptions?.freelancerData ? (
+                  <TouchableOpacity
+                    style={styles.editProfileButton}
+                    onPress={() => handleSetupRole("client")}
+                  >
+                    <Text style={styles.buttonText}>Setup Client Profile</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.editProfileButton}
+                    onPress={() => handleSetupRole("freelancer")}
+                  >
+                    <Text style={styles.buttonText}>
+                      Setup Freelancer Profile
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </>
+            )}
+          </>
+        ) : (
+          <Text style={styles.infoText}>No user data available</Text>
+        )}
 
-      {/* Modal for Transition Animation */}
-      <Modal
-        animationType="fade"
-        transparent={true}
-        visible={modalVisiblet}
-        onRequestClose={() => setModalVisiblet(false)}
-      >
-        <View style={styles.modalContainer}>
-          <Animated.View style={[styles.modalContent, { transform: [{ translateX }] }]}>
-            <Image
-              source={require("../assets/logo.png")} // Replace with the path to your logo
-              style={styles.logo}
+        {/* Modal for Transition Animation */}
+        <Modal
+          animationType="fade"
+          transparent={true}
+          visible={modalVisiblet}
+          onRequestClose={() => setModalVisiblet(false)}
+        >
+          <View style={[styles.modalContainer, {}]}>
+            {/* <LottieView
+              autoPlay
+              ref={animation}
+              style={{
+                width: 200,
+                height: 200,
+                backgroundColor: "#eee",
+              }}
+              // Find more Lottie files at https://lottiefiles.com/featured
+              source={require("../../assets/birdy.json")}
+            /> */}
+            <AnimatedLottieView
+              source={require("../../assets/loader-bird.json")}
+              progress={animationProgress.current}
+              style={[styles.modalContent]}
             />
-            <Text style={styles.modalText}>{transitionText}</Text>
-          </Animated.View>
-        </View>
-      </Modal>
-
+            {/* <AnimatedLottieView
+              style={[styles.modalContent, { transform: [{ translateX }] }]}
+            >
+              <Image
+                source={require("../../assets/birdy.json")} // Replace with the path to your logo
+                style={styles.logo}
+              />
+              <Text style={styles.modalText}>{transitionText}</Text>
+            </AnimatedLottieView> */}
+          </View>
+        </Modal>
 
         {/* <TouchableOpacity
           style={styles.editProfileButton}
@@ -441,7 +509,6 @@ const translateX = animation.interpolate({
         </TouchableOpacity>
         <Toast />
       </ScrollView>
-
     </SafeAreaView>
   );
 }
@@ -457,23 +524,25 @@ const getStyles = (currentTheme) =>
       flex: 1,
       justifyContent: "center",
       alignItems: "center",
-      backgroundColor: currentTheme.background
+      backgroundColor: currentTheme.background,
     },
 
     modalContainer: {
+      width: "100%",
+      height: "100%",
       flex: 1,
       justifyContent: "center",
       alignItems: "center",
-      backgroundColor: "rgba(0,0,0,0.5)",
+      backgroundColor: "#fff",
     },
     modalContent: {
       width: 300,
-      height: 200,
+      height: 250,
       backgroundColor: "#fff",
-      borderRadius: 12,
+      // borderRadius: 12,
       justifyContent: "center",
       alignItems: "center",
-      elevation: 5,
+      // elevation: 5,
     },
     logo: {
       width: 100,
@@ -486,7 +555,6 @@ const getStyles = (currentTheme) =>
       color: "#4B0082",
     },
 
-    
     tab: {
       display: "flex",
       flexDirection: "row",
@@ -512,18 +580,18 @@ const getStyles = (currentTheme) =>
       borderTopLeftRadius: 80,
     },
     tabTextL: {
-      color:"#fff",
+      color: "#fff",
       fontSize: 20,
       fontWeight: "bold",
     },
     tabTextR: {
-      color:currentTheme.text ||  "#000",
+      color: currentTheme.text || "#000",
       fontSize: 20,
       fontWeight: "bold",
     },
     modalHeader: {
       paddingTop: 10,
-      paddingLeft: 20
+      paddingLeft: 20,
     },
     backgroundImg: {
       width: "100%",
@@ -574,7 +642,7 @@ const getStyles = (currentTheme) =>
     nameText: {
       fontSize: 28,
       fontWeight: "600",
-      color: currentTheme.text
+      color: currentTheme.text,
     },
     roleWrap: {
       display: "flex",
@@ -584,21 +652,21 @@ const getStyles = (currentTheme) =>
     roleText: {
       fontSize: 14,
       fontWeight: "400",
-      color: currentTheme.text
+      color: currentTheme.text,
     },
     statusText: {
       fontSize: 14,
       fontWeight: "600",
-      color: currentTheme.text
+      color: currentTheme.text,
     },
     section: {
       padding: 20,
     },
     sectionTitle: {
-      fontSize: 18,
+      fontSize: 25,
       fontWeight: "600",
       textAlign: "center",
-      color: currentTheme.text
+      color: currentTheme.text,
     },
     sectionContent: {
       color: currentTheme.text || "#333",
@@ -635,6 +703,11 @@ const getStyles = (currentTheme) =>
       textAlign: "center",
       color: "#4C0183",
       marginBottom: 50,
+      borderWidth: 1,
+      padding: 10,
+      borderRadius: 12,
+      borderColor: "#4C0183",
+      marginHorizontal: 20,
     },
     Profile_heading: {
       textAlign: "center",
@@ -642,14 +715,14 @@ const getStyles = (currentTheme) =>
       fontWeight: "500",
       fontStyle: "italic",
       fontSize: 13,
-      color: currentTheme.text
+      color: currentTheme.text,
     },
     about: {
       textAlign: "center",
       marginTop: 10,
       fontWeight: "600",
-      fontSize: 17,
-      color: currentTheme.text
+      fontSize: 25,
+      color: currentTheme.text,
     },
     about_des: {
       textAlign: "justify",
@@ -657,14 +730,14 @@ const getStyles = (currentTheme) =>
       fontWeight: "400",
       fontSize: 13,
       paddingHorizontal: 25,
-      color: currentTheme.text
+      color: currentTheme.text,
     },
     levelContainer: {
       flex: 1,
       flexDirection: "row",
       marginHorizontal: 40,
       marginVertical: 12,
-      position: "relative"
+      position: "relative",
     },
     xpRan: {
       backgroundColor: currentTheme.background3 || "#D9D9D9",
@@ -672,10 +745,10 @@ const getStyles = (currentTheme) =>
       flexDirection: "row",
       borderRadius: 20,
       gap: 8,
-      height: 20,
+      height: 30,
       position: "relative",
       justifyContent: "center",
-      alignItems: "center"
+      alignItems: "center",
     },
     xp: {
       backgroundColor: "#56118F",
@@ -686,12 +759,12 @@ const getStyles = (currentTheme) =>
       left: 0,
     },
     xpText: {
-      fontSize: 14,
+      fontSize: 15,
       fontWeight: "400",
-      color: "#fff"
+      color: "#fff",
     },
     randomText: {
-      fontSize: 10,
+      fontSize: 13,
       fontWeight: "400",
       color: "#A1A1A1",
       paddingHorizontal: 5,
@@ -704,12 +777,12 @@ const getStyles = (currentTheme) =>
       borderRadius: 50,
       position: "absolute",
       right: 0,
-      top: "-10"
+      top: "-10",
     },
     levelText: {
       fontSize: 13,
       fontWeight: "600",
-      color: "#fff"
+      color: "#fff",
     },
 
     line: {
@@ -717,18 +790,18 @@ const getStyles = (currentTheme) =>
       width: "90%",
       height: 1,
       margin: "auto",
-      marginTop: 10
+      marginTop: 10,
     },
     locTitle: {
       color: "#8F8F8F",
       fontSize: 18,
       fontWeight: "600",
       marginLeft: 25,
-      marginTop: 15
+      marginTop: 15,
     },
     locSubTitle: {
-      color:currentTheme.text || "#000",
+      color: currentTheme.text || "#000",
       fontSize: 15,
       marginLeft: 25,
-    }
-  }); 
+    },
+  });
