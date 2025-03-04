@@ -156,7 +156,6 @@ const JobsPostedScreen = ({ navigation }) => {
           </Text>
           <Text style={styles.jobStatus}>Status: {item.priority}</Text>
         </View>
-        <View style={[styles.statusIndicator, { backgroundColor: item.color }]} />
         <TouchableOpacity
         style={styles.threedots}
         onPress={() => {
@@ -166,6 +165,7 @@ const JobsPostedScreen = ({ navigation }) => {
       >
         <Ionicons name="ellipsis-vertical" size={24} color={currentTheme.text} />
       </TouchableOpacity>
+        <View style={[styles.statusIndicator, { backgroundColor: item.color }]} />
       </TouchableOpacity>
     );
   };

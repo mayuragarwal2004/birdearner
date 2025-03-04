@@ -73,7 +73,8 @@
     "react-native-url-polyfill": "^2.0.0",
     "react-native-vector-icons": "^10.2.0",
     "react-native-video": "^6.9.1",
-    "react-native-webview": "13.12.5"
+    "react-native-webview": "13.12.5",
+    "expo-splash-screen": "~0.29.22"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
