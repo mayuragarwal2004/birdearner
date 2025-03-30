@@ -65,7 +65,7 @@ const MarketplaceScreen = ({ navigation }) => {
   const calculateDistance = (lat1, lon1, lat2, lon2) => {
     if (!lat1 || !lon1 || !lat2 || !lon2) return Infinity;
     const toRad = (value) => (value * Math.PI) / 180;
-    const R = 6371; // Earth's radius in km
+    const R = 15; // Earth's radius in km
     const dLat = toRad(lat2 - lat1);
     const dLon = toRad(lon2 - lon1);
     const a =

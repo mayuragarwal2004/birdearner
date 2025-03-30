@@ -9,6 +9,7 @@ import {
 import { account } from "../lib/appwrite";
 import { ID } from "react-native-appwrite";
 import Toast from "react-native-toast-message";
+import Checkbox from "expo-checkbox";
 
 const validateEmail = (email) => {
   const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -20,6 +21,7 @@ const Signup = ({ navigation, route }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [isChecked, setIsChecked] = useState(false);
   const { role } = route.params || {};
 
   const showToast = (type, text1, text2) => {
@@ -32,25 +34,29 @@ const Signup = ({ navigation, route }) => {
   };
 
   const handleSignup = async () => {
-    try {
-      // Validate inputs
-      if (!fullName || !email || !password || !confirmPassword) {
-        showToast("info", "Warning", "All fields are required.");
-        return;
-      }
-      if (!validateEmail(email)) {
-        showToast("error", "Error", "Please enter a valid email address.");
-        return;
-      }
-      if (password !== confirmPassword) {
-        showToast("error", "Error", "Passwords do not match.");
-        return;
-      }
-      if (password.length < 8) {
-        showToast("error", "Error", "Password must be at least 8 characters.");
-        return;
-      }
+    // Validate inputs
+    if (!fullName || !email || !password || !confirmPassword) {
+      showToast("info", "Warning", "All fields are required.");
+      return;
+    }
+    if (!validateEmail(email)) {
+      showToast("error", "Error", "Please enter a valid email address.");
+      return;
+    }
+    if (password !== confirmPassword) {
+      showToast("error", "Error", "Passwords do not match.");
+      return;
+    }
+    if (password.length < 8) {
+      showToast("error", "Error", "Password must be at least 8 characters.");
+      return;
+    }
+    if (!isChecked) {
+      showToast("info", "Warning", "You must accept the Terms and Conditions.");
+      return;
+    }
 
+    try {
       // Call Appwrite signup API
       await account.create(ID.unique(), email, password, fullName);
       await account.createEmailPasswordSession(email, password);
@@ -123,8 +129,22 @@ const Signup = ({ navigation, route }) => {
         secureTextEntry={true}
       />
 
+      {/* Terms and Conditions Checkbox */}
+      <View style={styles.checkboxContainer}>
+        <Checkbox
+          value={isChecked}
+          onValueChange={setIsChecked}
+          color={isChecked ? "#6A0DAD" : undefined}
+        />
+        <Text style={styles.checkboxLabel}>I agree to the Terms and Conditions</Text>
+      </View>
+
       {/* Signup Button */}
-      <TouchableOpacity style={styles.signupButton} onPress={handleSignup}>
+      <TouchableOpacity
+        style={[styles.signupButton, !isChecked && styles.disabledButton]}
+        onPress={handleSignup}
+        disabled={!isChecked}
+      >
         <Text style={styles.signupButtonText}>Sign Up</Text>
       </TouchableOpacity>
 
@@ -140,6 +160,12 @@ const styles = StyleSheet.create({
     backgroundColor: "#4B0082",
     paddingHorizontal: 40,
     justifyContent: "center",
+  },
+  heading: {
+    fontSize: 28,
+    color: "white",
+    marginBottom: 32,
+    textAlign: "center",
   },
   label: {
     fontSize: 18,
@@ -157,8 +183,16 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     fontSize: 16,
   },
+  checkboxContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  checkboxLabel: {
+    color: "white",
+    marginLeft: 10,
+  },
   signupButton: {
-    // width: "100%",
     height: 50,
     backgroundColor: "#fff",
     borderRadius: 10,
@@ -166,16 +200,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginTop: 20,
   },
+  disabledButton: {
+    backgroundColor: "gray",
+  },
   signupButtonText: {
     color: "#4B0082",
     fontSize: 20,
     fontWeight: "bold",
-  },
-  heading: {
-    fontSize: 28,
-    color: "white",
-    marginBottom: 32,
-    textAlign: "center",
   },
 });
 
