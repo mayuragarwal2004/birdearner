@@ -12,7 +12,7 @@ import {
   PanResponder
 } from "react-native";
 import Entypo from "@expo/vector-icons/Entypo";
-import MapView, { Marker } from "react-native-maps";
+import MapView, { Marker ,Circle} from "react-native-maps";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Location from "expo-location";
 import { appwriteConfig, databases } from "../lib/appwrite";
@@ -24,7 +24,7 @@ const colors = {
   Standard: ["#34660C", "#77CB35"],
 };
 
-const maxDist = 6000;
+const maxDist = 15000;
 
 const MarketplaceScreen = ({ navigation }) => {
   const [distance, setDistance] = useState(600);
@@ -207,7 +207,7 @@ const MarketplaceScreen = ({ navigation }) => {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <Text style={styles.title}>Marketplace</Text>
         <View style={styles.sliderContainer}>
-          <Text style={styles.distanceText}>{distance} km</Text>
+          <Text style={styles.distanceText}>{distance} m</Text>
 
           <View style={styles.customSliderWrapper}>
             <LinearGradient
@@ -283,80 +283,95 @@ const MarketplaceScreen = ({ navigation }) => {
 
 
         <MapView
-          style={styles.map}
-          region={
-            location
-              ? {
-                latitude: location.latitude,
-                longitude: location.longitude,
-                latitudeDelta: 0.05,
-                longitudeDelta: 0.05,
-              }
-              : {
-                latitude: 22.886473,
-                longitude: 79.610891,
-                latitudeDelta: 1.0,
-                longitudeDelta: 1.0,
-              }
-          }
-        >
-          {location && (
-            <Marker
-              coordinate={{
-                latitude: location.latitude,
-                longitude: location.longitude,
-              }}
-              title="Our Location"
-              description="This is our current location"
-              pinColor="blue"
-            />
-          )}
+  style={styles.map}
+  region={
+    location
+      ? {
+          latitude: location.latitude,
+          longitude: location.longitude,
+          latitudeDelta: 0.05,
+          longitudeDelta: 0.05,
+        }
+      : {
+          latitude: 22.886473,
+          longitude: 79.610891,
+          latitudeDelta: 1.0,
+          longitudeDelta: 1.0,
+        }
+  }
+>
+  {location && (
+    <Marker
+      coordinate={{
+        latitude: location.latitude,
+        longitude: location.longitude,
+      }}
+      title="Your Location"
+      description="This is your current location"
+      pinColor="blue"
+    />
+  )}
 
-          {jobs.Immediate.map((job, index) =>
-            job.latitude && job.longitude ? (
-              <Marker
-                key={`immediate-${index}`}
-                coordinate={{
-                  latitude: job.latitude,
-                  longitude: job.longitude,
-                }}
-                title={job.title}
-                description={job.description}
-                pinColor="red"
-              />
-            ) : null
-          )}
+  {/* ADD THIS PART TO SHOW A TRANSPARENT CIRCLE */}
+  {location && (
+    <Circle
+      center={{
+        latitude: location.latitude,
+        longitude: location.longitude,
+      }}
+      radius={distance} // This should be capped at 15km
+      fillColor="rgba(0, 0, 255, 0.2)" // Light blue transparent
+      strokeColor="rgba(0, 0, 255, 0.5)" // Blue border
+      strokeWidth={2}
+    />
+  )}
 
-          {jobs.High.map((job, index) =>
-            job.latitude && job.longitude ? (
-              <Marker
-                key={`high-${index}`}
-                coordinate={{
-                  latitude: job.latitude,
-                  longitude: job.longitude,
-                }}
-                title={job.title}
-                description={job.description}
-                pinColor="orange"
-              />
-            ) : null
-          )}
+  {jobs.Immediate.map((job, index) =>
+    job.latitude && job.longitude ? (
+      <Marker
+        key={`immediate-${index}`}
+        coordinate={{
+          latitude: job.latitude,
+          longitude: job.longitude,
+        }}
+        title={job.title}
+        description={job.description}
+        pinColor="red"
+      />
+    ) : null
+  )}
 
-          {jobs.Standard.map((job, index) =>
-            job.latitude && job.longitude ? (
-              <Marker
-                key={`standard-${index}`}
-                coordinate={{
-                  latitude: job.latitude,
-                  longitude: job.longitude,
-                }}
-                title={job.title}
-                description={job.description}
-                pinColor="green"
-              />
-            ) : null
-          )}
-        </MapView>
+  {jobs.High.map((job, index) =>
+    job.latitude && job.longitude ? (
+      <Marker
+        key={`high-${index}`}
+        coordinate={{
+          latitude: job.latitude,
+          longitude: job.longitude,
+        }}
+        title={job.title}
+        description={job.description}
+        pinColor="orange"
+      />
+    ) : null
+  )}
+
+  {jobs.Standard.map((job, index) =>
+    job.latitude && job.longitude ? (
+      <Marker
+        key={`standard-${index}`}
+        coordinate={{
+          latitude: job.latitude,
+          longitude: job.longitude,
+        }}
+        title={job.title}
+        description={job.description}
+        pinColor="green"
+      />
+    ) : null
+  )}
+</MapView>
+
 
 
         <Text style={styles.jobsAround}>Jobs around...</Text>

@@ -163,7 +163,7 @@ const getStyles = (currentTheme) =>
       color: currentTheme.subText || "#000000",
     },
     signupButton: {
-      width: "40%",
+      width: "100%",// Match the input width
       height: 50,
       backgroundColor: currentTheme.primary || "#6A0DAD",
       borderRadius: 12,
