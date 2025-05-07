@@ -17,22 +17,25 @@ export default {
       backgroundColor: "#ffffff",
     },
     ios: {
-      bundleIdentifier: "com.birdearner",
+      bundleIdentifier: "com.birdearner.birdearner",
       buildNumber: "1.0.0",
+      supportsTablet: true,
+      googleServicesFile: "./GoogleService-Info.plist",
       infoPlist: {
+        ITSAppUsesNonExemptEncryption: false,
         NSLocationWhenInUseUsageDescription:
           "This app needs access to your location to display maps.",
       },
     },
     android: {
-      googleServicesFile: process.env.GOOGLE_SERVICES_FILE,
+      googleServicesFile: "./google-services.json",
       config: {
         googleMaps: {
-          apiKey: process.env.GOOGLE_MAPS_API_KEY,
+          apiKey: "AIzaSyDk_drKIe9VsU3mi-muwYZJ5FYvHRak2fI",
         },
       },
       adaptiveIcon: {
-        foregroundImage: "./assets/favicon.png",
+        foregroundImage: "./assets/logo.png",
         backgroundColor: "#ffffff",
       },
       permissions: [
@@ -44,15 +47,26 @@ export default {
       package: "com.birdearner",
     },
     web: {
-      favicon: "./assets/favicon.png",
+      favicon: "./assets/logo.png",
     },
-    plugins: ["expo-router", "react-native-video"],
+    plugins: [
+      "expo-router",
+      "react-native-video",
+      [
+        "expo-build-properties",
+        {
+          ios: {
+            useFrameworks: "static",
+          },
+        },
+      ],
+    ],
     extra: {
       router: {
         origin: false,
       },
       eas: {
-        projectId: process.env.EAS_PROJECT_ID,
+        projectId: "e9ba2ff2-13a3-4a7a-b07b-e184de3972f7",
       },
     },
   },
