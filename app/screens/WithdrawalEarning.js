@@ -1,17 +1,23 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, TextInput } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  TextInput,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../context/AuthContext";
-import { appwriteConfig, databases } from "../lib/appwrite";
-import Toast from 'react-native-toast-message';
+import { useAppwrite } from "../context/AppwriteContext";
+import Toast from "react-native-toast-message";
 import { ID } from "react-native-appwrite";
 import { useTheme } from "../context/ThemeContext";
 
-
 const WithdrawalEarningScreen = ({ navigation }) => {
+  const { appwriteConfig, databases } = useAppwrite();
   const [amount, setAmount] = useState(0);
   const [warning, setWarning] = useState("");
-  const { userData } = useAuth()
+  const { userData } = useAuth();
   const totalAmountInWallet = userData?.withdrawableAmount || 0;
 
   const { theme, themeStyles } = useTheme();
@@ -21,20 +27,19 @@ const WithdrawalEarningScreen = ({ navigation }) => {
 
   const handleError = (message) => {
     Toast.show({
-      type: 'error',
-      text1: 'Error',
+      type: "error",
+      text1: "Error",
       text2: message,
     });
   };
 
   const handleSuccess = (message) => {
     Toast.show({
-      type: 'success',
-      text1: 'Success',
+      type: "success",
+      text1: "Success",
       text2: message,
     });
   };
-
 
   const handleAmountChange = (value) => {
     const numericValue = parseFloat(value);
@@ -52,17 +57,15 @@ const WithdrawalEarningScreen = ({ navigation }) => {
     }
   };
 
-
   const handleProcess = async () => {
     const freelancerId = userData?.$id;
 
     if (amount <= 0) {
-      handleError("PLease enter amount")
+      handleError("PLease enter amount");
       return;
     }
 
     try {
-
       await databases.createDocument(
         appwriteConfig.databaseId,
         appwriteConfig.withdrawalRequestsCollectionId,
@@ -70,7 +73,7 @@ const WithdrawalEarningScreen = ({ navigation }) => {
         {
           freelancerId,
           requestedAmount: parseInt(amount),
-          status: 'pending',
+          status: "pending",
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         }
@@ -87,12 +90,9 @@ const WithdrawalEarningScreen = ({ navigation }) => {
         }
       );
 
-
-
       handleSuccess("Withdrawal request submitted successfully!");
 
       navigation.navigate("Wallet");
-
     } catch (error) {
       handleError("Failed to submit withdrawal request.");
     }
@@ -101,15 +101,24 @@ const WithdrawalEarningScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <View style={styles.main}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={currentTheme.text || black} />
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}
+        >
+          <Ionicons
+            name="arrow-back"
+            size={24}
+            color={currentTheme.text || black}
+          />
         </TouchableOpacity>
         <Text style={styles.header}>Withdrawal Earning</Text>
       </View>
 
       {/* Total Amount in Wallet */}
       <Text style={styles.label}>Total Amount in Wallet</Text>
-      <Text style={styles.colorText}>RS. {userData?.withdrawableAmount || "0"}</Text>
+      <Text style={styles.colorText}>
+        RS. {userData?.withdrawableAmount || "0"}
+      </Text>
 
       {/* Withdrawal Amount Input */}
       <Text style={styles.label}>Enter the amount you want to withdraw</Text>
@@ -123,7 +132,6 @@ const WithdrawalEarningScreen = ({ navigation }) => {
       />
 
       {warning !== "" && <Text style={styles.warning}>{warning}</Text>}
-
 
       {/* Amount to Withdraw */}
       <Text style={styles.label}>You’re withdrawing</Text>
@@ -160,7 +168,7 @@ const getStyles = (currentTheme) =>
       fontSize: 24,
       fontWeight: "bold",
       textAlign: "center",
-      color: currentTheme.text
+      color: currentTheme.text,
     },
     label: {
       fontSize: 18,
@@ -205,7 +213,7 @@ const getStyles = (currentTheme) =>
       borderWidth: 2,
       marginVertical: 10,
       margin: "auto",
-      color: currentTheme.subText
+      color: currentTheme.subText,
     },
     warning: {
       color: "red",

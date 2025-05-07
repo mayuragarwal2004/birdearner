@@ -15,12 +15,12 @@ import {
 import { FontAwesome } from "@expo/vector-icons";
 import { household_service, freelance_service } from "../lib/roleData";
 import { useAuth } from "../context/AuthContext";
-import { appwriteConfig, databases } from "../lib/appwrite";
 import { Query } from "react-native-appwrite";
 import { differenceInDays } from "date-fns";
 import gifAnimation from "../assets/loading.gif";
 import { useTheme } from "../context/ThemeContext";
 import { useNavigation } from "@react-navigation/native";
+import { useAppwrite } from "../context/AppwriteContext";
 
 const placeholderImageURL = "https://picsum.photos/seed/";
 
@@ -28,6 +28,7 @@ const placeholderImageURL = "https://picsum.photos/seed/";
 const ClientHomeScreen = () => {
   const [search, setSearch] = useState("");
   const [showGif, setShowGif] = useState(false);
+  const { appwriteConfig, databases } = useAppwrite();
 
   const [filteredFreelanceServices, setFilteredFreelanceServices] = useState(
     []

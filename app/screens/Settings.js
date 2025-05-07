@@ -51,6 +51,12 @@ const SettingsScreen = ({ navigation }) => {
         { name: "Blogs & Forum", stack_name: "BlogsAndForum" },
       ]
     },
+    {
+      title: 'More',
+      options: [
+        { name: "Delete Account", stack_name: "DeleteAccount" },
+      ]
+    },
   ];
 
   const [searchQuery, setSearchQuery] = useState('');

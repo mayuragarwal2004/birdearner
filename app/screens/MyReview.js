@@ -16,11 +16,12 @@ import { FontAwesome, MaterialIcons } from "@expo/vector-icons";
 import { TouchableOpacity } from "react-native";
 import ReviewCard from "../components/ReviewCard";
 import { useAuth } from "../context/AuthContext";
-import { appwriteConfig, databases } from "../lib/appwrite";
+import { useAppwrite } from "../context/AppwriteContext";
 import { Query } from "react-native-appwrite";
 import { useTheme } from "../context/ThemeContext";
 
 export default function ReviewsScreen({ navigation }) {
+    const { appwriteConfig, databases } = useAppwrite();
   const { user, loading, userData, setUserData } = useAuth();
   const [data, setData] = useState(null);
   const [loadingProfile, setLoadingProfile] = useState(true);

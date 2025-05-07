@@ -10,20 +10,19 @@ import {
   Modal,
   Alert,
 } from "react-native";
-import { appwriteConfig, databases } from "../lib/appwrite";
 import { useAuth } from "../context/AuthContext";
 import { Query } from "react-native-appwrite";
 import { Ionicons } from "@expo/vector-icons";
 import Toast from 'react-native-toast-message';
 import { useTheme } from "../context/ThemeContext";
-
+import { useAppwrite } from "../context/AppwriteContext";
 const WarningModal = ({ visible, onConfirm, onCancel }) => {
   return (
     <Modal
-      transparent={true}
-      visible={visible}
-      animationType="fade"
-      onRequestClose={onCancel}
+    transparent={true}
+    visible={visible}
+    animationType="fade"
+    onRequestClose={onCancel}
     >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContainer}>
@@ -48,6 +47,7 @@ const WarningModal = ({ visible, onConfirm, onCancel }) => {
 };
 
 const Chat = ({ route, navigation }) => {
+  const { databases, appwriteConfig } = useAppwrite();
   const { full_name, profileImage, projectId, receiverId } = route.params;
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");

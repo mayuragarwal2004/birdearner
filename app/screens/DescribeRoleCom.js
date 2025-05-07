@@ -7,12 +7,13 @@ import {
   StyleSheet,
   ScrollView,
 } from "react-native";
-import { account, databases, appwriteConfig } from "../lib/appwrite";
+import { useAppwrite } from "../context/AppwriteContext";
 import Toast from "react-native-toast-message";
 import { Picker } from "@react-native-picker/picker";
 import { ID, Query } from "react-native-appwrite";
 
 const DescribeRoleCom = ({ navigation, route }) => {
+  const { account, appwriteConfig, databases } = useAppwrite();
   const { fullName, email, role } = route.params;
   const [formData, setFormData] = useState({
     qualification: "",
@@ -140,7 +141,6 @@ const DescribeRoleCom = ({ navigation, route }) => {
 
     try {
       const user = await authenticateUser();
-      
 
       const collectionId =
         role === "client"

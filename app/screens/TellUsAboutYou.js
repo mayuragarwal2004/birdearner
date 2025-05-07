@@ -9,12 +9,7 @@ import {
   StyleSheet,
   Alert,
 } from "react-native";
-import {
-  account,
-  databases,
-  appwriteConfig,
-  uploadFile,
-} from "../lib/appwrite";
+import { useAppwrite } from "../context/AppwriteContext";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import * as ImagePicker from "expo-image-picker";
 import { Picker } from "@react-native-picker/picker";
@@ -24,6 +19,7 @@ import { useAuth } from "../context/AuthContext";
 import { useNavigation } from "@react-navigation/native";
 
 const TellUsAboutYouScreen = ({ route }) => {
+  const { databases, appwriteConfig, uploadFile } = useAppwrite();
   const [gender, setGender] = useState("");
   const [dob, setDob] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);

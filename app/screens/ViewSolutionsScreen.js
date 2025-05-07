@@ -9,9 +9,10 @@ import {
   Image,
   Alert,
 } from "react-native";
-import { appwriteConfig, databases } from "../lib/appwrite";
+import { useAppwrite } from "../context/AppwriteContext";
 
 const ViewSolutionsScreen = ({ route, navigation }) => {
+  const { appwriteConfig, databases } = useAppwrite();
   const { projectId } = route.params;
   const [solutions, setSolutions] = useState([]);
   const [previewFile, setPreviewFile] = useState(null);
@@ -55,11 +56,11 @@ const ViewSolutionsScreen = ({ route, navigation }) => {
         <Text style={styles.loadingText}>Loading...</Text>
       ) : (
         <FlatList
-        style={{marginLeft: 30}}
+          style={{ marginLeft: 30 }}
           data={solutions}
           keyExtractor={(item, index) => `${item}-${index}`}
           // horizontal
-          numColumns={3} 
+          numColumns={3}
           renderItem={({ item }) => (
             <TouchableOpacity
               style={styles.fileItem}
@@ -67,7 +68,6 @@ const ViewSolutionsScreen = ({ route, navigation }) => {
               onLongPress={() => handleDownload(item)}
             >
               <Image source={{ uri: item }} style={styles.filePreview1} />
-              
             </TouchableOpacity>
           )}
           ListEmptyComponent={
@@ -150,11 +150,11 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
   },
-  filePreview1:{
+  filePreview1: {
     width: 80,
-    height:80,
-    borderRadius: 10
-  }
+    height: 80,
+    borderRadius: 10,
+  },
 });
 
 export default ViewSolutionsScreen;

@@ -1,36 +1,34 @@
-import React from 'react';
-import { createStackNavigator } from '@react-navigation/stack';
-import MyProfileScreen from '../screens/MyProfile';
-import MyReviewScreen from '../screens/MyReview';
-import AvailabilityScreen from '../screens/Availability';
-import SettingsScreen from '../screens/Settings';
-import PasswordUpdateScreen from '../screens/PasswordUpdate';
-import EmailUpdateScreen from '../screens/EmailUpdate';
-import WithdrawalEarningScreen from '../screens/WithdrawalEarning';
-import BankAccountdetailsScreen from '../screens/BankAccountdetails';
-import NotificationsSettingScreen from '../screens/NotificationsSetting';
-import AppearanceScreen from '../screens/Appearance';
-import WalletScreen from '../screens/Wallet';
-import PaymentScreen from '../screens/PaymentScreen';
-import WalletClientScreen from '../screens/WalletClient';
-import SecurityScreen from '../screens/SecurityScreen';
-import TermsAndConditionsScreen from '../screens/TermsAndConditionsScreen';
-import FeedbackScreen from '../screens/FeedbackScreen';
-import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
-import BlogsAndForumScreen from '../screens/BlogsAndForumScreen';
-import PortfolioScreen from '../screens/Portfolio';
-
+import React from "react";
+import { createStackNavigator } from "@react-navigation/stack";
+import MyProfileScreen from "../screens/MyProfile";
+import MyReviewScreen from "../screens/MyReview";
+import AvailabilityScreen from "../screens/Availability";
+import SettingsScreen from "../screens/Settings";
+import PasswordUpdateScreen from "../screens/PasswordUpdate";
+import EmailUpdateScreen from "../screens/EmailUpdate";
+import WithdrawalEarningScreen from "../screens/WithdrawalEarning";
+import BankAccountdetailsScreen from "../screens/BankAccountdetails";
+import NotificationsSettingScreen from "../screens/NotificationsSetting";
+import AppearanceScreen from "../screens/Appearance";
+import WalletScreen from "../screens/Wallet";
+import PaymentScreen from "../screens/PaymentScreen";
+import WalletClientScreen from "../screens/WalletClient";
+import SecurityScreen from "../screens/SecurityScreen";
+import TermsAndConditionsScreen from "../screens/TermsAndConditionsScreen";
+import FeedbackScreen from "../screens/FeedbackScreen";
+import PrivacyPolicyScreen from "../screens/PrivacyPolicyScreen";
+import BlogsAndForumScreen from "../screens/BlogsAndForumScreen";
+import PortfolioScreen from "../screens/Portfolio";
+import DeleteAccountScreen from "../screens/DeleteAccount";
 
 const Stack = createStackNavigator();
 
-const ProfileStack = () =>
-(
+const ProfileStack = () => (
   <Stack.Navigator>
     <Stack.Screen
       name="MyProfile"
       component={MyProfileScreen}
       options={{ headerShown: false }}
-
     />
     <Stack.Screen
       name="MyReview"
@@ -93,6 +91,11 @@ const ProfileStack = () =>
       options={{ headerShown: false }}
     />
     <Stack.Screen
+      name="DeleteAccount"
+      component={DeleteAccountScreen}
+      options={{ headerShown: false }}
+    />
+    <Stack.Screen
       name="Security"
       component={SecurityScreen}
       options={{ headerShown: false }}
@@ -125,5 +128,4 @@ const ProfileStack = () =>
   </Stack.Navigator>
 );
 
-
-export default ProfileStack
+export default ProfileStack;

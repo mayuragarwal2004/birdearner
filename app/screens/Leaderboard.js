@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -6,13 +6,14 @@ import {
   StyleSheet,
   TouchableOpacity,
   SafeAreaView,
-} from 'react-native';
-import { useAuth } from '../context/AuthContext';
-import { appwriteConfig, databases } from '../lib/appwrite';
-import { useTheme } from '../context/ThemeContext';
+} from "react-native";
+import { useAuth } from "../context/AuthContext";
+import { useAppwrite } from "../context/AppwriteContext";
+import { useTheme } from "../context/ThemeContext";
 
 const LeaderboardScreen = () => {
-  const [selectedTab, setSelectedTab] = useState('india');
+  const { appwriteConfig, databases } = useAppwrite();
+  const [selectedTab, setSelectedTab] = useState("india");
   const [leaderboardData, setLeaderboardData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -50,7 +51,7 @@ const LeaderboardScreen = () => {
       const rankedData = filterAndRankData(documents, tab);
       setLeaderboardData(rankedData);
     } catch (err) {
-      setError('Failed to fetch leaderboard data');
+      setError("Failed to fetch leaderboard data");
     } finally {
       setIsLoading(false);
     }
@@ -58,9 +59,9 @@ const LeaderboardScreen = () => {
 
   const filterAndRankData = (documents, tab) => {
     let filteredDocs;
-    if (tab === 'india') {
+    if (tab === "india") {
       filteredDocs = documents;
-    } else if (tab === 'state') {
+    } else if (tab === "state") {
       filteredDocs = documents.filter((doc) => doc.state === user.state);
     } else {
       filteredDocs = documents.filter((doc) => doc.zipcode === user.pin);
@@ -93,9 +94,9 @@ const LeaderboardScreen = () => {
 
   const formatXP = (xp) => {
     if (xp >= 1000000) {
-      return (xp / 1000000).toFixed(1) + 'M'; // For millions
+      return (xp / 1000000).toFixed(1) + "M"; // For millions
     } else if (xp >= 1000) {
-      return (xp / 1000).toFixed(1) + 'K'; // For thousands
+      return (xp / 1000).toFixed(1) + "K"; // For thousands
     } else {
       return xp; // For values less than 1000
     }
@@ -131,17 +132,22 @@ const LeaderboardScreen = () => {
               user.isCurrentUser
                 ? styles.currentUserRow
                 : user.rank === 1 || user.rank === 2
-                  ? styles.topRankRow
-                  : styles.otherUserRow,
+                ? styles.topRankRow
+                : styles.otherUserRow,
             ]}
           >
-            <Text style={[styles.tableText, styles.nameColumn]} numberOfLines={1}>
+            <Text
+              style={[styles.tableText, styles.nameColumn]}
+              numberOfLines={1}
+            >
               {user.isCurrentUser ? `You` : user?.full_name}
             </Text>
             <View
               style={[
                 styles.xpColumn,
-                user.isCurrentUser ? styles.currentredBackground : styles.blueBackground,
+                user.isCurrentUser
+                  ? styles.currentredBackground
+                  : styles.blueBackground,
               ]}
             >
               <Text style={styles.blueText}>{formatXP(user?.XP)}</Text>
@@ -165,33 +171,48 @@ const LeaderboardScreen = () => {
 
       {/* Footer Text */}
       <Text style={styles.footerText}>
-        Feature on the top 5 on the leaderboard and win coupons, gifts, and less deduction
-        on your bids!
+        Feature on the top 5 on the leaderboard and win coupons, gifts, and less
+        deduction on your bids!
       </Text>
 
       {/* Tab Navigation */}
       <View style={styles.tabContainer}>
         <TouchableOpacity
-          style={[styles.tab, selectedTab === 'local' && styles.activeTab]}
-          onPress={() => handleTabPress('local')}
+          style={[styles.tab, selectedTab === "local" && styles.activeTab]}
+          onPress={() => handleTabPress("local")}
         >
-          <Text style={[styles.tabText, selectedTab === 'local' && styles.activeTabText]}>
+          <Text
+            style={[
+              styles.tabText,
+              selectedTab === "local" && styles.activeTabText,
+            ]}
+          >
             Local
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.tab, selectedTab === 'state' && styles.activeTab]}
-          onPress={() => handleTabPress('state')}
+          style={[styles.tab, selectedTab === "state" && styles.activeTab]}
+          onPress={() => handleTabPress("state")}
         >
-          <Text style={[styles.tabText, selectedTab === 'state' && styles.activeTabText]}>
+          <Text
+            style={[
+              styles.tabText,
+              selectedTab === "state" && styles.activeTabText,
+            ]}
+          >
             State
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.tab, selectedTab === 'india' && styles.activeTab]}
-          onPress={() => handleTabPress('india')}
+          style={[styles.tab, selectedTab === "india" && styles.activeTab]}
+          onPress={() => handleTabPress("india")}
         >
-          <Text style={[styles.tabText, selectedTab === 'india' && styles.activeTabText]}>
+          <Text
+            style={[
+              styles.tabText,
+              selectedTab === "india" && styles.activeTabText,
+            ]}
+          >
             India
           </Text>
         </TouchableOpacity>
@@ -205,42 +226,42 @@ const getStyles = (currentTheme) =>
     container: {
       flex: 1,
       padding: 16,
-      backgroundColor: currentTheme.background || '#ffffff',
+      backgroundColor: currentTheme.background || "#ffffff",
       paddingTop: 50,
     },
     title: {
       fontSize: 24,
-      fontWeight: 'bold',
-      textAlign: 'center',
+      fontWeight: "bold",
+      textAlign: "center",
       marginBottom: 4,
-      color: currentTheme.text
+      color: currentTheme.text,
     },
     subtitle: {
       fontSize: 16,
-      textAlign: 'center',
+      textAlign: "center",
       marginBottom: 16,
-      color: currentTheme.subText
+      color: currentTheme.subText,
     },
     tableContainer: {
       marginBottom: 16,
     },
     tableHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-around',
+      flexDirection: "row",
+      justifyContent: "space-around",
       // backgroundColor: '#f0f0f0',
       padding: 12,
       borderRadius: 10,
     },
     headerText: {
-      fontWeight: 'bold',
+      fontWeight: "bold",
       fontSize: 16,
-      color: '#726B6B',
+      color: "#726B6B",
       flex: 1,
-      textAlign: 'center',
+      textAlign: "center",
     },
     tableRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-around',
+      flexDirection: "row",
+      justifyContent: "space-around",
       // padding: 12,
       marginVertical: 4,
       borderRadius: 12,
@@ -249,101 +270,101 @@ const getStyles = (currentTheme) =>
       opacity: 0.5,
     },
     topRankRow: {
-      backgroundColor: '#71C232',
+      backgroundColor: "#71C232",
     },
     otherUserRow: {
-      backgroundColor: '#C9D63E',
+      backgroundColor: "#C9D63E",
     },
     currentUserRow: {
-      backgroundColor: '#E8E8E8',
+      backgroundColor: "#E8E8E8",
     },
     tableText: {
       fontSize: 16,
       flex: 1,
-      textAlign: 'center',
+      textAlign: "center",
       padding: 12,
     },
     nameColumn: {
       flex: 2, // Increased width for Name column
-      textAlign: 'center', // Align text to the left
+      textAlign: "center", // Align text to the left
     },
     xpColumn: {
       flex: 1, // Default width
-      textAlign: 'center',
+      textAlign: "center",
     },
     ordersColumn: {
       flex: 1, // Default width
-      textAlign: 'center',
+      textAlign: "center",
     },
     rankColumn: {
       flex: 1, // Default width
-      textAlign: 'center',
+      textAlign: "center",
     },
     blueBackground: {
-      backgroundColor: currentTheme.primary || '#762BAD',
+      backgroundColor: currentTheme.primary || "#762BAD",
       // borderRadius: 5,
       paddingVertical: 12,
       flex: 1,
-      alignItems: 'center',
+      alignItems: "center",
     },
     blueBackgroundd: {
-      backgroundColor: currentTheme.primary || '#762BAD',
+      backgroundColor: currentTheme.primary || "#762BAD",
       borderTopRightRadius: 12,
       borderBottomRightRadius: 12,
       paddingVertical: 12,
       flex: 1,
-      alignItems: 'center',
+      alignItems: "center",
     },
     currentredBackground: {
-      backgroundColor: '#DC3737',
+      backgroundColor: "#DC3737",
       // borderRadius: 5,
       paddingVertical: 12,
       flex: 1,
-      alignItems: 'center',
+      alignItems: "center",
     },
     currentredBackgroundd: {
-      backgroundColor: '#DC3737',
+      backgroundColor: "#DC3737",
       borderTopRightRadius: 12,
       borderBottomRightRadius: 12,
       paddingVertical: 12,
       flex: 1,
-      alignItems: 'center',
+      alignItems: "center",
     },
     blueText: {
-      color: 'white',
+      color: "white",
       fontSize: 16,
     },
     footerText: {
-      textAlign: 'center',
+      textAlign: "center",
       fontSize: 16,
-      color: currentTheme.subText || '#555',
+      color: currentTheme.subText || "#555",
       marginVertical: 20,
       paddingHorizontal: 50,
     },
     tabContainer: {
-      flexDirection: 'row',
-      justifyContent: 'space-around',
+      flexDirection: "row",
+      justifyContent: "space-around",
       marginBottom: 15,
     },
     tab: {
       paddingHorizontal: 30,
       paddingVertical: 8,
       borderRadius: 10,
-      backgroundColor: currentTheme.cardBackground || '#ccc',
+      backgroundColor: currentTheme.cardBackground || "#ccc",
     },
     activeTab: {
-      backgroundColor: '#6A1B9A',
+      backgroundColor: "#6A1B9A",
     },
     tabText: {
       fontSize: 15,
-      fontWeight: 'bold',
-      color: currentTheme.subText || '#fff',
+      fontWeight: "bold",
+      color: currentTheme.subText || "#fff",
     },
     activeTabText: {
-      color: '#fff',
+      color: "#fff",
     },
     tabShadow: {
-      shadowColor: currentTheme.shadow || '#000',
+      shadowColor: currentTheme.shadow || "#000",
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.2,
       shadowRadius: 4,

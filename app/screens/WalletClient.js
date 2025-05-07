@@ -10,10 +10,11 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../context/AuthContext";
 import { Query } from "react-native-appwrite";
-import { appwriteConfig, databases } from "../lib/appwrite";
+import { useAppwrite } from "../context/AppwriteContext";
 import { useTheme } from "../context/ThemeContext";
 
 const WalletClientScreen = ({ navigation }) => {
+  const { appwriteConfig, databases } = useAppwrite();
   const { userData } = useAuth();
   const [walletAmount, setWalletAmount] = useState(userData?.wallet || 0);
   const [paymentHistory, setPaymentHistory] = useState([]);

@@ -9,14 +9,15 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../context/AuthContext";
-import { appwriteConfig, databases } from "../lib/appwrite";
+import { useAppwrite } from "../context/AppwriteContext";
 import { Query } from "react-native-appwrite";
 import { useTheme } from "../context/ThemeContext";
 
 const WalletScreen = ({ navigation, route }) => {
+  const { appwriteConfig, databases } = useAppwrite();
 
   const { userData } = useAuth();
-  const [history, setHistory] = useState()
+  const [history, setHistory] = useState();
 
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
@@ -34,48 +35,47 @@ const WalletScreen = ({ navigation, route }) => {
           [Query.equal("freelancerId", freelancerId)]
         );
 
-        const sortedDocuments = response.documents.sort((a, b) =>
-          new Date(b.$createdAt) - new Date(a.$createdAt)
+        const sortedDocuments = response.documents.sort(
+          (a, b) => new Date(b.$createdAt) - new Date(a.$createdAt)
         );
 
         setHistory(sortedDocuments);
       } catch (error) {
-        Alert.alert("Failed to fetch reviews")
+        Alert.alert("Failed to fetch reviews");
       }
     };
 
-    fetchHistry()
-
-  }, [userData])
+    fetchHistry();
+  }, [userData]);
 
   function getStatusColor(status) {
     switch (status) {
-      case 'pending':
-        return '#FFCC00';
-      case 'rejected':
-        return '#FF3B30';
-      case 'approved':
-        return '#71C232';
+      case "pending":
+        return "#FFCC00";
+      case "rejected":
+        return "#FF3B30";
+      case "approved":
+        return "#71C232";
       default:
-        return '#808080';
+        return "#808080";
     }
   }
 
   function getStatusText(status) {
     switch (status) {
-      case 'pending':
-        return 'Requested amount successfully';
-      case 'rejected':
-        return 'Withdrawal has been rejected';
-      case 'approved':
-        return 'Received amount successfully';
+      case "pending":
+        return "Requested amount successfully";
+      case "rejected":
+        return "Withdrawal has been rejected";
+      case "approved":
+        return "Received amount successfully";
       default:
-        return 'Something went wrong';
+        return "Something went wrong";
     }
   }
 
   const renderItem = ({ item }) => {
-    const createdAt = item?.createdAt
+    const createdAt = item?.createdAt;
     const date = new Date(createdAt);
 
     // Format the date and time
@@ -114,19 +114,30 @@ const WalletScreen = ({ navigation, route }) => {
         </View>
 
         {/* Date and Status */}
-        <View style={[styles.paymentDetailsn, { flexDirection: "row", justifyContent: "space-between", alignItems: "center" }]}>
-          <Text style={styles.date}>{formattedDate} | {formattedTime}</Text>
+        <View
+          style={[
+            styles.paymentDetailsn,
+            {
+              flexDirection: "row",
+              justifyContent: "space-between",
+              alignItems: "center",
+            },
+          ]}
+        >
+          <Text style={styles.date}>
+            {formattedDate} | {formattedTime}
+          </Text>
           <Text
             style={[
               styles.status,
-              { color: getStatusColor(item?.status) }  // Set color based on status
+              { color: getStatusColor(item?.status) }, // Set color based on status
             ]}
           >
             {item?.status}
           </Text>
         </View>
       </View>
-    )
+    );
   };
 
   return (
@@ -136,16 +147,24 @@ const WalletScreen = ({ navigation, route }) => {
           onPress={() => navigation.goBack()}
           style={styles.backButton}
         >
-          <Ionicons name="arrow-back" size={24} color={currentTheme.text || black} />
+          <Ionicons
+            name="arrow-back"
+            size={24}
+            color={currentTheme.text || black}
+          />
         </TouchableOpacity>
         <Text style={styles.header}>Wallet</Text>
       </View>
 
       {/* Full Name Input */}
       <Text style={styles.label}>Total Amount in Wallet</Text>
-      <Text style={styles.colorText}>RS. {userData?.withdrawableAmount || "0"}</Text>
+      <Text style={styles.colorText}>
+        RS. {userData?.withdrawableAmount || "0"}
+      </Text>
 
-      <TouchableOpacity onPress={() => navigation.navigate("Withdrawal Earning")}>
+      <TouchableOpacity
+        onPress={() => navigation.navigate("Withdrawal Earning")}
+      >
         <Text style={styles.addAmount}>Withdrawal Amount</Text>
       </TouchableOpacity>
 
@@ -188,14 +207,14 @@ const getStyles = (currentTheme) =>
       fontWeight: "bold",
       // marginBottom: 20,
       textAlign: "center",
-      color: currentTheme.text
+      color: currentTheme.text,
     },
     headerHis: {
       fontSize: 18,
       fontWeight: "bold",
       marginBottom: 20,
       textAlign: "center",
-      color: "#8F8F8F"
+      color: "#8F8F8F",
     },
     label: {
       fontSize: 18,
@@ -223,7 +242,7 @@ const getStyles = (currentTheme) =>
       display: "flex",
       justifyContent: "center",
       alignItems: "center",
-      marginTop: 10
+      marginTop: 10,
     },
     withdrwalText: {
       color: "#fff",
@@ -234,9 +253,8 @@ const getStyles = (currentTheme) =>
       width: 100,
       paddingHorizontal: 20,
       paddingVertical: 10,
-      borderRadius: 12
-    }
-    ,
+      borderRadius: 12,
+    },
     input: {
       width: "25%",
       height: 44,
@@ -277,7 +295,7 @@ const getStyles = (currentTheme) =>
       shadowOpacity: 0.2,
       shadowRadius: 1.5,
       paddingVertical: 5,
-      paddingHorizontal: 10
+      paddingHorizontal: 10,
     },
     triangleIndicator: {
       width: 0,

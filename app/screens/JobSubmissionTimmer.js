@@ -3,13 +3,14 @@ import { View, Text, TouchableOpacity, StyleSheet, Alert } from "react-native";
 import { Svg, Circle } from "react-native-svg";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../context/AuthContext";
-import { appwriteConfig, databases, uploadFile } from "../lib/appwrite";
+import { useAppwrite } from "../context/AppwriteContext";
 import { ID } from "react-native-appwrite";
 import { useTheme } from "../context/ThemeContext";
 
 const TOTAL_TIME = 30;
 
 const JobSubmissionTimmerScreen = ({ route, navigation }) => {
+  const { appwriteConfig, databases, uploadFile } = useAppwrite();
   const [seconds, setSeconds] = useState(TOTAL_TIME);
   const [progress, setProgress] = useState(1);
   const [submitted, setSubmitted] = useState(false);
@@ -104,7 +105,14 @@ const JobSubmissionTimmerScreen = ({ route, navigation }) => {
 
       <View style={styles.timerWrapper}>
         <Svg width="150" height="150" viewBox="0 0 100 100">
-          <Circle cx="50" cy="50" r="40" stroke="#ddd" strokeWidth="10" fill="none" />
+          <Circle
+            cx="50"
+            cy="50"
+            r="40"
+            stroke="#ddd"
+            strokeWidth="10"
+            fill="none"
+          />
           <Circle
             cx="50"
             cy="50"
@@ -122,7 +130,11 @@ const JobSubmissionTimmerScreen = ({ route, navigation }) => {
         <Text style={styles.timerText}>{seconds}</Text>
       </View>
 
-      <TouchableOpacity style={styles.submitButton} onPress={handleManualSubmit} disabled={submitted}>
+      <TouchableOpacity
+        style={styles.submitButton}
+        onPress={handleManualSubmit}
+        disabled={submitted}
+      >
         <Text style={styles.submitButtonText}>Submit</Text>
       </TouchableOpacity>
       <TouchableOpacity onPress={handleCancel}>
@@ -132,7 +144,7 @@ const JobSubmissionTimmerScreen = ({ route, navigation }) => {
   );
 };
 
-const getStyles =  (currentTheme) =>
+const getStyles = (currentTheme) =>
   StyleSheet.create({
     container: {
       flex: 1,
@@ -178,7 +190,7 @@ const getStyles =  (currentTheme) =>
       },
       shadowOpacity: 0.17,
       shadowRadius: 3.05,
-      elevation: 4
+      elevation: 4,
     },
     submitButtonText: {
       color: "#FFFFFF",

@@ -9,13 +9,14 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../context/AuthContext";
-import { account, appwriteConfig, databases } from "../lib/appwrite";
 import { useTheme } from "../context/ThemeContext";
+import { useAppwrite } from "../context/AppwriteContext";
 
 const EmailUpdateScreen = ({ navigation }) => {
   const [newEmail, setNewEmail] = useState("");
   const [confirmEmail, setConfirmEmail] = useState("");
   const [password, setPassword] = useState("");
+  const { account, appwriteConfig, databases } = useAppwrite();
 
   const { userData, setUser } = useAuth();
 
@@ -36,7 +37,6 @@ const EmailUpdateScreen = ({ navigation }) => {
     }
 
     try {
-
       // Update the email in Appwrite
       await account.updateEmail(newEmail, password);
 
@@ -68,7 +68,15 @@ const EmailUpdateScreen = ({ navigation }) => {
       Alert.alert("Success", "Email updated successfully");
       navigation.goBack();
     } catch (error) {
-      Alert.alert("Error", "Failed to update email. Please try again.");
+      if (error["type"] === "user_target_already_exists") {
+        Alert.alert("Error", "Email already in use. Please try another.");
+      } else if (error["type"] === "user_invalid_credentials") {
+        Alert.alert("Error", "Invalid password. Please try again.");
+      } else if (error["type"] === "general_argument_invalid") {
+        Alert.alert("Error", "Invalid email format. Please try again.");
+      } else {
+        Alert.alert("Error", "Failed to update email. Please try again.");
+      }
     }
   };
 
@@ -79,11 +87,14 @@ const EmailUpdateScreen = ({ navigation }) => {
           onPress={() => navigation.goBack()}
           style={styles.backButton}
         >
-          <Ionicons name="arrow-back" size={24} color={currentTheme.text || black} />
+          <Ionicons
+            name="arrow-back"
+            size={24}
+            color={currentTheme.text || black}
+          />
         </TouchableOpacity>
         <Text style={styles.header}>Change your email</Text>
       </View>
-
 
       {/* Password Input */}
       <Text style={styles.label}>Enter your new email address</Text>
@@ -142,7 +153,7 @@ const getStyles = (currentTheme) =>
       fontWeight: "bold",
       // marginBottom: 20,
       textAlign: "center",
-      color: currentTheme.text
+      color: currentTheme.text,
     },
     label: {
       fontSize: 18,
@@ -155,7 +166,7 @@ const getStyles = (currentTheme) =>
     input: {
       width: "100%",
       height: 44,
-      backgroundColor:currentTheme.background3 || "#f4f0f0",
+      backgroundColor: currentTheme.background3 || "#f4f0f0",
       borderRadius: 12,
       paddingHorizontal: 20,
       marginBottom: 20,

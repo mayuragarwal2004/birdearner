@@ -14,7 +14,7 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
-import { account, appwriteConfig, databases } from "../lib/appwrite";
+import { useAppwrite } from "./AppwriteContext";
 import { Query } from "react-native-appwrite";
 
 const AuthContext = createContext();
@@ -24,7 +24,11 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [userData, setUserData] = useState(null);
   const [roleSelectionVisible, setRoleSelectionVisible] = useState(false);
-  const [roleOptions, setRoleOptions] = useState({ freelancerData: null, clientData: null });
+  const [roleOptions, setRoleOptions] = useState({
+    freelancerData: null,
+    clientData: null,
+  });
+  const { account, appwriteConfig, databases } = useAppwrite();
 
   const fetchUserData = async (email) => {
     try {
@@ -49,11 +53,11 @@ export const AuthProvider = ({ children }) => {
         setRoleOptions({ freelancerData, clientData });
         setRoleSelectionVisible(true);
       } else if (freelancerData) {
-        setRoleOptions({ freelancerData, clientData: null })
+        setRoleOptions({ freelancerData, clientData: null });
         setUserData(freelancerData);
       } else if (clientData) {
-        setRoleOptions({ freelancerData: null, clientData })
-        setUserData(clientData)
+        setRoleOptions({ freelancerData: null, clientData });
+        setUserData(clientData);
       }
     } catch (error) {
       throw new Error("Error fetching user data");
@@ -77,11 +81,8 @@ export const AuthProvider = ({ children }) => {
     checkUserSession();
   }, []);
 
-
-
   const login = async (email, password) => {
     try {
-
       await account.createEmailPasswordSession(email, password);
       const currentUser = await account.get();
 
@@ -89,6 +90,8 @@ export const AuthProvider = ({ children }) => {
 
       await fetchUserData(currentUser.email);
     } catch (error) {
+      console.log(error);
+
       throw new Error("Invalid email or password. Please try again.");
     }
   };
@@ -123,7 +126,7 @@ export const AuthProvider = ({ children }) => {
         setUser,
         fetchUserData,
         setUserData,
-        checkUserSession
+        checkUserSession,
       }}
     >
       {children}
@@ -171,7 +174,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "bold",
     marginBottom: 15,
-    color: "white"
+    color: "white",
   },
   modalText: {
     fontSize: 16,
@@ -179,7 +182,7 @@ const styles = StyleSheet.create({
     marginBottom: 30,
     color: "#fff",
     fontWeight: "300",
-    paddingHorizontal: 30
+    paddingHorizontal: 30,
   },
   button: {
     width: "80%",
@@ -197,7 +200,7 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 16,
     fontWeight: "bold",
-    color: "#4B0082"
+    color: "#4B0082",
   },
   loadingOverlay: {
     position: "absolute",

@@ -12,8 +12,8 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../context/AuthContext";
-import { appwriteConfig, databases } from "../lib/appwrite";
 import { useTheme } from "../context/ThemeContext";
+import { useAppwrite } from "../context/AppwriteContext";
 
 const AppliersScreen = ({ navigation, route }) => {
   const { userData } = useAuth();
@@ -21,6 +21,7 @@ const AppliersScreen = ({ navigation, route }) => {
   const [loading, setLoading] = useState(true);
   const { title, freelancersId, color, item, projectId } = route.params;
   const [refreshing, setRefreshing] = useState(false);
+  const { appwriteConfig, databases } = useAppwrite();
 
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];

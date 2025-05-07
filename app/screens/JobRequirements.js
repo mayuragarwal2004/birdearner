@@ -8,7 +8,7 @@ import {
   StyleSheet,
   TextInput,
   Alert,
-  Animated
+  Animated,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -16,11 +16,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Picker } from "@react-native-picker/picker";
 import * as Location from "expo-location";
-import { appwriteConfig, databases } from "../lib/appwrite";
+import { useAppwrite } from "../context/AppwriteContext";
 import { Query } from "react-native-appwrite";
 import { useTheme } from "../context/ThemeContext";
 
 const JobRequirementsScreen = ({ navigation, route }) => {
+  const { appwriteConfig, databases } = useAppwrite();
   const [jobLocation, setJobLocation] = useState("");
   const [deadline, setDeadline] = useState(new Date());
   const [budget, setBudget] = useState("");
@@ -44,7 +45,6 @@ const JobRequirementsScreen = ({ navigation, route }) => {
 
   useEffect(() => {
     if (route.params?.freelancerType) {
-
       setFrelancerType(route.params.freelancerType);
     }
   }, [route.params?.freelancerType]);
@@ -53,9 +53,9 @@ const JobRequirementsScreen = ({ navigation, route }) => {
     setIsOnSite(!isOnSite);
 
     if (isOnSite) {
-      setJobType("On-site")
+      setJobType("On-site");
     } else {
-      setJobType("Remote")
+      setJobType("Remote");
     }
 
     Animated.timing(toggleAnim, {
@@ -105,7 +105,7 @@ const JobRequirementsScreen = ({ navigation, route }) => {
         const roles = response.documents.map((doc) => doc.role).flat();
         setServices(roles);
       } catch (error) {
-        Alert.alert("Error fetching services:", error)
+        Alert.alert("Error fetching services:", error);
       }
     }
     fetchServices();
@@ -233,9 +233,8 @@ const JobRequirementsScreen = ({ navigation, route }) => {
           Alert.alert("Validation Error", "Please enter a valid job location.");
         }
       }
-
-    };
-  }
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -248,7 +247,11 @@ const JobRequirementsScreen = ({ navigation, route }) => {
             onPress={() => navigation.goBack()}
             style={styles.backButton}
           >
-            <Ionicons name="arrow-back" size={24} color={currentTheme.text || black} />
+            <Ionicons
+              name="arrow-back"
+              size={24}
+              color={currentTheme.text || black}
+            />
           </TouchableOpacity>
           <Text style={styles.header}>Job Requirements</Text>
         </View>
@@ -295,7 +298,7 @@ const JobRequirementsScreen = ({ navigation, route }) => {
           </TouchableOpacity>
         </View>
 
-        {jobType === 'On-site' && (
+        {jobType === "On-site" && (
           <View>
             <Text style={styles.label}>Job Location</Text>
             <TextInput
@@ -307,7 +310,6 @@ const JobRequirementsScreen = ({ navigation, route }) => {
           </View>
         )}
 
-
         <Text style={styles.label}>Freelancer Type</Text>
         <View style={styles.dropdown}>
           <Picker
@@ -317,9 +319,18 @@ const JobRequirementsScreen = ({ navigation, route }) => {
             dropdownIconColor={currentTheme.text}
             mode="dropdown"
           >
-            <Picker.Item label="Select Freelancer Type" value="" style={styles.pickerItem} />
+            <Picker.Item
+              label="Select Freelancer Type"
+              value=""
+              style={styles.pickerItem}
+            />
             {services.map((service, id) => (
-              <Picker.Item key={id} label={service} value={service} style={styles.pickerItem} />
+              <Picker.Item
+                key={id}
+                label={service}
+                value={service}
+                style={styles.pickerItem}
+              />
             ))}
           </Picker>
         </View>
@@ -459,7 +470,7 @@ const getStyles = (currentTheme) =>
       fontSize: 24,
       fontWeight: "bold",
       textAlign: "center",
-      color: currentTheme.text
+      color: currentTheme.text,
     },
     dropdown: {
       backgroundColor: currentTheme.background3 || "#ededed",
@@ -491,7 +502,7 @@ const getStyles = (currentTheme) =>
       paddingHorizontal: 10,
       marginBottom: 15,
       height: 44,
-      color: currentTheme.subText
+      color: currentTheme.subText,
     },
     bulletPoint: {
       color: currentTheme.subText || "#000000",

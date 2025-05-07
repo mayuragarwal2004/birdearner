@@ -15,7 +15,7 @@ import Entypo from "@expo/vector-icons/Entypo";
 import MapView, { PROVIDER_GOOGLE, Marker, Circle } from "react-native-maps";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Location from "expo-location";
-import { appwriteConfig, databases } from "../lib/appwrite";
+import { useAppwrite } from "../context/AppwriteContext";
 import { useTheme } from "../context/ThemeContext";
 
 const colors = {
@@ -27,6 +27,7 @@ const colors = {
 const maxDist = 6000;
 
 const MarketplaceScreen = ({ navigation }) => {
+  const { appwriteConfig, databases } = useAppwrite();
   const mapRef = useRef(null);
   const [distance, setDistance] = useState(600);
   const [location, setLocation] = useState(null);
@@ -302,9 +303,7 @@ const MarketplaceScreen = ({ navigation }) => {
         >
           {location && (
             <Circle
-              key={(
-                location.latitude + location.longitude
-              ).toString()}
+              key={(location.latitude + location.longitude).toString()}
               center={{
                 latitude: location.latitude,
                 longitude: location.longitude,

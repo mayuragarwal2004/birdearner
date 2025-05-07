@@ -1,18 +1,28 @@
-import React, { useState } from 'react';
-import { View, Button, Text, Image, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
-import RazorpayCheckout from 'react-native-razorpay';
-import { useAuth } from '../context/AuthContext';
-import { Ionicons } from '@expo/vector-icons';
-import { appwriteConfig, databases } from '../lib/appwrite';
-import { useTheme } from '../context/ThemeContext';
+import React, { useState } from "react";
+import {
+  View,
+  Button,
+  Text,
+  Image,
+  StyleSheet,
+  TouchableOpacity,
+  TextInput,
+} from "react-native";
+import RazorpayCheckout from "react-native-razorpay";
+import { useAuth } from "../context/AuthContext";
+import { Ionicons } from "@expo/vector-icons";
+import { useAppwrite } from "../context/AppwriteContext";
+import { useTheme } from "../context/ThemeContext";
 
 const PaymentScreen = ({ navigation }) => {
+  const { appwriteConfig, databases } = useAppwrite();
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const { userData } = useAuth();
-  const pic = userData?.profile_photo || 'https://example.com/default-profile-pic.png';
-  const name = userData?.full_name || 'Guest User';
-  const email = userData?.email || 'user@gmail.com';
-  const [amount, setAmount] = useState('');
+  const pic =
+    userData?.profile_photo || "https://example.com/default-profile-pic.png";
+  const name = userData?.full_name || "Guest User";
+  const email = userData?.email || "user@gmail.com";
+  const [amount, setAmount] = useState("");
 
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
@@ -28,16 +38,16 @@ const PaymentScreen = ({ navigation }) => {
       const options = {
         description: `Add ₹${amount} to wallet`,
         image: pic,
-        currency: 'INR',
-        key: 'rzp_test_Jl7LJ6dEC1YfnX',
+        currency: "INR",
+        key: "rzp_test_Jl7LJ6dEC1YfnX",
         amount: amount * 100,
         name: name,
         prefill: {
           email: email,
-          phone: '4141414141',
+          phone: "4141414141",
           name: name,
         },
-        theme: { color: '#4B0082' },
+        theme: { color: "#4B0082" },
       };
 
       const paymentData = await RazorpayCheckout.open(options);
@@ -46,7 +56,7 @@ const PaymentScreen = ({ navigation }) => {
       setPaymentSuccess(true);
     } catch (error) {
       console.error(error);
-      alert('Payment failed. Please try again.');
+      alert("Payment failed. Please try again.");
     }
   };
 
@@ -57,7 +67,8 @@ const PaymentScreen = ({ navigation }) => {
 
         // Collection IDs
         const clientCollectionId = appwriteConfig.clientCollectionId;
-        const paymentHistoryCollectionId = appwriteConfig.paymentHistoryCollectionId;
+        const paymentHistoryCollectionId =
+          appwriteConfig.paymentHistoryCollectionId;
 
         // Fetch user document to get the current wallet amount
         const userDoc = await databases.getDocument(
@@ -83,36 +94,42 @@ const PaymentScreen = ({ navigation }) => {
         await databases.createDocument(
           appwriteConfig.databaseId,
           paymentHistoryCollectionId,
-          'unique()',
+          "unique()",
           {
             userId: userId,
             paymentId: paymentId,
             amount: parseFloat(addedAmount),
-            status: 'Success',
+            status: "Success",
             date: new Date().toISOString(),
           }
         );
 
-        alert(`₹${addedAmount} added successfully! Your new wallet balance is ₹${newWalletAmount}.`);
+        alert(
+          `₹${addedAmount} added successfully! Your new wallet balance is ₹${newWalletAmount}.`
+        );
       }
     } catch (error) {
-      alert('Failed to update wallet. Please contact support.');
+      alert("Failed to update wallet. Please contact support.");
     }
   };
 
-
   return (
     <View style={styles.container}>
-      {
-        !paymentSuccess && (
-          <View style={styles.main}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-              <Ionicons name="arrow-back" size={24} color={currentTheme.text || black} />
-            </TouchableOpacity>
-            <Text style={styles.header}>Add Amount to Wallet</Text>
-          </View>
-        )
-      }
+      {!paymentSuccess && (
+        <View style={styles.main}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
+          >
+            <Ionicons
+              name="arrow-back"
+              size={24}
+              color={currentTheme.text || black}
+            />
+          </TouchableOpacity>
+          <Text style={styles.header}>Add Amount to Wallet</Text>
+        </View>
+      )}
 
       {!paymentSuccess && (
         <>
@@ -129,15 +146,19 @@ const PaymentScreen = ({ navigation }) => {
 
       {paymentSuccess ? (
         <View style={styles.paymentContainer}>
-          <Image
-            source={{ uri: pic }}
-            style={styles.image}
-          />
+          <Image source={{ uri: pic }} style={styles.image} />
           <Text style={styles.description}>Thank you, {name}!</Text>
           <Text style={styles.amount}>Added Amount: ₹{amount}</Text>
-          <TouchableOpacity style={styles.goBackk} onPress={() => navigation.goBack()}>
-            <Ionicons name="arrow-back" size={20} color={currentTheme.subText || black} />
-            <Text style={{color: currentTheme.subText}}>Go Back</Text>
+          <TouchableOpacity
+            style={styles.goBackk}
+            onPress={() => navigation.goBack()}
+          >
+            <Ionicons
+              name="arrow-back"
+              size={20}
+              color={currentTheme.subText || black}
+            />
+            <Text style={{ color: currentTheme.subText }}>Go Back</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -173,7 +194,7 @@ const getStyles = (currentTheme) =>
       fontWeight: "bold",
       textAlign: "center",
       color: currentTheme.text,
-      marginRight: 50
+      marginRight: 50,
     },
     label: {
       fontSize: 18,
@@ -207,7 +228,7 @@ const getStyles = (currentTheme) =>
       elevation: 5,
       alignContent: "center",
       justifyContent: "center",
-      marginVertical: 160
+      marginVertical: 160,
     },
     image: {
       width: 150,
@@ -219,12 +240,12 @@ const getStyles = (currentTheme) =>
     description: {
       fontSize: 18,
       marginBottom: 10,
-      color: currentTheme.text
+      color: currentTheme.text,
     },
     amount: {
       fontSize: 16,
       marginBottom: 20,
-      color: currentTheme.text
+      color: currentTheme.text,
     },
     signupButton: {
       width: "50%",
@@ -244,7 +265,7 @@ const getStyles = (currentTheme) =>
       display: "flex",
       flexDirection: "row",
       gap: 8,
-    }
+    },
   });
 
 export default PaymentScreen;

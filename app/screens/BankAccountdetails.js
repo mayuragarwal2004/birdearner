@@ -8,10 +8,10 @@ import {
   ScrollView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { appwriteConfig, databases } from "../lib/appwrite";
 import { useAuth } from "../context/AuthContext";
 import Toast from "react-native-toast-message";
 import { useTheme } from "../context/ThemeContext";
+import { useAppwrite } from "../context/AppwriteContext";
 
 const BankAccountDetailsScreen = ({ navigation }) => {
   const [bankName, setBankName] = useState("");
@@ -22,6 +22,7 @@ const BankAccountDetailsScreen = ({ navigation }) => {
   const [ifscCode, setIfscCode] = useState("");
   const [isEditingIfscCode, setIsEditingIfscCode] = useState(false);
   const { userData } = useAuth();
+  const { appwriteConfig, databases } = useAppwrite();
 
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
@@ -108,7 +109,11 @@ const BankAccountDetailsScreen = ({ navigation }) => {
             onPress={() => navigation.goBack()}
             style={styles.backButton}
           >
-            <Ionicons name="arrow-back" size={24} color={currentTheme.text || black} />
+            <Ionicons
+              name="arrow-back"
+              size={24}
+              color={currentTheme.text || black}
+            />
           </TouchableOpacity>
           <Text style={styles.header}>Bank Account details</Text>
         </View>
@@ -187,21 +192,21 @@ const getStyles = (currentTheme) =>
       paddingHorizontal: 30,
     },
     maincon: {
-      alignItems: "center"
+      alignItems: "center",
     },
     main: {
       marginTop: 45,
       marginBottom: 50,
       flexDirection: "row",
       alignItems: "center",
-      gap: 60
+      gap: 60,
     },
     header: {
       fontSize: 24,
       fontWeight: "bold",
       textAlign: "center",
       color: currentTheme.text,
-      marginRight: 40
+      marginRight: 40,
     },
     label: {
       fontSize: 18,

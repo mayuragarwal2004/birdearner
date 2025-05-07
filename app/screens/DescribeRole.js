@@ -7,13 +7,14 @@ import {
   StyleSheet,
   ScrollView,
 } from "react-native";
-import { account, databases, appwriteConfig } from "../lib/appwrite";
 import Toast from "react-native-toast-message";
 import { Picker } from "@react-native-picker/picker";
 import { ID, Query } from "react-native-appwrite";
 import { useAuth } from "../context/AuthContext";
+import { useAppwrite } from "../context/AppwriteContext";
 
 const DescribeRole = ({ navigation, route }) => {
+  const { account, appwriteConfig, databases } = useAppwrite();
   const { fullName, email, role, password } = route.params;
   const { user, login, checkUserSession } = useAuth();
   const [formData, setFormData] = useState({

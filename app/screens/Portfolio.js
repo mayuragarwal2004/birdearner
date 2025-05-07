@@ -11,20 +11,16 @@ import {
 import * as ImagePicker from "expo-image-picker";
 import Checkbox from "expo-checkbox";
 import Toast from "react-native-toast-message";
-import {
-  appwriteConfig,
-  databases,
-  uploadFile,
-  account,
-} from "../lib/appwrite";
+import { useAppwrite } from "../context/AppwriteContext";
 import { Query } from "react-native-appwrite";
 import { useAuth } from "../context/AuthContext";
 
 const PortfolioScreen = ({ navigation, route }) => {
+  const { appwriteConfig, databases, uploadFile, account } = useAppwrite();
   const [portfolioImages, setPortfolioImages] = useState([]);
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [agreeTnC, setAgreeTnC] = useState(false);
-  const {checkUserSession} = useAuth();
+  const { checkUserSession } = useAuth();
   const { role } = route.params;
 
   const showToast = (type, title, message) => {
@@ -88,10 +84,14 @@ const PortfolioScreen = ({ navigation, route }) => {
       );
 
       if (response.documents.length === 0) {
-        showToast("error", "User Not Found", "No user with the provided email.");
+        showToast(
+          "error",
+          "User Not Found",
+          "No user with the provided email."
+        );
         return;
       }
- 
+
       const userDocumentId = response.documents[0].$id;
 
       const uploadedImageURLs = await Promise.all(
@@ -100,7 +100,11 @@ const PortfolioScreen = ({ navigation, route }) => {
             const fileResponse = await uploadFile({ uri: imageUri }, "image");
             return fileResponse;
           } catch (err) {
-            showToast("error", "Upload Error", `Failed to upload: ${err.message}`);
+            showToast(
+              "error",
+              "Upload Error",
+              `Failed to upload: ${err.message}`
+            );
             return null;
           }
         })
@@ -118,7 +122,7 @@ const PortfolioScreen = ({ navigation, route }) => {
       );
 
       showToast("success", "Success", "Portfolio submitted successfully!");
-      navigation.navigate("Tabs", { screen: 'Home' })
+      navigation.navigate("Tabs", { screen: "Home" });
     } catch (error) {
       showToast("error", "Error", `Failed to submit: ${error.message}`);
     }
@@ -140,7 +144,11 @@ const PortfolioScreen = ({ navigation, route }) => {
       );
 
       if (response.documents.length === 0) {
-        showToast("error", "User Not Found", "No user with the provided email.");
+        showToast(
+          "error",
+          "User Not Found",
+          "No user with the provided email."
+        );
         return;
       }
 
@@ -158,7 +166,7 @@ const PortfolioScreen = ({ navigation, route }) => {
 
       showToast("success", "Success", "Portfolio submitted successfully!");
       await checkUserSession();
-      navigation.navigate("Tabs", { screen: 'Home' })
+      navigation.navigate("Tabs", { screen: "Home" });
     } catch (error) {
       showToast("error", "Error", `Failed to submit: ${error.message}`);
     }
@@ -169,46 +177,50 @@ const PortfolioScreen = ({ navigation, route }) => {
       await checkUserSession();
       navigation.navigate("Tabs", { screen: "Home" });
     } catch (error) {
-      Alert.alert("Error during session check")
+      Alert.alert("Error during session check");
     }
   };
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>{role === "client" ? "Read it loud" : "Portfolio"}</Text>
+      <Text style={styles.title}>
+        {role === "client" ? "Read it loud" : "Portfolio"}
+      </Text>
 
       <TouchableOpacity style={styles.skipButton} onPress={skipScreen}>
         <Text style={styles.skipButtonText}>Skip</Text>
       </TouchableOpacity>
 
       <Text style={styles.instructions}>
-        {role === "client" ? "Please read and agree before proceeding on BirdEARNER:" : "Please read before adding your portfolio on BirdEARNER:"}
+        {role === "client"
+          ? "Please read and agree before proceeding on BirdEARNER:"
+          : "Please read before adding your portfolio on BirdEARNER:"}
       </Text>
 
       {role === "client" ? (
         <View style={styles.containerMain}>
           <Text style={styles.boldText}>General Rules</Text>
           <Text style={styles.bulletPoints}>
-            1. Upload your image in 1080x1080 px</Text>
+            1. Upload your image in 1080x1080 px
+          </Text>
           <Text style={styles.bulletPoints}>
             2. Image size should be between 100 KB~2 MB.
-          </Text><Text style={styles.bulletPoints}>
-            3. Don’t upload any inappropriate or NSFW content.
-          </Text><Text style={styles.bulletPoints}>
-            4. Don’t fraud......
           </Text>
+          <Text style={styles.bulletPoints}>
+            3. Don’t upload any inappropriate or NSFW content.
+          </Text>
+          <Text style={styles.bulletPoints}>4. Don’t fraud......</Text>
           <Text style={styles.boldText}>Terms & Conditions</Text>
           <Text style={styles.bulletPoints}>
-            1. Upload your image in 1080x1080 px</Text>
+            1. Upload your image in 1080x1080 px
+          </Text>
           <Text style={styles.bulletPoints}>
             2. Image size should be between 100 KB~2 MB.
           </Text>
           <Text style={styles.bulletPoints}>
             3. Don’t upload any inappropriate or NSFW content.
           </Text>
-          <Text style={styles.bulletPoints}>
-            4. Don’t fraud......
-          </Text>
+          <Text style={styles.bulletPoints}>4. Don’t fraud......</Text>
           <Text style={styles.bulletPoints}>
             5. Image size should be between 100 KB~2 MB.
           </Text>
@@ -237,7 +249,6 @@ const PortfolioScreen = ({ navigation, route }) => {
           </Text>
         </TouchableOpacity>
       )}
-
 
       {role === "freelancer" && (
         <View style={styles.uploadedImages}>
@@ -296,7 +307,6 @@ const PortfolioScreen = ({ navigation, route }) => {
       </View>
 
       <Toast />
-      
     </ScrollView>
   );
 };
@@ -306,14 +316,14 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     backgroundColor: "#3b006b",
     paddingHorizontal: 25,
-    justifyContent: "center"
+    justifyContent: "center",
   },
   title: {
     fontSize: 28,
     color: "#ffffff",
     textAlign: "center",
     marginBottom: 40,
-    fontWeight: "600"
+    fontWeight: "600",
   },
   skipButton: {
     position: "absolute",
@@ -331,7 +341,7 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     fontSize: 16,
     marginBottom: 10,
-    fontWeight: "600"
+    fontWeight: "600",
   },
   containerMain: {
     backgroundColor: "#fff",
@@ -346,7 +356,7 @@ const styles = StyleSheet.create({
     marginLeft: 10,
     fontWeight: "600",
     marginBottom: 7,
-    marginTop: 15
+    marginTop: 15,
   },
   bulletPoint: {
     color: "#ffffff",
@@ -364,12 +374,12 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: "center",
-    marginTop: 25
+    marginTop: 25,
   },
   imageUploadButtonText: {
     color: "#ffffff",
     fontWeight: "bold",
-    fontSize: 18
+    fontSize: 18,
   },
   uploadedImages: {
     flexDirection: "row",
@@ -399,7 +409,7 @@ const styles = StyleSheet.create({
   removeButtonText: {
     color: "#ffffff",
     fontSize: 10,
-    fontWeight: "600"
+    fontWeight: "600",
   },
   checkboxContainer: {
     flexDirection: "row",

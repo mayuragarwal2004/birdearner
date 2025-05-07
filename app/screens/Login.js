@@ -6,14 +6,24 @@ import {
   TouchableOpacity,
   StyleSheet,
   Image,
+  ScrollView,
+  RefreshControl,
+  SafeAreaView,
 } from "react-native";
 import { FontAwesome } from "@expo/vector-icons";
 import { useAuth } from "../context/AuthContext";
 import Toast from "react-native-toast-message";
+import { useAppwrite } from "../context/AppwriteContext";
+import { useTheme } from "../context/ThemeContext";
 
 const Login = ({ navigation }) => {
+  const { initAppwrite } = useAppwrite();
   const [credentials, setCredentials] = useState({ email: "", password: "" });
   const { login } = useAuth();
+  const [refreshing, setRefreshing] = useState(false);
+
+  const { theme, themeStyles } = useTheme();
+  const currentTheme = themeStyles[theme];
 
   const handleInputChange = (field, value) => {
     setCredentials({ ...credentials, [field]: value });
@@ -56,6 +66,8 @@ const Login = ({ navigation }) => {
         routes: [{ name: "Tabs" }],
       });
     } catch (error) {
+      console.log("Login Error:", error.message);
+
       let errorMessage = "An unexpected error occurred.";
 
       if (error.message.includes("Invalid email or password")) {
@@ -68,76 +80,108 @@ const Login = ({ navigation }) => {
     }
   };
 
+  const onRefresh = () => {
+    console.log("Refreshing...");
+    initAppwrite();
+
+    setRefreshing(true);
+    setTimeout(() => {
+      setRefreshing(false);
+    }, 1000);
+  };
+
   return (
-    <View style={styles.container}>
-      {/* Logo */}
-      <Image source={require("../assets/logo11.png")} style={styles.logo} />
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#4B0082" }}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContainer}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={["#3b006b"]}
+            progressBackgroundColor={currentTheme.cardBackground || "#fff"}
+          />
+        }
+      >
+        <View style={styles.container}>
+          {/* Logo */}
+          <Image source={require("../assets/logo11.png")} style={styles.logo} />
 
-      {/* App Name */}
-      <Text style={styles.title}>BirdEARNER</Text>
-      <Text style={styles.subtitle}>Be BirdEARNER, Become Bread Earner!</Text>
+          {/* App Name */}
+          <Text style={styles.title}>BirdEARNER</Text>
+          <Text style={styles.subtitle}>
+            Be BirdEARNER, Become Bread Earner!
+          </Text>
 
-      {/* Inputs */}
-      {["email", "password"].map((field, index) => (
-        <TextInput
-          key={index}
-          style={styles.input}
-          placeholder={field === "email" ? "yourname@gmail.com" : "********"}
-          placeholderTextColor="#999"
-          keyboardType={field === "email" ? "email-address" : "default"}
-          secureTextEntry={field === "password"}
-          value={credentials[field]}
-          onChangeText={(value) => handleInputChange(field, value)}
-        />
-      ))}
+          {/* Inputs */}
+          {["email", "password"].map((field, index) => (
+            <TextInput
+              key={index}
+              style={styles.input}
+              placeholder={
+                field === "email" ? "yourname@gmail.com" : "********"
+              }
+              placeholderTextColor="#999"
+              keyboardType={field === "email" ? "email-address" : "default"}
+              secureTextEntry={field === "password"}
+              value={credentials[field]}
+              onChangeText={(value) => handleInputChange(field, value)}
+            />
+          ))}
 
-      {/* Login Button */}
-      <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-        <Text style={styles.loginButtonText}>Log In</Text>
-      </TouchableOpacity>
+          {/* Login Button */}
+          <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
+            <Text style={styles.loginButtonText}>Log In</Text>
+          </TouchableOpacity>
 
-      {/* Links */}
-      {[
-        { text: "Forget Password", screen: "ForgotPassword" },
-        { text: "New Here? Create Your Account Here!", screen: "Role" },
-      ].map((link, index) => (
-        <TouchableOpacity
-          key={index}
-          onPress={() => navigation.navigate(link.screen)}
-        >
-          <Text style={styles.linkText}>{link.text}</Text>
-        </TouchableOpacity>
-      ))}
+          {/* Links */}
+          {[
+            { text: "Forget Password", screen: "ForgotPassword" },
+            { text: "New Here? Create Your Account Here!", screen: "Role" },
+          ].map((link, index) => (
+            <TouchableOpacity
+              key={index}
+              onPress={() => navigation.navigate(link.screen)}
+            >
+              <Text style={styles.linkText}>{link.text}</Text>
+            </TouchableOpacity>
+          ))}
 
-      {/* Google Login */}
-      {/* <TouchableOpacity style={styles.googleButton}>
+          {/* Google Login */}
+          {/* <TouchableOpacity style={styles.googleButton}>
         <FontAwesome name="google" size={24} color="black" />
         <Text style={styles.googleButtonText}>Log in with Google</Text>
       </TouchableOpacity> */}
 
-      {/* Social Icons */}
-      <View style={styles.socialContainer}>
-        {["instagram", "facebook"].map((icon, index) => (
-          <FontAwesome
-            key={index}
-            name={icon}
-            size={24}
-            color="white"
-            style={styles.socialIcon}
-          />
-        ))}
-      </View>
+          {/* Social Icons */}
+          <View style={styles.socialContainer}>
+            {["instagram", "facebook"].map((icon, index) => (
+              <FontAwesome
+                key={index}
+                name={icon}
+                size={24}
+                color="white"
+                style={styles.socialIcon}
+              />
+            ))}
+          </View>
 
-      {/* Toast container */}
-      <Toast />
-    </View>
+          {/* Toast container */}
+          <Toast />
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  scrollContainer: {
+    flexGrow: 1,
+  },
   container: {
     flex: 1,
-    backgroundColor: "#4B0082", // Purple background
+    minHeight: '100%', // this is key!
+    backgroundColor: "#4B0082",
     alignItems: "center",
     justifyContent: "center",
     padding: 20,

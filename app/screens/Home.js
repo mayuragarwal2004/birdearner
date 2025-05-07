@@ -6,24 +6,25 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  RefreshControl
+  RefreshControl,
 } from "react-native";
 import { FontAwesome, MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "../context/AuthContext";
-import { appwriteConfig, databases } from "../lib/appwrite";
 import { useTheme } from "../context/ThemeContext";
 import { useNavigation } from "@react-navigation/native";
+import { useAppwrite } from "../context/AppwriteContext";
 
 const HomeScreen = () => {
+  const { appwriteConfig, databases } = useAppwrite();
   const { user, userData, setUserData, fetchUserData } = useAuth();
   const [profilePercentage, setProfilePercentage] = useState(20);
   const [flagsCount, setFlagsCount] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
-  const [CompletedOrders, setCompletedOrders] = useState(0)
-  const [activeOrders, setActiveOrders] = useState(0)
-  const [cancelledOrders, setCancelledOrdersOrders] = useState(0)
-  const [successScore, setSuccessScore] = useState(0)
-  const navigation = useNavigation()
+  const [CompletedOrders, setCompletedOrders] = useState(0);
+  const [activeOrders, setActiveOrders] = useState(0);
+  const [cancelledOrders, setCancelledOrdersOrders] = useState(0);
+  const [successScore, setSuccessScore] = useState(0);
+  const navigation = useNavigation();
 
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
@@ -32,23 +33,32 @@ const HomeScreen = () => {
 
   const fetchOrderRecords = async () => {
     try {
-      const cancelledOrders = userData?.cancelled_jobs.length
-      const assignedJobs = userData?.assigned_jobs
+      const cancelledOrders = userData?.cancelled_jobs.length;
+      const assignedJobs = userData?.assigned_jobs;
 
-      setCancelledOrdersOrders(cancelledOrders)
+      setCancelledOrdersOrders(cancelledOrders);
 
       if (userData?.assigned_jobs.length === 0) {
-        setActiveOrders(0)
-        setCompletedOrders(0)
+        setActiveOrders(0);
+        setCompletedOrders(0);
       } else {
         const jobPromises = assignedJobs.map((jobId) =>
-          databases.getDocument(appwriteConfig.databaseId, appwriteConfig.jobCollectionID, jobId)
+          databases.getDocument(
+            appwriteConfig.databaseId,
+            appwriteConfig.jobCollectionID,
+            jobId
+          )
         );
 
         const jobs = await Promise.all(jobPromises);
 
-        const completedCount = jobs.filter((job) => job?.completed_status === true).length;
-        const activeCount = jobs.filter((job) => job?.completed_status === false || job?.completed_status === null).length;
+        const completedCount = jobs.filter(
+          (job) => job?.completed_status === true
+        ).length;
+        const activeCount = jobs.filter(
+          (job) =>
+            job?.completed_status === false || job?.completed_status === null
+        ).length;
 
         setCompletedOrders(completedCount);
         setActiveOrders(activeCount);
@@ -58,18 +68,16 @@ const HomeScreen = () => {
           ? ((completedCount / totalOrders) * 100).toFixed(0)
           : 0;
 
-        setSuccessScore(calSuccessScore)
+        setSuccessScore(calSuccessScore);
       }
-
     } catch (error) {
-      throw error
+      throw error;
     }
-  }
+  };
 
   useEffect(() => {
-    fetchOrderRecords()
-  }, [])
-
+    fetchOrderRecords();
+  }, []);
 
   useEffect(() => {
     let percentage = 0;
@@ -84,23 +92,32 @@ const HomeScreen = () => {
     if (userData?.flags && Array.isArray(userData?.flags)) {
       setFlagsCount(userData?.flags.length);
     }
-
   }, [userData]);
 
   const handleCompleteProfile = () => {
-    const fullName = userData.full_name
-    const email = userData.email
-    const password = userData.password
-    const role = userData.role
+    const fullName = userData.full_name;
+    const email = userData.email;
+    const password = userData.password;
+    const role = userData.role;
 
     if (profilePercentage < 20) {
-      navigation.navigate("DescribeRoleCom", { fullName, email, password, role })
+      navigation.navigate("DescribeRoleCom", {
+        fullName,
+        email,
+        password,
+        role,
+      });
     } else if (profilePercentage >= 20 && profilePercentage < 40) {
-      navigation.navigate("DescribeRoleCom", { fullName, email, password, role })
+      navigation.navigate("DescribeRoleCom", {
+        fullName,
+        email,
+        password,
+        role,
+      });
     } else if (profilePercentage >= 40 && profilePercentage < 70) {
-      navigation.navigate("TellUsAboutYouCom", { role })
+      navigation.navigate("TellUsAboutYouCom", { role });
     } else if (profilePercentage >= 70 && profilePercentage < 100) {
-      navigation.navigate("PortfolioCom", { role })
+      navigation.navigate("PortfolioCom", { role });
     }
   };
 
@@ -110,28 +127,30 @@ const HomeScreen = () => {
         try {
           const freelancerId = userData?.$id;
 
-          const collectionId = userData?.role === "client" ? appwriteConfig.clientCollectionId : appwriteConfig.freelancerCollectionId
-
+          const collectionId =
+            userData?.role === "client"
+              ? appwriteConfig.clientCollectionId
+              : appwriteConfig.freelancerCollectionId;
 
           const freelancerDoc = await databases.getDocument(
             appwriteConfig.databaseId,
             collectionId,
             freelancerId
           );
-          setUserData(freelancerDoc)
+          setUserData(freelancerDoc);
         } catch (error) {
-          Alert.alert("Error updating flags:", error)
+          Alert.alert("Error updating flags:", error);
         }
       }
-    }
-    flagsData()
-  }, [refreshing])
+    };
+    flagsData();
+  }, [refreshing]);
 
   const formatAmount = (xp) => {
     if (xp >= 1000000) {
-      return (xp / 1000000).toFixed(1) + 'M'; // For millions
+      return (xp / 1000000).toFixed(1) + "M"; // For millions
     } else if (xp >= 1000) {
-      return (xp / 1000).toFixed(1) + 'K'; // For thousands
+      return (xp / 1000).toFixed(1) + "K"; // For thousands
     } else {
       return xp; // For values less than 1000
     }
@@ -147,8 +166,10 @@ const HomeScreen = () => {
   };
 
   return (
-    <SafeAreaView >
-      <ScrollView showsVerticalScrollIndicator={false} style={styles.safeContainer}
+    <SafeAreaView>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        style={styles.safeContainer}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -159,9 +180,12 @@ const HomeScreen = () => {
         }
       >
         <View style={styles.header}>
-          <TouchableOpacity style={styles.notificationIcon} onPress={() => {
-            navigation.navigate("Notification")
-          }} >
+          <TouchableOpacity
+            style={styles.notificationIcon}
+            onPress={() => {
+              navigation.navigate("Notification");
+            }}
+          >
             <MaterialIcons name="notifications" size={24} color="#fff" />
           </TouchableOpacity>
           <Text style={styles.welcomeText}>Welcome Back</Text>
@@ -207,20 +231,34 @@ const HomeScreen = () => {
           <Text style={styles.sectionTitle}>Your Earnings</Text>
           <View style={styles.earningsContainer}>
             <View style={styles.earningItem}>
-              <Text style={styles.earningValue}>Rs. {formatAmount(userData?.totalEarnings) || "0"} </Text>
+              <Text style={styles.earningValue}>
+                Rs. {formatAmount(userData?.totalEarnings) || "0"}{" "}
+              </Text>
               <Text style={styles.earningLabel}>Total Earnings</Text>
             </View>
             <View style={styles.earningItem}>
-              <Text style={styles.earningValue}>Rs. {formatAmount(userData?.monthlyEarnings) || "0"}</Text>
+              <Text style={styles.earningValue}>
+                Rs. {formatAmount(userData?.monthlyEarnings) || "0"}
+              </Text>
               <Text style={styles.earningLabel}>Monthly</Text>
             </View>
             <View style={styles.earningItem}>
-              <Text style={styles.earningValue}>{formatAmount(userData?.outstandingAmount) || "0"}</Text>
+              <Text style={styles.earningValue}>
+                {formatAmount(userData?.outstandingAmount) || "0"}
+              </Text>
               <Text style={styles.earningLabel}>Outstanding Amount</Text>
             </View>
             <View style={styles.earningItem}>
-              <TouchableOpacity onPress={() => navigation.navigate("Profile", { screen: "Withdrawal Earning" })}>
-                <Text style={styles.earningValue}>Rs. {formatAmount(userData?.withdrawableAmount) || "0"}</Text>
+              <TouchableOpacity
+                onPress={() =>
+                  navigation.navigate("Profile", {
+                    screen: "Withdrawal Earning",
+                  })
+                }
+              >
+                <Text style={styles.earningValue}>
+                  Rs. {formatAmount(userData?.withdrawableAmount) || "0"}
+                </Text>
               </TouchableOpacity>
               <Text style={styles.earningLabel}>Withdrawal</Text>
             </View>
@@ -246,28 +284,63 @@ const HomeScreen = () => {
           </View>
         </View>
 
-
-        {
-          !userData?.terms_accepted && profilePercentage !== 100 && (
-            <View style={styles.sectionContainer}>
-              <View style={styles.profileContainers}>
-                <Text style={styles.profileText}>Complete Your Profile</Text>
-                <Text style={styles.whatsNewText}>Your profile is {profilePercentage}% complete</Text>
-                <View style={styles.boxColor}>
-                  <View style={profilePercentage >= 20 ? styles.redBox : styles.pBoxColor}></View>
-                  <View style={profilePercentage >= 40 ? styles.redBox : styles.pBoxColor}></View>
-                  <View style={profilePercentage >= 70 ? styles.yellowBox : styles.pBoxColor}></View>
-                  <View style={profilePercentage >= 70 ? styles.yellowBox : styles.pBoxColor}></View>
-                  <View style={profilePercentage === 100 ? styles.greenBox : styles.pBoxColor}></View>
-                  <View style={profilePercentage === 100 ? styles.greenBox : styles.pBoxColor}></View>
-                </View>
-                <TouchableOpacity style={styles.loginButton} onPress={handleCompleteProfile} F>
-                  <Text style={styles.loginButtonText}>Complete Now</Text>
-                </TouchableOpacity>
+        {!userData?.terms_accepted && profilePercentage !== 100 && (
+          <View style={styles.sectionContainer}>
+            <View style={styles.profileContainers}>
+              <Text style={styles.profileText}>Complete Your Profile</Text>
+              <Text style={styles.whatsNewText}>
+                Your profile is {profilePercentage}% complete
+              </Text>
+              <View style={styles.boxColor}>
+                <View
+                  style={
+                    profilePercentage >= 20 ? styles.redBox : styles.pBoxColor
+                  }
+                ></View>
+                <View
+                  style={
+                    profilePercentage >= 40 ? styles.redBox : styles.pBoxColor
+                  }
+                ></View>
+                <View
+                  style={
+                    profilePercentage >= 70
+                      ? styles.yellowBox
+                      : styles.pBoxColor
+                  }
+                ></View>
+                <View
+                  style={
+                    profilePercentage >= 70
+                      ? styles.yellowBox
+                      : styles.pBoxColor
+                  }
+                ></View>
+                <View
+                  style={
+                    profilePercentage === 100
+                      ? styles.greenBox
+                      : styles.pBoxColor
+                  }
+                ></View>
+                <View
+                  style={
+                    profilePercentage === 100
+                      ? styles.greenBox
+                      : styles.pBoxColor
+                  }
+                ></View>
               </View>
+              <TouchableOpacity
+                style={styles.loginButton}
+                onPress={handleCompleteProfile}
+                F
+              >
+                <Text style={styles.loginButtonText}>Complete Now</Text>
+              </TouchableOpacity>
             </View>
-          )
-        }
+          </View>
+        )}
 
         <View style={styles.sectionContainer}>
           <Text style={styles.sectionTitle}>What's New</Text>
@@ -278,7 +351,10 @@ const HomeScreen = () => {
         </View>
       </ScrollView>
       <View style={styles.stickyButton}>
-        <TouchableOpacity style={styles.chatIcon} onPress={() => navigation.navigate("Chatlist")}>
+        <TouchableOpacity
+          style={styles.chatIcon}
+          onPress={() => navigation.navigate("Chatlist")}
+        >
           <FontAwesome name="comments" size={28} color="#fff" />
         </TouchableOpacity>
       </View>
@@ -299,7 +375,7 @@ const getStyles = (currentTheme) =>
       justifyContent: "space-between",
       alignItems: "center",
       marginBottom: 20,
-      marginTop: 15
+      marginTop: 15,
     },
     welcomeText: {
       fontSize: 24,
@@ -316,7 +392,6 @@ const getStyles = (currentTheme) =>
       borderRadius: 50,
       position: "absolute",
       right: 10,
-
     },
     sectionContainer: {
       marginBottom: 20,
@@ -346,37 +421,37 @@ const getStyles = (currentTheme) =>
       fontSize: 24,
       fontWeight: "500",
       textAlign: "center",
-      color: currentTheme.text
+      color: currentTheme.text,
     },
     boxColor: {
       flex: 1,
       flexDirection: "row",
       gap: 5,
-      marginHorizontal: 20
+      marginHorizontal: 20,
     },
     pBoxColor: {
       backgroundColor: currentTheme.text2 || "#CCD2CE",
       height: 12,
       width: 48,
-      borderRadius: 12
+      borderRadius: 12,
     },
     redBox: {
       backgroundColor: "#FF3131",
       height: 12,
       width: 48,
-      borderRadius: 12
+      borderRadius: 12,
     },
     yellowBox: {
       backgroundColor: "#CEBF1D",
       height: 12,
       width: 48,
-      borderRadius: 12
+      borderRadius: 12,
     },
     greenBox: {
       backgroundColor: "#00871E",
       height: 12,
       width: 48,
-      borderRadius: 12
+      borderRadius: 12,
     },
     loginButton: {
       width: "100%",
@@ -410,7 +485,7 @@ const getStyles = (currentTheme) =>
       },
       shadowOpacity: 0.17,
       shadowRadius: 3.05,
-      elevation: 4
+      elevation: 4,
     },
     statsContainer: {
       backgroundColor: currentTheme.cardBackground || "#ffffff",
@@ -439,7 +514,7 @@ const getStyles = (currentTheme) =>
       justifyContent: "center",
       alignContent: "center",
       alignItems: "center",
-      gap: 15
+      gap: 15,
     },
     statItem: {
       alignItems: "center",
@@ -504,7 +579,7 @@ const getStyles = (currentTheme) =>
       },
       shadowOpacity: 0.17,
       shadowRadius: 3.05,
-      elevation: 4
+      elevation: 4,
     },
     orderItem: {
       alignItems: "center",
@@ -537,7 +612,7 @@ const getStyles = (currentTheme) =>
       },
       shadowOpacity: 0.17,
       shadowRadius: 3.05,
-      elevation: 4
+      elevation: 4,
     },
     whatsNewText: {
       fontSize: 16,
@@ -558,13 +633,13 @@ const getStyles = (currentTheme) =>
       },
       shadowOpacity: 0.17,
       shadowRadius: 3.05,
-      elevation: 4
+      elevation: 4,
     },
     chatIcon: {
       flex: 1,
       justifyContent: "center",
       alignContent: "center",
-      alignItems: "center"
+      alignItems: "center",
     },
   });
 

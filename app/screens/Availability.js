@@ -9,8 +9,8 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { Picker } from "@react-native-picker/picker";
 import { useAuth } from "../context/AuthContext";
-import { appwriteConfig, databases } from "../lib/appwrite";
 import { useTheme } from "../context/ThemeContext";
+import { useAppwrite } from "../context/AppwriteContext";
 
 const AvailabilityScreen = ({ navigation }) => {
   const [offlineDuration, setOfflineDuration] = useState("1 hour");
@@ -18,6 +18,7 @@ const AvailabilityScreen = ({ navigation }) => {
   const availability = userData?.currently_available
   const [selectedStatus, setSelectedStatus] = useState(availability);
   const freelancerId = userData.$id
+  const { appwriteConfig, databases } = useAppwrite();
 
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];

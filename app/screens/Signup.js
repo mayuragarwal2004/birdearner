@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from "react-native";
-import { account } from "../lib/appwrite";
+import { useAppwrite } from "../context/AppwriteContext";
 import { ID } from "react-native-appwrite";
 import Toast from "react-native-toast-message";
 
@@ -16,6 +16,7 @@ const validateEmail = (email) => {
 };
 
 const Signup = ({ navigation, route }) => {
+  const { account } = useAppwrite();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

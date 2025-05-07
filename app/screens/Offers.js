@@ -16,15 +16,28 @@ import nest from "../assets/nest.png";
 import tree from "../assets/tree.png";
 import brEgg from "../assets/brEgg.png";
 import { useAuth } from "../context/AuthContext";
-import { appwriteConfig, databases } from "../lib/appwrite";
+import { useAppwrite } from "../context/AppwriteContext";
 import { Query } from "react-native-appwrite";
 import { useTheme } from "../context/ThemeContext";
 
 const offers = [10, 50, 0, 25, 15];
 
 const OffersScreen = ({ navigation }) => {
-  const [eggStatus, setEggStatus] = useState([false, false, false, false, false]);
-  const [brokenEggs, setBrokenEggs] = useState([false, false, false, false, false]);
+  const { appwriteConfig, databases } = useAppwrite();
+  const [eggStatus, setEggStatus] = useState([
+    false,
+    false,
+    false,
+    false,
+    false,
+  ]);
+  const [brokenEggs, setBrokenEggs] = useState([
+    false,
+    false,
+    false,
+    false,
+    false,
+  ]);
   const [showOfferPopup, setShowOfferPopup] = useState(false);
   const [showRulesPopup, setShowRulesPopup] = useState(false);
   const [showVideoPopup, setShowVideoPopup] = useState(false);
@@ -62,17 +75,19 @@ const OffersScreen = ({ navigation }) => {
       const response = await databases.listDocuments(
         appwriteConfig.databaseId,
         appwriteConfig.userEggsCollectionId,
-        [
-          Query.equal('userId', userId),
-        ]);
+        [Query.equal("userId", userId)]
+      );
 
       if (response.documents.length === 0) {
         const currentDate = new Date();
         const eggStatusInitial = [false, false, false, false, false];
         const brokenEggInitial = [false, false, false, false, false];
         setShowRulesPopup(true);
-        await createOfferDocument(eggStatusInitial, brokenEggInitial, currentDate);
-
+        await createOfferDocument(
+          eggStatusInitial,
+          brokenEggInitial,
+          currentDate
+        );
       } else {
         const userEggData = response.documents[0];
         const { eggStatus, brokenEggs, lastRefreshDate } = userEggData;
@@ -91,7 +106,6 @@ const OffersScreen = ({ navigation }) => {
 
         const currentDate = new Date();
         const currentMonth = currentDate.getMonth();
-
 
         if (currentMonth !== lastRefreshMonth) {
           const newEggStatus = [false, false, false, false, false];
@@ -119,12 +133,16 @@ const OffersScreen = ({ navigation }) => {
     }
   };
 
-  const createOfferDocument = async (eggStatusInitial, brokenEggInitial, currentDate) => {
+  const createOfferDocument = async (
+    eggStatusInitial,
+    brokenEggInitial,
+    currentDate
+  ) => {
     try {
       await databases.createDocument(
         appwriteConfig.databaseId,
         appwriteConfig.userEggsCollectionId,
-        'unique()',
+        "unique()",
         {
           userId,
           eggStatus: eggStatusInitial,
@@ -133,7 +151,7 @@ const OffersScreen = ({ navigation }) => {
         }
       );
       setEggStatus(eggStatusInitial);
-      setBrokenEggs(brokenEggInitial)
+      setBrokenEggs(brokenEggInitial);
     } catch (error) {
       console.error("Error creating offer document:", error);
     }
@@ -176,9 +194,9 @@ const OffersScreen = ({ navigation }) => {
       setBrokenEggs(updatedBrokenEggs);
 
       try {
-
         const clientCollectionId = appwriteConfig.clientCollectionId;
-        const paymentHistoryCollectionId = appwriteConfig.paymentHistoryCollectionId;
+        const paymentHistoryCollectionId =
+          appwriteConfig.paymentHistoryCollectionId;
 
         // Fetch user document to get the current wallet amount
         const userDoc = await databases.getDocument(
@@ -204,12 +222,12 @@ const OffersScreen = ({ navigation }) => {
         await databases.createDocument(
           appwriteConfig.databaseId,
           paymentHistoryCollectionId,
-          'unique()',
+          "unique()",
           {
             userId: userId,
             paymentId: "Cashback Amount",
             amount: parseFloat(randomOffer),
-            status: 'Recieved',
+            status: "Recieved",
             date: new Date().toISOString(),
           }
         );
@@ -217,7 +235,7 @@ const OffersScreen = ({ navigation }) => {
         const response = await databases.listDocuments(
           appwriteConfig.databaseId,
           appwriteConfig.userEggsCollectionId,
-          [Query.equal('userId', userId)]
+          [Query.equal("userId", userId)]
         );
 
         if (response.documents.length > 0) {
@@ -253,23 +271,28 @@ const OffersScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ImageBackground source={offerBackground} style={styles.offerBackground} resizeMode="cover">
+      <ImageBackground
+        source={offerBackground}
+        style={styles.offerBackground}
+        resizeMode="cover"
+      >
         <Image source={tree} style={styles.tree} />
         {eggStatus.map((status, index) => (
           <React.Fragment key={index}>
             <Image source={nest} style={styles[`nest${index + 1}`]} />
             <Animated.View
               style={[
-                styles[`egg${index + 1}`], brokenEggs[index] && styles[`brokenEgg${index + 1}`],
+                styles[`egg${index + 1}`],
+                brokenEggs[index] && styles[`brokenEgg${index + 1}`],
                 {
                   transform: [
                     {
                       translateX: brokenEggs[index]
                         ? 0
                         : shakeAnimations[index].interpolate({
-                          inputRange: [-1, 1],
-                          outputRange: [-5, 5],
-                        }),
+                            inputRange: [-1, 1],
+                            outputRange: [-5, 5],
+                          }),
                     },
                   ],
                 },
@@ -294,7 +317,9 @@ const OffersScreen = ({ navigation }) => {
         <View style={styles.popupOverlay}>
           <View style={styles.popupContent}>
             <Text style={styles.popupTitle}>Congratulations!</Text>
-            <Text style={styles.popupText}>You've earned a cashback of ₹{selectedOffer}!</Text>
+            <Text style={styles.popupText}>
+              You've earned a cashback of ₹{selectedOffer}!
+            </Text>
             <TouchableOpacity style={styles.popupButton} onPress={closePopup}>
               <Text style={styles.popupButtonText}>Claim Cashback</Text>
             </TouchableOpacity>
@@ -318,18 +343,28 @@ const OffersScreen = ({ navigation }) => {
       {/* Rules Popup (First-time Visit) */}
       <Modal visible={showRulesPopup} transparent={true} animationType="slide">
         <View style={styles.popupOverlay1}>
-          <Animated.View style={[styles.popupContent1, { transform: [{ translateY: slideAnimation }] }]}>
+          <Animated.View
+            style={[
+              styles.popupContent1,
+              { transform: [{ translateY: slideAnimation }] },
+            ]}
+          >
             <Text style={styles.popupTitle1}>How Offers Work</Text>
             <Text style={styles.popupDetails1}>
-              Unlock eggs by completing orders. Each egg holds a surprise offer, ranging cashback money! 🎁
+              Unlock eggs by completing orders. Each egg holds a surprise offer,
+              ranging cashback money! 🎁
             </Text>
             <Text style={styles.popupDetails1}>
-              The eggs reset every month, so check back regularly to unlock new surprises. 🗓️
+              The eggs reset every month, so check back regularly to unlock new
+              surprises. 🗓️
             </Text>
             <Text style={styles.popupDetails1}>
               Tap on each egg to crack it open and reveal your reward! 🥚💰
             </Text>
-            <TouchableOpacity style={styles.popupButton1} onPress={closeRulesPopup}>
+            <TouchableOpacity
+              style={styles.popupButton1}
+              onPress={closeRulesPopup}
+            >
               <Text style={styles.popupButtonText1}>Got It!</Text>
             </TouchableOpacity>
           </Animated.View>
@@ -359,7 +394,6 @@ const getStyles = (currentTheme) =>
       fontSize: 16,
       fontWeight: "bold",
     },
-
 
     offerBackground: {
       flex: 1,
@@ -445,18 +479,18 @@ const getStyles = (currentTheme) =>
       alignItems: "center",
       elevation: 5,
       borderColor: currentTheme.border || "#fff",
-      borderWidth: 2
+      borderWidth: 2,
     },
     popupTitle: {
       fontSize: 20,
       fontWeight: "bold",
       marginBottom: 10,
-      color: currentTheme.text
+      color: currentTheme.text,
     },
     popupText: {
       fontSize: 16,
       marginBottom: 20,
-      color: currentTheme.subText
+      color: currentTheme.subText,
     },
     popupButton: {
       backgroundColor: "#4C0183",

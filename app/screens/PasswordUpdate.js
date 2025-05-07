@@ -8,10 +8,11 @@ import {
   Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { account, appwriteConfig, databases } from "../lib/appwrite";
+import { useAppwrite } from "../context/AppwriteContext";
 import { useTheme } from "../context/ThemeContext";
 
 const PasswordUpdateScreen = ({ navigation }) => {
+  const { account } = useAppwrite();
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -40,7 +41,10 @@ const PasswordUpdateScreen = ({ navigation }) => {
       Alert.alert("Success", "Password updated successfully.");
       navigation.goBack();
     } catch (error) {
-      Alert.alert("Error", "Failed to update password. Please check your current password and try again.");
+      Alert.alert(
+        "Error",
+        "Failed to update password. Please check your current password and try again."
+      );
     }
   };
 
@@ -51,7 +55,11 @@ const PasswordUpdateScreen = ({ navigation }) => {
           onPress={() => navigation.goBack()}
           style={styles.backButton}
         >
-          <Ionicons name="arrow-back" size={24} color={currentTheme.text || black} />
+          <Ionicons
+            name="arrow-back"
+            size={24}
+            color={currentTheme.text || black}
+          />
         </TouchableOpacity>
         <Text style={styles.header}>Password update</Text>
       </View>
@@ -84,7 +92,10 @@ const PasswordUpdateScreen = ({ navigation }) => {
         secureTextEntry={true}
       />
 
-      <TouchableOpacity style={styles.signupButton} onPress={handlePasswordUpdate} >
+      <TouchableOpacity
+        style={styles.signupButton}
+        onPress={handlePasswordUpdate}
+      >
         <Text style={styles.signupButtonText}>Save</Text>
       </TouchableOpacity>
     </View>
@@ -97,7 +108,7 @@ const getStyles = (currentTheme) =>
       flex: 1,
       padding: 20,
       backgroundColor: currentTheme.background || "#FFF",
-      paddingHorizontal: 30
+      paddingHorizontal: 30,
     },
     main: {
       marginTop: 45,
@@ -112,7 +123,7 @@ const getStyles = (currentTheme) =>
       fontWeight: "bold",
       // marginBottom: 20,
       textAlign: "center",
-      color: currentTheme.text
+      color: currentTheme.text,
     },
     label: {
       fontSize: 18,
@@ -140,7 +151,7 @@ const getStyles = (currentTheme) =>
       alignItems: "center",
       justifyContent: "center",
       marginTop: 20,
-      margin: "auto"
+      margin: "auto",
     },
     signupButtonText: {
       color: "#fff",

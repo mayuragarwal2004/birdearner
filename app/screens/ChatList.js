@@ -9,12 +9,12 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
-import { appwriteConfig, databases } from "../lib/appwrite";
 import { useAuth } from "../context/AuthContext";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { Query } from "react-native-appwrite";
 import { useTheme } from "../context/ThemeContext";
+import { useAppwrite } from "../context/AppwriteContext";
 
 const ChatList = () => {
   const [chatThreads, setChatThreads] = useState([]);
@@ -25,6 +25,7 @@ const ChatList = () => {
   const isDataFetched = useRef(false);
   const { userData } = useAuth();
   const navigation = useNavigation()
+  const { appwriteConfig, databases } = useAppwrite();
 
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];

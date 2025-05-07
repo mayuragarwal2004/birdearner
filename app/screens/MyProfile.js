@@ -17,10 +17,9 @@ import {
   Easing,
 } from "react-native";
 import { FontAwesome, MaterialIcons } from "@expo/vector-icons";
-// import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../context/AuthContext";
 import ImageViewer from "react-native-image-zoom-viewer";
-import { appwriteConfig, databases } from "../lib/appwrite";
+import { useAppwrite } from "../context/AppwriteContext";
 import Toast from "react-native-toast-message";
 import { useTheme } from "../context/ThemeContext";
 import LottieView from "lottie-react-native";
@@ -28,6 +27,7 @@ import LottieView from "lottie-react-native";
 const AnimatedLottieView = Animated.createAnimatedComponent(LottieView);
 
 export default function ProfileScreen({ navigation }) {
+  const { appwriteConfig, databases } = useAppwrite();
   const {
     user,
     loading,
