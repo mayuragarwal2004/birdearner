@@ -13,12 +13,15 @@ import {
 import { FontAwesome } from "@expo/vector-icons";
 import { useAppwrite } from "../context/AppwriteContext";
 import ImageViewer from "react-native-image-zoom-viewer";
-import DateTimePickerModal from "react-native-modal-datetime-picker";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { useTheme } from "../context/ThemeContext";
 import * as ImagePicker from "expo-image-picker";
 
 const UpdateJobDetailsScreen = ({ route, navigation }) => {
   const { appwriteConfig, databases, uploadFile } = useAppwrite();
+  const [deadline, setDeadline] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
   const { projectId } = route.params;
   const [modalVisible, setModalVisible] = useState(false);
   const [images, setImages] = useState([]);
@@ -28,26 +31,33 @@ const UpdateJobDetailsScreen = ({ route, navigation }) => {
   const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
   const [portfolioImages, setPortfolioImages] = useState([]);
 
+  const onChangeDeadline = (event, selectedDate) => {
+    const currentDate = selectedDate || deadline;
+    setShowDatePicker(false);
+    setDeadline(currentDate);
+  };
+
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
 
   const styles = getStyles(currentTheme);
 
+  const fetchJobDetails = async () => {
+    try {
+      const jobDoc = await databases.getDocument(
+        appwriteConfig.databaseId,
+        appwriteConfig.jobCollectionID,
+        projectId
+      );
+      setJob(jobDoc);
+      setUpdatedJob({ ...jobDoc }); // Clone the job details for editing
+      setDeadline(new Date(jobDoc.deadline));
+    } catch (error) {
+      Alert.alert("Error", `Failed to fetch job details: ${error.message}`);
+    }
+  };
+  
   useEffect(() => {
-    const fetchJobDetails = async () => {
-      try {
-        const jobDoc = await databases.getDocument(
-          appwriteConfig.databaseId,
-          appwriteConfig.jobCollectionID,
-          projectId
-        );
-        setJob(jobDoc);
-        setUpdatedJob({ ...jobDoc }); // Clone the job details for editing
-      } catch (error) {
-        Alert.alert("Error", `Failed to fetch job details: ${error.message}`);
-      }
-    };
-
     fetchJobDetails();
   }, [projectId]);
 
@@ -93,7 +103,7 @@ const UpdateJobDetailsScreen = ({ route, navigation }) => {
         description: updatedJob.description,
         budget: parseInt(updatedJob.budget, 10),
         skills: updatedJob.skills,
-        deadline: updatedJob.deadline,
+        deadline: deadline.toISOString(),
         attached_files: allImageUrls,
         updated_at: new Date().toISOString(),
       };
@@ -109,6 +119,7 @@ const UpdateJobDetailsScreen = ({ route, navigation }) => {
       setPortfolioImages([]);
       setIsEditing(false);
       Alert.alert("Success", "Job updated successfully!");
+      fetchJobDetails();
     } catch (error) {
       console.error("Error updating job:", error);
       Alert.alert("Error", `Failed to update job: ${error.message}`);
@@ -209,23 +220,6 @@ const UpdateJobDetailsScreen = ({ route, navigation }) => {
         }
       />
 
-      {/* Deadline (DateTime picker) */}
-      <Text style={styles.label1}>Deadline</Text>
-      <TouchableOpacity onPress={() => setIsDatePickerVisible(true)}>
-        <TextInput
-          style={styles.input1}
-          value={new Date(updatedJob.deadline).toLocaleString()}
-          editable={false}
-        />
-      </TouchableOpacity>
-      <DateTimePickerModal
-        isVisible={isDatePickerVisible}
-        mode="datetime"
-        date={new Date(updatedJob.deadline)}
-        onConfirm={handleDateConfirm}
-        onCancel={() => setIsDatePickerVisible(false)}
-      />
-
       {/* Skills */}
       <Text style={styles.label1}>Skills</Text>
       <TextInput
@@ -238,6 +232,24 @@ const UpdateJobDetailsScreen = ({ route, navigation }) => {
           })
         }
       />
+
+      <View>
+        <Text style={styles.label}>Deadline</Text>
+        <TouchableOpacity
+          style={styles.dob}
+          onPress={() => setShowDatePicker(true)}
+        >
+          <Text>{deadline ? deadline.toDateString() : "Deadline"}</Text>
+        </TouchableOpacity>
+        {showDatePicker && (
+          <DateTimePicker
+            value={deadline}
+            mode="date"
+            display="default"
+            onChange={onChangeDeadline}
+          />
+        )}
+      </View>
 
       {/* Attached Files */}
       <View style={styles.attachedFilesContainer1}>
