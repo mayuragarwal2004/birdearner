@@ -8,11 +8,11 @@ import {
 } from "react-native";
 import { useAuth } from "../context/AuthContext";
 import Toast from "react-native-toast-message";
-import { Client, Account } from "appwrite";
+import { useAppwrite } from "../context/AppwriteContext";
 
 const ForgetPasswordScreen = ({ navigation }) => {
+  const { account } = useAppwrite();
   const [email, setEmail] = useState("");
-  const { client } = useAuth();
 
   const handleInputChange = (value) => {
     setEmail(value);
@@ -45,7 +45,7 @@ const ForgetPasswordScreen = ({ navigation }) => {
   const handleForgotPassword = async () => {
     if (!validateInputs()) return;
 
-    const account = new Account(client);
+    // const account = new Account(client);
 
     try {
       await account.createRecovery(

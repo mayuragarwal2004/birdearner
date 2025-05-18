@@ -36,6 +36,28 @@ import ViewSolutionsScreen from "./screens/ViewSolutionsScreen";
 import UpdateJobDetailsScreen from "./screens/UpdateJobDetailsScreen";
 
 import messaging from "@react-native-firebase/messaging";
+import { AuthProvider } from "./context/AuthContext";
+import { StatusBar } from "expo-status-bar";
+import { ThemeProvider } from "./context/ThemeContext";
+import { AppwriteProvider } from "./context/AppwriteContext";
+import { NavigationContainer } from "@react-navigation/native";
+
+export default function MainApp() {
+  console.log("hi");
+
+  return (
+    <NavigationContainer>
+      <ThemeProvider>
+        <AppwriteProvider>
+          <AuthProvider>
+            <App />
+            <StatusBar style="auto" />
+          </AuthProvider>
+        </AppwriteProvider>
+      </ThemeProvider>
+    </NavigationContainer>
+  );
+}
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -153,7 +175,8 @@ async function requestUserPermission() {
 }
 
 // Main App Component
-export default function App() {
+export function App() {
+  console.log("hi");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const { user, loading } = useAuth();
 
