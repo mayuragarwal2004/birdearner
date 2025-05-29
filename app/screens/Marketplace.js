@@ -24,15 +24,16 @@ const colors = {
   Standard: ["#34660C", "#77CB35"],
 };
 
-const maxDist = 6000;
+const maxDist = 20;
 
 const MarketplaceScreen = ({ navigation }) => {
   const { appwriteConfig, databases } = useAppwrite();
   const mapRef = useRef(null);
-  const [distance, setDistance] = useState(600);
+  const [distance, setDistance] = useState(20);
+  const [sliderWidth, setSliderWidth] = useState(0);
   const [location, setLocation] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
-  const step = 5;
+  const step = 0.5;
   const animatedValue = useRef(new Animated.Value(0)).current;
   const [jobs, setJobs] = useState({
     Immediate: [],
@@ -48,7 +49,7 @@ const MarketplaceScreen = ({ navigation }) => {
 
   const updateDistance = (newDistance) => {
     const boundedDistance = Math.min(maxDist, Math.max(0, newDistance));
-    const snappedDistance = Math.round(boundedDistance / step) * step; // Snap to nearest 5km
+    const snappedDistance = Math.round(boundedDistance / step) * step; // Snap to nearest step
     setDistance(snappedDistance);
 
     Animated.timing(animatedValue, {
@@ -59,7 +60,10 @@ const MarketplaceScreen = ({ navigation }) => {
   };
 
   const handleSlide = (locationX) => {
-    const percentage = (locationX / 307) * 100;
+    console.log("Slider Location X:", locationX);
+
+    if (sliderWidth === 0) return;
+    const percentage = (locationX / sliderWidth) * 100;
     const newDistance = (percentage / 100) * maxDist;
     updateDistance(newDistance);
   };
@@ -114,7 +118,7 @@ const MarketplaceScreen = ({ navigation }) => {
       const remainingJobs = allJobs.filter(
         (job) => job?.assigned_freelancer === null
       );
-      console.log(remainingJobs);
+      // console.log(remainingJobs);
 
       if (filterByLocation && location) {
         const filteredJobs = remainingJobs.filter((job) => {
@@ -192,6 +196,7 @@ const MarketplaceScreen = ({ navigation }) => {
       );
     }
     return lines;
+    // return [];
   };
 
   if (loading) {
@@ -202,6 +207,8 @@ const MarketplaceScreen = ({ navigation }) => {
     );
   }
 
+  // console.log("Slider Width:", sliderWidth);
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -209,69 +216,63 @@ const MarketplaceScreen = ({ navigation }) => {
         <View style={styles.sliderContainer}>
           <Text style={styles.distanceText}>{distance} km</Text>
 
-          <View style={styles.customSliderWrapper}>
-            <LinearGradient
-              colors={["#232222", "#898686"]}
-              start={{ x: 0, y: 1 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.sliderBackground}
-              onStartShouldSetResponder={(e) => {
-                const { locationX } = e.nativeEvent;
-                handleSlide(locationX);
-                return true;
-              }}
-              onMoveShouldSetResponder={() => true}
-              onResponderMove={(e) => {
-                const { locationX } = e.nativeEvent;
-                handleSlide(locationX);
-              }}
+          <View style={styles.sliderControls}>
+            {/* - Button */}
+            <TouchableOpacity
+              onPress={() => updateDistance(distance - step)}
+              style={styles.iconButton}
             >
-              {/* <Animated.View
-                style={[
-                  styles.linesContainer,
-                  {
-                    transform: [
-                      {
-                        translateX: animatedValue.interpolate({
-                          inputRange: [0, 100],
-                          outputRange: [0, -200], // Move lines left when sliding right
-                        }),
-                      },
-                    ],
-                  },
-                ]}
+              <Entypo name="circle-with-minus" size={29} color="black" />
+            </TouchableOpacity>
+
+            {/* Slider Body */}
+            <View
+              style={styles.customSliderWrapper}
+              onLayout={(e) => setSliderWidth(e.nativeEvent.layout.width)}
+            >
+              {/* Gradient background and lines */}
+              <LinearGradient
+                colors={["#232222", "#898686"]}
+                start={{ x: 0, y: 1 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.sliderBackground}
+                pointerEvents="none" // Let touches pass through
               >
-                {renderLines()}
-              </Animated.View> */}
+                <View style={styles.linesContainer}>{renderLines()}</View>
 
-              <View style={styles.linesContainer}>{renderLines()}</View>
+                <View
+                  style={[
+                    styles.sliderIndicator,
+                    { left: `${(distance / maxDist) * 100}%` },
+                  ]}
+                >
+                  <Text style={styles.sliderIndicatorText}>▼</Text>
+                </View>
+              </LinearGradient>
 
+              {/* Invisible overlay for click handling */}
               <View
-                style={[
-                  styles.sliderIndicator,
-                  { left: `${(distance / maxDist) * 100}%` },
-                ]}
-              >
-                <Text style={styles.sliderIndicatorText}>▼</Text>
-              </View>
-            </LinearGradient>
+                style={StyleSheet.absoluteFill}
+                onStartShouldSetResponder={(e) => {
+                  const { locationX } = e.nativeEvent;
+                  handleSlide(locationX);
+                  return true;
+                }}
+                onMoveShouldSetResponder={() => true}
+                onResponderMove={(e) => {
+                  const { locationX } = e.nativeEvent;
+                  handleSlide(locationX);
+                }}
+              />
+            </View>
 
-            <View style={styles.iconButtonContain}>
-              <TouchableOpacity
-                onPress={() => updateDistance(distance + step)}
-                style={styles.iconButtonminus}
-              >
-                <Entypo name="circle-with-plus" size={29} color="black" />
-              </TouchableOpacity>
-            </View>
-            <View style={styles.iconButtonContainminus}>
-              <TouchableOpacity
-                onPress={() => updateDistance(distance - step)}
-                style={styles.iconButton}
-              >
-                <Entypo name="circle-with-minus" size={29} color="black" />
-              </TouchableOpacity>
-            </View>
+            {/* + Button */}
+            <TouchableOpacity
+              onPress={() => updateDistance(distance + step)}
+              style={styles.iconButton}
+            >
+              <Entypo name="circle-with-plus" size={29} color="black" />
+            </TouchableOpacity>
           </View>
 
           <Text style={styles.sliderLabel}>
@@ -450,61 +451,39 @@ const getStyles = (currentTheme) =>
       marginBottom: 10,
       color: currentTheme.subText,
     },
-    customSliderWrapper: {
-      // flexDirection: "row",
-      alignItems: "center",
-      // justifyContent: "space-between",
-      width: 360,
-      height: 24,
-      // backgroundColor: "transparent",
-      margin: "auto",
-      position: "relative",
-    },
-    iconButtonContain: {
-      justifyContent: "center",
-      alignItems: "center",
-      position: "absolute",
-      right: 14,
-      top: 1,
-      backgroundColor: "white",
-      width: 29,
-      height: 29,
-      borderRadius: 20,
-    },
-    iconButtonContainminus: {
-      justifyContent: "center",
-      alignItems: "center",
-      position: "absolute",
-      left: 15,
-      top: 1,
-      backgroundColor: "white",
-      width: 29,
-      height: 29,
-      borderRadius: 20,
-      padding: 0,
-      margin: 0,
-    },
-    // iconButton: {
-    //   position: "absolute",
-    //   right: 14,
-    //   top: 1
-    // },
-    // iconButtonminus: {
-    //   position: "absolute",
-    //   left: 15,
-    //   top: 1
-    // },
-    sliderBackground: {
+    sliderControls: {
       flexDirection: "row",
-      justifyContent: "center",
       alignItems: "center",
-      width: 332,
+      justifyContent: "center",
+      gap: 12,
+    },
+
+    iconButton: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: "white",
+      alignItems: "center",
+      justifyContent: "center",
+      elevation: 2,
+    },
+
+    customSliderWrapper: {
+      width: 300,
       height: 32,
       borderRadius: 6,
-      backgroundColor: "#232222",
       position: "relative",
-      // overflow: "hidden"
+      overflow: "visible",
     },
+
+    sliderBackground: {
+      width: "100%",
+      height: "100%",
+      borderRadius: 6,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+
     linesContainer: {
       flexDirection: "row",
       justifyContent: "space-between",
@@ -513,19 +492,22 @@ const getStyles = (currentTheme) =>
       paddingHorizontal: 5,
       alignItems: "center",
     },
+
+    sliderIndicator: {
+      position: "absolute",
+      top: -12,
+      transform: [{ translateX: -6 }],
+    },
+
+    sliderIndicatorText: {
+      fontSize: 14,
+      color: currentTheme.text || "#000",
+      // color: "#fff",
+    },
     line: {
       width: 3,
       height: "72%",
       // backgroundColor: "#898686",
-    },
-    sliderIndicator: {
-      position: "absolute",
-      top: -10,
-      alignItems: "center",
-    },
-    sliderIndicatorText: {
-      fontSize: 14,
-      color: currentTheme.text || "#000",
     },
     sliderLabel: {
       color: "#6f28d4",
