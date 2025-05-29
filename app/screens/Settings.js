@@ -84,7 +84,7 @@ const SettingsScreen = ({ navigation }) => {
       <Text style={styles.title}>Settings</Text>
 
       {/* Search Bar */}
-      <View style={styles.searchContainer}>
+      {/* <View style={styles.searchContainer}>
         <TextInput
           value={searchQuery}
           onChangeText={handleSearch}
@@ -92,7 +92,7 @@ const SettingsScreen = ({ navigation }) => {
           style={styles.searchInput}
           placeholderTextColor="#888"
         />
-      </View>
+      </View> */}
 
       {/* Settings List */}
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>

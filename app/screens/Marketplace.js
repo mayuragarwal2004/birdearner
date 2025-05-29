@@ -286,6 +286,10 @@ const MarketplaceScreen = ({ navigation }) => {
           showsUserLocation
           showsMyLocationButton
           ref={mapRef}
+          onMapReady={() => console.log("Map is ready")}
+          onError={(e) => {
+            console.error("Map error:", e.nativeEvent);
+          }}
           region={
             location
               ? {

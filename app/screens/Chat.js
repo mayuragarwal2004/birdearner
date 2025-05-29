@@ -1193,6 +1193,14 @@ const Chat = ({ route, navigation }) => {
         </TouchableOpacity>
       </View>
 
+      {/* Warning Message */}
+<View style={styles.warningContainer}>
+  <Text style={styles.warningText}>
+    Interact with the other user at your own risk. Terms & conditions apply.
+  </Text>
+</View>
+
+
 
       {/* Delete Confirmation Modal */}
       {renderDeleteConfirmation()}
@@ -1282,6 +1290,19 @@ const getStyles = (currentTheme) =>
       backgroundColor: "#5c2d91",
       borderRadius: 5,
     },
+    warningContainer: {
+      // marginTop: 5,
+      paddingHorizontal: 10,
+      alignItems: "center",
+    },
+    
+    warningText: {
+      fontSize: 12,
+      color: "#000",
+      textAlign: "center",
+      fontWeight: "bold",
+    },
+    
     sendButtonText: { color: "#fff" },
     modalBackground: {
       flex: 1,

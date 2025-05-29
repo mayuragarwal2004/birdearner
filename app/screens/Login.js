@@ -13,12 +13,14 @@ import {
 import { FontAwesome } from "@expo/vector-icons";
 import { useAuth } from "../context/AuthContext";
 import Toast from "react-native-toast-message";
+import Checkbox from "expo-checkbox";
 import { useAppwrite } from "../context/AppwriteContext";
 import { useTheme } from "../context/ThemeContext";
 
 const Login = ({ navigation }) => {
   const { initAppwrite } = useAppwrite();
   const [credentials, setCredentials] = useState({ email: "", password: "" });
+  const [isChecked, setIsChecked] = useState(false);
   const { login } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
 
@@ -40,6 +42,11 @@ const Login = ({ navigation }) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       showToast("info", "Warning", "Please enter a valid email address.");
+      return false;
+    }
+
+    if (!isChecked) {
+      showToast("info", "Warning", "You must accept the Terms and Conditions.");
       return false;
     }
 
@@ -113,58 +120,47 @@ const Login = ({ navigation }) => {
             Be BirdEARNER, Become Bread Earner!
           </Text>
 
-          {/* Inputs */}
-          {["email", "password"].map((field, index) => (
-            <TextInput
-              key={index}
-              style={styles.input}
-              placeholder={
-                field === "email" ? "yourname@gmail.com" : "********"
-              }
-              placeholderTextColor="#999"
-              keyboardType={field === "email" ? "email-address" : "default"}
-              secureTextEntry={field === "password"}
-              value={credentials[field]}
-              onChangeText={(value) => handleInputChange(field, value)}
-            />
-          ))}
+      {/* Inputs */}
+      {["email", "password"].map((field, index) => (
+        <TextInput
+          key={index}
+          style={styles.input}
+          placeholder={field === "email" ? "yourname@gmail.com" : "********"}
+          placeholderTextColor="#999"
+          keyboardType={field === "email" ? "email-address" : "default"}
+          secureTextEntry={field === "password"}
+          value={credentials[field]}
+          onChangeText={(value) => handleInputChange(field, value)}
+        />
+      ))}
 
-          {/* Login Button */}
-          <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-            <Text style={styles.loginButtonText}>Log In</Text>
-          </TouchableOpacity>
+      {/* Terms and Conditions Checkbox */}
+      <View style={styles.checkboxContainer}>
+        <Checkbox value={isChecked} onValueChange={setIsChecked} color={isChecked ? "#6A0DAD" : undefined} />
+        <Text style={styles.checkboxLabel}>I agree to the Terms and Conditions</Text>
+      </View>
 
-          {/* Links */}
-          {[
-            { text: "Forget Password", screen: "ForgotPassword" },
-            { text: "New Here? Create Your Account Here!", screen: "Role" },
-          ].map((link, index) => (
-            <TouchableOpacity
-              key={index}
-              onPress={() => navigation.navigate(link.screen)}
-            >
-              <Text style={styles.linkText}>{link.text}</Text>
-            </TouchableOpacity>
-          ))}
+      {/* Login Button */}
+      <TouchableOpacity style={[styles.loginButton, !isChecked && styles.disabledButton]} onPress={handleLogin} disabled={!isChecked}>
+        <Text style={styles.loginButtonText}>Log In</Text>
+      </TouchableOpacity>
 
-          {/* Google Login */}
-          {/* <TouchableOpacity style={styles.googleButton}>
-        <FontAwesome name="google" size={24} color="black" />
-        <Text style={styles.googleButtonText}>Log in with Google</Text>
-      </TouchableOpacity> */}
+      {/* Links */}
+      {[
+        { text: "Forget Password", screen: "ForgotPassword" },
+        { text: "New Here? Create Your Account Here!", screen: "Role" },
+      ].map((link, index) => (
+        <TouchableOpacity key={index} onPress={() => navigation.navigate(link.screen)}>
+          <Text style={styles.linkText}>{link.text}</Text>
+        </TouchableOpacity>
+      ))}
 
-          {/* Social Icons */}
-          <View style={styles.socialContainer}>
-            {["instagram", "facebook"].map((icon, index) => (
-              <FontAwesome
-                key={index}
-                name={icon}
-                size={24}
-                color="white"
-                style={styles.socialIcon}
-              />
-            ))}
-          </View>
+      {/* Social Icons */}
+      <View style={styles.socialContainer}>
+        {["instagram", "facebook"].map((icon, index) => (
+          <FontAwesome key={index} name={icon} size={24} color="white" style={styles.socialIcon} />
+        ))}
+      </View>
 
           {/* Toast container */}
           <Toast />
@@ -180,6 +176,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
+    backgroundColor: "#4B0082",
     minHeight: '100%', // this is key!
     backgroundColor: "#4B0082",
     alignItems: "center",
@@ -210,6 +207,15 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     fontSize: 16,
   },
+  checkboxContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  checkboxLabel: {
+    color: "white",
+    marginLeft: 10,
+  },
   loginButton: {
     width: "100%",
     height: 50,
@@ -218,6 +224,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 20,
+  },
+  disabledButton: {
+    backgroundColor: "gray",
   },
   loginButtonText: {
     color: "white",
@@ -229,21 +238,6 @@ const styles = StyleSheet.create({
     marginVertical: 10,
     fontSize: 14,
     textDecorationLine: "underline",
-  },
-  googleButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#fff",
-    width: "100%",
-    height: 50,
-    borderRadius: 12,
-    marginTop: 20,
-  },
-  googleButtonText: {
-    marginLeft: 10,
-    fontSize: 16,
-    color: "#000",
   },
   socialContainer: {
     flexDirection: "row",
