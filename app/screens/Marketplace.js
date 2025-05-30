@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Animated,
   PanResponder,
+  Platform,
 } from "react-native";
 import Entypo from "@expo/vector-icons/Entypo";
 import MapView, { PROVIDER_GOOGLE, Marker, Circle } from "react-native-maps";
@@ -282,7 +283,7 @@ const MarketplaceScreen = ({ navigation }) => {
 
         <MapView
           style={styles.map}
-          provider={PROVIDER_GOOGLE}
+          provider={Platform.OS === "android" ? PROVIDER_GOOGLE : undefined}
           showsUserLocation
           showsMyLocationButton
           ref={mapRef}

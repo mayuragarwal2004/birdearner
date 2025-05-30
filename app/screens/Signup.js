@@ -137,7 +137,23 @@ const Signup = ({ navigation, route }) => {
           onValueChange={setIsChecked}
           color={isChecked ? "#6A0DAD" : undefined}
         />
-        <Text style={styles.checkboxLabel}>I agree to the Terms and Conditions</Text>
+
+        <Text style={styles.checkboxLabel}>
+          I agree to the{" "}
+          <Text
+            style={styles.link}
+            onPress={() => navigation.navigate("TermsAndConditions")}
+          >
+            Terms and Conditions
+          </Text>{" "}
+          and{" "}
+          <Text
+            style={styles.link}
+            onPress={() => navigation.navigate("PrivacyPolicy")}
+          >
+            Privacy Policy
+          </Text>
+        </Text>
       </View>
 
       {/* Signup Button */}
@@ -151,6 +167,20 @@ const Signup = ({ navigation, route }) => {
 
       {/* Toast Notification Component */}
       <Toast />
+
+      {/* Links */}
+      <View style={styles.linksWrapper}>
+        {[{ text: "Already have an account?", screen: "Login" }].map(
+          (link, index) => (
+            <TouchableOpacity
+              key={index}
+              onPress={() => navigation.navigate(link.screen)}
+            >
+              <Text style={styles.linkText}>{link.text}</Text>
+            </TouchableOpacity>
+          )
+        )}
+      </View>
     </View>
   );
 };
@@ -167,6 +197,10 @@ const styles = StyleSheet.create({
     color: "white",
     marginBottom: 32,
     textAlign: "center",
+  },
+  link: {
+    color: "#aa42f5",
+    textDecorationLine: "underline",
   },
   label: {
     fontSize: 18,
@@ -204,10 +238,20 @@ const styles = StyleSheet.create({
   disabledButton: {
     backgroundColor: "gray",
   },
+  linkText: {
+    color: "white",
+    marginVertical: 10,
+    fontSize: 14,
+    textDecorationLine: "underline",
+  },
   signupButtonText: {
     color: "#4B0082",
     fontSize: 20,
     fontWeight: "bold",
+  },
+  linksWrapper: {
+    alignItems: "center", // centers horizontally
+    marginTop: 20,
   },
 });
 

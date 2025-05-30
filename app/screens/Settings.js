@@ -1,7 +1,16 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TextInput, TouchableOpacity, SafeAreaView } from 'react-native';
-import { useAuth } from '../context/AuthContext';
-import { useTheme } from '../context/ThemeContext';
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  SafeAreaView,
+} from "react-native";
+import { useAuth } from "../context/AuthContext";
+import { useTheme } from "../context/ThemeContext";
+import { Ionicons } from "@expo/vector-icons";
 
 const SettingsScreen = ({ navigation }) => {
   const { userData } = useAuth();
@@ -13,67 +22,74 @@ const SettingsScreen = ({ navigation }) => {
 
   const settingsData = [
     {
-      title: 'Account Settings',
+      title: "Account Settings",
       options: [
         { name: "Availability", stack_name: "Availability" },
         { name: "My profile", stack_name: "MyProfile" },
         { name: "Password update", stack_name: "Password update" },
         { name: "Change your email", stack_name: "Email update" },
-      ]
+      ],
     },
     {
-      title: 'Payment Settings',
-      options: role === "freelancer"
-        ? [
-          { name: "Withdrawal Earning", stack_name: "Withdrawal Earning" },
-          { name: "Link your wallet/Bank account", stack_name: "Bank Account details" },
-          { name: "Your Wallet & History", stack_name: "Wallet" },
-        ]
-        : [
-          { name: "Link your wallet/Bank account", stack_name: "Bank Account details" },
-          { name: "Your Wallet & History", stack_name: "WalletClient" },
-        ]
+      title: "Payment Settings",
+      options:
+        role === "freelancer"
+          ? [
+              { name: "Withdrawal Earning", stack_name: "Withdrawal Earning" },
+              {
+                name: "Link your wallet/Bank account",
+                stack_name: "Bank Account details",
+              },
+              { name: "Your Wallet & History", stack_name: "Wallet" },
+            ]
+          : [
+              {
+                name: "Link your wallet/Bank account",
+                stack_name: "Bank Account details",
+              },
+              { name: "Your Wallet & History", stack_name: "WalletClient" },
+            ],
     },
     {
-      title: 'Preferences',
+      title: "Preferences",
       options: [
         { name: "Notifications", stack_name: "Notifications Setting" },
         { name: "Appearance", stack_name: "Appearance" },
         { name: "Security", stack_name: "Security" },
-      ]
+      ],
     },
     {
-      title: 'About',
+      title: "About",
       options: [
         { name: "Terms & Conditions", stack_name: "TermsAndConditions" },
         { name: "Feedback", stack_name: "Feedback" },
         { name: "Privacy Policy", stack_name: "PrivacyPolicy" },
         { name: "Blogs & Forum", stack_name: "BlogsAndForum" },
-      ]
+      ],
     },
     {
-      title: 'More',
-      options: [
-        { name: "Delete Account", stack_name: "DeleteAccount" },
-      ]
+      title: "More",
+      options: [{ name: "Delete Account", stack_name: "DeleteAccount" }],
     },
   ];
 
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [filteredData, setFilteredData] = useState(settingsData);
 
   const handleSearch = (query) => {
     setSearchQuery(query);
 
-    if (query.trim() === '') {
+    if (query.trim() === "") {
       setFilteredData(settingsData);
     } else {
-      const filtered = settingsData.map((section) => {
-        const options = section.options.filter((option) =>
-          option.name.toLowerCase().includes(query.toLowerCase())
-        );
-        return options.length > 0 ? { ...section, options } : null;
-      }).filter(Boolean);
+      const filtered = settingsData
+        .map((section) => {
+          const options = section.options.filter((option) =>
+            option.name.toLowerCase().includes(query.toLowerCase())
+          );
+          return options.length > 0 ? { ...section, options } : null;
+        })
+        .filter(Boolean);
       setFilteredData(filtered);
     }
   };
@@ -81,21 +97,25 @@ const SettingsScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <Text style={styles.title}>Settings</Text>
-
-      {/* Search Bar */}
-      {/* <View style={styles.searchContainer}>
-        <TextInput
-          value={searchQuery}
-          onChangeText={handleSearch}
-          placeholder="Search"
-          style={styles.searchInput}
-          placeholderTextColor="#888"
-        />
-      </View> */}
+      <View style={styles.main}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}
+        >
+          <Ionicons
+            name="arrow-back"
+            size={24}
+            color={currentTheme.text || black}
+          />
+        </TouchableOpacity>
+        <Text style={styles.header}>Settings</Text>
+      </View>
 
       {/* Settings List */}
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+      >
         {filteredData.map((section, index) => (
           <View key={index} style={styles.sectionContainer}>
             <Text style={styles.sectionTitle}>{section.title}</Text>
@@ -121,18 +141,33 @@ const SettingsScreen = ({ navigation }) => {
 
 const getStyles = (currentTheme) =>
   StyleSheet.create({
+    main: {
+      marginTop: 15,
+      marginBottom: 50,
+      display: "flex",
+      flexDirection: "row",
+      gap: 120,
+      alignItems: "center",
+    },
+    header: {
+      fontSize: 24,
+      fontWeight: "bold",
+      // marginBottom: 20,
+      textAlign: "center",
+      color: currentTheme.text,
+    },
     container: {
       flex: 1,
-      backgroundColor: currentTheme.background || '#fff',
+      backgroundColor: currentTheme.background || "#fff",
       padding: 16,
       paddingTop: 50,
     },
     title: {
       fontSize: 24,
-      fontWeight: 'bold',
-      textAlign: 'center',
+      fontWeight: "bold",
+      textAlign: "center",
       marginBottom: 16,
-      color: currentTheme.text || "white"
+      color: currentTheme.text || "white",
     },
     searchContainer: {
       marginBottom: 20,
@@ -140,9 +175,9 @@ const getStyles = (currentTheme) =>
     searchInput: {
       height: 45,
       borderRadius: 8,
-      backgroundColor: currentTheme.background3 || '#f0f0f0',
+      backgroundColor: currentTheme.background3 || "#f0f0f0",
       paddingHorizontal: 16,
-      color: currentTheme.subText || '#333',
+      color: currentTheme.subText || "#333",
     },
     scrollView: {
       flex: 1,
@@ -152,30 +187,30 @@ const getStyles = (currentTheme) =>
     },
     sectionTitle: {
       fontSize: 16,
-      fontWeight: '600',
-      color: currentTheme.text || '#555',
+      fontWeight: "600",
+      color: currentTheme.text || "#555",
       marginBottom: 10,
     },
     optionContainer: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
+      flexDirection: "row",
+      justifyContent: "space-between",
       paddingVertical: 12,
       paddingHorizontal: 10,
-      backgroundColor: currentTheme.background3 || '#f0f0f0',
+      backgroundColor: currentTheme.background3 || "#f0f0f0",
       borderRadius: 8,
       marginBottom: 10,
     },
     optionText: {
       fontSize: 14,
-      color: currentTheme.text || '#333',
+      color: currentTheme.text || "#333",
     },
     arrowIcon: {
       fontSize: 18,
-      color: currentTheme.text || '#888',
+      color: currentTheme.text || "#888",
     },
     noResults: {
-      textAlign: 'center',
-      color: currentTheme.text || '#888',
+      textAlign: "center",
+      color: currentTheme.text || "#888",
       fontSize: 16,
       marginTop: 20,
     },

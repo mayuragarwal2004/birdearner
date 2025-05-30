@@ -120,47 +120,82 @@ const Login = ({ navigation }) => {
             Be BirdEARNER, Become Bread Earner!
           </Text>
 
-      {/* Inputs */}
-      {["email", "password"].map((field, index) => (
-        <TextInput
-          key={index}
-          style={styles.input}
-          placeholder={field === "email" ? "yourname@gmail.com" : "********"}
-          placeholderTextColor="#999"
-          keyboardType={field === "email" ? "email-address" : "default"}
-          secureTextEntry={field === "password"}
-          value={credentials[field]}
-          onChangeText={(value) => handleInputChange(field, value)}
-        />
-      ))}
+          {/* Inputs */}
+          {["email", "password"].map((field, index) => (
+            <TextInput
+              key={index}
+              style={styles.input}
+              placeholder={
+                field === "email" ? "yourname@gmail.com" : "********"
+              }
+              placeholderTextColor="#999"
+              keyboardType={field === "email" ? "email-address" : "default"}
+              secureTextEntry={field === "password"}
+              value={credentials[field]}
+              onChangeText={(value) => handleInputChange(field, value)}
+            />
+          ))}
 
-      {/* Terms and Conditions Checkbox */}
-      <View style={styles.checkboxContainer}>
-        <Checkbox value={isChecked} onValueChange={setIsChecked} color={isChecked ? "#6A0DAD" : undefined} />
-        <Text style={styles.checkboxLabel}>I agree to the Terms and Conditions</Text>
-      </View>
+          {/* Terms and Conditions Checkbox */}
+          <View style={styles.checkboxContainer}>
+            <Checkbox
+              value={isChecked}
+              onValueChange={setIsChecked}
+              color={isChecked ? "#6A0DAD" : undefined}
+            />
 
-      {/* Login Button */}
-      <TouchableOpacity style={[styles.loginButton, !isChecked && styles.disabledButton]} onPress={handleLogin} disabled={!isChecked}>
-        <Text style={styles.loginButtonText}>Log In</Text>
-      </TouchableOpacity>
+            <Text style={styles.checkboxLabel}>
+              I agree to the{" "}
+              <Text
+                style={styles.link}
+                onPress={() => navigation.navigate("TermsAndConditions")}
+              >
+                Terms and Conditions
+              </Text>{" "}
+              and{" "}
+              <Text
+                style={styles.link}
+                onPress={() => navigation.navigate("PrivacyPolicy")}
+              >
+                Privacy Policy
+              </Text>
+            </Text>
+          </View>
 
-      {/* Links */}
-      {[
-        { text: "Forget Password", screen: "ForgotPassword" },
-        { text: "New Here? Create Your Account Here!", screen: "Role" },
-      ].map((link, index) => (
-        <TouchableOpacity key={index} onPress={() => navigation.navigate(link.screen)}>
-          <Text style={styles.linkText}>{link.text}</Text>
-        </TouchableOpacity>
-      ))}
+          {/* Login Button */}
+          <TouchableOpacity
+            style={[styles.loginButton, !isChecked && styles.disabledButton]}
+            onPress={handleLogin}
+            disabled={!isChecked}
+          >
+            <Text style={styles.loginButtonText}>Log In</Text>
+          </TouchableOpacity>
 
-      {/* Social Icons */}
-      <View style={styles.socialContainer}>
-        {["instagram", "facebook"].map((icon, index) => (
-          <FontAwesome key={index} name={icon} size={24} color="white" style={styles.socialIcon} />
-        ))}
-      </View>
+          {/* Links */}
+          {[
+            { text: "Forget Password", screen: "ForgotPassword" },
+            { text: "New Here? Create Your Account Here!", screen: "Role" },
+          ].map((link, index) => (
+            <TouchableOpacity
+              key={index}
+              onPress={() => navigation.navigate(link.screen)}
+            >
+              <Text style={styles.linkText}>{link.text}</Text>
+            </TouchableOpacity>
+          ))}
+
+          {/* Social Icons */}
+          <View style={styles.socialContainer}>
+            {["instagram", "facebook"].map((icon, index) => (
+              <FontAwesome
+                key={index}
+                name={icon}
+                size={24}
+                color="white"
+                style={styles.socialIcon}
+              />
+            ))}
+          </View>
 
           {/* Toast container */}
           <Toast />
@@ -177,7 +212,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#4B0082",
-    minHeight: '100%', // this is key!
+    minHeight: "100%", // this is key!
     backgroundColor: "#4B0082",
     alignItems: "center",
     justifyContent: "center",
@@ -213,8 +248,13 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   checkboxLabel: {
-    color: "white",
-    marginLeft: 10,
+    marginLeft: 8,
+    fontSize: 14,
+    color: 'white',
+  },
+  link: {
+    color: '#aa42f5',
+    textDecorationLine: 'underline',
   },
   loginButton: {
     width: "100%",

@@ -26,11 +26,6 @@ export default {
         NSLocationWhenInUseUsageDescription:
           "This app needs access to your location to display maps.",
       },
-      config: {
-        googleMaps: {
-          apiKey: "AIzaSyDk_drKIe9VsU3mi-muwYZJ5FYvHRak2fI",
-        },
-      },
     },
     android: {
       googleServicesFile: "./google-services.json",

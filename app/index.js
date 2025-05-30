@@ -41,6 +41,8 @@ import { StatusBar } from "expo-status-bar";
 import { ThemeProvider } from "./context/ThemeContext";
 import { AppwriteProvider } from "./context/AppwriteContext";
 import { NavigationContainer } from "@react-navigation/native";
+import TermsAndConditionsScreen from "./screens/TermsAndConditionsScreen";
+import PrivacyPolicyScreen from "./screens/PrivacyPolicyScreen";
 
 export default function MainApp() {
   console.log("hi");
@@ -282,6 +284,8 @@ export function App() {
             component={UpdateJobDetailsScreen}
           />
           <Stack.Screen name="Portfolio" component={PortfolioScreen} />
+          <Stack.Screen name="TermsAndConditions" component={TermsAndConditionsScreen} />
+          <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
         </>
       ) : (
         <>
@@ -298,6 +302,8 @@ export function App() {
           />
           <Stack.Screen name="Role" component={Role} />
           <Stack.Screen name="Portfolio" component={PortfolioScreen} />
+          <Stack.Screen name="TermsAndConditions" component={TermsAndConditionsScreen} />
+          <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
         </>
       )}
     </Stack.Navigator>

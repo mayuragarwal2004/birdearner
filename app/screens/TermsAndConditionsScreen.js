@@ -1,92 +1,109 @@
-import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView } from 'react-native';
-import { useTheme } from '../context/ThemeContext';
+import React, { useEffect, useState } from "react";
+import {
+  View,
+  ActivityIndicator,
+  SafeAreaView,
+  TouchableOpacity,
+  Text,
+  StyleSheet,
+} from "react-native";
+import { WebView } from "react-native-webview";
+import { Ionicons } from "@expo/vector-icons";
+import { useTheme } from "../context/ThemeContext";
 
 const TermsAndConditionsScreen = ({ navigation }) => {
-    const dummyTerms = [
-        { title: 'General Terms', content: 'These are the general terms and conditions for using our platform.' },
-        { title: 'User Responsibilities', content: 'You are responsible for keeping your account secure.' },
-        { title: 'Prohibited Activities', content: 'Using the platform for illegal activities is strictly prohibited.' },
-        { title: 'Termination of Services', content: 'We reserve the right to terminate your account under certain conditions.' },
-        { title: 'Liability', content: 'We are not liable for damages resulting from misuse of the platform.' },
-    ];
+  const [termsUrl, setTermsUrl] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const { theme, themeStyles } = useTheme();
+  const currentTheme = themeStyles[theme];
 
-    const { theme, themeStyles } = useTheme();
-    const currentTheme = themeStyles[theme];
+  useEffect(() => {
+    const fetchTermsLink = async () => {
+      try {
+        const response = await fetch("https://api.birdearner.com/terms");
+        const data = await response.json();
+        setTermsUrl(data?.terms);
+      } catch (err) {
+        console.error("Failed to fetch terms link:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    const styles = getStyles(currentTheme);
+    fetchTermsLink();
+  }, []);
 
-    return (
-        <SafeAreaView style={styles.container}>
-            <View style={styles.main}>
-                <TouchableOpacity
-                    onPress={() => navigation.goBack()}
-                    style={styles.backButton}
-                >
-                    <Ionicons name="arrow-back" size={24} color={currentTheme.text || "black"} />
-                </TouchableOpacity>
-                <Text style={styles.header}>Terms & Conditions</Text>
-            </View>
+  return (
+    <SafeAreaView
+      style={[
+        styles.container,
+        { backgroundColor: currentTheme.background2 || "#fff" },
+      ]}
+    >
+      <View style={styles.header}>
+        <TouchableOpacity
+          onPress={() => {
+            if (navigation.canGoBack()) {
+              navigation.goBack();
+            } else {
+              navigation.navigate("Login"); // or whatever your home route is named
+            }
+          }}
+        >
+          <Ionicons
+            name="arrow-back"
+            size={24}
+            color={currentTheme.text || "#000"}
+          />
+        </TouchableOpacity>
+        <Text style={[styles.title, { color: currentTheme.text || "#000" }]}>
+          Terms & Conditions
+        </Text>
+      </View>
 
-            {/* Terms List */}
-            <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-                {dummyTerms.map((term, index) => (
-                    <View key={index} style={styles.termContainer}>
-                        <Text style={styles.termTitle}>{term.title}</Text>
-                        <Text style={styles.termContent}>{term.content}</Text>
-                    </View>
-                ))}
-            </ScrollView>
-        </SafeAreaView>
-    );
+      {loading ? (
+        <ActivityIndicator
+          size="large"
+          color="#6A0DAD"
+          style={{ marginTop: 40 }}
+        />
+      ) : termsUrl ? (
+        <WebView
+          source={{ uri: termsUrl }}
+          startInLoadingState
+          renderLoading={() => (
+            <ActivityIndicator
+              size="large"
+              color="#6A0DAD"
+              style={{ marginTop: 20 }}
+            />
+          )}
+        />
+      ) : (
+        <Text style={{ padding: 20, color: "red" }}>
+          Unable to load Terms and Conditions.
+        </Text>
+      )}
+    </SafeAreaView>
+  );
 };
 
-const getStyles = (currentTheme) => 
-    StyleSheet.create({
-        container: {
-            flex: 1,
-            padding: 20,
-            backgroundColor: currentTheme.background2 || "#f9f9f9",
-        },
-        main: {
-            marginTop: 45,
-            marginBottom: 50,
-            display: "flex",
-            flexDirection: "row",
-            gap: 60,
-            alignItems: "center",
-        },
-        header: {
-            fontSize: 24,
-            fontWeight: "bold",
-            textAlign: "center",
-            color: currentTheme.text || "black",
-        },
-        scrollView: {
-            padding: 16,
-        },
-        termContainer: {
-            backgroundColor: currentTheme.background || '#fff',
-            padding: 16,
-            borderRadius: 8,
-            marginBottom: 12,
-            shadowColor: currentTheme.text || '#000',
-            shadowOpacity: 0.1,
-            shadowOffset: { width: 0, height: 2 },
-            shadowRadius: 4,
-            elevation: 2,
-        },
-        termTitle: {
-            fontSize: 16,
-            fontWeight: 'bold',
-            color: currentTheme.text || '#333',
-            marginBottom: 8,
-        },
-        termContent: {
-            fontSize: 14,
-            color: currentTheme.subText || '#666',
-        },
-    });
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  header: {
+    paddingTop: 45,
+    paddingBottom: 16,
+    paddingHorizontal: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 20,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: "bold",
+  },
+});
 
 export default TermsAndConditionsScreen;
