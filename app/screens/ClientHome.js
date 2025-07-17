@@ -14,13 +14,14 @@ import {
 } from "react-native";
 import { FontAwesome } from "@expo/vector-icons";
 import { household_service, freelance_service } from "../lib/roleData";
-import { useAuth } from "../context/AuthContext";
-import { Query } from "react-native-appwrite";
+import { useAuth } from "../context/NewAuthContext";
 import { differenceInDays } from "date-fns";
 import gifAnimation from "../assets/loading.gif";
 import { useTheme } from "../context/ThemeContext";
 import { useNavigation } from "@react-navigation/native";
-import { useAppwrite } from "../context/AppwriteContext";
+import apiService from "../lib/apiService";
+import { getProfileStatus, isProfileSetupNeeded, isPhaseCompleteOrSkipped } from "../lib/profileStatusStorage";
+// import { useAppwrite } from "../context/AppwriteContext";
 
 const placeholderImageURL = "https://picsum.photos/seed/";
 
@@ -28,7 +29,10 @@ const placeholderImageURL = "https://picsum.photos/seed/";
 const ClientHomeScreen = () => {
   const [search, setSearch] = useState("");
   const [showGif, setShowGif] = useState(false);
-  const { appwriteConfig, databases } = useAppwrite();
+  const [loadingJobs, setLoadingJobs] = useState(false);
+  const [showProfileSetup, setShowProfileSetup] = useState(false);
+  const [currentSetupStep, setCurrentSetupStep] = useState(null);
+  // const { appwriteConfig, databases } = useAppwrite();
 
   const [filteredFreelanceServices, setFilteredFreelanceServices] = useState(
     []
@@ -41,13 +45,78 @@ const ClientHomeScreen = () => {
   const [profilePercentage, setProfilePercentage] = useState(20);
   const [refreshing, setRefreshing] = useState(false);
   const [combinedData, setCombinedData] = useState([]);
-  const { userData, setUserData } = useAuth();
+  const { userData, setUserData, logout, userProfile, user } = useAuth();
   const navigation = useNavigation();
 
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
 
   const styles = getStyles(currentTheme);
+
+  // Check profile setup status and determine if setup is needed
+  const checkProfileSetupStatus = async () => {
+    try {
+      if (!user || !userData || userData.role !== 'CLIENT') {
+        setShowProfileSetup(false);
+        return;
+      }
+
+      // Check if profile setup is needed using the new status storage
+      const setupNeeded = await isProfileSetupNeeded('CLIENT');
+      
+      if (!setupNeeded) {
+        setShowProfileSetup(false);
+        navigation.replace('MainTabs');
+        return;
+      }
+
+      // Check phase completion flags from database
+      const hasPhase1Complete = userProfile && userProfile.phase1Completed;
+      const hasPhase2Complete = userProfile && userProfile.phase2Completed;
+
+      // Check if phases were skipped using the new status storage
+      const phase1SkippedOrComplete = await isPhaseCompleteOrSkipped('CLIENT', 1);
+      const phase2SkippedOrComplete = await isPhaseCompleteOrSkipped('CLIENT', 2);
+
+      console.log("Client profile setup status check:");
+      console.log("Phase 1 completed:", hasPhase1Complete, "skipped or complete:", phase1SkippedOrComplete);
+      console.log("Phase 2 completed:", hasPhase2Complete, "skipped or complete:", phase2SkippedOrComplete);
+
+      // Determine which phase needs to be completed
+      if (!hasPhase1Complete && !phase1SkippedOrComplete) {
+        setCurrentSetupStep('DescribeRole');
+        setShowProfileSetup(true);
+      } else if (!hasPhase2Complete && !phase2SkippedOrComplete) {
+        setCurrentSetupStep('TellUsAboutYou');
+        setShowProfileSetup(true);
+      } else {
+        setShowProfileSetup(false);
+        // If all phases are complete or skipped, navigate to main tabs
+        navigation.replace('MainTabs');
+      }
+    } catch (error) {
+      console.error("Error checking profile setup status:", error);
+      setShowProfileSetup(false);
+    }
+  };
+
+  useEffect(() => {
+    checkProfileSetupStatus();
+  }, [user, userData, userProfile]);
+
+  // Handle profile setup navigation
+  const handleProfileSetupNavigation = () => {
+    if (currentSetupStep) {
+      console.log("Navigating to profile setup step:", currentSetupStep);
+      
+      navigation.navigate(currentSetupStep);
+    }
+  };
+
+  // Handle skip profile setup (go to main tabs)
+  const handleSkipProfileSetup = () => {
+    navigation.replace('MainTabs');
+  };
 
   const categorizeJobs = (jobs) => {
     const today = new Date();
@@ -96,13 +165,13 @@ const ClientHomeScreen = () => {
   useEffect(() => {
     let percentage = 0;
 
-    if (userData?.full_name) percentage = 20;
-    if (userData?.country) percentage = 40;
-    if (userData?.profile_photo) percentage = 70;
-    if (userData?.terms_accepted) percentage = 100;
+    if (userProfile?.fullName) percentage = 20;
+    if (userProfile?.country) percentage = 40;
+    if (userProfile?.profilePhoto) percentage = 70;
+    if (userProfile?.termsAccepted) percentage = 100;
 
     setProfilePercentage(percentage);
-  }, [userData, refreshing]);
+  }, [userProfile, refreshing]);
 
   const sendTitle = (item) => {
     const title = item.title;
@@ -114,82 +183,61 @@ const ClientHomeScreen = () => {
   useEffect(() => {
     const fetchOngoingJobs = async () => {
       try {
-        const clientId = userData?.$id;
-        if (!clientId) throw new Error("Client ID is undefined!");
-
-        const projectDocs = await databases.listDocuments(
-          appwriteConfig.databaseId,
-          appwriteConfig.jobCollectionID,
-          [Query.equal("job_created_by", clientId)]
-        );
-
-        const onGoingJobs = projectDocs.documents.filter(
-          (job) => job?.completed_status === false && job.assigned_freelancer
-        );
-
-        const freelancePromises = onGoingJobs.map((freelance) =>
-          databases.getDocument(
-            appwriteConfig.databaseId,
-            appwriteConfig.freelancerCollectionId,
-            freelance.assigned_freelancer
-          )
-        );
-
-        const freelanceProfiles = await Promise.allSettled(freelancePromises);
-
-        const validProfiles = freelanceProfiles
-          .filter((result) => result.status === "fulfilled")
-          .map((result) => result.value);
-
-        const jobsWithColor = categorizeJobs(onGoingJobs);
-
-        // Mapping combined data with job details and freelancer profiles
-        const combinedData = validProfiles.map((profile) => {
-          const correspondingJob = jobsWithColor.find(
-            (job) => job.assigned_freelancer === profile.$id
-          );
-
-          return {
-            ...profile,
-            jobDetails: correspondingJob || null,
-            color: correspondingJob?.color || "#D3D3D3",
-          };
-        });
-
-        // Limiting to maximum 3 ongoing jobs
-        const maxOngoingJobs = jobsWithColor.slice(0, 3);
-
-        let emptySlots = [];
-
-        if (maxOngoingJobs.length < 3) {
-          const remainingEmptySlots = 3 - maxOngoingJobs.length;
-
-          // Add empty slots based on how many jobs we have
-          emptySlots = Array(remainingEmptySlots).fill({
+        if (userData?.role === "CLIENT" && userProfile?.id) {
+          setLoadingJobs(true); // Start loading
+          // Fetch ongoing jobs from the new backend API
+          const ongoingJobsData = await apiService.getOngoingJobsByClientId(userProfile.id);
+          
+          if (ongoingJobsData && ongoingJobsData.length > 0) {
+            setOngoingJobs(ongoingJobsData);
+            setCombinedData(ongoingJobsData);
+          } else {
+            // If no ongoing jobs, show empty placeholders
+            const emptySlots = Array(3).fill({
+              jobDetails: null,
+              full_name: "?",
+              profile_photo: placeholderImageURL,
+              color: "#D3D3D3", // Placeholder for empty slots
+            });
+            setOngoingJobs([]);
+            setCombinedData(emptySlots);
+          }
+        } else {
+          // For non-client users or when profile is not loaded
+          const emptySlots = Array(3).fill({
             jobDetails: null,
             full_name: "?",
             profile_photo: placeholderImageURL,
-            color: "#D3D3D3", // Placeholder for empty slots
+            color: "#D3D3D3",
           });
+          setOngoingJobs([]);
+          setCombinedData(emptySlots);
         }
-
-        // Ensuring combinedData always has exactly 3 entries
-        const finalData = [...combinedData, ...emptySlots].slice(0, 3);
-
-        setOngoingJobs(jobsWithColor);
-        setCombinedData(finalData);
       } catch (error) {
-        Alert.alert("Error fetching ongoing jobs:", error.message)
+        console.error("Error fetching ongoing jobs:", error);
+        Alert.alert("Error", "Failed to fetch ongoing jobs: " + error.message);
+        
+        // Fallback to empty placeholders on error
+        const emptySlots = Array(3).fill({
+          jobDetails: null,
+          full_name: "?",
+          profile_photo: placeholderImageURL,
+          color: "#D3D3D3",
+        });
+        setOngoingJobs([]);
+        setCombinedData(emptySlots);
+      } finally {
+        setLoadingJobs(false); // Stop loading
       }
     };
 
     fetchOngoingJobs();
-  }, [refreshing]);
+  }, [refreshing, userData, userProfile]);
 
   const handleCompleteProfile = () => {
-    if (userData) {
-      // Check if userData is not null
-      const fullName = userData.full_name;
+    if (userData && userProfile) {
+      // Check if userData and userProfile are not null
+      const fullName = userProfile.fullName;
       const email = userData.email;
       const password = userData.password;
       const role = userData.role;
@@ -242,30 +290,26 @@ const ClientHomeScreen = () => {
   }, [refreshing]);
 
   useEffect(() => {
-    const flagsData = async () => {
-      if (userData) {
-        try {
-          const freelancerId = userData?.$id;
-
-          const collectionId =
-            userData?.role === "client"
-              ? appwriteConfig.clientCollectionId
-              : appwriteConfig.freelancerCollectionId;
-
-          const freelancerDoc = await databases.getDocument(
-            appwriteConfig.databaseId,
-            collectionId,
-            freelancerId
-          );
-          setUserData(freelancerDoc);
-        } catch (error) {
-          Alert.alert("Error updating flags:", error);
+    const refreshUserData = async () => {
+      try {
+        if (userData?.id) {
+          // Fetch updated user data from the new backend API
+          const updatedUserData = await apiService.getUserProfile(userData.id);
+          
+          if (updatedUserData) {
+            // Update the auth context with fresh data
+            console.log("Updated user data:", updatedUserData);
+            // Note: You might want to update the auth context here if needed
+          }
         }
+      } catch (error) {
+        console.error("Error updating user data:", error);
+        // Don't show alert for this as it's background refresh
       }
     };
 
-    flagsData();
-  }, [refreshing]);
+    refreshUserData();
+  }, [refreshing, userData]);
 
   const handleSearch = (text) => {
     setSearch(text);
@@ -324,6 +368,15 @@ const ClientHomeScreen = () => {
     }, 1000);
   };
 
+  const handleLogout = async () => {
+    try {
+      await logout();
+      Alert.alert("Success", "Logged out successfully!");
+    } catch (error) {
+      Alert.alert("Error", "Failed to logout: " + error.message);
+    }
+  };
+
   const renderFreelanceService = useCallback(
     ({ item }) => <RenderServiceItem item={item} onPress={sendTitle} borderRadius={45} />,
     []
@@ -344,22 +397,28 @@ const ClientHomeScreen = () => {
       <View style={styles.header}>
         <View style={styles.wraptext}>
           <Text style={styles.welcome}>Welcome</Text>
-          <Text style={styles.how}>How’s the day!</Text>
+          <Text style={styles.how}>How's the day!</Text>
         </View>
-        {showGif ? (
-          <Image source={gifAnimation} style={styles.gifStyle} />
-        ) : (
-          <TouchableOpacity style={styles.notificationIcon} onPress={handlePress}>
-            <Image
-              source={
-                userData?.profile_photo
-                  ? { uri: userData.profile_photo }
-                  : require("../assets/profile.png")
-              }
-              style={styles.proileImage}
-            />
+        <View style={styles.headerRight}>
+          {/* Logout Button */}
+          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+            <FontAwesome name="sign-out" size={20} color="#fff" />
           </TouchableOpacity>
-        )}
+          {showGif ? (
+            <Image source={gifAnimation} style={styles.gifStyle} />
+          ) : (
+            <TouchableOpacity style={styles.notificationIcon} onPress={handlePress}>
+              <Image
+                source={
+                  userProfile?.profilePhoto
+                    ? { uri: userProfile.profilePhoto }
+                    : require("../assets/profile.png")
+                }
+                style={styles.proileImage}
+              />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       <View style={styles.line}></View>
@@ -413,8 +472,13 @@ const ClientHomeScreen = () => {
                     >
                       {jobDetails ? (
                         <Image
-                          source={{ uri: profile_photo }}
+                          source={{ 
+                            uri: profile_photo || `${placeholderImageURL}${index}/100/100`
+                          }}
                           style={styles.ongoingImage}
+                          onError={(e) => {
+                            console.log('Image load error:', e.nativeEvent.error);
+                          }}
                         />
                       ) : (
                         <Text style={styles.placeholderText}>?</Text>
@@ -647,6 +711,25 @@ const getStyles = (currentTheme) =>
       alignItems: "center",
       // gap: 140,
       position: "static"
+    },
+    headerRight: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+    },
+    logoutButton: {
+      backgroundColor: "#d32f2f",
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 8,
+      shadowColor: currentTheme.shadow || "#000000",
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.1,
+      shadowRadius: 2,
+      elevation: 2,
     },
     gifStyle: {
       // width: 10,
@@ -992,6 +1075,97 @@ const getStyles = (currentTheme) =>
       color: "white",
       fontSize: 18,
       fontWeight: "bold",
+    },
+    headerRight: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    logoutButton: {
+      marginRight: 10,
+      padding: 8,
+      borderRadius: 50,
+      backgroundColor: currentTheme.primary || "#4B0082",
+      justifyContent: "center",
+      alignItems: "center",
+      shadowColor: currentTheme.shadow || "#000000",
+      shadowOffset: {
+        width: 0,
+        height: 3,
+      },
+      shadowOpacity: 0.17,
+      shadowRadius: 3.05,
+      elevation: 4,
+    },
+    // Profile Setup Overlay Styles
+    profileSetupOverlay: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(0, 0, 0, 0.8)',
+      zIndex: 1000,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    profileSetupContainer: {
+      backgroundColor: 'white',
+      borderRadius: 16,
+      padding: 24,
+      margin: 20,
+      alignItems: 'center',
+      shadowColor: '#000',
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.25,
+      shadowRadius: 4,
+      elevation: 5,
+    },
+    profileSetupTitle: {
+      fontSize: 24,
+      fontWeight: 'bold',
+      marginBottom: 12,
+      color: '#333',
+      textAlign: 'center',
+    },
+    profileSetupMessage: {
+      fontSize: 16,
+      textAlign: 'center',
+      marginBottom: 24,
+      color: '#666',
+      lineHeight: 22,
+    },
+    profileSetupButton: {
+      backgroundColor: currentTheme.primary || '#3b006b',
+      paddingVertical: 12,
+      paddingHorizontal: 24,
+      borderRadius: 8,
+      marginVertical: 8,
+      minWidth: 200,
+    },
+    profileSetupButtonText: {
+      color: 'white',
+      fontSize: 16,
+      fontWeight: '600',
+      textAlign: 'center',
+    },
+    profileSetupSkipButton: {
+      backgroundColor: 'transparent',
+      paddingVertical: 12,
+      paddingHorizontal: 24,
+      borderRadius: 8,
+      marginVertical: 8,
+      minWidth: 200,
+      borderWidth: 1,
+      borderColor: currentTheme.primary || '#3b006b',
+    },
+    profileSetupSkipButtonText: {
+      color: currentTheme.primary || '#3b006b',
+      fontSize: 16,
+      fontWeight: '600',
+      textAlign: 'center',
     },
   });
 

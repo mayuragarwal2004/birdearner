@@ -9,21 +9,20 @@ import {
   ScrollView,
   RefreshControl,
   SafeAreaView,
+  ActivityIndicator,
 } from "react-native";
 import { FontAwesome } from "@expo/vector-icons";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/NewAuthContext";
 import Toast from "react-native-toast-message";
-import Checkbox from "expo-checkbox";
-import { useAppwrite } from "../context/AppwriteContext";
 import { useTheme } from "../context/ThemeContext";
 
 const Login = ({ navigation }) => {
-  const { initAppwrite } = useAppwrite();
   const [credentials, setCredentials] = useState({ email: "", password: "" });
-  const [isChecked, setIsChecked] = useState(false);
-  const { login } = useAuth();
+  const [showPassword, setShowPassword] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-
+  const [isLoading, setIsLoading] = useState(false);
+  
+  const { login } = useAuth();
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
 
@@ -45,11 +44,6 @@ const Login = ({ navigation }) => {
       return false;
     }
 
-    if (!isChecked) {
-      showToast("info", "Warning", "You must accept the Terms and Conditions.");
-      return false;
-    }
-
     return true;
   };
 
@@ -65,13 +59,10 @@ const Login = ({ navigation }) => {
   const handleLogin = async () => {
     if (!validateInputs()) return;
 
+    setIsLoading(true);
     try {
       await login(credentials.email, credentials.password);
-      showToast("success", "Login Successful!", "Redirecting to Home...");
-      navigation.reset({
-        index: 0,
-        routes: [{ name: "Tabs" }],
-      });
+      showToast("success", "Login Successful!", "Welcome back!");
     } catch (error) {
       console.log("Login Error:", error.message);
 
@@ -79,26 +70,29 @@ const Login = ({ navigation }) => {
 
       if (error.message.includes("Invalid email or password")) {
         errorMessage = "Incorrect email or password. Please try again.";
-      } else if (error.message.includes("Invalid `password` param")) {
-        errorMessage = "Password must be between 8 and 256 characters long.";
+      } else if (error.message.includes("Network error")) {
+        errorMessage = "Network error. Please check your connection.";
+      } else if (error.message.includes("JSON Parse error")) {
+        errorMessage = "Server error. Please try again later.";
       }
 
       showToast("error", "Login Failed", errorMessage);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const onRefresh = () => {
-    console.log("Refreshing...");
-    initAppwrite();
-
     setRefreshing(true);
+    // Reset form
+    setCredentials({ email: "", password: "" });
     setTimeout(() => {
       setRefreshing(false);
     }, 1000);
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#4B0082" }}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: "#4B0082" }]}>
       <ScrollView
         contentContainerStyle={styles.scrollContainer}
         refreshControl={
@@ -106,69 +100,75 @@ const Login = ({ navigation }) => {
             refreshing={refreshing}
             onRefresh={onRefresh}
             colors={["#3b006b"]}
-            progressBackgroundColor={currentTheme.cardBackground || "#fff"}
+            progressBackgroundColor="#fff"
           />
         }
       >
-        <View style={styles.container}>
+        <View style={[styles.container, { backgroundColor: "#4B0082" }]}>
           {/* Logo */}
           <Image source={require("../assets/logo11.png")} style={styles.logo} />
 
           {/* App Name */}
-          <Text style={styles.title}>BirdEARNER</Text>
-          <Text style={styles.subtitle}>
+          <Text style={[styles.title, { color: "white" }]}>BirdEARNER</Text>
+          <Text style={[styles.subtitle, { color: "white" }]}>
             Be BirdEARNER, Become Bread Earner!
           </Text>
 
-          {/* Inputs */}
-          {["email", "password"].map((field, index) => (
+          {/* Email Input */}
+          <TextInput
+            style={[styles.input, { 
+              backgroundColor: "#fff",
+              color: "#000",
+              borderColor: "transparent"
+            }]}
+            placeholder="yourname@gmail.com"
+            placeholderTextColor="#999"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+            value={credentials.email}
+            onChangeText={(value) => handleInputChange("email", value)}
+          />
+
+          {/* Password Input */}
+          <View style={[styles.passwordContainer, { 
+            backgroundColor: "#fff",
+            borderColor: "transparent"
+          }]}>
             <TextInput
-              key={index}
-              style={styles.input}
-              placeholder={
-                field === "email" ? "yourname@gmail.com" : "********"
-              }
+              style={[styles.passwordInput, { color: "#000" }]}
+              placeholder="********"
               placeholderTextColor="#999"
-              keyboardType={field === "email" ? "email-address" : "default"}
-              secureTextEntry={field === "password"}
-              value={credentials[field]}
-              onChangeText={(value) => handleInputChange(field, value)}
+              secureTextEntry={!showPassword}
+              value={credentials.password}
+              onChangeText={(value) => handleInputChange("password", value)}
             />
-          ))}
-
-          {/* Terms and Conditions Checkbox */}
-          <View style={styles.checkboxContainer}>
-            <Checkbox
-              value={isChecked}
-              onValueChange={setIsChecked}
-              color={isChecked ? "#6A0DAD" : undefined}
-            />
-
-            <Text style={styles.checkboxLabel}>
-              I agree to the{" "}
-              <Text
-                style={styles.link}
-                onPress={() => navigation.navigate("TermsAndConditions")}
-              >
-                Terms and Conditions
-              </Text>{" "}
-              and{" "}
-              <Text
-                style={styles.link}
-                onPress={() => navigation.navigate("PrivacyPolicy")}
-              >
-                Privacy Policy
-              </Text>
-            </Text>
+            <TouchableOpacity
+              style={styles.eyeIcon}
+              onPress={() => setShowPassword(!showPassword)}
+            >
+              <FontAwesome
+                name={showPassword ? "eye" : "eye-slash"}
+                size={20}
+                color="#999"
+              />
+            </TouchableOpacity>
           </View>
 
           {/* Login Button */}
           <TouchableOpacity
-            style={[styles.loginButton, !isChecked && styles.disabledButton]}
+            style={[
+              styles.loginButton,
+              isLoading && styles.disabledButton
+            ]}
             onPress={handleLogin}
-            disabled={!isChecked}
+            disabled={isLoading}
           >
-            <Text style={styles.loginButtonText}>Log In</Text>
+            {isLoading ? (
+              <ActivityIndicator color="white" size="small" />
+            ) : (
+              <Text style={styles.loginButtonText}>Log In</Text>
+            )}
           </TouchableOpacity>
 
           {/* Links */}
@@ -180,7 +180,9 @@ const Login = ({ navigation }) => {
               key={index}
               onPress={() => navigation.navigate(link.screen)}
             >
-              <Text style={styles.linkText}>{link.text}</Text>
+              <Text style={[styles.linkText, { color: "white" }]}>
+                {link.text}
+              </Text>
             </TouchableOpacity>
           ))}
 
@@ -206,14 +208,15 @@ const Login = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+  },
   scrollContainer: {
     flexGrow: 1,
   },
   container: {
     flex: 1,
-    backgroundColor: "#4B0082",
-    minHeight: "100%", // this is key!
-    backgroundColor: "#4B0082",
+    minHeight: "100%",
     alignItems: "center",
     justifyContent: "center",
     padding: 20,
@@ -226,31 +229,47 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: "bold",
-    color: "white",
   },
   subtitle: {
     fontSize: 16,
-    color: "white",
     marginBottom: 40,
   },
   input: {
     width: "100%",
     height: 44,
-    backgroundColor: "#fff",
     borderRadius: 12,
     paddingHorizontal: 20,
     marginBottom: 20,
     fontSize: 16,
+    borderWidth: 1,
+  },
+  passwordContainer: {
+    width: "100%",
+    height: 44,
+    borderRadius: 12,
+    marginBottom: 20,
+    borderWidth: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 20,
+  },
+  passwordInput: {
+    flex: 1,
+    fontSize: 16,
+  },
+  eyeIcon: {
+    padding: 5,
   },
   checkboxContainer: {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 20,
+    paddingHorizontal: 5,
   },
   checkboxLabel: {
     marginLeft: 8,
     fontSize: 14,
-    color: 'white',
+    flex: 1,
   },
   link: {
     color: '#aa42f5',
@@ -274,7 +293,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   linkText: {
-    color: "white",
     marginVertical: 10,
     fontSize: 14,
     textDecorationLine: "underline",

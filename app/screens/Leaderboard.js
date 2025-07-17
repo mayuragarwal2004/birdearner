@@ -7,12 +7,12 @@ import {
   TouchableOpacity,
   SafeAreaView,
 } from "react-native";
-import { useAuth } from "../context/AuthContext";
-import { useAppwrite } from "../context/AppwriteContext";
+import { useAuth } from "../context/NewAuthContext";
+// import { useAppwrite } from "../context/AppwriteContext";
 import { useTheme } from "../context/ThemeContext";
 
 const LeaderboardScreen = () => {
-  const { appwriteConfig, databases } = useAppwrite();
+  // const { appwriteConfig, databases } = useAppwrite();
   const [selectedTab, setSelectedTab] = useState("india");
   const [leaderboardData, setLeaderboardData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -25,9 +25,9 @@ const LeaderboardScreen = () => {
   const styles = getStyles(currentTheme);
 
   const user = {
-    id: userData?.$id,
-    country: userData?.country,
-    state: userData?.state,
+    id: userData?.id, // Updated for new backend
+    country: userData?.country || "India", // Default fallback
+    state: userData?.state || "Unknown",
     pin: userData?.zipcode,
   };
 

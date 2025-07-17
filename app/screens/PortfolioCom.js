@@ -13,7 +13,7 @@ import Checkbox from "expo-checkbox";
 import Toast from "react-native-toast-message";
 import { useAppwrite } from "../context/AppwriteContext";
 import { Query } from "react-native-appwrite";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/NewAuthContext";
 
 const PortfolioComScreen = ({ navigation, route }) => {
   const { appwriteConfig, databases, uploadFile, account } = useAppwrite();

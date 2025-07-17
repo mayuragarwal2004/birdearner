@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -9,17 +9,19 @@ import {
   StyleSheet,
   Alert,
 } from "react-native";
-import { useAppwrite } from "../context/AppwriteContext";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import * as ImagePicker from "expo-image-picker";
 import { Picker } from "@react-native-picker/picker";
-import { ID, Query } from "react-native-appwrite";
 import Toast from "react-native-toast-message";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/NewAuthContext";
 import { useNavigation } from "@react-navigation/native";
+import { updateRoleProfileStatus } from "../lib/profileStatusStorage";
+import apiService from "../lib/apiService";
 
 const TellUsAboutYouScreen = ({ route }) => {
-  const { databases, appwriteConfig, uploadFile } = useAppwrite();
+  // console.log(`[NAVIGATION] TellUsAboutYouScreen rendered with role: ${route?.params?.role}`);
+  // console.log("[NAVIGATION] Route params:", route?.params);
+  
   const [gender, setGender] = useState("");
   const [dob, setDob] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -28,12 +30,20 @@ const TellUsAboutYouScreen = ({ route }) => {
   const [bio, setBio] = useState("");
   const [profileImage, setProfileImage] = useState(null);
   const [coverImage, setCoverImage] = useState(null);
-  const { role } = route.params;
-  const { user, checkUserSession } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
+  const { user, checkUserSession, userProfile } = useAuth();
+  const { role } = user;
   const navigation = useNavigation();
+  
+  // Skip functionality states
+  const [isSkipping, setIsSkipping] = useState(false);
 
   useEffect(() => {
-    checkUserSession();
+    if (!user) {
+      console.error("User not found. Redirecting to login.");
+      navigation.replace("Login");
+      return;
+    }
   }, []);
 
   const handleError = (message) => {
@@ -50,6 +60,46 @@ const TellUsAboutYouScreen = ({ route }) => {
       text1: "Success",
       text2: message,
     });
+  };
+
+  // Skip functionality methods
+  const handleSkipPhase = async () => {
+    try {
+      setIsSkipping(true);
+      
+      // Record the skip using the new profile status storage
+      await updateRoleProfileStatus(role, { phase2skipped: true });
+      
+      handleSuccess("Phase 2 skipped. You can complete it later from your profile.");
+      
+      // Navigate based on role
+      setTimeout(() => {
+        if (role === "FREELANCER") {
+          // Freelancers go to Portfolio screen next
+          navigation.navigate("Portfolio", { role });
+        } else if (role === "CLIENT") {
+          // Clients go directly to main app (no portfolio phase)
+          navigation.replace("MainTabs");
+        }
+      }, 1500);
+      
+    } catch (error) {
+      console.error('Error handling skip:', error);
+      handleError("Failed to skip. Please try again.");
+    } finally {
+      setIsSkipping(false);
+    }
+  };
+
+  const confirmSkip = () => {
+    Alert.alert(
+      "Skip Additional Details?",
+      "You can add photos, certifications, and other details later from your profile settings to make your profile more attractive to potential clients.",
+      [
+        { text: "Complete Now", style: "cancel" },
+        { text: "Skip for Now", onPress: handleSkipPhase, style: "destructive" }
+      ]
+    );
   };
 
   const addCertification = () => setCertifications([...certifications, ""]);
@@ -93,6 +143,8 @@ const TellUsAboutYouScreen = ({ route }) => {
 
   const saveDetails = async () => {
     try {
+      setIsLoading(true);
+      
       // Check if gender is selected
       if (!gender) return handleError("Gender is required.");
 
@@ -118,78 +170,112 @@ const TellUsAboutYouScreen = ({ route }) => {
         }
       }
 
-      // Check if certifications and bio are filled for freelancers
-      if (role === "freelancer") {
+      // Role-specific validation
+      if (role === "FREELANCER") {
+        // Check if certifications and bio are filled for freelancers
         if (certifications.some((cert) => !cert)) {
           return handleError("Please fill in all certification fields.");
         }
         if (bio.length === 0) {
           return handleError("Bio is required.");
         }
+        // Validate cover art upload for freelancers
+        if (!coverImage) return handleError("Cover art is required.");
+      } else if (role === "CLIENT") {
+        // For clients, bio is optional, cover image is not required
+        // Only profile image is required
       }
 
-      // Validate profile image upload
+      // Validate profile image upload (required for both roles)
       if (!profileImage) return handleError("Profile image is required.");
 
-      // Validate cover art upload
-      if (!coverImage) return handleError("Cover art is required.");
+      console.log("Saving details for user:", user);
 
-      console.log({ user });
+      // Upload profile image
+      let profileImageUrl = null;
+      if (profileImage) {
+        try {
+          profileImageUrl = await apiService.uploadFile(
+            profileImage.uri,
+            `profile_${user.id}_${Date.now()}.jpg`,
+            'image'
+          );
+        } catch (error) {
+          console.error("Profile image upload failed:", error);
+          return handleError("Failed to upload profile image. Please try again.");
+        }
+      }
 
-      const userCollection =
-        role === "client"
-          ? appwriteConfig.clientCollectionId
-          : appwriteConfig.freelancerCollectionId;
+      // Upload cover image (only for freelancers)
+      let coverImageUrl = null;
+      if (role === "FREELANCER" && coverImage) {
+        try {
+          coverImageUrl = await apiService.uploadFile(
+            coverImage.uri,
+            `cover_${user.id}_${Date.now()}.jpg`,
+            'image'
+          );
+        } catch (error) {
+          console.error("Cover image upload failed:", error);
+          return handleError("Failed to upload cover image. Please try again.");
+        }
+      }
 
-      const response = await databases.listDocuments(
-        appwriteConfig.databaseId,
-        userCollection,
-        [Query.equal("email", user.email)]
-      );
-      if (response.documents.length === 0)
-        return handleError("No user document found with the provided email.");
-
-      const userDocumentId = response.documents[0].$id;
-
-      let profileImageFileURL = profileImage
-        ? await uploadFile(profileImage, "image")
-        : null;
-      let coverImageFileURL = coverImage
-        ? await uploadFile(coverImage, "image")
-        : null;
-
-      const updatedDetails = {
-        gender,
-        dob: dob.toISOString(),
-        ...(role === "freelancer" && {
-          certifications,
-          profile_description: bio,
-          social_media_links:
-            socialMediaLinks.length > 0 ? socialMediaLinks : [],
-        }),
-        ...(profileImageFileURL && { profile_photo: profileImageFileURL }),
-        ...(coverImageFileURL && { cover_photo: coverImageFileURL }),
-        updated_at: new Date().toISOString(),
+      // Prepare update data based on role
+      const updateData = {
+        phase2Completed: true,
       };
 
-      await databases.updateDocument(
-        appwriteConfig.databaseId,
-        userCollection,
-        userDocumentId,
-        updatedDetails
-      );
+      // Add role-specific fields
+      if (role === "FREELANCER") {
+        // Freelancer-specific fields
+        updateData.gender = gender;
+        updateData.dob = dob.toISOString();
+        updateData.socialMediaLinks = socialMediaLinks.length > 0 ? socialMediaLinks : null;
+        updateData.profilePhoto = profileImageUrl;
+        updateData.coverPhoto = coverImageUrl;
+        updateData.certifications = certifications.filter(cert => cert.trim() !== "");
+        updateData.profileDescription = bio;
+      } else if (role === "CLIENT") {
+        // Client-specific fields (limited to what's available in schema)
+        updateData.profileDescription = bio || `${gender} client born on ${dob.toDateString()}`;
+        updateData.profilePhoto = profileImageUrl;
+        // Note: Client model doesn't have gender, dob, socialMediaLinks, coverPhoto fields
+        // These are stored in the profileDescription for now
+      }
+
+      // Update profile based on role
+      if (role === "FREELANCER") {
+        if (!userProfile?.id) {
+          return handleError("Freelancer profile not found. Please contact support.");
+        }
+        await apiService.updateFreelancerPhase2(userProfile.id, updateData);
+      } else if (role === "CLIENT") {
+        if (!userProfile?.id) {
+          return handleError("Client profile not found. Please contact support.");
+        }
+        await apiService.updateClientPhase2(userProfile.id, updateData);
+      }
 
       handleSuccess("Your details have been updated successfully.");
-      navigation.navigate("Portfolio", { role });
+      
+      // Update profile status to mark phase 2 as complete
+      await updateRoleProfileStatus(role, { phase2profileComplete: true });
+      
+      // Navigate based on role
+      if (role === "FREELANCER") {
+        // Freelancers go to Portfolio screen next
+        navigation.navigate("Portfolio", { role });
+      } else if (role === "CLIENT") {
+        // Clients go directly to main app (no portfolio phase)
+        navigation.replace("MainTabs");
+      }
+      
     } catch (error) {
-      console.error("Error details:", {
-        message: error.message,
-        stack: error.stack,
-        name: error.name,
-        code: error.code,
-        response: error.response,
-      });
+      console.error("Error saving details:", error);
       handleError(`Failed to update details: ${error.message}`);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -197,7 +283,14 @@ const TellUsAboutYouScreen = ({ route }) => {
   const skipScreen = async () => {
     try {
       await checkUserSession();
-      navigation.navigate("Tabs", { screen: "Home" });
+      // Navigate based on role
+      if (role === "FREELANCER") {
+        // Freelancers go to Portfolio screen next
+        navigation.navigate("Portfolio", { role });
+      } else if (role === "CLIENT") {
+        // Clients go directly to main app (no portfolio phase)
+        navigation.replace("MainTabs");
+      }
     } catch (error) {
       Alert.alert("Error during session check");
     }
@@ -245,7 +338,7 @@ const TellUsAboutYouScreen = ({ route }) => {
         </View>
       </View>
 
-      {role === "freelancer" && (
+      {role === "FREELANCER" && (
         <>
           <Text style={styles.label}>Certifications</Text>
           {certifications.map((cert, index) => (
@@ -286,12 +379,26 @@ const TellUsAboutYouScreen = ({ route }) => {
         <Text style={styles.addMore}>+ Add more social media links</Text>
       </TouchableOpacity>
 
-      {role === "freelancer" && (
+      {role === "FREELANCER" && (
         <>
           <Text style={styles.label}>Describe yourself</Text>
           <TextInput
             style={styles.textArea}
             placeholder="Describe yourself"
+            value={bio}
+            multiline
+            onChangeText={(text) => text.length <= 255 && setBio(text)}
+          />
+          <Text style={styles.charCount}>{bio.length}/255</Text>
+        </>
+      )}
+
+      {role === "CLIENT" && (
+        <>
+          <Text style={styles.label}>Describe your business (optional)</Text>
+          <TextInput
+            style={styles.textArea}
+            placeholder="Tell us about your business or organization"
             value={bio}
             multiline
             onChangeText={(text) => text.length <= 255 && setBio(text)}
@@ -316,28 +423,39 @@ const TellUsAboutYouScreen = ({ route }) => {
         )}
       </View>
 
-      <Text style={styles.label}>Add your cover art</Text>
-      <View style={styles.profileUploadContainer}>
-        <TouchableOpacity
-          onPress={handleCoverUpload}
-          style={styles.uploadButton}
-        >
-          <Text>Click here to upload</Text>
-        </TouchableOpacity>
-        {coverImage && (
-          <Image source={{ uri: coverImage?.uri }} style={styles.coverImage} />
-        )}
-      </View>
+      {role === "FREELANCER" && (
+        <>
+          <Text style={styles.label}>Add your cover art</Text>
+          <View style={styles.profileUploadContainer}>
+            <TouchableOpacity
+              onPress={handleCoverUpload}
+              style={styles.uploadButton}
+            >
+              <Text>Click here to upload</Text>
+            </TouchableOpacity>
+            {coverImage && (
+              <Image source={{ uri: coverImage?.uri }} style={styles.coverImage} />
+            )}
+          </View>
+        </>
+      )}
 
       <View style={styles.buttonRow}>
         <TouchableOpacity
           style={styles.nextButton}
           onPress={() => navigation.goBack()}
+          disabled={isLoading}
         >
           <Text style={styles.nextButtonText}>Previous</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.nextButton} onPress={saveDetails}>
-          <Text style={styles.nextButtonText}>Next</Text>
+        <TouchableOpacity 
+          style={[styles.nextButton, isLoading && styles.disabledButton]} 
+          onPress={saveDetails}
+          disabled={isLoading}
+        >
+          <Text style={styles.nextButtonText}>
+            {isLoading ? "Saving..." : "Next"}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -473,6 +591,10 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
+  },
+  disabledButton: {
+    backgroundColor: "#ccc",
+    opacity: 0.6,
   },
   nextButtonText: {
     color: "#6A0DAD",

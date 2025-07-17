@@ -6,12 +6,12 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from "react-native";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/NewAuthContext";
 import Toast from "react-native-toast-message";
-import { useAppwrite } from "../context/AppwriteContext";
+// import { useAppwrite } from "../context/AppwriteContext";
 
 const ForgetPasswordScreen = ({ navigation }) => {
-  const { account } = useAppwrite();
+  // const { account } = useAppwrite();
   const [email, setEmail] = useState("");
 
   const handleInputChange = (value) => {
@@ -45,17 +45,18 @@ const ForgetPasswordScreen = ({ navigation }) => {
   const handleForgotPassword = async () => {
     if (!validateInputs()) return;
 
+    // TODO: Implement password reset with new backend
     // const account = new Account(client);
 
     try {
-      await account.createRecovery(
-        email,
-        "https://app.birdearner.com/reset-password"
-      );
+      // await account.createRecovery(
+      //   email,
+      //   "https://app.birdearner.com/reset-password"
+      // );
       showToast(
-        "success",
-        "Email Sent",
-        "Check your email for password reset instructions."
+        "info",
+        "Feature Coming Soon",
+        "Password reset functionality will be available soon."
       );
       navigation.goBack();
     } catch (error) {

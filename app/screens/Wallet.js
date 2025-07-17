@@ -8,7 +8,7 @@ import {
   Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/NewAuthContext";
 import { useAppwrite } from "../context/AppwriteContext";
 import { Query } from "react-native-appwrite";
 import { useTheme } from "../context/ThemeContext";

@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useAuth } from '../context/AuthContext'; 
+import { useAuth } from '../context/NewAuthContext'; 
 
 const Intro = () => {
   const router = useRouter();

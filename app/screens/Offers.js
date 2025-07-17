@@ -15,7 +15,7 @@ import egg from "../assets/egg.png";
 import nest from "../assets/nest.png";
 import tree from "../assets/tree.png";
 import brEgg from "../assets/brEgg.png";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/NewAuthContext";
 import { useAppwrite } from "../context/AppwriteContext";
 import { Query } from "react-native-appwrite";
 import { useTheme } from "../context/ThemeContext";

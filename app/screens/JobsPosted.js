@@ -12,26 +12,29 @@ import {
   Modal,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useAuth } from "../context/AuthContext";
-import { useAppwrite } from "../context/AppwriteContext";
-import { Query } from "react-native-appwrite";
+import { Briefcase } from "lucide-react-native";
+import { useAuth } from "../context/NewAuthContext";
 import { differenceInDays } from "date-fns";
 import { useTheme } from "../context/ThemeContext";
+import apiService from "../lib/apiService";
 
 const categorizeJobs = (jobs) => {
   const today = new Date();
   return jobs.map((job) => {
-    const daysRemaining = differenceInDays(new Date(job.deadline), today);
+    const daysRemaining = differenceInDays(new Date(job.deadlineDate), today);
 
     let priority;
     let color = "#FFCC00";
 
-    if (job.applied_freelancer.length === 0) {
+    // For now, we'll use proposalCount from the job data
+    const proposalCount = job.proposalCount || 0;
+
+    if (proposalCount === 0) {
       priority = "Under process";
-    } else if (job.applied_freelancer.length === 1) {
-      priority = `${job.applied_freelancer.length} Entry Received`;
+    } else if (proposalCount === 1) {
+      priority = `${proposalCount} Entry Received`;
     } else {
-      priority = `${job.applied_freelancer.length} Entries Received`;
+      priority = `${proposalCount} Entries Received`;
     }
 
     if (daysRemaining <= 2) {
@@ -49,8 +52,7 @@ const categorizeJobs = (jobs) => {
 };
 
 const JobsPostedScreen = ({ navigation }) => {
-  const { appwriteConfig, databases } = useAppwrite();
-  const { userData } = useAuth();
+  const { userData, userProfile } = useAuth();
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -59,7 +61,6 @@ const JobsPostedScreen = ({ navigation }) => {
   const [selectedJob, setSelectedJob] = useState(null);
 
   const cachedJobs = useRef([]);
-  const profilePic = userData?.profile_photo;
 
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
@@ -70,23 +71,29 @@ const JobsPostedScreen = ({ navigation }) => {
     setLoading(true);
     setError(false);
     try {
-      const response = await databases.listDocuments(
-        appwriteConfig.databaseId,
-        appwriteConfig.jobCollectionID,
-        [
-          Query.equal("job_created_by", userData.$id),
-          Query.orderDesc("created_at"),
-        ]
-      );
+      await apiService.init(); // Initialize the API service
+      
+      // Check if we have a valid client profile
+      if (!userProfile || !userProfile.id) {
+        console.log("No client profile found");
+        setJobs([]);
+        return;
+      }
 
-      const fetchedJobs = response.documents;
+      // Fetch jobs for this client
+      const response = await apiService.getJobsByClientId(userProfile.id);
+      
+      // The API returns paginated data, so we get the jobs from response.jobs
+      const fetchedJobs = response.jobs || response;
+      
       if (JSON.stringify(fetchedJobs) !== JSON.stringify(cachedJobs.current)) {
         const categorizedJobs = categorizeJobs(fetchedJobs);
         cachedJobs.current = fetchedJobs;
         setJobs(categorizedJobs);
       }
     } catch (err) {
-      Alert.alert("Failed to fetch jobs:", err);
+      console.error("Error fetching jobs:", err);
+      Alert.alert("Error", `Failed to fetch jobs: ${err.message}`);
       setError(true);
     } finally {
       setLoading(false);
@@ -111,10 +118,10 @@ const JobsPostedScreen = ({ navigation }) => {
   const handleOptionSelect = (option) => {
     setModalVisible(false); // Close the modal
     if (option === "View Details") {
-      navigation.navigate("JobDetailsChat", { projectId: selectedJob.$id });
+      navigation.navigate("JobDetailsChat", { projectId: selectedJob.id });
     } else if (option === "Update") {
       navigation.navigate("UpdateJobDetailsScreen", {
-        projectId: selectedJob.$id,
+        projectId: selectedJob.id,
       });
     } else if (option === "Delete") {
       Alert.alert("Delete Job", "Are you sure you want to delete this job?", [
@@ -122,7 +129,7 @@ const JobsPostedScreen = ({ navigation }) => {
         {
           text: "Delete",
           style: "destructive",
-          onPress: () => deleteJob(selectedJob.$id),
+          onPress: () => deleteJob(selectedJob.id),
         },
       ]);
     }
@@ -130,23 +137,25 @@ const JobsPostedScreen = ({ navigation }) => {
 
   const deleteJob = async (jobId) => {
     try {
-      await databases.deleteDocument(
-        appwriteConfig.databaseId,
-        appwriteConfig.jobCollectionID,
-        jobId
-      );
+      await apiService.init();
+      await apiService.deleteJob(jobId);
       Alert.alert("Success", "Job deleted successfully.");
       fetchJobs(); // Refresh jobs after deletion
     } catch (err) {
-      Alert.alert("Error", "Failed to delete job.");
+      console.error("Error deleting job:", err);
+      Alert.alert("Error", `Failed to delete job: ${err.message}`);
     }
   };
 
   const renderJobItem = ({ item }) => {
-    const title = item.title;
-    const freelancersId = item.applied_freelancer;
+    const title = item.jobTitle;
+    const proposalCount = item.proposalCount || 0;
     const color = item.color;
-    const projectId = item.$id;
+    const projectId = item.id;
+    
+    // Check if there are portfolio images attached to this job
+    const hasPortfolioImages = item.attachedFiles && item.attachedFiles.length > 0;
+    const firstPortfolioImage = hasPortfolioImages ? item.attachedFiles[0] : null;
 
     return (
       <TouchableOpacity
@@ -154,23 +163,30 @@ const JobsPostedScreen = ({ navigation }) => {
         onPress={() => {
           navigation.navigate("AppliersScreen", {
             title,
-            freelancersId,
+            proposalCount,
             color,
             item,
             projectId,
           });
         }}
       >
-        <Image
-          source={{
-            uri:
-              profilePic || "https://randomuser.me/api/portraits/women/3.jpg",
-          }}
-          style={styles.avatar}
-        />
+        {hasPortfolioImages ? (
+          <Image
+            source={{ uri: firstPortfolioImage }}
+            style={styles.avatar}
+          />
+        ) : (
+          <View style={[styles.avatar, styles.iconContainer]}>
+            <Briefcase 
+              size={40} 
+              color="#6A0DAD" 
+              strokeWidth={2}
+            />
+          </View>
+        )}
         <View style={styles.jobContent}>
           <Text style={styles.jobTitle} numberOfLines={1}>
-            {item.title}
+            {item.jobTitle}
           </Text>
           <Text style={styles.jobStatus}>Status: {item.priority}</Text>
         </View>
@@ -248,7 +264,7 @@ const JobsPostedScreen = ({ navigation }) => {
       <FlatList
         data={jobs}
         renderItem={renderJobItem}
-        keyExtractor={(item) => item.$id}
+        keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContainer}
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -271,7 +287,7 @@ const JobsPostedScreen = ({ navigation }) => {
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>
-              Options for {selectedJob?.title}
+              Options for {selectedJob?.jobTitle}
             </Text>
             <TouchableOpacity
               onPress={() => handleOptionSelect("View Details")}
@@ -345,6 +361,13 @@ const getStyles = (currentTheme) =>
       height: 80,
       borderRadius: 40,
       marginRight: 15,
+    },
+    iconContainer: {
+      backgroundColor: currentTheme.cardBackground || "#F0F0F0",
+      justifyContent: "center",
+      alignItems: "center",
+      borderWidth: 2,
+      borderColor: "#6A0DAD",
     },
     jobContent: {
       flex: 1,

@@ -2,20 +2,18 @@ import React, { useEffect, useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from "react-native";
 import { Svg, Circle } from "react-native-svg";
 import { Ionicons } from "@expo/vector-icons";
-import { useAuth } from "../context/AuthContext";
-import { useAppwrite } from "../context/AppwriteContext";
-import { ID } from "react-native-appwrite";
+import { useAuth } from "../context/NewAuthContext";
+import apiService from "../lib/apiService";
 import { useTheme } from "../context/ThemeContext";
 
 const TOTAL_TIME = 30;
 
 const JobSubmissionTimmerScreen = ({ route, navigation }) => {
-  const { appwriteConfig, databases, uploadFile } = useAppwrite();
   const [seconds, setSeconds] = useState(TOTAL_TIME);
   const [progress, setProgress] = useState(1);
   const [submitted, setSubmitted] = useState(false);
   const { formData } = route.params;
-  const { userData } = useAuth();
+  const { userData, userProfile } = useAuth();
 
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
@@ -24,39 +22,39 @@ const JobSubmissionTimmerScreen = ({ route, navigation }) => {
 
   const submitJob = async () => {
     try {
-      const userDocumentId = userData.$id;
+      await apiService.init(); // Initialize the API service
+      
+      // Validate that we have the required profile data
+      if (!userProfile || !userProfile.id) {
+        console.log("Debug - userData:", userData);
+        console.log("Debug - userProfile:", userProfile);
+        throw new Error("Client profile not found. Please complete your profile setup.");
+      }
+      
+      console.log("Debug - Using clientId:", userProfile.id);
+      console.log("Debug - Job data being sent:", jobData);
+      
+      // Create job data object
+      const jobData = {
+        jobTitle: formData.jobTitle,
+        jobDescription: formData.jobDes,
+        jobCategory: formData.freelancerType,
+        jobSubCategory: formData.freelancerType, // Using the same value for now
+        skillsRequired: formData.skills,
+        experienceLevel: "Intermediate", // Default value
+        projectType: formData.jobType,
+        projectDuration: "1-3 months", // Default value
+        budgetType: "Fixed", // Default value
+        budgetAmount: parseFloat(formData.budget),
+        clientId: userProfile.id, // Use the client profile ID, not user ID
+        deadlineDate: new Date(formData.deadline),
+        attachedFiles: formData.portfolioImages, // Send image URIs as is - backend will handle file upload
+        location: formData.jobLocation,
+      };
 
-      // Upload each image and get URLs
-      const uploadedImageURLs = await Promise.all(
-        formData.portfolioImages.map(async (imageUri) => {
-          const fileResponse = await uploadFile({ uri: imageUri }, "image");
-          return fileResponse;
-        })
-      );
-
-      // Create job document
-      await databases.createDocument(
-        appwriteConfig.databaseId,
-        appwriteConfig.jobCollectionID,
-        ID.unique(),
-        {
-          title: formData.jobTitle,
-          description: formData.jobDes,
-          budget: parseInt(formData.budget, 10),
-          location: formData.jobLocation,
-          skills: formData.skills,
-          deadline: formData.deadline,
-          attached_files: uploadedImageURLs,
-          freelancer_type: formData.freelancerType,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          job_created_by: userDocumentId,
-          latitude: formData.latitude,
-          longitude: formData.longitude,
-          jobType: formData.jobType,
-        }
-      );
-
+      // Create the job using apiService
+      const response = await apiService.createJob(jobData);
+      
       Alert.alert("Success", "Job has been created successfully.");
       navigation.reset({
         index: 0,
@@ -64,7 +62,8 @@ const JobSubmissionTimmerScreen = ({ route, navigation }) => {
       });
       setSubmitted(true);
     } catch (error) {
-      Alert.alert("Error", `Failed to update details: ${error.message}`);
+      console.error("Error creating job:", error);
+      Alert.alert("Error", `Failed to create job: ${error.message}`);
     }
   };
 

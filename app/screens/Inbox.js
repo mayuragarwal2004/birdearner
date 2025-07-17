@@ -9,15 +9,15 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/NewAuthContext";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
-import { Query } from "react-native-appwrite";
+// import { Query } from "react-native-appwrite";
 import { useTheme } from "../context/ThemeContext";
-import { useAppwrite } from "../context/AppwriteContext";
+// import { useAppwrite } from "../context/AppwriteContext";
 
 const Inbox = () => {
-    const { appwriteConfig, databases } = useAppwrite();
+    // const { appwriteConfig, databases } = useAppwrite();
   const [chatThreads, setChatThreads] = useState([]);
   const [unchatThreads, setunChatThreads] = useState([]);
   const [starStatus, setStarStatus] = useState({});

@@ -10,7 +10,7 @@ import {
   Alert,
 } from "react-native";
 import { FontAwesome } from "@expo/vector-icons";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/NewAuthContext";
 import { useAppwrite } from "../context/AppwriteContext";
 import ImageViewer from "react-native-image-zoom-viewer";
 import { useTheme } from "../context/ThemeContext";

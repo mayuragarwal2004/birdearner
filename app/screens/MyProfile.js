@@ -17,17 +17,26 @@ import {
   Easing,
 } from "react-native";
 import { FontAwesome, MaterialIcons } from "@expo/vector-icons";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/NewAuthContext";
 import ImageViewer from "react-native-image-zoom-viewer";
-import { useAppwrite } from "../context/AppwriteContext";
 import Toast from "react-native-toast-message";
 import { useTheme } from "../context/ThemeContext";
 import LottieView from "lottie-react-native";
+import apiService from "../lib/apiService";
 
 const AnimatedLottieView = Animated.createAnimatedComponent(LottieView);
 
+// Helper function to show toast messages
+const showToast = (type, title, message = "") => {
+  Toast.show({
+    type,
+    text1: title,
+    text2: message,
+    position: "top",
+  });
+};
+
 export default function ProfileScreen({ navigation }) {
-  const { appwriteConfig, databases } = useAppwrite();
   const {
     user,
     loading,
@@ -37,6 +46,8 @@ export default function ProfileScreen({ navigation }) {
     roleOptions,
     handleRoleSelection,
     fetchUserData,
+    userProfile,
+    setUserProfile,
   } = useAuth();
   const [data, setData] = useState(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
@@ -52,7 +63,7 @@ export default function ProfileScreen({ navigation }) {
 
   const styles = getStyles(currentTheme);
 
-  const createdAt = userData?.$createdAt;
+  const createdAt = userData?.createdAt;
   const date = new Date(createdAt);
 
   // Format the date and time
@@ -78,7 +89,7 @@ export default function ProfileScreen({ navigation }) {
   };
 
   const transitionText =
-    userData?.role === "freelancer"
+    userData?.role === "FREELANCER"
       ? "Switching to Client"
       : "Switching to Freelancer";
 
@@ -89,7 +100,7 @@ export default function ProfileScreen({ navigation }) {
 
   const handleSetupRole = async (roleType) => {
     try {
-      const fullName = userData?.full_name;
+      const fullName = userProfile?.fullName;
       const email = userData?.email;
       const role = roleType;
 
@@ -99,50 +110,64 @@ export default function ProfileScreen({ navigation }) {
     }
   };
 
-  useEffect(() => {
+  // Fetch profile data from backend
+  const fetchProfileData = async () => {
     try {
-      setData(userData);
+      setLoadingProfile(true);
+      
+      if (!userData || !userData.id) {
+        console.log("No user data available");
+        setData(null);
+        return;
+      }
+
+      // Use userProfile data if available, otherwise fetch from API
+      if (userProfile) {
+        setData(userProfile);
+      } else {
+        // Fetch complete profile data from API
+        try {
+          const completeProfile = await apiService.getCompleteProfile(userData.id);
+          setData(completeProfile);
+          
+          // Update the userProfile in context if we got data
+          if (completeProfile.profile) {
+            setUserProfile(completeProfile.profile);
+          }
+        } catch (error) {
+          console.log("Error fetching complete profile:", error);
+          // Fallback to basic user data
+          setData(userData);
+        }
+      }
     } catch (error) {
-      Alert.alert("Failed to fetch freelancer data:", error);
+      console.error("Error fetching profile data:", error);
+      showToast("error", "Error", "Failed to fetch profile data");
     } finally {
       setLoadingProfile(false);
     }
-  }, [user]);
+  };
 
   useEffect(() => {
-    const flagsData = async () => {
-      if (userData) {
-        try {
-          const freelancerId = userData?.$id;
+    fetchProfileData();
+  }, [userData, userProfile]);
 
-          const collectionId =
-            userData?.role === "client"
-              ? appwriteConfig.clientCollectionId
-              : appwriteConfig.freelancerCollectionId;
-
-          const freelancerDoc = await databases.getDocument(
-            appwriteConfig.databaseId,
-            collectionId,
-            freelancerId
-          );
-          setUserData(freelancerDoc);
-        } catch (error) {
-          Alert.alert("Error updating flags:", error);
-        }
-      }
-    };
-
-    flagsData();
-  }, [refreshing]);
-
-  const onRefresh = () => {
+  // Remove the old Appwrite flagsData effect
+  const onRefresh = async () => {
     console.log("Refreshing...");
-    fetchUserData();
-
     setRefreshing(true);
-    setTimeout(() => {
+    
+    try {
+      // Refresh user data through auth context
+      await fetchUserData();
+      // Fetch fresh profile data
+      await fetchProfileData();
+    } catch (error) {
+      console.error("Error refreshing data:", error);
+      showToast("error", "Error", "Failed to refresh data");
+    } finally {
       setRefreshing(false);
-    }, 1000);
+    }
   };
 
   const openImageModal = (imageUri) => {
@@ -162,10 +187,10 @@ export default function ProfileScreen({ navigation }) {
 
   const onShare = async () => {
     try {
-      const profileLink = `https://birdearner.com/profile/${userData.$id}`;
+      const profileLink = `https://birdearner.com/profile/${userData?.id}`;
 
       const result = await Share.share({
-        message: `Check out my profile on our app! Name: ${data?.full_name}\n\nProfile Link: ${profileLink}`,
+        message: `Check out my profile on our app! Name: ${data?.fullName || userData?.fullName || "User"}\n\nProfile Link: ${profileLink}`,
       });
       if (result.action === Share.sharedAction) {
         if (result.activityType) {
@@ -245,17 +270,17 @@ export default function ProfileScreen({ navigation }) {
 
         <ImageBackground
           source={
-            data?.cover_photo
-              ? { uri: data.cover_photo }
+            data?.coverPhoto
+              ? { uri: data.coverPhoto }
               : require("../assets/backGroungBanner.png")
           }
           style={styles.backgroundImg}
         >
-          <TouchableOpacity onPress={() => openImageModal(data?.profile_photo)}>
+          <TouchableOpacity onPress={() => openImageModal(data?.profilePhoto)}>
             <Image
               source={
-                data?.profile_photo
-                  ? { uri: data.profile_photo }
+                data?.profilePhoto
+                  ? { uri: data.profilePhoto }
                   : require("../assets/profile.png")
               }
               style={styles.profileImage}
@@ -285,27 +310,27 @@ export default function ProfileScreen({ navigation }) {
         </ImageBackground>
 
         <View style={styles.userDetails}>
-          <Text style={styles.nameText}>{data?.full_name || "User"}</Text>
-          {role === "client" ? (
+          <Text style={styles.nameText}>{data?.fullName || userData?.fullName || "User"}</Text>
+          {role === "CLIENT" ? (
             <Text style={styles.roleText}>
-              {data?.organization_type || "Not found"}
+              {data?.organizationType || "Organization"}
             </Text>
           ) : (
             <View style={styles.roleWrap}>
               <Text>
-                {data?.role_designation?.map((item, idx) => (
+                {data?.roleDesignation?.map((item, idx) => (
                   <Text key={idx} style={styles.roleText}>
                     {item}
-                    {", "}
+                    {idx < data.roleDesignation.length - 1 ? ", " : ""}
                   </Text>
-                )) || "No role designation available"}
+                )) || <Text style={styles.roleText}>No role designation available</Text>}
               </Text>
             </View>
           )}
           <Text style={styles.statusText}>
             Status:
-            {userData?.currently_available === true ? " Active " : " Inactive "}
-            {userData?.currently_available === true ? (
+            {data?.currentlyAvailable === true ? " Active " : " Inactive "}
+            {data?.currentlyAvailable === true ? (
               <FontAwesome name="circle" size={12} color="#6BCD2F" />
             ) : (
               <FontAwesome name="circle" size={12} color="#FF3131" />
@@ -313,12 +338,12 @@ export default function ProfileScreen({ navigation }) {
           </Text>
         </View>
 
-        {userData?.role === "freelancer" && (
+        {userData?.role === "FREELANCER" && (
           <View style={styles.levelContainer}>
             <View style={styles.xpRan}>
               <View style={styles.xp}>
                 <Text style={styles.xpText}>
-                  {formatXP(userData?.XP) || 0} xp
+                  {formatXP(data?.xp || 0)} xp
                 </Text>
               </View>
               <Text style={styles.randomText}>
@@ -326,28 +351,28 @@ export default function ProfileScreen({ navigation }) {
               </Text>
             </View>
             <View style={styles.level}>
-              <Text style={styles.levelText}>Lev. {userData?.level || 1}</Text>
+              <Text style={styles.levelText}>Lev. {data?.level || 1}</Text>
             </View>
           </View>
         )}
 
         <Text style={styles.Profile_heading}>
-          {role === "client"
-            ? `Company Name: ${data?.company_name || "--"}`
-            : data?.profile_heading}
+          {role === "CLIENT"
+            ? `Company Name: ${data?.companyName || "--"}`
+            : data?.profileHeading || "No profile heading"}
         </Text>
 
         <Text style={styles.about}>About me</Text>
         <Text style={styles.about_des}>
-          {data?.profile_description || "No description available"}
+          {data?.profileDescription || "No description available"}
         </Text>
 
         {/* Portfolio Section */}
-        {role === "freelancer" && data?.portfolio_images?.length > 0 && (
+        {role === "FREELANCER" && data?.portfolioImages?.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Portfolio</Text>
             <View style={styles.portfolioImages}>
-              {data?.portfolio_images.map((image, index) => (
+              {data?.portfolioImages.map((image, index) => (
                 <TouchableOpacity
                   key={index}
                   onPress={() => openImageModal(image)}
@@ -363,7 +388,7 @@ export default function ProfileScreen({ navigation }) {
         )}
 
         {/* Experience & Certifications */}
-        {role === "freelancer" &&
+        {role === "FREELANCER" &&
           (data?.experience || data?.certifications?.length > 0) && (
             <View style={styles.section}>
               {data?.experience && (
@@ -394,8 +419,7 @@ export default function ProfileScreen({ navigation }) {
 
         <Text style={styles.locTitle}>Location</Text>
         <Text style={styles.locSubTitle}>
-          {" "}
-          {userData?.city}, {userData?.state} ({userData?.country}){" "}
+          {data?.city || userData?.city}, {data?.state || userData?.state} ({data?.country || userData?.country})
         </Text>
 
         <Text style={styles.locTitle}>Member Since</Text>
@@ -408,7 +432,7 @@ export default function ProfileScreen({ navigation }) {
                 style={styles.editProfileButton}
                 onPress={() =>
                   handleRoleSwitch(
-                    userData.role === "freelancer"
+                    userData.role === "FREELANCER"
                       ? roleOptions.clientData
                       : roleOptions.freelancerData
                   )
@@ -416,7 +440,7 @@ export default function ProfileScreen({ navigation }) {
               >
                 <Text style={styles.buttonText}>
                   Switch to{" "}
-                  {userData.role === "freelancer" ? "Client" : "Freelancer"}
+                  {userData.role === "FREELANCER" ? "Client" : "Freelancer"}
                 </Text>
               </TouchableOpacity>
             ) : (

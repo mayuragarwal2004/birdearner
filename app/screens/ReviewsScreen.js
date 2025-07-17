@@ -15,7 +15,7 @@ import {
 import { FontAwesome, MaterialIcons } from "@expo/vector-icons";
 import { TouchableOpacity } from "react-native";
 import ReviewCard from "../components/ReviewCard";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/NewAuthContext";
 import { useAppwrite } from "../context/AppwriteContext";
 import { Query } from "react-native-appwrite";
 import { useTheme } from "../context/ThemeContext";

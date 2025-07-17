@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
   SafeAreaView,
 } from "react-native";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/NewAuthContext";
 import { useTheme } from "../context/ThemeContext";
 import { Ionicons } from "@expo/vector-icons";
 

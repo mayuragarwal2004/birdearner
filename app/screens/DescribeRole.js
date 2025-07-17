@@ -6,17 +6,33 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
+  Alert,
 } from "react-native";
 import Toast from "react-native-toast-message";
 import { Picker } from "@react-native-picker/picker";
-import { ID, Query } from "react-native-appwrite";
-import { useAuth } from "../context/AuthContext";
-import { useAppwrite } from "../context/AppwriteContext";
+// import { ID, Query } from "react-native-appwrite";
+import { useAuth } from "../context/NewAuthContext";
+// import { useAppwrite } from "../context/AppwriteContext";
+import apiService from "../lib/apiService";
+import { updateRoleProfileStatus } from "../lib/profileStatusStorage";
+import { freelance_service, household_service } from "../lib/roleData";
 
 const DescribeRole = ({ navigation, route }) => {
-  const { account, appwriteConfig, databases } = useAppwrite();
-  const { fullName, email, role, password } = route.params;
-  const { user, login, checkUserSession } = useAuth();
+  // const { account, appwriteConfig, databases } = useAppwrite();
+  let {
+    // fullName = "",
+    // email = "",
+    // role = "",
+    // password = "",
+  } = route.params || {};
+  const { user, refreshUserData } = useAuth(); // Added refreshUserData
+  const { role, fullName, email } = user;
+  console.log(`[mayur-data-role] 
+    role: ${role}
+    fullName: ${fullName}
+    email: ${email}
+    `);
+
   const [formData, setFormData] = useState({
     qualification: "",
     experience: "",
@@ -30,10 +46,24 @@ const DescribeRole = ({ navigation, route }) => {
     designations: [],
   });
   const [services, setServices] = useState([]);
+  const [serviceObjects, setServiceObjects] = useState([]); // Store full service objects with imageUrl
+  const [isLoadingServices, setIsLoadingServices] = useState(true);
+  const [servicesError, setServicesError] = useState(null);
+  
+  // States for existing profile data
+  const [existingProfile, setExistingProfile] = useState(null);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
+  
+  // Skip functionality states
+  const [showSkipOption, setShowSkipOption] = useState(false);
+  const [isSkipping, setIsSkipping] = useState(false);
+  const [glitchCount, setGlitchCount] = useState(0);
 
-  useEffect(() => {
-    checkUserSession();
-  }, []);
+  // useEffect(() => {
+  //   checkUserSession();
+  // }, []);
 
   // List of Indian states
   const indianStates = [
@@ -82,9 +112,118 @@ const DescribeRole = ({ navigation, route }) => {
   };
   console.log({ user });
 
+  // Helper function to get full service details by name (for future image display)
+  const getServiceByName = (serviceName) => {
+    return serviceObjects.find(service => service.name === serviceName);
+  };
+
+  // Skip functionality methods
+  const handleSkipPhase = async () => {
+    try {
+      setIsSkipping(true);
+      
+      // Record the skip using the new profile status storage
+      await updateRoleProfileStatus(role, { phase1skipped: true });
+      
+      showToast("info", "Phase 1 skipped. You can complete it later from your profile.");
+      
+      // Navigate to next phase or main app
+      setTimeout(() => {
+        setIsNavigating(true);
+        navigation.replace("TellUsAboutYou", { role, skipped: true });
+      }, 1500);
+      
+    } catch (error) {
+      console.error('Error handling skip:', error);
+      showToast("error", "Failed to skip. Please try again.");
+    } finally {
+      setIsSkipping(false);
+    }
+  };
+
+  const handleGlitchRecovery = async (errorMessage) => {
+    try {
+      setGlitchCount(glitchCount + 1);
+      
+      // Show skip option if multiple glitches detected
+      if (glitchCount >= 2 && !showSkipOption) {
+        setShowSkipOption(true);
+        Alert.alert(
+          "Having trouble?",
+          "It seems you're experiencing some technical difficulties. Would you like to skip this step for now and complete it later?",
+          [
+            { text: "Keep Trying", style: "cancel" },
+            { text: "Skip for Now", onPress: () => handleSkipPhase() }
+          ]
+        );
+      }
+    } catch (error) {
+      console.error('Error in glitch recovery:', error);
+    }
+  };
+
+  const confirmSkip = () => {
+    Alert.alert(
+      "Skip Profile Setup?",
+      "You can complete your profile later from the settings. This will help other users find and connect with you better.",
+      [
+        { text: "Complete Now", style: "cancel" },
+        { text: "Skip for Now", onPress: handleSkipPhase, style: "destructive" }
+      ]
+    );
+  };
+
+  // Fetch existing profile data for the user and role
+  const fetchExistingProfile = async () => {
+    try {
+      setIsLoadingProfile(true);
+      console.log(`Fetching existing ${role} profile for user:`, user.id);
+      
+      await apiService.init();
+      
+      let profileData = null;
+      if (role === "CLIENT") {
+        profileData = await apiService.getClientProfile(user.id);
+      } else if (role === "FREELANCER") {
+        profileData = await apiService.getFreelancerProfile(user.id);
+      }
+      
+      if (profileData) {
+        console.log("Existing profile found:", profileData);
+        setExistingProfile(profileData);
+        setIsUpdating(true);
+        
+        // Auto-fill form with existing data
+        setFormData({
+          qualification: profileData.highestQualification || "",
+          experience: profileData.experience ? profileData.experience.toString() : "",
+          heading: profileData.profileHeading || profileData.companyName || "",
+          city: profileData.city || "",
+          state: profileData.state || "",
+          zipCode: profileData.zipcode ? profileData.zipcode.toString() : "",
+          country: profileData.country || "",
+          designation: role === "CLIENT" ? profileData.organizationType || "" : "",
+          bio: profileData.profileDescription || "",
+          designations: Array.isArray(profileData.roleDesignation) ? profileData.roleDesignation : [],
+        });
+        
+        showToast("info", `Existing ${role.toLowerCase()} profile loaded`);
+      } else {
+        console.log("No existing profile found, creating new profile");
+        setIsUpdating(false);
+      }
+    } catch (error) {
+      console.log("No existing profile found or error:", error.message);
+      setExistingProfile(null);
+      setIsUpdating(false);
+    } finally {
+      setIsLoadingProfile(false);
+    }
+  };
+
   const handleInputChange = (key, value) => {
     setFormData((prev) => ({ ...prev, [key]: value }));
-    addRole();
+    // addRole();
   };
 
   const addRole = () => {
@@ -101,7 +240,7 @@ const DescribeRole = ({ navigation, route }) => {
 
   const validateForm = () => {
     const requiredFields =
-      role === "client"
+      role === "CLIENT"
         ? ["designation", "city", "state", "zipCode", "country", "bio"]
         : [
             "designations",
@@ -121,116 +260,206 @@ const DescribeRole = ({ navigation, route }) => {
         !formData[field] ||
         (Array.isArray(formData[field]) && !formData[field].length)
       ) {
-        showToast("info", "All fields are required.");
+        showToast("info", `All fields are required. Problem with ${field}`);
         return false;
       }
     }
     return true;
   };
 
-  const authenticateUser = async () => {
-    try {
-      return await account.getSession("current");
-    } catch {
-      await login(email, password);
-    }
-  };
-
-  // 678223c5002d015d1667
-
   const saveDetails = async () => {
     if (!validateForm()) return;
 
     try {
-      const user = await authenticateUser();
+      // Get current user from context
+      if (!user || !user.id) {
+        showToast("error", "User not authenticated");
+        return;
+      }
 
-      const collectionId =
-        role === "client"
-          ? appwriteConfig.clientCollectionId
-          : appwriteConfig.freelancerCollectionId;
+      // Prepare payload for create vs update
+      const basePayload = role === "CLIENT"
+        ? {
+            organizationType: formData.designation,
+            companyName: formData.heading,
+            city: formData.city,
+            state: formData.state,
+            zipcode: parseInt(formData.zipCode) || 0,
+            country: formData.country,
+            profileDescription: formData.bio,
+          }
+        : {
+            roleDesignation: formData.designations,
+            highestQualification: formData.qualification,
+            experience: parseInt(formData.experience) || 0,
+            profileHeading: formData.heading,
+            city: formData.city,
+            state: formData.state,
+            zipcode: parseInt(formData.zipCode) || 0,
+            country: formData.country,
+            profileDescription: formData.bio,
+          };
 
-      const payload =
-        role === "client"
-          ? {
-              full_name: fullName,
-              email,
-              role,
-              organization_type: formData.designation,
-              company_name: formData.heading,
-              city: formData.city,
-              state: formData.state,
-              zipcode: parseInt(formData.zipCode),
-              country: formData.country,
-              profile_description: formData.bio,
-              userId: user.userId,
-            }
-          : {
-              full_name: fullName,
-              email,
-              role,
-              role_designation: formData.designations,
-              highest_qualification: formData.qualification,
-              experience: parseInt(formData.experience),
-              profile_heading: formData.heading,
-              city: formData.city,
-              state: formData.state,
-              zipcode: parseInt(formData.zipCode),
-              country: formData.country,
-              userId: user.userId,
-            };
+      // For create operations, include userId, fullName, email
+      // For update operations, exclude them as they shouldn't change
+      const payload = isUpdating && existingProfile
+        ? basePayload
+        : {
+            ...basePayload,
+            userId: user.id,
+            fullName: fullName,
+            email: email,
+          };
 
-      console.log({ payload });
+      console.log(`${isUpdating ? 'Updating' : 'Creating'} profile for:`, role, payload);
 
-      await databases.createDocument(
-        appwriteConfig.databaseId,
-        collectionId,
-        ID.unique(),
-        { ...payload, created_at: new Date().toISOString() }
-      );
+      let response;
+      if (isUpdating && existingProfile) {
+        // Update existing profile
+        if (role === "CLIENT") {
+          response = await apiService.updateClientProfile(existingProfile.id, payload);
+        } else {
+          response = await apiService.updateFreelancerProfile(existingProfile.id, payload);
+        }
+        console.log("Profile updated successfully:", response);
+        showToast("success", `${role} profile updated successfully!`);
+      } else {
+        // Create new profile
+        if (role === "CLIENT") {
+          response = await apiService.createClientProfile(payload);
+        } else {
+          response = await apiService.createFreelancerProfile(payload);
+        }
+        console.log("Profile created successfully:", response);
+        showToast("success", `${role} profile created successfully!`);
+      }
 
-      showToast("success", `${role} details saved successfully.`);
-      navigation.navigate("TellUsAboutYou", { role });
+      // Add a small delay to ensure toast is shown, then navigate
+      setIsNavigating(true);
+      console.log("About to refresh user data and navigate...");
+      
+      // Update profile status to mark phase 1 as complete
+      await updateRoleProfileStatus(role, { phase1profileComplete: true });
+      
+      // Refresh user data to update context BEFORE navigation
+      await refreshUserData();
+      console.log("User data refreshed, navigating in 1.5 seconds...");
+      
+      setTimeout(() => {
+        console.log("Executing navigation to TellUsAboutYou...");
+        navigation.replace("TellUsAboutYou", { role });
+      }, 1500);
     } catch (error) {
+      console.error(`Error ${isUpdating ? 'updating' : 'creating'} profile:`, error);
+      
+      // Record potential glitch for skip tracking
+      await handleGlitchRecovery(error.message);
+      
       showToast("error", `Error saving details: ${error.message}`);
-      console.error(error);
     }
   };
 
+  // Load services data for role selection from backend
   useEffect(() => {
     const fetchServices = async () => {
       try {
-        const response = await databases.listDocuments(
-          appwriteConfig.databaseId,
-          appwriteConfig.roleCollectionID,
-          [Query.equal("category", ["freelance_service", "household_service"])]
+        setIsLoadingServices(true);
+        setServicesError(null);
+
+        console.log("Fetching services from backend...");
+
+        // Initialize API service
+        await apiService.init();
+
+        // Fetch both freelance and household services from backend
+        const [freelanceResponse, householdResponse] = await Promise.all([
+          apiService.getServicesByCategory("FREELANCE"),
+          apiService.getServicesByCategory("HOUSEHOLD"),
+        ]);
+      
+        // Log the response data
+        // console.log('Freelance Services Response:', JSON.stringify(freelanceResponse, null, 2));
+        // console.log('Household Services Response:', JSON.stringify(householdResponse, null, 2));
+
+        // Extract service data from response
+        const freelanceServices = freelanceResponse || [];
+        const householdServices = householdResponse || [];
+
+        // Store full service objects for future use (like images)
+        const allServices = [...freelanceServices, ...householdServices];
+        
+        // For now, we'll use just the names for the picker, but we have the full objects available
+        const allServiceNames = allServices.map((service) => service.name);
+
+        setServices(allServiceNames);
+        setServiceObjects(allServices); // Store full objects for future image usage
+        console.log(
+          "Services loaded from backend:",
+          allServiceNames.length,
+          "services"
         );
-        const roles = response.documents.map((doc) => doc.role).flat();
-        setServices(roles);
+        console.log("Sample service with imageUrl:", allServices[0]); // Log to see the structure
+        showToast(
+          "success",
+          `Loaded ${allServiceNames.length} services from server`
+        );
       } catch (error) {
-        showToast("error", "Error fetching services.");
+        console.error("Error fetching services from backend:", error);
+        setServicesError(error.message);
+
+        // Fallback to local data if backend fails
+        const allServices = [...freelance_service, ...household_service];
+        setServices(allServices);
+        showToast(
+          "error",
+          "Failed to load services from server. Using offline data."
+        );
+      } finally {
+        setIsLoadingServices(false);
       }
     };
+
     fetchServices();
   }, []);
 
+  // Fetch existing profile data on component mount
   useEffect(() => {
-    if (!user) {
-      login(email, password);
+    if (user && user.id && role && !isNavigating) {
+      fetchExistingProfile();
     }
-  }, []);
+  }, [user, role, isNavigating]);
+
+  // User should already be authenticated from signup flow
+  // useEffect(() => {
+  //   if (!user) {
+  //     login(email, password);
+  //   }
+  // }, []);
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>
-        {role === "client" ? "Tell us about yourself" : "Describe Your Role"}
+        {role === "CLIENT" ? "Tell us about yourself" : "Describe Your Role"}
       </Text>
       <Text style={styles.heading}>for role: {role}</Text>
+      
+      {/* Show loading state while fetching profile */}
+      {isLoadingProfile && (
+        <Text style={styles.loadingText}>Loading existing profile...</Text>
+      )}
+      
+      {/* Show update/create indicator */}
+      {/* {!isLoadingProfile && (
+        <Text style={styles.modeText}>
+          {isUpdating ? "✏️ Updating existing profile" : "➕ Creating new profile"}
+        </Text>
+      )} */}
 
       {/* Role/Designation */}
       <Text style={styles.label}>
-        {role === "client" ? "Type of your organisation" : "Role/Designation"}
+        {role === "CLIENT" ? "Type of your organisation" : "Role/Designation"}
       </Text>
-      {role === "client" ? (
+      {role === "CLIENT" ? (
         <View style={styles.dropdown}>
           <Picker
             selectedValue={formData.designation}
@@ -261,13 +490,32 @@ const DescribeRole = ({ navigation, route }) => {
               onValueChange={(itemValue) =>
                 handleInputChange("designation", itemValue)
               }
+              enabled={!isLoadingServices}
             >
-              <Picker.Item label="Select Role" value="" />
-              {services.map((service, id) => (
-                <Picker.Item key={id} label={service} value={service} />
-              ))}
+              <Picker.Item
+                label={
+                  isLoadingServices ? "Loading services..." : "Select Role"
+                }
+                value=""
+              />
+              {!isLoadingServices &&
+                services.map((service, id) => (
+                  <Picker.Item key={id} label={service} value={service} />
+                ))}
             </Picker>
           </View>
+
+          {isLoadingServices && (
+            <Text style={styles.loadingText}>
+              Loading services from server...
+            </Text>
+          )}
+
+          {servicesError && (
+            <Text style={styles.errorText}>
+              Error loading services: {servicesError}
+            </Text>
+          )}
 
           {formData.designations.length > 0 &&
             formData.designations.map((r, index) => (
@@ -281,7 +529,7 @@ const DescribeRole = ({ navigation, route }) => {
         </>
       )}
 
-      {role === "freelancer" && (
+      {role === "FREELANCER" && (
         <>
           {/* Qualification */}
           <Text style={styles.label}>Highest Qualification</Text>
@@ -316,14 +564,14 @@ const DescribeRole = ({ navigation, route }) => {
 
       {/* Profile Heading */}
       <Text style={styles.label}>
-        {role === "client"
+        {role === "CLIENT"
           ? "Company Name (Optional)"
           : "Heading on your profile"}
       </Text>
       <TextInput
         style={styles.input}
         placeholder={
-          role === "client" ? "Company name" : "E.g. I am a designer"
+          role === "CLIENT" ? "Company name" : "E.g. I am a designer"
         }
         value={formData.heading}
         onChangeText={(text) => handleInputChange("heading", text)}
@@ -386,7 +634,7 @@ const DescribeRole = ({ navigation, route }) => {
       </View>
 
       {/* Description (Bio) Section */}
-      {role === "client" && (
+      {role === "CLIENT" && (
         <>
           <Text style={styles.label}>Describe yourself</Text>
           <TextInput
@@ -404,10 +652,38 @@ const DescribeRole = ({ navigation, route }) => {
         </>
       )}
 
-      {/* Next Button */}
-      <TouchableOpacity style={styles.nextButton} onPress={saveDetails}>
-        <Text style={styles.nextButtonText}>Next</Text>
-      </TouchableOpacity>
+      {/* Next Button and Skip Option */}
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity 
+          style={[styles.nextButton, isLoadingProfile && styles.disabledButton]} 
+          onPress={saveDetails}
+          disabled={isLoadingProfile || isSkipping}
+        >
+          <Text style={styles.nextButtonText}>
+            {isLoadingProfile ? "Loading..." : isUpdating ? "Update" : "Next"}
+          </Text>
+        </TouchableOpacity>
+
+        {/* Skip Button */}
+        <TouchableOpacity 
+          style={styles.skipButton} 
+          onPress={confirmSkip}
+          disabled={isLoadingProfile || isSkipping}
+        >
+          <Text style={styles.skipButtonText}>
+            {isSkipping ? "Skipping..." : "Skip for Now"}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Glitch Detection Info */}
+      {showSkipOption && (
+        <View style={styles.helpContainer}>
+          <Text style={styles.helpText}>
+            💡 Having trouble? You can complete this later from your profile settings.
+          </Text>
+        </View>
+      )}
 
       <Toast />
     </ScrollView>
@@ -480,20 +756,72 @@ const styles = StyleSheet.create({
   dropdownContainer: {
     flex: 1,
   },
+  buttonContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 20,
+  },
   nextButton: {
-    width: "32%",
+    width: "48%",
     height: 40,
     backgroundColor: "#fff",
     borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 20,
-    marginLeft: 230,
   },
   nextButtonText: {
     color: "#6A0DAD",
     fontWeight: "bold",
-    fontSize: 20,
+    fontSize: 18,
+  },
+  skipButton: {
+    width: "48%",
+    height: 40,
+    backgroundColor: "transparent",
+    borderColor: "#fff",
+    borderWidth: 1,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  skipButtonText: {
+    color: "#fff",
+    fontSize: 16,
+  },
+  helpContainer: {
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 15,
+  },
+  helpText: {
+    color: "#fff",
+    fontSize: 14,
+    textAlign: "center",
+    fontStyle: "italic",
+  },
+  loadingText: {
+    color: "#fff",
+    fontStyle: "italic",
+    marginBottom: 10,
+    textAlign: "center",
+  },
+  modeText: {
+    color: "#90EE90",
+    fontSize: 14,
+    marginBottom: 15,
+    textAlign: "center",
+    fontWeight: "bold",
+  },
+  errorText: {
+    color: "#ffcccc",
+    fontSize: 12,
+    marginBottom: 10,
+    textAlign: "center",
+  },
+  disabledButton: {
+    opacity: 0.6,
   },
 });
 

@@ -5,11 +5,13 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
+  ActivityIndicator,
+  ScrollView,
+  SafeAreaView,
 } from "react-native";
-import { useAppwrite } from "../context/AppwriteContext";
-import { ID } from "react-native-appwrite";
 import Toast from "react-native-toast-message";
 import Checkbox from "expo-checkbox";
+import { useTheme } from "../context/ThemeContext";
 
 const validateEmail = (email) => {
   const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -17,175 +19,115 @@ const validateEmail = (email) => {
 };
 
 const Signup = ({ navigation, route }) => {
-  const { account } = useAppwrite();
-  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [isChecked, setIsChecked] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const { theme, themeStyles } = useTheme();
+  const currentTheme = themeStyles[theme];
   const { role } = route.params || {};
 
   const showToast = (type, text1, text2) => {
-    Toast.show({
-      type,
-      text1,
-      text2,
-      position: "top",
-    });
+    Toast.show({ type, text1, text2, position: "top" });
   };
 
-  const handleSignup = async () => {
-    // Validate inputs
-    if (!fullName || !email || !password || !confirmPassword) {
-      showToast("info", "Warning", "All fields are required.");
+  const handleCheckEmail = async () => {
+    // Validate email
+    if (!email) {
+      showToast("info", "Warning", "Email is required.");
       return;
     }
     if (!validateEmail(email)) {
       showToast("error", "Error", "Please enter a valid email address.");
       return;
     }
-    if (password !== confirmPassword) {
-      showToast("error", "Error", "Passwords do not match.");
-      return;
-    }
-    if (password.length < 8) {
-      showToast("error", "Error", "Password must be at least 8 characters.");
-      return;
-    }
-    if (!isChecked) {
-      showToast("info", "Warning", "You must accept the Terms and Conditions.");
-      return;
-    }
 
+    setIsLoading(true);
     try {
-      // Call Appwrite signup API
-      await account.create(ID.unique(), email, password, fullName);
-      await account.createEmailPasswordSession(email, password);
-      showToast("success", "Success", "User registered successfully!");
-
-      // Navigate to the DescribeRole screen
-      navigation.navigate("DescribeRole", { fullName, email, role, password });
-    } catch (error) {
-      // Detailed error handling
-      if (error.code === 409) {
-        showToast(
-          "error",
-          "Signup Failed",
-          "User with this email already exists."
-        );
-      } else if (error.code === 400) {
-        showToast(
-          "error",
-          "Signup Failed",
-          "Invalid request. Check your inputs."
-        );
-      } else if (error.message.includes("network error")) {
-        showToast("error", "Signup Failed", "Network error. Please try again.");
+      const apiService = require('../lib/apiService').default;
+      const data = await apiService.checkEmail(email);
+      console.log({data});
+      
+      if (!data.success) {
+        showToast("error", "Signup Failed", data.message || "Email check failed.");
+      } else if (data.exists) {
+        showToast("error", "Signup Failed", "User with this email already exists.");
       } else {
-        showToast("error", "Signup Failed", "An unexpected error occurred.");
+        // Redirect to role-specific signup with email
+        if (role === "CLIENT") {
+          navigation.replace("ClientSignup", { email });
+        } else {
+          navigation.replace("FreelancerSignup", { email });
+        }
       }
+    } catch (error) {
+      showToast("error", "Signup Failed", error.message || "Network error. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.heading}>Register</Text>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: currentTheme.background || "#4B0082" }]}> 
+      <ScrollView contentContainerStyle={styles.scrollContainer}> 
+        <View style={[styles.container, { backgroundColor: currentTheme.background || "#4B0082" }]}> 
+          <Text style={[styles.heading, { color: currentTheme.text || "white" }]}>Check Email Availability</Text>
 
-      {/* Full Name Input */}
-      <Text style={styles.label}>Full Name</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Enter your full name"
-        value={fullName}
-        onChangeText={setFullName}
-      />
+          {/* Email Input */}
+          <Text style={[styles.label, { color: currentTheme.text || "white" }]}>Email</Text>
+          <TextInput
+            style={[styles.input, { 
+              backgroundColor: currentTheme.cardBackground || "#fff",
+              color: currentTheme.text || "#000",
+              borderColor: currentTheme.border || "transparent"
+            }]}
+            placeholder="Enter your email"
+            placeholderTextColor={currentTheme.placeholderText || "#999"}
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
 
-      {/* Email Input */}
-      <Text style={styles.label}>Email</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Enter your email"
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-      />
-
-      {/* Password Input */}
-      <Text style={styles.label}>Password</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Enter your password"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry={true}
-      />
-
-      {/* Confirm Password Input */}
-      <Text style={styles.label}>Confirm Password</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Confirm your password"
-        value={confirmPassword}
-        onChangeText={setConfirmPassword}
-        secureTextEntry={true}
-      />
-
-      {/* Terms and Conditions Checkbox */}
-      <View style={styles.checkboxContainer}>
-        <Checkbox
-          value={isChecked}
-          onValueChange={setIsChecked}
-          color={isChecked ? "#6A0DAD" : undefined}
-        />
-
-        <Text style={styles.checkboxLabel}>
-          I agree to the{" "}
-          <Text
-            style={styles.link}
-            onPress={() => navigation.navigate("TermsAndConditions")}
+          {/* Check Email Button */}
+          <TouchableOpacity
+            style={[
+              styles.signupButton,
+              isLoading && styles.disabledButton
+            ]}
+            onPress={handleCheckEmail}
+            disabled={isLoading}
           >
-            Terms and Conditions
-          </Text>{" "}
-          and{" "}
-          <Text
-            style={styles.link}
-            onPress={() => navigation.navigate("PrivacyPolicy")}
-          >
-            Privacy Policy
-          </Text>
-        </Text>
-      </View>
+            {isLoading ? (
+              <ActivityIndicator color="white" size="small" />
+            ) : (
+              <Text style={styles.signupButtonText}>Check Email & Continue</Text>
+            )}
+          </TouchableOpacity>
 
-      {/* Signup Button */}
-      <TouchableOpacity
-        style={[styles.signupButton, !isChecked && styles.disabledButton]}
-        onPress={handleSignup}
-        disabled={!isChecked}
-      >
-        <Text style={styles.signupButtonText}>Sign Up</Text>
-      </TouchableOpacity>
+          {/* Toast Notification Component */}
+          <Toast />
 
-      {/* Toast Notification Component */}
-      <Toast />
-
-      {/* Links */}
-      <View style={styles.linksWrapper}>
-        {[{ text: "Already have an account?", screen: "Login" }].map(
-          (link, index) => (
-            <TouchableOpacity
-              key={index}
-              onPress={() => navigation.navigate(link.screen)}
-            >
-              <Text style={styles.linkText}>{link.text}</Text>
+          {/* Links */}
+          <View style={styles.linksWrapper}> 
+            <TouchableOpacity onPress={() => navigation.navigate("Login")}> 
+              <Text style={[styles.linkText, { color: currentTheme.text || "white" }]}> 
+                Already have an account?
+              </Text>
             </TouchableOpacity>
-          )
-        )}
-      </View>
-    </View>
+          </View>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+  },
+  scrollContainer: {
+    flexGrow: 1,
+  },
   container: {
     flex: 1,
     backgroundColor: "#4B0082",
@@ -218,6 +160,23 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     fontSize: 16,
   },
+  passwordContainer: {
+    width: "100%",
+    height: 44,
+    borderRadius: 10,
+    marginBottom: 20,
+    borderWidth: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 20,
+  },
+  passwordInput: {
+    flex: 1,
+    fontSize: 16,
+  },
+  eyeIcon: {
+    padding: 5,
+  },
   checkboxContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -229,14 +188,15 @@ const styles = StyleSheet.create({
   },
   signupButton: {
     height: 50,
-    backgroundColor: "#fff",
+    backgroundColor: "#6A0DAD",
     borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 20,
   },
   disabledButton: {
-    backgroundColor: "gray",
+    backgroundColor: "#9E9E9E",
+    opacity: 0.6,
   },
   linkText: {
     color: "white",
@@ -245,7 +205,7 @@ const styles = StyleSheet.create({
     textDecorationLine: "underline",
   },
   signupButtonText: {
-    color: "#4B0082",
+    color: "white",
     fontSize: 20,
     fontWeight: "bold",
   },

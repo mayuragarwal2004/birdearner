@@ -6,8 +6,12 @@ import { TouchableOpacity } from "react-native";
 const Role = ({navigation}) => {
 
     const navigateToSignup = (role) => {
-      navigation.navigate("Signup", {role})
-      };
+      if (role === "CLIENT") {
+        navigation.navigate("ClientSignup");
+      } else {
+        navigation.navigate("FreelancerSignup");
+      }
+    };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -16,15 +20,15 @@ const Role = ({navigation}) => {
         <View style={styles.roleBox}>
           <View style={styles.box}>
             <TouchableOpacity style={styles.logoBox} onPress={() => {
-                navigateToSignup("client")
+                navigateToSignup("CLIENT")
             }}>
               <Image source={require("../assets/client.png")} style={styles.logo} />
             </TouchableOpacity>
-            <Text style={styles.roleText}>client</Text>
+            <Text style={styles.roleText}>Client</Text>
           </View>
           <View style={styles.box}>
             <TouchableOpacity style={styles.logoBox} onPress={() => {
-                navigateToSignup("freelancer")
+                navigateToSignup("FREELANCER")
             }}>
               <Image source={require("../assets/freelancer.png")} style={styles.logo} />
             </TouchableOpacity>

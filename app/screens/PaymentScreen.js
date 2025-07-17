@@ -9,7 +9,7 @@ import {
   TextInput,
 } from "react-native";
 import RazorpayCheckout from "react-native-razorpay";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/NewAuthContext";
 import { Ionicons } from "@expo/vector-icons";
 import { useAppwrite } from "../context/AppwriteContext";
 import { useTheme } from "../context/ThemeContext";
@@ -17,10 +17,10 @@ import { useTheme } from "../context/ThemeContext";
 const PaymentScreen = ({ navigation }) => {
   const { appwriteConfig, databases } = useAppwrite();
   const [paymentSuccess, setPaymentSuccess] = useState(false);
-  const { userData } = useAuth();
+  const { userData, userProfile } = useAuth();
   const pic =
-    userData?.profile_photo || "https://example.com/default-profile-pic.png";
-  const name = userData?.full_name || "Guest User";
+    userProfile?.profilePhoto || "https://example.com/default-profile-pic.png";
+  const name = userProfile?.fullName || "Guest User";
   const email = userData?.email || "user@gmail.com";
   const [amount, setAmount] = useState("");
 

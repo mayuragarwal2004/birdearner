@@ -11,16 +11,16 @@ import {
 import * as ImagePicker from "expo-image-picker";
 import Checkbox from "expo-checkbox";
 import Toast from "react-native-toast-message";
-import { useAppwrite } from "../context/AppwriteContext";
-import { Query } from "react-native-appwrite";
-import { useAuth } from "../context/AuthContext";
+// import { useAppwrite } from "../context/AppwriteContext";
+// import { Query } from "react-native-appwrite";
+import { useAuth } from "../context/NewAuthContext";
 
 const PortfolioScreen = ({ navigation, route }) => {
-  const { appwriteConfig, databases, uploadFile, account } = useAppwrite();
+  // const { appwriteConfig, databases, uploadFile, account } = useAppwrite();
   const [portfolioImages, setPortfolioImages] = useState([]);
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [agreeTnC, setAgreeTnC] = useState(false);
-  const { checkUserSession } = useAuth();
+  // const { checkUserSession } = useAuth();
   const { role } = route.params;
 
   const showToast = (type, title, message) => {
@@ -75,54 +75,32 @@ const PortfolioScreen = ({ navigation, route }) => {
     }
 
     try {
-      const user = await account.get();
+      // TODO: Update to use new backend
+      // const user = await account.get();
 
-      const response = await databases.listDocuments(
-        appwriteConfig.databaseId,
-        appwriteConfig.freelancerCollectionId,
-        [Query.equal("email", user.email)]
+      // const response = await databases.listDocuments(
+      //   appwriteConfig.databaseId,
+      //   appwriteConfig.freelancerCollectionId,
+      //   [Query.equal("email", user.email)]
+      // );
+
+      // if (response.documents.length === 0) {
+      //   showToast(
+      //     "error",
+      //     "User Not Found",
+      //     "No user with the provided email."
+      //   );
+      //   return;
+      // }
+
+      showToast(
+        "info",
+        "Feature Coming Soon",
+        "Portfolio upload functionality will be available soon."
       );
-
-      if (response.documents.length === 0) {
-        showToast(
-          "error",
-          "User Not Found",
-          "No user with the provided email."
-        );
-        return;
-      }
-
-      const userDocumentId = response.documents[0].$id;
-
-      const uploadedImageURLs = await Promise.all(
-        portfolioImages.map(async (imageUri) => {
-          try {
-            const fileResponse = await uploadFile({ uri: imageUri }, "image");
-            return fileResponse;
-          } catch (err) {
-            showToast(
-              "error",
-              "Upload Error",
-              `Failed to upload: ${err.message}`
-            );
-            return null;
-          }
-        })
-      );
-
-      await databases.updateDocument(
-        appwriteConfig.databaseId,
-        appwriteConfig.freelancerCollectionId,
-        userDocumentId,
-        {
-          portfolio_images: uploadedImageURLs.filter(Boolean),
-          terms_accepted: true,
-          updated_at: new Date().toISOString(),
-        }
-      );
-
-      showToast("success", "Success", "Portfolio submitted successfully!");
-      navigation.navigate("Tabs", { screen: "Home" });
+      
+      // For now, navigate to the next step
+      navigation.navigate("Tabs");
     } catch (error) {
       showToast("error", "Error", `Failed to submit: ${error.message}`);
     }
@@ -135,37 +113,38 @@ const PortfolioScreen = ({ navigation, route }) => {
     }
 
     try {
-      const user = await account.get();
+      // TODO: Update to use new backend
+      // const user = await account.get();
 
-      const response = await databases.listDocuments(
-        appwriteConfig.databaseId,
-        appwriteConfig.clientCollectionId,
-        [Query.equal("email", user.email)]
-      );
+      // const response = await databases.listDocuments(
+      //   appwriteConfig.databaseId,
+      //   appwriteConfig.clientCollectionId,
+      //   [Query.equal("email", user.email)]
+      // );
 
-      if (response.documents.length === 0) {
-        showToast(
-          "error",
-          "User Not Found",
-          "No user with the provided email."
-        );
-        return;
-      }
+      // if (response.documents.length === 0) {
+      //   showToast(
+      //     "error",
+      //     "User Not Found",
+      //     "No user with the provided email."
+      //   );
+      //   return;
+      // }
 
-      const userDocumentId = response.documents[0].$id;
+      // const userDocumentId = response.documents[0].$id;
 
-      await databases.updateDocument(
-        appwriteConfig.databaseId,
-        appwriteConfig.clientCollectionId,
-        userDocumentId,
-        {
-          terms_accepted: true,
-          updated_at: new Date().toISOString(),
-        }
-      );
+      // await databases.updateDocument(
+      //   appwriteConfig.databaseId,
+      //   appwriteConfig.clientCollectionId,
+      //   userDocumentId,
+      //   {
+      //     terms_accepted: true,
+      //     updated_at: new Date().toISOString(),
+      //   }
+      // );
 
       showToast("success", "Success", "Portfolio submitted successfully!");
-      await checkUserSession();
+      // await checkUserSession();
       navigation.navigate("Tabs", { screen: "Home" });
     } catch (error) {
       showToast("error", "Error", `Failed to submit: ${error.message}`);
@@ -174,7 +153,8 @@ const PortfolioScreen = ({ navigation, route }) => {
 
   const skipScreen = async () => {
     try {
-      await checkUserSession();
+      // TODO: Add any necessary checks with new backend
+      // await checkUserSession();
       navigation.navigate("Tabs", { screen: "Home" });
     } catch (error) {
       Alert.alert("Error during session check");

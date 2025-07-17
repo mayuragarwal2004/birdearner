@@ -9,6 +9,9 @@ import {
   TextInput,
   Alert,
   Animated,
+  RefreshControl,
+  Modal,
+  Platform,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -16,12 +19,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Picker } from "@react-native-picker/picker";
 import * as Location from "expo-location";
-import { useAppwrite } from "../context/AppwriteContext";
-import { Query } from "react-native-appwrite";
+import MapView, { PROVIDER_GOOGLE, Marker } from "react-native-maps";
+import apiService from "../lib/apiService";
 import { useTheme } from "../context/ThemeContext";
+import { useAuth } from "../context/NewAuthContext";
 
 const JobRequirementsScreen = ({ navigation, route }) => {
-  const { appwriteConfig, databases } = useAppwrite();
   const [jobLocation, setJobLocation] = useState("");
   const [deadline, setDeadline] = useState(new Date());
   const [budget, setBudget] = useState("");
@@ -35,8 +38,21 @@ const JobRequirementsScreen = ({ navigation, route }) => {
   const [latitude, setLatitude] = useState(null);
   const [longitude, setLongitude] = useState(null);
   const [services, setServices] = useState([]);
-  const [isOnSite, setIsOnSite] = useState(true); // Default state
-  const toggleAnim = new Animated.Value(isOnSite ? 0 : 1); // Animation value
+  const [isOnSite, setIsOnSite] = useState(false); // Default to Remote (false = Remote, true = On-site)
+  const [refreshing, setRefreshing] = useState(false);
+  const [locationLoading, setLocationLoading] = useState(false);
+  const [showMapModal, setShowMapModal] = useState(false);
+  const [mapRegion, setMapRegion] = useState({
+    latitude: 37.78825,
+    longitude: -122.4324,
+    latitudeDelta: 0.0922,
+    longitudeDelta: 0.0421,
+  });
+  const [tempLocation, setTempLocation] = useState({
+    latitude: 37.78825,
+    longitude: -122.4324,
+  });
+  const toggleAnim = new Animated.Value(isOnSite ? 1 : 0); // Animation value (0 = Remote, 1 = On-site)
 
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
@@ -52,14 +68,22 @@ const JobRequirementsScreen = ({ navigation, route }) => {
     // Toggle state and animate translation
     setIsOnSite(!isOnSite);
 
-    if (isOnSite) {
+    if (!isOnSite) {
       setJobType("On-site");
+      // Clear location data when switching to on-site
+      setJobLocation("");
+      setLatitude(null);
+      setLongitude(null);
     } else {
       setJobType("Remote");
+      // Set default values for remote jobs
+      setJobLocation("Remote Work");
+      setLatitude(0);
+      setLongitude(0);
     }
 
     Animated.timing(toggleAnim, {
-      toValue: isOnSite ? 1 : 0,
+      toValue: isOnSite ? 0 : 1,
       duration: 300,
       useNativeDriver: false,
     }).start();
@@ -94,37 +118,160 @@ const JobRequirementsScreen = ({ navigation, route }) => {
   useEffect(() => {
     async function fetchServices() {
       try {
-        const jobCategory = isOnSite
-          ? ["freelance_service"]
-          : ["household_service"];
-        const response = await databases.listDocuments(
-          appwriteConfig.databaseId,
-          appwriteConfig.roleCollectionID,
-          [Query.equal("category", jobCategory)]
-        );
-        const roles = response.documents.map((doc) => doc.role).flat();
-        setServices(roles);
+        await apiService.init(); // Initialize the API service
+        const category = isOnSite ? "household" : "freelance";
+        const services = await apiService.getServicesByCategory(category);
+        console.log("Fetching services for category:", category);
+        console.log({services});
+        
+        
+        // Extract service names/roles from the response
+        const serviceNames = services.map((service) => service.name || service.role || service.title);
+        setServices(serviceNames);
       } catch (error) {
-        Alert.alert("Error fetching services:", error);
+        console.error("Error fetching services:", error);
+        Alert.alert("Error", "Failed to fetch services. Please try again.");
       }
     }
     fetchServices();
   }, [isOnSite]);
 
+  // Function to handle manual refresh
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await apiService.init(); // Initialize the API service
+      const category = isOnSite ? "household" : "freelance";
+      const services = await apiService.getServicesByCategory(category);
+      console.log("Refreshing services for category:", category);
+      console.log({services});
+      
+      // Extract service names/roles from the response
+      const serviceNames = services.map((service) => service.name || service.role || service.title);
+      setServices(serviceNames);
+    } catch (error) {
+      console.error("Error refreshing services:", error);
+      Alert.alert("Error", "Failed to refresh services. Please try again.");
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   const fetchCoordinates = async () => {
     const hasPermission = await requestPermission();
     if (!hasPermission) return;
 
+    setLocationLoading(true);
     try {
       const [result] = await Location.geocodeAsync(jobLocation);
       if (result) {
         setLatitude(parseFloat(result.latitude));
         setLongitude(parseFloat(result.longitude));
+        Alert.alert("Success", "Location coordinates found successfully!");
       } else {
         Alert.alert("Error", "Unable to fetch coordinates. Please try again.");
       }
     } catch (error) {
       Alert.alert("Error", `Failed to fetch coordinates: ${error.message}`);
+    } finally {
+      setLocationLoading(false);
+    }
+  };
+
+  const getCurrentLocation = async () => {
+    const hasPermission = await requestPermission();
+    if (!hasPermission) return;
+
+    setLocationLoading(true);
+    try {
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+      
+      const { latitude, longitude } = location.coords;
+      setLatitude(parseFloat(latitude));
+      setLongitude(parseFloat(longitude));
+
+      // Update map region and temp location
+      const newRegion = {
+        latitude,
+        longitude,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      };
+      setMapRegion(newRegion);
+      setTempLocation({ latitude, longitude });
+
+      // Get address from coordinates
+      const addressResponse = await Location.reverseGeocodeAsync({
+        latitude,
+        longitude,
+      });
+
+      if (addressResponse.length > 0) {
+        const address = addressResponse[0];
+        const formattedAddress = `${address.street || ''} ${address.city || ''} ${address.region || ''} ${address.country || ''}`.trim();
+        setJobLocation(formattedAddress);
+        Alert.alert("Success", "Current location detected successfully!");
+      }
+    } catch (error) {
+      Alert.alert("Error", `Failed to get current location: ${error.message}`);
+    } finally {
+      setLocationLoading(false);
+    }
+  };
+
+  const openMapModal = () => {
+    if (latitude && longitude) {
+      const newRegion = {
+        latitude,
+        longitude,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      };
+      setMapRegion(newRegion);
+      setTempLocation({ latitude, longitude });
+    }
+    setShowMapModal(true);
+  };
+
+  const handleMapPress = (event) => {
+    const { latitude, longitude } = event.nativeEvent.coordinate;
+    setTempLocation({ latitude, longitude });
+  };
+
+  const confirmLocationFromMap = async () => {
+    setLocationLoading(true);
+    try {
+      const { latitude, longitude } = tempLocation;
+      setLatitude(parseFloat(latitude));
+      setLongitude(parseFloat(longitude));
+
+      // Get address from coordinates
+      const addressResponse = await Location.reverseGeocodeAsync({
+        latitude,
+        longitude,
+      });
+
+      if (addressResponse.length > 0) {
+        const address = addressResponse[0];
+        const formattedAddress = `${address.street || ''} ${address.city || ''} ${address.region || ''} ${address.country || ''}`.trim();
+        setJobLocation(formattedAddress);
+      } else {
+        setJobLocation(`${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
+      }
+
+      setShowMapModal(false);
+      Alert.alert("Success", "Location selected successfully!");
+    } catch (error) {
+      Alert.alert("Error", `Failed to get address: ${error.message}`);
+      // Still save the coordinates even if reverse geocoding fails
+      setLatitude(parseFloat(tempLocation.latitude));
+      setLongitude(parseFloat(tempLocation.longitude));
+      setJobLocation(`${tempLocation.latitude.toFixed(6)}, ${tempLocation.longitude.toFixed(6)}`);
+      setShowMapModal(false);
+    } finally {
+      setLocationLoading(false);
     }
   };
 
@@ -173,10 +320,6 @@ const JobRequirementsScreen = ({ navigation, route }) => {
 
   // Validation function
   const validateForm = () => {
-    if (jobType === "On-site" && !jobLocation) {
-      Alert.alert("Validation Error", "Please enter a job location.");
-      return false;
-    }
     if (!jobTitle) {
       Alert.alert("Validation Error", "Please enter a job title.");
       return false;
@@ -212,26 +355,40 @@ const JobRequirementsScreen = ({ navigation, route }) => {
       );
       return false;
     }
+    
+    // Only validate location for on-site jobs
+    if (jobType === "On-site") {
+      if (!jobLocation || jobLocation.trim() === "") {
+        Alert.alert("Validation Error", "Please enter a job location for on-site work.");
+        return false;
+      }
+      if (!latitude || !longitude) {
+        Alert.alert("Validation Error", "Please fetch coordinates for the job location.");
+        return false;
+      }
+    }
+    
     return true;
   };
 
   const handleSubmit = async () => {
     if (validateForm()) {
       if (jobType === "On-site") {
-        await fetchCoordinates();
+        // For on-site jobs, coordinates should already be set
         if (latitude && longitude) {
           navigation.navigate("JobDetails", { formData });
         } else {
-          Alert.alert("Validation Error", "Please enter a valid job location.");
+          Alert.alert("Validation Error", "Please set the job location coordinates.");
         }
       } else {
-        setJobLocation("India");
-        await fetchCoordinates();
-        if (latitude && longitude) {
-          navigation.navigate("JobDetails", { formData });
-        } else {
-          Alert.alert("Validation Error", "Please enter a valid job location.");
-        }
+        // For remote jobs, set default location data
+        const updatedFormData = {
+          ...formData,
+          jobLocation: "Remote Work",
+          latitude: 0,
+          longitude: 0,
+        };
+        navigation.navigate("JobDetails", { formData: updatedFormData });
       }
     }
   };
@@ -241,6 +398,16 @@ const JobRequirementsScreen = ({ navigation, route }) => {
       <ScrollView
         contentContainerStyle={{ flexGrow: 1 }}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={["#6A0DAD"]} // Android
+            tintColor="#6A0DAD" // iOS
+            title="Refreshing services..." // iOS
+            titleColor="#6A0DAD" // iOS
+          />
+        }
       >
         <View style={styles.main}>
           <TouchableOpacity
@@ -280,33 +447,90 @@ const JobRequirementsScreen = ({ navigation, route }) => {
           {/* Touchable for changing state */}
           <TouchableOpacity
             style={[styles.side, styles.leftSide]}
-            onPress={() => !isOnSite && handleToggle()}
+            onPress={() => isOnSite && handleToggle()}
             activeOpacity={0.8}
           >
-            <Text style={[styles.text, isOnSite && styles.activeText]}>
+            <Text style={[styles.text, !isOnSite && styles.activeText]}>
               Remote
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.side, styles.rightSide]}
-            onPress={() => isOnSite && handleToggle()}
+            onPress={() => !isOnSite && handleToggle()}
             activeOpacity={0.8}
           >
-            <Text style={[styles.text, !isOnSite && styles.activeText]}>
+            <Text style={[styles.text, isOnSite && styles.activeText]}>
               On-site
             </Text>
           </TouchableOpacity>
         </View>
 
+        <View style={styles.jobTypeIndicator}>
+          <Text style={styles.jobTypeText}>
+            Selected: {jobType} {isOnSite ? "🏢" : "💻"}
+          </Text>
+          <Text style={styles.serviceTypeText}>
+            Services: {isOnSite ? "Household Services" : "Freelance Services"}
+          </Text>
+        </View>
+
         {jobType === "On-site" && (
-          <View>
+          <View style={styles.locationSection}>
             <Text style={styles.label}>Job Location</Text>
             <TextInput
               style={styles.input}
-              placeholder="Enter job location"
+              placeholder="Enter job address (e.g., 123 Main St, City, State)"
               value={jobLocation}
               onChangeText={setJobLocation}
+              multiline
             />
+            
+            <View style={styles.locationButtonsRow}>
+              <TouchableOpacity 
+                style={[styles.locationButton, locationLoading && styles.disabledButton]}
+                onPress={getCurrentLocation}
+                disabled={locationLoading}
+              >
+                <Ionicons name="location" size={20} color="#fff" />
+                <Text style={styles.locationButtonText}>
+                  {locationLoading ? "Getting..." : "Use Current"}
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.locationButton, styles.geocodeButton, locationLoading && styles.disabledButton]}
+                onPress={fetchCoordinates}
+                disabled={locationLoading || !jobLocation.trim()}
+              >
+                <Ionicons name="map" size={20} color="#fff" />
+                <Text style={styles.locationButtonText}>
+                  {locationLoading ? "Loading..." : "Get Coordinates"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            
+            <TouchableOpacity 
+              style={[styles.mapButton, !latitude && !longitude && styles.disabledButton]}
+              onPress={openMapModal}
+              disabled={!latitude && !longitude}
+            >
+              <Ionicons name="map-outline" size={20} color="#fff" />
+              <Text style={styles.mapButtonText}>
+                View & Adjust on Map
+              </Text>
+            </TouchableOpacity>
+            
+            {latitude && longitude && (
+              <View style={styles.coordinatesDisplay}>
+                <Text style={styles.coordinatesText}>
+                  📍 Coordinates: {latitude.toFixed(6)}, {longitude.toFixed(6)}
+                </Text>
+              </View>
+            )}
+            
+            <Text style={styles.helpText}>
+              💡 Tip: Use "Current Location" for your current position, or enter an address and tap "Get Coordinates"
+            </Text>
           </View>
         )}
 
@@ -446,6 +670,60 @@ const JobRequirementsScreen = ({ navigation, route }) => {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Map Modal */}
+      <Modal
+        visible={showMapModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+      >
+        <SafeAreaView style={styles.mapModalContainer}>
+          <View style={styles.mapModalHeader}>
+            <TouchableOpacity 
+              style={styles.mapModalCloseButton}
+              onPress={() => setShowMapModal(false)}
+            >
+              <Ionicons name="close" size={24} color="#fff" />
+            </TouchableOpacity>
+            <Text style={styles.mapModalTitle}>Select Job Location</Text>
+            <TouchableOpacity 
+              style={styles.mapModalConfirmButton}
+              onPress={confirmLocationFromMap}
+              disabled={locationLoading}
+            >
+              <Text style={styles.mapModalConfirmText}>
+                {locationLoading ? "Loading..." : "Confirm"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+          
+          <MapView
+            style={styles.map}
+            region={mapRegion}
+            provider={Platform.OS === "android" ? PROVIDER_GOOGLE : undefined}
+            onPress={handleMapPress}
+            showsUserLocation={true}
+            showsMyLocationButton={true}
+          >
+            <Marker
+              coordinate={tempLocation}
+              draggable={true}
+              onDragEnd={(e) => setTempLocation(e.nativeEvent.coordinate)}
+              title="Job Location"
+              description="Drag to adjust the exact location"
+            />
+          </MapView>
+          
+          <View style={styles.mapModalFooter}>
+            <Text style={styles.mapHelpText}>
+              📍 Tap anywhere on the map or drag the pin to set the exact job location
+            </Text>
+            <Text style={styles.coordinatesText}>
+              Coordinates: {tempLocation.latitude.toFixed(6)}, {tempLocation.longitude.toFixed(6)}
+            </Text>
+          </View>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -660,6 +938,136 @@ const getStyles = (currentTheme) =>
     rightSide: {
       justifyContent: "center",
       alignItems: "center",
+    },
+    locationSection: {
+      marginBottom: 20,
+    },
+    locationButtonsRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginTop: 10,
+      marginBottom: 15,
+      gap: 10,
+    },
+    locationButton: {
+      flex: 1,
+      backgroundColor: "#6A0DAD",
+      paddingVertical: 12,
+      paddingHorizontal: 15,
+      borderRadius: 8,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+    },
+    geocodeButton: {
+      backgroundColor: "#4c0183",
+    },
+    disabledButton: {
+      backgroundColor: "#cccccc",
+      opacity: 0.6,
+    },
+    locationButtonText: {
+      color: "#ffffff",
+      fontWeight: "600",
+      fontSize: 14,
+    },
+    coordinatesDisplay: {
+      backgroundColor: "#e8f5e8",
+      padding: 12,
+      borderRadius: 8,
+      marginBottom: 10,
+    },
+    coordinatesText: {
+      color: "#2d5016",
+      fontWeight: "500",
+      textAlign: "center",
+    },
+    helpText: {
+      color: currentTheme.subText || "#666666",
+      fontSize: 12,
+      fontStyle: "italic",
+      textAlign: "center",
+      marginTop: 5,
+    },
+    jobTypeIndicator: {
+      backgroundColor: currentTheme.background3 || "#f0f0f0",
+      padding: 12,
+      borderRadius: 8,
+      marginVertical: 15,
+      alignItems: "center",
+    },
+    jobTypeText: {
+      color: currentTheme.text || "#000000",
+      fontSize: 16,
+      fontWeight: "600",
+      marginBottom: 4,
+    },
+    serviceTypeText: {
+      color: currentTheme.subText || "#666666",
+      fontSize: 14,
+      fontWeight: "400",
+    },
+    mapButton: {
+      backgroundColor: "#2E8B57",
+      paddingVertical: 14,
+      paddingHorizontal: 20,
+      borderRadius: 8,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      marginTop: 10,
+    },
+    mapButtonText: {
+      color: "#ffffff",
+      fontWeight: "600",
+      fontSize: 16,
+    },
+    mapModalContainer: {
+      flex: 1,
+      backgroundColor: "#ffffff",
+    },
+    mapModalHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      backgroundColor: "#6A0DAD",
+      paddingHorizontal: 20,
+      paddingVertical: 15,
+    },
+    mapModalCloseButton: {
+      padding: 5,
+    },
+    mapModalTitle: {
+      color: "#ffffff",
+      fontSize: 18,
+      fontWeight: "600",
+    },
+    mapModalConfirmButton: {
+      backgroundColor: "#2E8B57",
+      paddingHorizontal: 15,
+      paddingVertical: 8,
+      borderRadius: 6,
+    },
+    mapModalConfirmText: {
+      color: "#ffffff",
+      fontWeight: "600",
+    },
+    map: {
+      flex: 1,
+    },
+    mapModalFooter: {
+      backgroundColor: "#f8f9fa",
+      padding: 15,
+      borderTopWidth: 1,
+      borderTopColor: "#e0e0e0",
+    },
+    mapHelpText: {
+      color: "#666666",
+      fontSize: 14,
+      textAlign: "center",
+      marginBottom: 8,
     },
   });
 

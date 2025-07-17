@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/NewAuthContext";
 import { useTheme } from "../context/ThemeContext";
 import { Query } from "react-native-appwrite";
 import { useAppwrite } from "../context/AppwriteContext";
 
 const DeleteAccountScreen = ({ navigation }) => {
-  const { userData } = useAuth();
+  const { userData, userProfile } = useAuth();
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
   const { appwriteConfig, databases } = useAppwrite();
@@ -26,9 +26,9 @@ const DeleteAccountScreen = ({ navigation }) => {
         appwriteConfig.deleteRequestsCollectionId, // make sure you have this in config
         "unique()",
         {
-          userId: userData?.$id,
+          userId: userData?.id,
           email: userData?.email,
-          full_name: userData?.full_name,
+          full_name: userProfile?.fullName,
           requestedAt: new Date().toISOString(),
         }
       );

@@ -15,7 +15,7 @@ import {
 } from "react-native";
 import { FontAwesome } from "@expo/vector-icons";
 import { useAppwrite } from "../context/AppwriteContext";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/NewAuthContext";
 import ImageViewer from "react-native-image-zoom-viewer";
 import { useTheme } from "../context/ThemeContext";
 
