@@ -45,7 +45,7 @@ export default function ProfileScreen({ navigation }) {
     setUserData,
     roleOptions,
     handleRoleSelection,
-    fetchUserData,
+    refreshUserData,
     userProfile,
     setUserProfile,
   } = useAuth();
@@ -159,7 +159,7 @@ export default function ProfileScreen({ navigation }) {
     
     try {
       // Refresh user data through auth context
-      await fetchUserData();
+      await refreshUserData();
       // Fetch fresh profile data
       await fetchProfileData();
     } catch (error) {
