@@ -1,7 +1,7 @@
 // API service for communicating with the Bird Earner Node.js backend
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const API_BASE_URL = "https://expression-wound-length-tiny.trycloudflare.com/api"; // Local network IP
+const API_BASE_URL = "https://caribbean-jeans-facial-medal.trycloudflare.com/api"; // Local network IP "<url>/api"
 
 
 class ApiService {

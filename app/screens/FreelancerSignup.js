@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -65,6 +65,7 @@ const schema = z.object({
   termsAccepted: z.boolean().refine((val) => val === true, {
     message: "You must accept the Terms and Conditions.",
   }),
+  selectedServices: z.array(z.string()).min(1, "You must select at least one service"),
   // Make optional fields truly optional
   qualification: z.string().optional(),
   experience: z.string().optional(),
@@ -73,7 +74,6 @@ const schema = z.object({
   state: z.string().optional(),
   zipCode: z.string().optional(),
   country: z.string().optional(),
-  designation: z.string().optional(),
   bio: z.string().optional(),
   gender: z.string().optional(),
   dob: z.date().optional(),
@@ -95,6 +95,14 @@ const FreelancerSignup = ({ navigation, route }) => {
   const [emailChecked, setEmailChecked] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const { email: initialEmail } = route.params || {};
+  
+  // Services state
+  const [availableServices, setAvailableServices] = useState([]);
+  const [selectedServices, setSelectedServices] = useState([]);
+  const [servicesLoading, setServicesLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filteredServices, setFilteredServices] = useState([]);
+  
   const [form, setForm] = useState({
     full_name: "",
     email: initialEmail || "",
@@ -108,7 +116,6 @@ const FreelancerSignup = ({ navigation, route }) => {
     state: "",
     zipCode: "",
     country: "India",
-    designation: "",
     bio: "",
     gender: "",
     dob: new Date(),
@@ -118,6 +125,7 @@ const FreelancerSignup = ({ navigation, route }) => {
     coverImage: null,
     portfolioImages: [],
     agreePortfolioTerms: false,
+    selectedServices: [], // Add selectedServices to form state
   });
 
   // Toast helper
@@ -191,6 +199,67 @@ const FreelancerSignup = ({ navigation, route }) => {
   const addCertification = () =>
     setForm({ ...form, certifications: [...form.certifications, ""] });
 
+  // Load available services on component mount
+  useEffect(() => {
+    const loadServices = async () => {
+      try {
+        setServicesLoading(true);
+        await apiService.init();
+        const services = await apiService.getServicesByCategory('freelance');
+        setAvailableServices(services);
+        setFilteredServices([]); // Start with empty filtered services
+      } catch (error) {
+        console.error('Error loading services:', error);
+        showToast('error', 'Error', 'Failed to load services');
+      } finally {
+        setServicesLoading(false);
+      }
+    };
+
+    loadServices();
+  }, []);
+
+  // Filter services based on search query
+  useEffect(() => {
+    if (searchQuery.trim() === "") {
+      setFilteredServices([]);
+    } else {
+      const filtered = availableServices.filter(service => 
+        service.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (service.description && service.description.toLowerCase().includes(searchQuery.toLowerCase()))
+      );
+      setFilteredServices(filtered);
+    }
+  }, [searchQuery, availableServices]);
+
+  // Service selection handlers
+  const toggleServiceSelection = (service) => {
+    const serviceId = service.id;
+    const currentlySelected = selectedServices.includes(serviceId);
+    
+    if (currentlySelected) {
+      // Remove service
+      const newSelected = selectedServices.filter(id => id !== serviceId);
+      setSelectedServices(newSelected);
+      setForm({ ...form, selectedServices: newSelected });
+    } else {
+      // Add service (max 5)
+      if (selectedServices.length < 5) {
+        const newSelected = [...selectedServices, serviceId];
+        setSelectedServices(newSelected);
+        setForm({ ...form, selectedServices: newSelected });
+      } else {
+        showToast('info', 'Limit Reached', 'You can select maximum 5 services');
+      }
+    }
+  };
+
+  // Get service name by ID for display
+  const getServiceNameById = (serviceId) => {
+    const service = availableServices.find(s => s.id === serviceId);
+    return service ? service.name : 'Unknown Service';
+  };
+
   // Step navigation
   const nextStep = async () => {
     if (step === 1) {
@@ -248,27 +317,22 @@ const FreelancerSignup = ({ navigation, route }) => {
         setIsLoading(false);
         return;
       }
+    } else if (step === 2) {
+      // Validate service selection
+      if (selectedServices.length === 0) {
+        showToast(
+          "error", 
+          "Services Required", 
+          "Please select at least one service you want to offer"
+        );
+        return;
+      }
+      setStep(step + 1);
     } else {
       setStep(step + 1);
     }
   };
   const prevStep = () => setStep(step - 1);
-
-  // Skip prompt
-  const confirmSkip = () => {
-    Alert.alert(
-      "Skip Additional Details?",
-      "You can add photos, certifications, and other details later from your profile settings.",
-      [
-        { text: "Complete Now", style: "cancel" },
-        {
-          text: "Skip for Now",
-          onPress: () => setStep(5),
-          style: "destructive",
-        },
-      ]
-    );
-  };
 
   // Final API call
   const handleSubmit = async () => {
@@ -397,16 +461,150 @@ const FreelancerSignup = ({ navigation, route }) => {
             </TouchableOpacity>
           </View>
         )}
-        {/* Step 2: Freelancer Details */}
+        {/* Step 2: Service Selection */}
         {step === 2 && (
           <View style={styles.card}>
-            <Text style={styles.label}>Role/Designation</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="E.g. Designer"
-              value={form.designation}
-              onChangeText={(v) => setForm({ ...form, designation: v })}
-            />
+            <Text style={styles.cardHeading}>Select Your Services</Text>
+            <Text style={styles.label}>
+              Choose up to 5 services you want to offer (minimum 1 required):
+            </Text>
+            
+            {/* Search Input */}
+            <View style={styles.searchContainer}>
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search for services (e.g., graphic design, web developer)..."
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+            </View>
+
+            {/* Show selected services summary */}
+            {selectedServices.length > 0 && (
+              <View style={styles.selectedServicesInfo}>
+                <Text style={styles.selectedCount}>
+                  Selected: {selectedServices.length}/5
+                </Text>
+                <View style={styles.selectedServicesList}>
+                  {selectedServices.map((serviceId) => (
+                    <View key={serviceId} style={styles.selectedServiceTag}>
+                      <Text style={styles.selectedServiceText}>
+                        {getServiceNameById(serviceId)}
+                      </Text>
+                      <TouchableOpacity
+                        onPress={() => {
+                          const service = availableServices.find(s => s.id === serviceId);
+                          if (service) toggleServiceSelection(service);
+                        }}
+                        style={styles.removeServiceButton}
+                      >
+                        <Text style={styles.removeServiceText}>×</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+            
+            {servicesLoading ? (
+              <ActivityIndicator size="large" color="#6A0DAD" style={{ marginVertical: 20 }} />
+            ) : (
+              <ScrollView 
+                style={styles.servicesContainer}
+                nestedScrollEnabled={true}
+                showsVerticalScrollIndicator={true}
+              >
+                {searchQuery.trim() === "" ? (
+                  <View style={styles.searchPrompt}>
+                    <Text style={styles.searchPromptText}>
+                      💡 Start typing to search for services you want to offer
+                    </Text>
+                    <Text style={styles.searchHintText}>
+                      Try: "graphic", "web", "writer", "designer", "marketing"
+                    </Text>
+                  </View>
+                ) : (
+                  <>
+                    {filteredServices.length === 0 ? (
+                      <View style={styles.noResultsContainer}>
+                        <Text style={styles.noResultsText}>
+                          No services found for "{searchQuery}"
+                        </Text>
+                        <Text style={styles.noResultsHint}>
+                          Try different keywords or check spelling
+                        </Text>
+                      </View>
+                    ) : (
+                      <>
+                        <Text style={styles.searchResultsHeader}>
+                          Found {filteredServices.length} service{filteredServices.length !== 1 ? 's' : ''}:
+                        </Text>
+                        {filteredServices.map((service) => (
+                          <TouchableOpacity
+                            key={service.id}
+                            style={[
+                              styles.serviceItem,
+                              selectedServices.includes(service.id) && styles.serviceItemSelected
+                            ]}
+                            onPress={() => toggleServiceSelection(service)}
+                            activeOpacity={0.7}
+                          >
+                            <View style={styles.serviceContent}>
+                              <Text style={[
+                                styles.serviceName,
+                                selectedServices.includes(service.id) && styles.serviceNameSelected
+                              ]}>
+                                {service.name}
+                              </Text>
+                              {service.description && (
+                                <Text style={[
+                                  styles.serviceDescription,
+                                  selectedServices.includes(service.id) && styles.serviceDescriptionSelected
+                                ]}>
+                                  {service.description}
+                                </Text>
+                              )}
+                            </View>
+                            <View style={[
+                              styles.serviceCheckbox,
+                              selectedServices.includes(service.id) && styles.serviceCheckboxSelected
+                            ]}>
+                              {selectedServices.includes(service.id) && (
+                                <Text style={styles.checkmark}>✓</Text>
+                              )}
+                            </View>
+                          </TouchableOpacity>
+                        ))}
+                      </>
+                    )}
+                  </>
+                )}
+              </ScrollView>
+            )}
+            
+            <View style={styles.buttonRow}>
+              <TouchableOpacity style={styles.backButton} onPress={prevStep}>
+                <Text style={styles.backButtonText}>Back</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[
+                  styles.nextButton,
+                  selectedServices.length === 0 && styles.disabledButton
+                ]} 
+                onPress={nextStep}
+                disabled={selectedServices.length === 0}
+              >
+                <Text style={styles.nextButtonText}>Next</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+        
+        {/* Step 3: Freelancer Details */}
+        {step === 3 && (
+          <View style={styles.card}>
             <Text style={styles.label}>Highest Qualification</Text>
             <TextInput
               style={styles.input}
@@ -495,14 +693,11 @@ const FreelancerSignup = ({ navigation, route }) => {
               <TouchableOpacity style={styles.nextButton} onPress={nextStep}>
                 <Text style={styles.nextButtonText}>Next</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.skipButton} onPress={confirmSkip}>
-                <Text style={styles.skipButtonText}>Skip for Now</Text>
-              </TouchableOpacity>
             </View>
           </View>
         )}
-        {/* Step 3: Personal Details */}
-        {step === 3 && (
+        {/* Step 4: Personal Details */}
+        {step === 4 && (
           <View style={styles.card}>
             <Text style={styles.label}>Gender</Text>
             <View style={styles.dropdown}>
@@ -620,14 +815,11 @@ const FreelancerSignup = ({ navigation, route }) => {
               <TouchableOpacity style={styles.nextButton} onPress={nextStep}>
                 <Text style={styles.nextButtonText}>Next</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.skipButton} onPress={confirmSkip}>
-                <Text style={styles.skipButtonText}>Skip for Now</Text>
-              </TouchableOpacity>
             </View>
           </View>
         )}
-        {/* Step 4: Portfolio Upload */}
-        {step === 4 && (
+        {/* Step 5: Portfolio Upload */}
+        {step === 5 && (
           <View style={styles.card}>
             <Text style={styles.cardHeading}>Portfolio</Text>
             <TouchableOpacity
@@ -671,14 +863,11 @@ const FreelancerSignup = ({ navigation, route }) => {
               <TouchableOpacity style={styles.nextButton} onPress={nextStep}>
                 <Text style={styles.nextButtonText}>Next</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.skipButton} onPress={confirmSkip}>
-                <Text style={styles.skipButtonText}>Skip for Now</Text>
-              </TouchableOpacity>
             </View>
           </View>
         )}
-        {/* Step 5: Review & Submit */}
-        {step === 5 && (
+        {/* Step 6: Review & Submit */}
+        {step === 6 && (
           <View style={styles.card}>
             <Text style={styles.cardHeading}>Review & Submit</Text>
            <Text style={styles.label}>
@@ -703,8 +892,8 @@ const FreelancerSignup = ({ navigation, route }) => {
             </View>
           </View>
         )}
-        <Toast />
       </ScrollView>
+      <Toast />
     </SafeAreaView>
   );
 };
@@ -841,20 +1030,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
   },
-  skipButton: {
-    width: "48%",
-    height: 50,
-    backgroundColor: "#9E9E9E",
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 10,
-  },
-  skipButtonText: {
-    color: "white",
-    fontSize: 18,
-    fontWeight: "bold",
-  },
   addMore: {
     color: "#6A0DAD",
     marginBottom: 10,
@@ -928,6 +1103,175 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     fontSize: 10,
     fontWeight: "600",
+  },
+  // Service selection styles
+  searchContainer: {
+    marginVertical: 15,
+  },
+  searchInput: {
+    width: "100%",
+    height: 50,
+    backgroundColor: "#f8f9fa",
+    borderRadius: 12,
+    paddingHorizontal: 20,
+    fontSize: 16,
+    borderWidth: 2,
+    borderColor: "#e9ecef",
+  },
+  searchPrompt: {
+    padding: 20,
+    backgroundColor: "#f8f9fa",
+    borderRadius: 12,
+    alignItems: "center",
+    marginVertical: 10,
+  },
+  searchPromptText: {
+    fontSize: 16,
+    color: "#6A0DAD",
+    textAlign: "center",
+    marginBottom: 8,
+    fontWeight: "500",
+  },
+  searchHintText: {
+    fontSize: 14,
+    color: "#666",
+    textAlign: "center",
+  },
+  searchResultsHeader: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#4B0082",
+    marginBottom: 15,
+  },
+  noResultsContainer: {
+    padding: 20,
+    alignItems: "center",
+  },
+  noResultsText: {
+    fontSize: 16,
+    color: "#666",
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  noResultsHint: {
+    fontSize: 14,
+    color: "#999",
+    textAlign: "center",
+  },
+  servicesContainer: {
+    marginVertical: 10,
+    maxHeight: 400, // Limit height for scrolling
+  },
+  serviceItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f5f5f5",
+    borderRadius: 12,
+    padding: 15,
+    marginBottom: 10,
+    borderWidth: 2,
+    borderColor: "#e0e0e0",
+  },
+  serviceItemSelected: {
+    backgroundColor: "#e8d5ff",
+    borderColor: "#6A0DAD",
+  },
+  serviceContent: {
+    flex: 1,
+    marginRight: 10,
+  },
+  serviceName: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#333",
+    marginBottom: 4,
+  },
+  serviceNameSelected: {
+    color: "#6A0DAD",
+  },
+  serviceDescription: {
+    fontSize: 14,
+    color: "#666",
+    lineHeight: 20,
+  },
+  serviceDescriptionSelected: {
+    color: "#8A2BE2",
+  },
+  serviceCheckbox: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: "#fff",
+    borderWidth: 2,
+    borderColor: "#e0e0e0",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  serviceCheckboxSelected: {
+    backgroundColor: "#6A0DAD",
+    borderColor: "#6A0DAD",
+  },
+  checkmark: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  selectedServicesInfo: {
+    marginVertical: 15,
+    padding: 15,
+    backgroundColor: "#e8f4f8",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#bee5eb",
+  },
+  selectedCount: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#0c5460",
+    marginBottom: 10,
+  },
+  selectedServicesList: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  selectedServiceTag: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#6A0DAD",
+    borderRadius: 20,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  selectedServiceText: {
+    fontSize: 14,
+    color: "#fff",
+    fontWeight: "500",
+    marginRight: 6,
+  },
+  removeServiceButton: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  removeServiceText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "bold",
+    lineHeight: 18,
+  },
+  selectedServiceItem: {
+    fontSize: 14,
+    color: "#333",
+    marginBottom: 5,
+  },
+  disabledButton: {
+    backgroundColor: "#ccc",
   },
 });
 
