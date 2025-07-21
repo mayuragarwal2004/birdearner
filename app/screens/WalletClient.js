@@ -6,117 +6,95 @@ import {
   TouchableOpacity,
   FlatList,
   Alert,
+  RefreshControl,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../context/NewAuthContext";
-import { Query } from "react-native-appwrite";
-import { useAppwrite } from "../context/AppwriteContext";
 import { useTheme } from "../context/ThemeContext";
+import apiService from "../lib/apiService";
 
 const WalletClientScreen = ({ navigation }) => {
-  const { appwriteConfig, databases } = useAppwrite();
   const { userData } = useAuth();
-  const [walletAmount, setWalletAmount] = useState(userData?.wallet || 0);
+  const [walletData, setWalletData] = useState(null);
   const [paymentHistory, setPaymentHistory] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
-
   const styles = getStyles(currentTheme);
 
-  // Fetch updated wallet data when the screen is focused
+  // Fetch wallet data when the screen is focused
   useEffect(() => {
-    const unsubscribe = navigation.addListener("focus", fetchWalletData);
+    const unsubscribe = navigation.addListener("focus", () => {
+      fetchWalletData();
+    });
     return unsubscribe;
   }, [navigation]);
 
-  const fetchPaymentHistory = async (userId) => {
-    try {
-      const response = await databases.listDocuments(
-        appwriteConfig.databaseId,
-        appwriteConfig.paymentHistoryCollectionId,
-        [Query.equal("userId", userId)]
-      );
-
-      const sortedDocuments = response.documents.sort((a, b) => {
-        return new Date(b.$createdAt) - new Date(a.$createdAt);
-      });
-      setPaymentHistory(sortedDocuments || []);
-    } catch (error) {
-      Alert.alert("Error fetching payment history");
-    }
-  };
+  // Initial load
+  useEffect(() => {
+    fetchWalletData();
+  }, []);
 
   const fetchWalletData = async () => {
     try {
-      if (userData) {
-        const userId = userData?.$id;
-        const collectionId = appwriteConfig.clientCollectionId;
+      setLoading(true);
+      
+      // Fetch wallet information
+      const walletResponse = await apiService.getClientWalletInfo();
+      if (walletResponse.success) {
+        setWalletData(walletResponse.data);
+      }
 
-        // Fetch wallet details
-        const userDoc = await databases.getDocument(
-          appwriteConfig.databaseId,
-          collectionId,
-          userId
-        );
-
-        setWalletAmount(userDoc.wallet || 0);
-
-        // Fetch payment history
-        fetchPaymentHistory(userId);
+      // Fetch transaction history
+      const historyResponse = await apiService.getClientTransactionHistory();
+      if (historyResponse.success) {
+        console.log({ transactions: historyResponse.data.transactions });
+        setPaymentHistory(historyResponse.data.transactions || []);
       }
     } catch (error) {
-      Alert.alert("Error fetching wallet data");
+      console.error("Error fetching wallet data:", error);
+      Alert.alert("Error", "Failed to load wallet data. Please try again.");
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
   };
 
-  const getStatusStyle = (status) => {
-    switch (status) {
-      case "Success":
-        return { color: "green" };
-      case "Failed":
-        return { color: "red" };
-      case "Pending":
-        return { color: "orange" };
-      case "Recieved":
-        return { color: "orange" };
-      default:
-        return {};
-    }
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchWalletData();
   };
 
-  function getStatusColor(status) {
-    switch (status) {
-      case "Pending":
-        return "#FFCC00";
-      case "Failed":
-        return "#FF3B30";
-      case "Paid":
-        return "#71C232";
-      case "Success":
-        return "#71C232";
-      case "Recieved":
-        return "#FFCC00";
+  const formatTransactionType = (type) => {
+    switch (type) {
+      case "DEPOSIT":
+        return "Wallet Deposit";
+      case "WITHDRAWAL":
+        return "Wallet Withdrawal";
+      case "JOB_PAYMENT":
+        return "Job Payment";
+      case "JOB_REFUND":
+        return "Job Refund";
+      case "JOB_RESERVE":
+        return "Job Reserve";
+      case "JOB_RELEASE":
+        return "Job Release";
+      case "PENALTY":
+        return "Late Penalty";
+      case "BONUS":
+        return "Early Bonus";
+      case "PLATFORM_FEE":
+        return "Platform Fee";
       default:
-        return "#808080";
+        return type?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || "Unknown";
     }
-  }
-
-  function getStatusText(status) {
-    switch (status) {
-      case "Pending":
-        return "Requested amount successfully";
-      case "Failed":
-        return "Withdrawal has been rejected";
-      case "Success":
-        return "Received amount successfully";
-      default:
-        return "Something went wrong";
-    }
-  }
+  };
 
   const renderItem = ({ item }) => {
-    const createdAt = item?.date;
+    const createdAt = item?.createdAt || item?.date;
     const date = new Date(createdAt);
 
     // Format the date and time
@@ -132,6 +110,10 @@ const WalletClientScreen = ({ navigation }) => {
       hour12: true,
     });
 
+    // Determine if this is a credit or debit transaction
+    const isCredit = ['DEPOSIT', 'JOB_REFUND', 'JOB_RELEASE', 'BONUS'].includes(item?.transactionType);
+    const isDebit = ['WITHDRAWAL', 'JOB_PAYMENT', 'JOB_RESERVE', 'PENALTY', 'PLATFORM_FEE'].includes(item?.transactionType);
+
     return (
       <View style={[styles.paymentItem]}>
         {/* Triangle Indicator and Payment Details */}
@@ -144,17 +126,38 @@ const WalletClientScreen = ({ navigation }) => {
                 style={[
                   styles.triangleIndicator,
                   {
-                    borderLeftColor: getStatusColor(item?.status),
+                    borderLeftColor: isCredit ? "#71C232" : "#FF3B30",
                   },
                 ]}
               />
-              <Text style={styles.name}>ID: {item?.paymentId} </Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.name}>
+                  {formatTransactionType(item?.transactionType)} 
+                </Text>
+                {item?.description && (
+                  <Text style={styles.description}>
+                    {item.description}
+                  </Text>
+                )}
+                {item?.jobTitle && (
+                  <Text style={styles.jobTitle}>
+                    Job: {item.jobTitle}
+                  </Text>
+                )}
+              </View>
             </View>
-            <Text style={styles.amount}>₹{item?.amount}</Text>
+            <Text style={[
+              styles.amount,
+              { 
+                color: isCredit ? "#71C232" : "#FF3B30"
+              }
+            ]}>
+              {isDebit ? '-' : '+'}₹{parseFloat(item?.amount || 0).toFixed(2)}
+            </Text>
           </View>
         </View>
 
-        {/* Date and Status */}
+        {/* Date and Balance Info */}
         <View
           style={[
             styles.paymentDetailsn,
@@ -168,13 +171,8 @@ const WalletClientScreen = ({ navigation }) => {
           <Text style={styles.date}>
             {formattedDate} | {formattedTime}
           </Text>
-          <Text
-            style={[
-              styles.status,
-              { color: getStatusColor(item?.status) }, // Set color based on status
-            ]}
-          >
-            {item?.status}
+          <Text style={styles.balanceInfo}>
+            Balance: ₹{parseFloat(item?.balanceAfter || 0).toFixed(2)}
           </Text>
         </View>
       </View>
@@ -191,35 +189,70 @@ const WalletClientScreen = ({ navigation }) => {
           <Ionicons
             name="arrow-back"
             size={24}
-            color={currentTheme.text || black}
+            color={currentTheme.text || "black"}
           />
         </TouchableOpacity>
         <Text style={styles.header}>Wallet</Text>
       </View>
 
-      <Text style={styles.label}>Total Amount in Wallet</Text>
-      <Text style={styles.colorText}>₹{walletAmount || "0.0"}</Text>
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#6A0DAD" />
+          <Text style={styles.loadingText}>Loading wallet data...</Text>
+        </View>
+      ) : (
+        <>
+          <Text style={styles.label}>Total Amount in Wallet</Text>
+          <Text style={styles.colorText}>
+            ₹{walletData?.totalBalance?.toFixed(2) || "0.00"}
+          </Text>
+          
+          {walletData?.reservedAmount > 0 && (
+            <View style={styles.reservedContainer}>
+              <Text style={styles.reservedLabel}>Reserved Amount</Text>
+              <Text style={styles.reservedAmount}>
+                ₹{walletData.reservedAmount.toFixed(2)}
+              </Text>
+            </View>
+          )}
 
-      <TouchableOpacity
-        style={styles.addAmountButton}
-        onPress={() => navigation.navigate("Payment")}
-      >
-        <Text style={styles.addAmount}>Add Amount to Wallet</Text>
-      </TouchableOpacity>
+          <View style={styles.availableContainer}>
+            <Text style={styles.availableLabel}>Available Balance</Text>
+            <Text style={styles.availableAmount}>
+              ₹{walletData?.availableBalance?.toFixed(2) || "0.00"}
+            </Text>
+          </View>
 
-      <View style={styles.historyContainer}>
-        <Text style={styles.headerPay}>Payment History</Text>
-        {paymentHistory.length > 0 ? (
-          <FlatList
-            data={paymentHistory}
-            renderItem={renderItem}
-            keyExtractor={(item) => item.$id}
-            style={styles.historyList}
-          />
-        ) : (
-          <Text style={styles.noHistory}>No payment history available.</Text>
-        )}
-      </View>
+          <TouchableOpacity
+            style={styles.addAmountButton}
+            onPress={() => navigation.navigate("Payment")}
+          >
+            <Text style={styles.addAmount}>Add Amount to Wallet</Text>
+          </TouchableOpacity>
+
+          <View style={styles.historyContainer}>
+            <Text style={styles.headerPay}>Payment History</Text>
+            {paymentHistory.length > 0 ? (
+              <FlatList
+                data={paymentHistory}
+                renderItem={renderItem}
+                keyExtractor={(item) => item.id}
+                style={styles.historyList}
+                refreshControl={
+                  <RefreshControl
+                    refreshing={refreshing}
+                    onRefresh={onRefresh}
+                    colors={["#6A0DAD"]}
+                    tintColor="#6A0DAD"
+                  />
+                }
+              />
+            ) : (
+              <Text style={styles.noHistory}>No payment history available.</Text>
+            )}
+          </View>
+        </>
+      )}
     </View>
   );
 };
@@ -240,6 +273,51 @@ const getStyles = (currentTheme) =>
       gap: 100,
       alignItems: "center",
     },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    loadingText: {
+      marginTop: 10,
+      fontSize: 16,
+      color: currentTheme.text || "#000",
+    },
+    reservedContainer: {
+      marginVertical: 10,
+      padding: 15,
+      backgroundColor: "#FFF3CD",
+      borderRadius: 8,
+      borderLeftWidth: 4,
+      borderLeftColor: "#FFB000",
+    },
+    reservedLabel: {
+      fontSize: 14,
+      color: "#856404",
+      fontWeight: "500",
+    },
+    reservedAmount: {
+      fontSize: 18,
+      color: "#856404",
+      fontWeight: "bold",
+    },
+    availableContainer: {
+      marginBottom: 20,
+      padding: 10,
+      backgroundColor: currentTheme.cardBackground || "#F8F9FA",
+      borderRadius: 8,
+      alignItems: "center",
+    },
+    availableLabel: {
+      fontSize: 14,
+      color: currentTheme.subText || "#666",
+      marginBottom: 5,
+    },
+    availableAmount: {
+      fontSize: 20,
+      color: "#28A745",
+      fontWeight: "600",
+    },
     addAmountButton: {
       width: "90%",
       margin: "auto",
@@ -254,7 +332,6 @@ const getStyles = (currentTheme) =>
       fontWeight: "bold",
       fontSize: 20,
     },
-
     header: {
       fontSize: 24,
       fontWeight: "bold",
@@ -291,62 +368,16 @@ const getStyles = (currentTheme) =>
       marginTop: 10,
     },
     paymentItem: {
-      backgroundColor: currentTheme.background || "#F9F9F9",
-      padding: 15,
-      marginVertical: 10,
-      borderRadius: 10,
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.2,
-      shadowRadius: 3,
-    },
-    paymentCon: {
-      display: "flex",
-      flexDirection: "row",
-      justifyContent: "center",
-      gap: 50,
-      marginLeft: 1,
-      alignItems: "center",
-    },
-    paymentId: {
-      fontSize: 14,
-      fontWeight: "600",
-      color: "#333",
-    },
-    paymentAmount: {
-      fontSize: 14,
-      fontWeight: "500",
-      color: "#4B0082",
-    },
-    paymentStatus: {
-      fontSize: 14,
-      fontWeight: "600",
-      // marginTop: 5,
-    },
-    paymentDate: {
-      fontSize: 12,
-      color: "#888",
-      // marginTop: 5,
-    },
-    noHistory: {
-      fontSize: 16,
-      color: "#888",
-      textAlign: "center",
-      marginTop: 20,
-    },
-
-    paymentItem: {
       backgroundColor: currentTheme.cardBackground || "#fff",
-      // padding: 12,
       marginVertical: 5,
       borderRadius: 8,
-      elevation: 3, // Add shadow for elevation (optional)
+      elevation: 3,
       shadowColor: "#000",
       shadowOffset: { width: 0, height: 1 },
       shadowOpacity: 0.2,
       shadowRadius: 1.5,
-      paddingVertical: 5,
-      paddingHorizontal: 10,
+      paddingVertical: 10,
+      paddingHorizontal: 15,
     },
     triangleIndicator: {
       width: 0,
@@ -371,25 +402,45 @@ const getStyles = (currentTheme) =>
       flexDirection: "row",
       justifyContent: "flex-start",
       alignItems: "center",
-      // color: currentTheme.text
     },
     name: {
       fontSize: 15,
       fontWeight: "500",
-      color: currentTheme.subText || "#333",
+      color: currentTheme.text || "#333",
+      marginBottom: 2,
+    },
+    description: {
+      fontSize: 12,
+      color: currentTheme.subText || "#666",
+      fontStyle: "italic",
+    },
+    jobTitle: {
+      fontSize: 11,
+      color: "#4B0082",
+      fontWeight: "500",
+      marginTop: 2,
     },
     amount: {
-      fontSize: 15,
-      fontWeight: "500",
-      color: "#71C232",
+      fontSize: 16,
+      fontWeight: "600",
     },
     date: {
       fontSize: 12,
       color: "#666",
     },
-    status: {
+    balanceInfo: {
       fontSize: 12,
-      fontWeight: "bold",
+      color: "#4B0082",
+      fontWeight: "500",
+    },
+    noHistory: {
+      fontSize: 16,
+      color: "#888",
+      textAlign: "center",
+      marginTop: 20,
+    },
+    paymentDetailsn: {
+      // Additional styles if needed
     },
   });
 

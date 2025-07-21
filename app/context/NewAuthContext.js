@@ -17,6 +17,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import apiService from '../lib/apiService';
 import { setActiveRole, clearProfileStatus } from '../lib/profileStatusStorage';
+import Toast from "react-native-toast-message";
 
 const AuthContext = createContext();
 
@@ -25,6 +26,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [userData, setUserData] = useState(null);
   const [userProfile, setUserProfile] = useState(null); // freelancer or client profile
+  const [authToken, setAuthToken] = useState(null);
   const [roleSelectionVisible, setRoleSelectionVisible] = useState(false);
   const [roleOptions, setRoleOptions] = useState({
     freelancerData: null,
@@ -34,6 +36,30 @@ export const AuthProvider = ({ children }) => {
   // Fetch user profile data (freelancer/client) from our backend
   const fetchUserProfile = async (userId, userRole) => {
     try {
+      // First, verify that the user exists in the database
+      try {
+        const userExists = await apiService.getUserById(userId);
+        if (!userExists) {
+          console.log('User not found in database, triggering logout');
+          Toast.show({
+            type: 'error',
+            text1: 'Session Expired',
+            text2: 'Please log in again.',
+          });
+          await logout();
+          return null;
+        }
+      } catch (error) {
+        // If user is not found (404 or similar), logout the user
+        if (error.message && (error.message.includes('User not found') || error.message.includes('404'))) {
+          console.log('User not found in database, triggering logout');
+          await logout();
+          return null;
+        }
+        // For other errors, continue with the normal flow
+        console.warn('Error checking user existence:', error.message);
+      }
+
       let profileData = null;
       
       if (userRole === 'FREELANCER') {
@@ -75,13 +101,41 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       
       // Check for stored user data
-      const [storedUserData, storedUserProfile] = await Promise.all([
+      const [storedUserData, storedUserProfile, storedAuthToken] = await Promise.all([
         AsyncStorage.getItem('userData'),
         AsyncStorage.getItem('userProfile'),
+        AsyncStorage.getItem('authToken'),
       ]);
 
       if (storedUserData) {
         const userData = JSON.parse(storedUserData);
+        
+        // Verify user still exists in database before setting state
+        try {
+          const userExists = await apiService.getUserById(userData.id);
+          if (!userExists) {
+            console.log('Stored user not found in database during session check, clearing session');
+            await AsyncStorage.multiRemove(['userData', 'userProfile', 'authToken']);
+            setUser(null);
+            setUserData(null);
+            setUserProfile(null);
+            setAuthToken(null);
+            return;
+          }
+        } catch (error) {
+          if (error.message && (error.message.includes('User not found') || error.message.includes('404'))) {
+            console.log('Stored user not found in database during session check, clearing session');
+            await AsyncStorage.multiRemove(['userData', 'userProfile', 'authToken']);
+            setUser(null);
+            setUserData(null);
+            setUserProfile(null);
+            setAuthToken(null);
+            return;
+          }
+          // For other errors, continue with normal flow but log the warning
+          console.warn('Error verifying user existence during session check:', error.message);
+        }
+
         setUser(userData);
         setUserData(userData);
 
@@ -391,6 +445,35 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Role switching functionality for users with multiple roles
+  const updateUserRole = async (newRole) => {
+    try {
+      if (!user) {
+        throw new Error("User not authenticated");
+      }
+
+      // Update user role on backend
+      const updatedUser = await apiService.updateUser(user.id, { role: newRole });
+      
+      if (updatedUser) {
+        // Update local state
+        setUserData(updatedUser);
+        await AsyncStorage.setItem('userData', JSON.stringify(updatedUser));
+        
+        // Fetch the corresponding profile
+        await fetchUserProfile(updatedUser.id, newRole);
+        
+        // Set active role in profile status
+        await setActiveRole(newRole);
+        
+        return updatedUser;
+      }
+    } catch (error) {
+      console.error("Error updating user role:", error);
+      throw new Error(error.message || "Failed to update user role");
+    }
+  };
+
   // Refresh user data
   const refreshUserData = async () => {
     if (user) {
@@ -419,7 +502,32 @@ export const AuthProvider = ({ children }) => {
         }
       } catch (error) {
         console.error("Error refreshing user data:", error);
+        
+        // If user is not found in database, logout automatically
+        if (error.message && (error.message.includes('User not found') || error.message.includes('404'))) {
+          console.log('User not found during refresh, triggering logout');
+          await logout();
+        }
       }
+    }
+  };
+
+  // Validate if current user still exists in database
+  const validateUserExists = async () => {
+    if (!user) return false;
+    
+    try {
+      const userExists = await apiService.getUserById(user.id);
+      return !!userExists;
+    } catch (error) {
+      if (error.message && (error.message.includes('User not found') || error.message.includes('404'))) {
+        console.log('User validation failed: user not found, triggering logout');
+        await logout();
+        return false;
+      }
+      // For other errors, assume user exists to avoid unnecessary logouts
+      console.warn('Error validating user existence:', error.message);
+      return true;
     }
   };
 
@@ -427,6 +535,7 @@ export const AuthProvider = ({ children }) => {
     user,
     userData,
     userProfile,
+    authToken,
     loading,
     login,
     register,
@@ -434,8 +543,11 @@ export const AuthProvider = ({ children }) => {
     createFreelancerProfile,
     createClientProfile,
     updateUserProfile,
+    updateUserRole,
     refreshUserData,
     checkUserSession,
+    fetchUserProfile,
+    validateUserExists,
     selectRole,
     roleOptions,
     roleSelectionVisible,

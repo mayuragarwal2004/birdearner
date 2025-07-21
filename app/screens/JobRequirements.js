@@ -28,6 +28,11 @@ const JobRequirementsScreen = ({ navigation, route }) => {
   const [jobLocation, setJobLocation] = useState("");
   const [deadline, setDeadline] = useState(new Date());
   const [budget, setBudget] = useState("");
+  const [walletData, setWalletData] = useState(null);
+  const [walletLoading, setWalletLoading] = useState(false);
+  const [budgetError, setBudgetError] = useState("");
+  const [showWalletInfo, setShowWalletInfo] = useState(false);
+  const [budgetValidating, setBudgetValidating] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [skills, setSkills] = useState([""]);
   const [jobDes, setJobDes] = useState("");
@@ -55,6 +60,7 @@ const JobRequirementsScreen = ({ navigation, route }) => {
   const toggleAnim = new Animated.Value(isOnSite ? 1 : 0); // Animation value (0 = Remote, 1 = On-site)
 
   const { theme, themeStyles } = useTheme();
+  const { userData, authToken } = useAuth();
   const currentTheme = themeStyles[theme];
 
   const styles = getStyles(currentTheme);
@@ -64,6 +70,77 @@ const JobRequirementsScreen = ({ navigation, route }) => {
       setFrelancerType(route.params.freelancerType);
     }
   }, [route.params?.freelancerType]);
+
+  // Fetch wallet data on component mount and screen focus
+  useEffect(() => {
+    fetchWalletData();
+    const unsubscribe = navigation.addListener("focus", () => {
+      fetchWalletData();
+    });
+
+    return unsubscribe;
+  }, [navigation]); // Removed authToken dependency
+
+  const fetchWalletData = async () => {
+    setWalletLoading(true);
+    try {
+      const response = await apiService.getClientWalletInfo();
+      console.log("Wallet data fetched:", response);
+      if (response.success) {
+        setWalletData(response.data);
+      }
+    } catch (error) {
+      console.error("Error fetching wallet data:", error);
+      // Don't show alert here to avoid disrupting the flow
+    } finally {
+      setWalletLoading(false);
+    }
+  };
+
+  const validateBudget = (budgetValue) => {
+    const budgetNum = parseFloat(budgetValue);
+    setBudgetError("");
+    setBudgetValidating(false);
+
+    if (!budgetValue || isNaN(budgetNum) || budgetNum <= 0) {
+      setBudgetError("Please enter a valid budget amount");
+      return false;
+    }
+
+    if (!walletData) {
+      setBudgetError("Unable to verify wallet balance. Please try again.");
+      return false;
+    }
+
+    if (budgetNum > walletData.availableBalance) {
+      setBudgetError(
+        `Insufficient balance. Available: ₹${walletData.availableBalance?.toFixed(
+          2
+        )}`
+      );
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleBudgetChange = (value) => {
+    setBudget(value);
+    if (value && walletData) {
+      setBudgetValidating(true);
+      // Add a slight delay to show loading state
+      setTimeout(() => {
+        validateBudget(value);
+      }, 300);
+    } else {
+      setBudgetError("");
+      setBudgetValidating(false);
+    }
+  };
+
+  const navigateToWallet = () => {
+    navigation.navigate("WalletClient");
+  };
   const handleToggle = () => {
     // Toggle state and animate translation
     setIsOnSite(!isOnSite);
@@ -122,11 +199,12 @@ const JobRequirementsScreen = ({ navigation, route }) => {
         const category = isOnSite ? "household" : "freelance";
         const services = await apiService.getServicesByCategory(category);
         console.log("Fetching services for category:", category);
-        console.log({services});
-        
-        
+        // console.log({services});
+
         // Extract service names/roles from the response
-        const serviceNames = services.map((service) => service.name || service.role || service.title);
+        const serviceNames = services.map(
+          (service) => service.name || service.role || service.title
+        );
         setServices(serviceNames);
       } catch (error) {
         console.error("Error fetching services:", error);
@@ -140,18 +218,22 @@ const JobRequirementsScreen = ({ navigation, route }) => {
   const onRefresh = async () => {
     setRefreshing(true);
     try {
-      await apiService.init(); // Initialize the API service
+      // Refresh services
       const category = isOnSite ? "household" : "freelance";
       const services = await apiService.getServicesByCategory(category);
-      console.log("Refreshing services for category:", category);
-      console.log({services});
-      
+      // console.log("Refreshing services for category:", category);
+
       // Extract service names/roles from the response
-      const serviceNames = services.map((service) => service.name || service.role || service.title);
+      const serviceNames = services.map(
+        (service) => service.name || service.role || service.title
+      );
       setServices(serviceNames);
+
+      // Refresh wallet data
+      await fetchWalletData();
     } catch (error) {
-      console.error("Error refreshing services:", error);
-      Alert.alert("Error", "Failed to refresh services. Please try again.");
+      console.error("Error refreshing data:", error);
+      Alert.alert("Error", "Failed to refresh data. Please try again.");
     } finally {
       setRefreshing(false);
     }
@@ -187,7 +269,7 @@ const JobRequirementsScreen = ({ navigation, route }) => {
       const location = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.High,
       });
-      
+
       const { latitude, longitude } = location.coords;
       setLatitude(parseFloat(latitude));
       setLongitude(parseFloat(longitude));
@@ -210,7 +292,9 @@ const JobRequirementsScreen = ({ navigation, route }) => {
 
       if (addressResponse.length > 0) {
         const address = addressResponse[0];
-        const formattedAddress = `${address.street || ''} ${address.city || ''} ${address.region || ''} ${address.country || ''}`.trim();
+        const formattedAddress = `${address.street || ""} ${
+          address.city || ""
+        } ${address.region || ""} ${address.country || ""}`.trim();
         setJobLocation(formattedAddress);
         Alert.alert("Success", "Current location detected successfully!");
       }
@@ -255,7 +339,9 @@ const JobRequirementsScreen = ({ navigation, route }) => {
 
       if (addressResponse.length > 0) {
         const address = addressResponse[0];
-        const formattedAddress = `${address.street || ''} ${address.city || ''} ${address.region || ''} ${address.country || ''}`.trim();
+        const formattedAddress = `${address.street || ""} ${
+          address.city || ""
+        } ${address.region || ""} ${address.country || ""}`.trim();
         setJobLocation(formattedAddress);
       } else {
         setJobLocation(`${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
@@ -268,7 +354,11 @@ const JobRequirementsScreen = ({ navigation, route }) => {
       // Still save the coordinates even if reverse geocoding fails
       setLatitude(parseFloat(tempLocation.latitude));
       setLongitude(parseFloat(tempLocation.longitude));
-      setJobLocation(`${tempLocation.latitude.toFixed(6)}, ${tempLocation.longitude.toFixed(6)}`);
+      setJobLocation(
+        `${tempLocation.latitude.toFixed(6)}, ${tempLocation.longitude.toFixed(
+          6
+        )}`
+      );
       setShowMapModal(false);
     } finally {
       setLocationLoading(false);
@@ -287,13 +377,9 @@ const JobRequirementsScreen = ({ navigation, route }) => {
 
   const uploadPortfolioImages = async () => {
     try {
-      let permissionResult =
-        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      let permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permissionResult.granted) {
-        Alert.alert(
-          "Permission required",
-          "You need to grant permission to access your photos."
-        );
+        Alert.alert("Permission required", "Please allow access to your media library.");
         return;
       }
 
@@ -306,8 +392,46 @@ const JobRequirementsScreen = ({ navigation, route }) => {
       });
 
       if (!pickerResult.canceled) {
-        const newImages = pickerResult.assets.map((asset) => asset.uri);
-        setPortfolioImages([...portfolioImages, ...newImages]);
+        // pickerResult.assets is an array of selected images
+        const selectedImages = pickerResult.assets || [];
+        let uploadedUrls = [];
+
+        for (const image of selectedImages) {
+          const localUri = image.uri;
+          const filename = localUri.split('/').pop();
+          const match = /\.([a-zA-Z0-9]+)$/.exec(filename);
+          const type = match ? `image/${match[1]}` : `image`;
+
+          // Prepare form data
+          const formData = new FormData();
+          formData.append('file', {
+            uri: localUri,
+            name: filename,
+            type,
+          });
+
+          try {
+            const response = await fetch(`${apiService.baseURL}/uploads`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'multipart/form-data',
+                ...(apiService.getAuthHeaders ? apiService.getAuthHeaders() : {}),
+              },
+              body: formData,
+            });
+            const result = await response.json();
+            if (result.success && result.data && result.data.url) {
+              uploadedUrls.push(result.data.url);
+            } else {
+              Alert.alert('Upload Error', result.message || 'Failed to upload image.');
+            }
+          } catch (err) {
+            Alert.alert('Upload Error', err.message || 'Failed to upload image.');
+          }
+        }
+
+        // Update state with uploaded image URLs
+        setPortfolioImages([...portfolioImages, ...uploadedUrls]);
       }
     } catch (error) {
       Alert.alert("Error", `Failed to pick images: ${error.message}`);
@@ -336,8 +460,13 @@ const JobRequirementsScreen = ({ navigation, route }) => {
       Alert.alert("Validation Error", "Deadline must be a future date.");
       return false;
     }
-    if (!budget || isNaN(budget) || budget <= 0) {
-      Alert.alert("Validation Error", "Please enter a valid budget.");
+
+    // Enhanced budget validation with wallet integration
+    if (!validateBudget(budget)) {
+      Alert.alert(
+        "Budget Validation Error",
+        budgetError || "Please enter a valid budget amount."
+      );
       return false;
     }
     if (skills.some((skill) => skill === "")) {
@@ -355,19 +484,25 @@ const JobRequirementsScreen = ({ navigation, route }) => {
       );
       return false;
     }
-    
+
     // Only validate location for on-site jobs
     if (jobType === "On-site") {
       if (!jobLocation || jobLocation.trim() === "") {
-        Alert.alert("Validation Error", "Please enter a job location for on-site work.");
+        Alert.alert(
+          "Validation Error",
+          "Please enter a job location for on-site work."
+        );
         return false;
       }
       if (!latitude || !longitude) {
-        Alert.alert("Validation Error", "Please fetch coordinates for the job location.");
+        Alert.alert(
+          "Validation Error",
+          "Please fetch coordinates for the job location."
+        );
         return false;
       }
     }
-    
+
     return true;
   };
 
@@ -378,7 +513,10 @@ const JobRequirementsScreen = ({ navigation, route }) => {
         if (latitude && longitude) {
           navigation.navigate("JobDetails", { formData });
         } else {
-          Alert.alert("Validation Error", "Please set the job location coordinates.");
+          Alert.alert(
+            "Validation Error",
+            "Please set the job location coordinates."
+          );
         }
       } else {
         // For remote jobs, set default location data
@@ -392,6 +530,8 @@ const JobRequirementsScreen = ({ navigation, route }) => {
       }
     }
   };
+
+  console.log({ showWalletInfo, walletData });
 
   return (
     <SafeAreaView style={styles.container}>
@@ -484,10 +624,13 @@ const JobRequirementsScreen = ({ navigation, route }) => {
               onChangeText={setJobLocation}
               multiline
             />
-            
+
             <View style={styles.locationButtonsRow}>
-              <TouchableOpacity 
-                style={[styles.locationButton, locationLoading && styles.disabledButton]}
+              <TouchableOpacity
+                style={[
+                  styles.locationButton,
+                  locationLoading && styles.disabledButton,
+                ]}
                 onPress={getCurrentLocation}
                 disabled={locationLoading}
               >
@@ -496,9 +639,13 @@ const JobRequirementsScreen = ({ navigation, route }) => {
                   {locationLoading ? "Getting..." : "Use Current"}
                 </Text>
               </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={[styles.locationButton, styles.geocodeButton, locationLoading && styles.disabledButton]}
+
+              <TouchableOpacity
+                style={[
+                  styles.locationButton,
+                  styles.geocodeButton,
+                  locationLoading && styles.disabledButton,
+                ]}
                 onPress={fetchCoordinates}
                 disabled={locationLoading || !jobLocation.trim()}
               >
@@ -508,18 +655,19 @@ const JobRequirementsScreen = ({ navigation, route }) => {
                 </Text>
               </TouchableOpacity>
             </View>
-            
-            <TouchableOpacity 
-              style={[styles.mapButton, !latitude && !longitude && styles.disabledButton]}
+
+            <TouchableOpacity
+              style={[
+                styles.mapButton,
+                !latitude && !longitude && styles.disabledButton,
+              ]}
               onPress={openMapModal}
               disabled={!latitude && !longitude}
             >
               <Ionicons name="map-outline" size={20} color="#fff" />
-              <Text style={styles.mapButtonText}>
-                View & Adjust on Map
-              </Text>
+              <Text style={styles.mapButtonText}>View & Adjust on Map</Text>
             </TouchableOpacity>
-            
+
             {latitude && longitude && (
               <View style={styles.coordinatesDisplay}>
                 <Text style={styles.coordinatesText}>
@@ -527,9 +675,10 @@ const JobRequirementsScreen = ({ navigation, route }) => {
                 </Text>
               </View>
             )}
-            
+
             <Text style={styles.helpText}>
-              💡 Tip: Use "Current Location" for your current position, or enter an address and tap "Get Coordinates"
+              💡 Tip: Use "Current Location" for your current position, or enter
+              an address and tap "Get Coordinates"
             </Text>
           </View>
         )}
@@ -578,14 +727,108 @@ const JobRequirementsScreen = ({ navigation, route }) => {
             )}
           </View>
           <View style={styles.dropdownContainer}>
-            <Text style={styles.label}>Budget</Text>
+            <View style={styles.budgetHeader}>
+              <Text style={styles.label}>Budget</Text>
+              <TouchableOpacity
+                onPress={() => setShowWalletInfo(!showWalletInfo)}
+                style={styles.walletToggle}
+              >
+                <Ionicons
+                  name={showWalletInfo ? "wallet" : "wallet-outline"}
+                  size={18}
+                  color="#6A0DAD"
+                />
+                <Text style={styles.walletToggleText}>
+                  {walletLoading ? "Loading..." : "Wallet Info"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {showWalletInfo && walletData && (
+              <View style={styles.walletInfoContainer}>
+                <View style={styles.walletInfoRow}>
+                  <Text style={styles.walletInfoLabel}>Available Balance:</Text>
+                  <Text style={styles.walletInfoAmount}>
+                    ₹{walletData.availableBalance?.toFixed(2) || "0.00"}
+                  </Text>
+                </View>
+                {walletData.reservedAmount > 0 && (
+                  <View style={styles.walletInfoRow}>
+                    <Text style={styles.walletInfoLabel}>Reserved:</Text>
+                    <Text style={styles.walletInfoReserved}>
+                      ₹{walletData.reservedAmount?.toFixed(2)}
+                    </Text>
+                  </View>
+                )}
+                <View style={styles.walletInfoRow}>
+                  <Text style={styles.walletInfoLabel}>Total Balance:</Text>
+                  <Text style={styles.walletInfoTotal}>
+                    ₹{walletData.totalBalance?.toFixed(2) || "0.00"}
+                  </Text>
+                </View>
+              </View>
+            )}
+
             <TextInput
-              style={styles.input}
-              placeholder=""
-              keyboardType="number-pad"
+              style={[styles.input, budgetError ? styles.inputError : null]}
+              placeholder={
+                walletData
+                  ? `Max: ₹${walletData.availableBalance?.toFixed(2)}`
+                  : "Enter budget amount"
+              }
+              keyboardType="numeric"
               value={budget}
-              onChangeText={setBudget}
+              onChangeText={handleBudgetChange}
             />
+
+            {budgetError ? (
+              <View style={styles.errorContainer}>
+                <Text style={styles.errorText}>{budgetError}</Text>
+                {budgetError.includes("Insufficient balance") && (
+                  <TouchableOpacity
+                    onPress={navigateToWallet}
+                    style={styles.addMoneyButton}
+                  >
+                    <Ionicons
+                      name="add-circle-outline"
+                      size={16}
+                      color="#6A0DAD"
+                    />
+                    <Text style={styles.addMoneyText}>Add Money</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            ) : budgetValidating ? (
+              <View style={styles.budgetValidationContainer}>
+                <View style={styles.budgetValidationRow}>
+                  <Ionicons name="time-outline" size={16} color="#6A0DAD" />
+                  <Text
+                    style={[styles.budgetValidationText, { color: "#6A0DAD" }]}
+                  >
+                    Validating budget...
+                  </Text>
+                </View>
+              </View>
+            ) : (
+              budget &&
+              walletData && (
+                <View style={styles.budgetValidationContainer}>
+                  <View style={styles.budgetValidationRow}>
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={16}
+                      color="#28A745"
+                    />
+                    <Text style={styles.budgetValidationText}>
+                      Valid amount. Remaining: ₹
+                      {(
+                        walletData.availableBalance - parseFloat(budget || 0)
+                      ).toFixed(2)}
+                    </Text>
+                  </View>
+                </View>
+              )
+            )}
           </View>
         </View>
 
@@ -637,7 +880,7 @@ const JobRequirementsScreen = ({ navigation, route }) => {
         <View style={styles.uploadedImages}>
           {portfolioImages.map((image, index) => (
             <View key={index} style={styles.imagePreviewContainer}>
-              <Image source={{ uri: image }} style={styles.uploadedImage} />
+              <Image source={{ uri: apiService.loadImageURI(image) }} style={styles.uploadedImage} />
               <TouchableOpacity
                 style={styles.removeButton}
                 onPress={() => removeImage(index)}
@@ -679,14 +922,14 @@ const JobRequirementsScreen = ({ navigation, route }) => {
       >
         <SafeAreaView style={styles.mapModalContainer}>
           <View style={styles.mapModalHeader}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.mapModalCloseButton}
               onPress={() => setShowMapModal(false)}
             >
               <Ionicons name="close" size={24} color="#fff" />
             </TouchableOpacity>
             <Text style={styles.mapModalTitle}>Select Job Location</Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.mapModalConfirmButton}
               onPress={confirmLocationFromMap}
               disabled={locationLoading}
@@ -696,7 +939,7 @@ const JobRequirementsScreen = ({ navigation, route }) => {
               </Text>
             </TouchableOpacity>
           </View>
-          
+
           <MapView
             style={styles.map}
             region={mapRegion}
@@ -713,13 +956,15 @@ const JobRequirementsScreen = ({ navigation, route }) => {
               description="Drag to adjust the exact location"
             />
           </MapView>
-          
+
           <View style={styles.mapModalFooter}>
             <Text style={styles.mapHelpText}>
-              📍 Tap anywhere on the map or drag the pin to set the exact job location
+              📍 Tap anywhere on the map or drag the pin to set the exact job
+              location
             </Text>
             <Text style={styles.coordinatesText}>
-              Coordinates: {tempLocation.latitude.toFixed(6)}, {tempLocation.longitude.toFixed(6)}
+              Coordinates: {tempLocation.latitude.toFixed(6)},{" "}
+              {tempLocation.longitude.toFixed(6)}
             </Text>
           </View>
         </SafeAreaView>
@@ -1068,6 +1313,104 @@ const getStyles = (currentTheme) =>
       fontSize: 14,
       textAlign: "center",
       marginBottom: 8,
+    },
+    // Budget and Wallet styles
+    budgetHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 8,
+    },
+    walletToggle: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: 4,
+      paddingHorizontal: 8,
+      backgroundColor: "#f0f0f0",
+      borderRadius: 12,
+      gap: 4,
+    },
+    walletToggleText: {
+      fontSize: 12,
+      color: "#6A0DAD",
+      fontWeight: "500",
+    },
+    walletInfoContainer: {
+      backgroundColor: "#f8f9fa",
+      padding: 12,
+      borderRadius: 8,
+      marginBottom: 10,
+      borderWidth: 1,
+      borderColor: "#e9ecef",
+    },
+    walletInfoRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 6,
+    },
+    walletInfoLabel: {
+      fontSize: 14,
+      color: "#6c757d",
+      fontWeight: "500",
+    },
+    walletInfoAmount: {
+      fontSize: 14,
+      color: "#28A745",
+      fontWeight: "600",
+    },
+    walletInfoReserved: {
+      fontSize: 14,
+      color: "#FFC107",
+      fontWeight: "600",
+    },
+    walletInfoTotal: {
+      fontSize: 14,
+      color: "#343a40",
+      fontWeight: "600",
+    },
+    inputError: {
+      borderColor: "#DC3545",
+      borderWidth: 1.5,
+      backgroundColor: "#fef2f2",
+    },
+    errorContainer: {
+      marginTop: 5,
+      paddingHorizontal: 5,
+    },
+    errorText: {
+      fontSize: 12,
+      color: "#DC3545",
+      marginBottom: 5,
+    },
+    addMoneyButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: 6,
+      paddingHorizontal: 12,
+      backgroundColor: "#f8f9ff",
+      borderRadius: 12,
+      alignSelf: "flex-start",
+      gap: 4,
+    },
+    addMoneyText: {
+      fontSize: 12,
+      color: "#6A0DAD",
+      fontWeight: "600",
+    },
+    budgetValidationContainer: {
+      marginTop: 5,
+      paddingHorizontal: 5,
+    },
+    budgetValidationRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
+    budgetValidationText: {
+      fontSize: 12,
+      color: "#28A745",
+      fontWeight: "500",
     },
   });
 

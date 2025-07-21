@@ -12,6 +12,7 @@ const JobSubmissionTimmerScreen = ({ route, navigation }) => {
   const [seconds, setSeconds] = useState(TOTAL_TIME);
   const [progress, setProgress] = useState(1);
   const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false); // Add loading state
   const { formData } = route.params;
   const { userData, userProfile } = useAuth();
 
@@ -21,7 +22,14 @@ const JobSubmissionTimmerScreen = ({ route, navigation }) => {
   const styles = getStyles(currentTheme);
 
   const submitJob = async () => {
+    // Prevent multiple submissions
+    if (isSubmitting || submitted) {
+      console.log("Job submission already in progress or completed");
+      return;
+    }
+
     try {
+      setIsSubmitting(true); // Set loading state
       await apiService.init(); // Initialize the API service
       
       // Validate that we have the required profile data
@@ -30,9 +38,6 @@ const JobSubmissionTimmerScreen = ({ route, navigation }) => {
         console.log("Debug - userProfile:", userProfile);
         throw new Error("Client profile not found. Please complete your profile setup.");
       }
-      
-      console.log("Debug - Using clientId:", userProfile.id);
-      console.log("Debug - Job data being sent:", jobData);
       
       // Create job data object
       const jobData = {
@@ -46,11 +51,13 @@ const JobSubmissionTimmerScreen = ({ route, navigation }) => {
         projectDuration: "1-3 months", // Default value
         budgetType: "Fixed", // Default value
         budgetAmount: parseFloat(formData.budget),
-        clientId: userProfile.id, // Use the client profile ID, not user ID
         deadlineDate: new Date(formData.deadline),
         attachedFiles: formData.portfolioImages, // Send image URIs as is - backend will handle file upload
         location: formData.jobLocation,
       };
+
+      console.log("Debug - Using clientId:", userProfile.id);
+      console.log("Debug - Job data being sent:", jobData);
 
       // Create the job using apiService
       const response = await apiService.createJob(jobData);
@@ -64,6 +71,8 @@ const JobSubmissionTimmerScreen = ({ route, navigation }) => {
     } catch (error) {
       console.error("Error creating job:", error);
       Alert.alert("Error", `Failed to create job: ${error.message}`);
+    } finally {
+      setIsSubmitting(false); // Reset loading state
     }
   };
 
@@ -81,10 +90,10 @@ const JobSubmissionTimmerScreen = ({ route, navigation }) => {
     if (!submitted) {
       submitJob();
     }
-  }, [seconds, submitted]);
+  }, [seconds, submitted, isSubmitting]); // Add isSubmitting to dependencies
 
   const handleManualSubmit = () => {
-    if (!submitted) {
+    if (!submitted && !isSubmitting) {
       submitJob();
     }
   };
@@ -130,11 +139,13 @@ const JobSubmissionTimmerScreen = ({ route, navigation }) => {
       </View>
 
       <TouchableOpacity
-        style={styles.submitButton}
+        style={[styles.submitButton, (submitted || isSubmitting) && styles.disabledButton]}
         onPress={handleManualSubmit}
-        disabled={submitted}
+        disabled={submitted || isSubmitting}
       >
-        <Text style={styles.submitButtonText}>Submit</Text>
+        <Text style={styles.submitButtonText}>
+          {isSubmitting ? "Submitting..." : submitted ? "Submitted" : "Submit"}
+        </Text>
       </TouchableOpacity>
       <TouchableOpacity onPress={handleCancel}>
         <Text style={styles.cancelText}>Cancel</Text>
@@ -190,6 +201,11 @@ const getStyles = (currentTheme) =>
       shadowOpacity: 0.17,
       shadowRadius: 3.05,
       elevation: 4,
+    },
+    disabledButton: {
+      backgroundColor: "#CCCCCC",
+      shadowOpacity: 0,
+      elevation: 0,
     },
     submitButtonText: {
       color: "#FFFFFF",

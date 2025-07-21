@@ -1,452 +1,635 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import {
   View,
   Text,
-  Image,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Modal,
   Alert,
+  ActivityIndicator,
+  Modal,
+  Image,
 } from "react-native";
-import { FontAwesome } from "@expo/vector-icons";
-import { useAuth } from "../context/NewAuthContext";
-import { useAppwrite } from "../context/AppwriteContext";
+import { FontAwesome, Ionicons } from "@expo/vector-icons";
 import ImageViewer from "react-native-image-zoom-viewer";
+import { useAuth } from "../context/NewAuthContext";
 import { useTheme } from "../context/ThemeContext";
+import apiService from "../lib/apiService";
 
 const JobDetailsChatScreen = ({ route, navigation }) => {
-  const { appwriteConfig, databases } = useAppwrite();
-  const { projectId } = route.params;
-  const [flagged, setFlagged] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [images, setImages] = useState([]);
-  const [job, setJob] = useState();
-  const { userData } = useAuth();
 
+  const { jobId } = route.params || {};
+  const { user } = useAuth();
   const { theme, themeStyles } = useTheme();
-  const currentTheme = themeStyles[theme];
+  const currentTheme = themeStyles[theme] || themeStyles.light;
+
+  // Early return if required props are missing
+  if (!jobId) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <Text>Error: Job ID not provided</Text>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={{
+            padding: 10,
+            backgroundColor: currentTheme.primary,
+            borderRadius: 5,
+            marginTop: 10,
+          }}
+        >
+          <Text style={{ color: "white" }}>Go Back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   const styles = getStyles(currentTheme);
 
+  // State management
+  const [job, setJob] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [flagged, setFlagged] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [images, setImages] = useState([]);
+
+  // Fetch job details on component mount
   useEffect(() => {
-    const checkAppliedStatus = async () => {
-      try {
-        const jobDoc = await databases.getDocument(
-          appwriteConfig.databaseId,
-          appwriteConfig.jobCollectionID,
-          projectId
-        );
+    fetchJobDetails();
+    checkBookmarkStatus();
+  }, [jobId]);
 
-        setJob(jobDoc);
-      } catch (error) {
-        Alert.alert("Error job status:", error);
+  const fetchJobDetails = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await apiService.getJobById(jobId);
+      console.log("Debug - Using jobId:", jobId);
+      console.log("Debug - API Response:", response);
+
+      // Map API response fields to expected frontend fields
+      const apiJob = response;
+      const mappedJob = {
+        title: apiJob.jobTitle,
+        description: apiJob.jobDescription,
+        category: apiJob.jobCategory,
+        subCategory: apiJob.jobSubCategory,
+        skills: apiJob.skillsRequired || [],
+        deadline: apiJob.deadlineDate,
+        budget: apiJob.budgetAmount,
+        attached_files: apiJob.attachedFiles || [],
+        status: apiJob.jobStatus,
+        urgent: apiJob.isUrgent,
+        client: apiJob.client
+          ? {
+              fullname: apiJob.client.user?.fullName,
+              name: apiJob.client.companyName,
+              accountType: apiJob.client.organizationType,
+              location: [apiJob.client.city, apiJob.client.state]
+                .filter(Boolean)
+                .join(", "),
+            }
+          : null,
+        experienceLevel: apiJob.experienceLevel,
+        duration: apiJob.projectDuration,
+        paymentType: apiJob.budgetType,
+        location: apiJob.location,
+        category: apiJob.jobCategory,
+      };
+      setJob(mappedJob);
+      console.log("Debug - Mapped job data:", mappedJob);
+
+      // Prepare images for modal viewer
+      if (mappedJob.attached_files && mappedJob.attached_files.length > 0) {
+        const imageUrls = mappedJob.attached_files.map((file) => ({
+          url: file,
+          props: {},
+        }));
+        setImages(imageUrls);
       }
-    };
+    } catch (error) {
+      console.error("Error fetching job details:", error);
+      setError("Unable to load job details. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    const checkFlaggedStatus = async () => {
-      try {
-        const Id = userData.$id;
-        const clientDoc = await databases.getDocument(
-          appwriteConfig.databaseId,
-          userData.role === "client"
-            ? appwriteConfig.clientCollectionId
-            : appwriteConfig.freelancerCollectionId,
-          Id
-        );
-
-        if (clientDoc.flags && clientDoc.flags.includes(projectId)) {
-          setFlagged(true);
-        }
-      } catch (error) {
-        Alert.alert("Error checking flagged status:", error);
+  const checkBookmarkStatus = async () => {
+    try {
+      const response = await apiService.isJobBookmarked(jobId);
+      if (response.success) {
+        setFlagged(response.data.isBookmarked);
       }
-    };
-
-    checkAppliedStatus();
-    checkFlaggedStatus();
-  }, []);
-
-  const openImageModal = (imageUri) => {
-    setImages([{ url: imageUri }]);
-    setModalVisible(true);
+    } catch (error) {
+      console.error("Error checking bookmark status:", error);
+    }
   };
 
   const toggleFlag = async () => {
     try {
-      const freelancerId = userData.$id;
+      const response = await apiService.toggleJobBookmark(jobId);
 
-      const freelancerDoc = await databases.getDocument(
-        appwriteConfig.databaseId,
-        userData.role === "client"
-          ? appwriteConfig.clientCollectionId
-          : appwriteConfig.freelancerCollectionId,
-        freelancerId
-      );
+      if (response.success) {
+        setFlagged(response.data.isBookmarked);
 
-      let updatedFlags = freelancerDoc.flags || [];
+        const message = response.data.isBookmarked
+          ? "Job bookmarked successfully!"
+          : "Bookmark removed successfully!";
 
-      if (updatedFlags.includes(projectId)) {
-        updatedFlags = updatedFlags.filter((id) => id !== projectId);
-        setFlagged(false);
+        Alert.alert("Success", message);
       } else {
-        updatedFlags.push(projectId);
-        setFlagged(true);
+        Alert.alert("Error", response.message || "Failed to update bookmark");
       }
-
-      await databases.updateDocument(
-        appwriteConfig.databaseId,
-        userData.role === "client"
-          ? appwriteConfig.clientCollectionId
-          : appwriteConfig.freelancerCollectionId,
-        freelancerId,
-        {
-          flags: updatedFlags,
-        }
-      );
     } catch (error) {
-      Alert.alert("Error updating flags:", error);
+      console.error("Error toggling bookmark:", error);
+      Alert.alert("Error", "Unable to update bookmark. Please try again.");
     }
   };
 
-  const formatDeadline = (deadline) => {
-    const currentDate = new Date();
-    const deadlineDate = new Date(deadline);
-    const timeDiff = Math.ceil(
-      (deadlineDate - currentDate) / (1000 * 60 * 60 * 24)
-    );
-    return timeDiff > 0 ? `${timeDiff} days` : "Deadline passed";
+  const openImageModal = (imageUri) => {
+    const imageIndex = images.findIndex((img) => img.url === imageUri);
+    if (imageIndex !== -1) {
+      setModalVisible(true);
+    }
   };
 
-  const formatBudget = (budget) => {
-    return budget >= 1000
-      ? `${(budget / 1000).toFixed(budget % 1000 === 0 ? 0 : 1)}k`
-      : `${budget}`;
+  const formatDate = (dateString) => {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+    } catch (error) {
+      return "Date not available";
+    }
   };
+
+  const formatCurrency = (amount) => {
+    try {
+      return new Intl.NumberFormat("en-IN", {
+        style: "currency",
+        currency: "INR",
+        minimumFractionDigits: 0,
+      }).format(amount);
+    } catch (error) {
+      return `Rs. ${amount}/-`;
+    }
+  };
+
+  const getStatusColor = (status) => {
+    switch (status?.toLowerCase()) {
+      case "open":
+        return "#34C759";
+      case "in_progress":
+        return "#007AFF";
+      case "completed":
+        return "#32D74B";
+      case "cancelled":
+        return "#FF3B30";
+      case "paused":
+        return "#FF9500";
+      default:
+        return "#8E8E93";
+    }
+  };
+
+  const handleGoBack = () => {
+    navigation.goBack();
+  };
+
+  // Loading state
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator
+          size="large"
+          color={currentTheme?.primary || "#4e2587"}
+        />
+        <Text style={styles.loadingText}>Loading job details...</Text>
+      </View>
+    );
+  }
+
+  // Error state
+  if (error || !job) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>{error || "Job not found"}</Text>
+        <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
+          <Text style={styles.backButtonText}>Go Back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <Modal
-        visible={modalVisible}
-        transparent={true}
-        onRequestClose={() => setModalVisible(false)} // Close on back button
-      >
-        <ImageViewer
-          imageUrls={images} // Array of images
-          enableSwipeDown={true} // Swipe down to close
-          onSwipeDown={() => setModalVisible(false)}
-          renderIndicator={() => null}
-          renderHeader={() => (
-            <TouchableOpacity
-              onPress={() => setModalVisible(false)}
-              style={{
-                position: "absolute",
-                top: 30,
-                left: 20,
-                zIndex: 10,
-                backgroundColor: "rgba(0,0,0,0.5)",
-                borderRadius: 20,
-                padding: 10,
-              }}
-            >
-              <FontAwesome name="arrow-left" size={24} color="#fff" />
-            </TouchableOpacity>
-          )}
-        />
-      </Modal>
+    <View style={styles.container}>
+      {/* Image Modal */}
+      {modalVisible && images.length > 0 && (
+        <Modal
+          visible={modalVisible}
+          transparent={true}
+          onRequestClose={() => setModalVisible(false)}
+        >
+          <ImageViewer
+            imageUrls={images}
+            enableSwipeDown={true}
+            onSwipeDown={() => setModalVisible(false)}
+            renderIndicator={() => null}
+            renderHeader={() => (
+              <TouchableOpacity
+                onPress={() => setModalVisible(false)}
+                style={styles.modalCloseButton}
+              >
+                <Ionicons name="arrow-back" size={24} color="#fff" />
+              </TouchableOpacity>
+            )}
+          />
+        </Modal>
+      )}
 
-      <ScrollView style={styles.scrollContent}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Job Header */}
         <View style={styles.jobHeader}>
           <View style={styles.jobInfo}>
             <View style={styles.jobTitlebar}>
               <Text style={styles.jobTitle}>
-                {job?.title || "Job Heading missing"}
-              </Text>
-              <Text style={styles.detailText}>
-                <Text style={styles.boldText}>Budget </Text> Rs. {job?.budget}/-
+                {job.title || "Job Title Not Available"}
               </Text>
             </View>
-            <TouchableOpacity onPress={toggleFlag}>
+            <TouchableOpacity onPress={toggleFlag} style={styles.flagIcon}>
               <FontAwesome
-                name="flag"
+                name={flagged ? "flag" : "flag-o"}
                 size={24}
-                color={flagged ? "#4C0183" : currentTheme.text || "black"}
-                style={styles.flagIcon}
+                color={flagged ? "#4e2587" : currentTheme.text || "#666"}
               />
             </TouchableOpacity>
           </View>
         </View>
 
+        {/* Client Information */}
+        {job.client && (
+          <View style={styles.clientSection}>
+            <Text style={styles.sectionTitle}>Client Information</Text>
+            <View style={styles.clientInfo}>
+              <Text style={styles.clientName}>
+                {job.client.fullname || job.client.name || "Client Name"}
+              </Text>
+              <Text style={styles.clientType}>
+                Client • {job.client.accountType || "Individual"}
+              </Text>
+              {job.client.location && (
+                <Text style={styles.clientLocation}>
+                  📍 {job.client.location}
+                </Text>
+              )}
+            </View>
+          </View>
+        )}
+
         {/* Job Description */}
-        <Text style={styles.desText}>Description</Text>
+        <Text style={styles.sectionTitle}>Job Description</Text>
         <View style={styles.jobDescription}>
-          <Text style={styles.descriptionText}>{job?.description}</Text>
+          <Text style={styles.descriptionText}>
+            {job.description || "No description available"}
+          </Text>
         </View>
 
-        <Text style={styles.desText}>Skills Required</Text>
-        <Text style={styles.skillText}>{job?.skills.join(", ")}</Text>
+        {/* Skills Required */}
+        {job.skills && job.skills.length > 0 && (
+          <>
+            <Text style={styles.sectionTitle}>Skills Required</Text>
+            <Text style={styles.skillText}>
+              {Array.isArray(job.skills) ? job.skills.join(", ") : job.skills}
+            </Text>
+          </>
+        )}
 
-        <Text style={styles.desText}>Deadline</Text>
-        <Text style={styles.detailText}>
-          {new Date(job?.deadline).toLocaleDateString()}
-        </Text>
+        {/* Job Details Grid */}
+        <View style={styles.detailsGrid}>
+          <View style={styles.detailItem}>
+            <Text style={styles.sectionTitle}>Budget</Text>
+            <Text style={styles.detailValue}>{formatCurrency(job.budget)}</Text>
+          </View>
 
-        <Text style={styles.desText}>Location</Text>
-        <Text style={styles.detailText}>{job?.location || "N/A"}</Text>
+          <View style={styles.detailItem}>
+            <Text style={styles.sectionTitle}>Deadline</Text>
+            <Text style={styles.detailValue}>{formatDate(job.deadline)}</Text>
+          </View>
 
-        {/* Attached Files */}
-        <View style={styles.attachedFilesContainer}>
-          <Text style={styles.attachedFilesTitle}>Attached Files</Text>
-          <View style={styles.filePreviewContainer}>
-            {job?.attached_files.map((image, index) => (
-              <TouchableOpacity
-                key={index}
-                onPress={() => openImageModal(image)}
-              >
-                <Image source={{ uri: image }} style={styles.filePreview} />
-              </TouchableOpacity>
-            ))}
+          <View style={styles.detailItem}>
+            <Text style={styles.sectionTitle}>Location</Text>
+            <Text style={styles.detailValue}>{job.location || "Remote"}</Text>
+          </View>
+
+          <View style={styles.detailItem}>
+            <Text style={styles.sectionTitle}>Category</Text>
+            <Text style={styles.detailValue}>{job.category || "General"}</Text>
           </View>
         </View>
+
+        {/* Status Section */}
+        <View style={styles.statusSection}>
+          <View style={styles.statusItem}>
+            <Text style={styles.sectionTitle}>Status</Text>
+            <Text
+              style={[
+                styles.statusValue,
+                { color: getStatusColor(job.status) },
+              ]}
+            >
+              {job.status || "Open"}
+            </Text>
+          </View>
+
+          {job.urgent && (
+            <View style={styles.urgentBadge}>
+              <Text style={styles.urgentText}>URGENT</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Additional Details */}
+        {job.experienceLevel && (
+          <Text style={styles.detailText}>
+            <Text style={styles.boldText}>Experience Level: </Text>
+            {job.experienceLevel}
+          </Text>
+        )}
+
+        {job.duration && (
+          <Text style={styles.detailText}>
+            <Text style={styles.boldText}>Project Duration: </Text>
+            {job.duration}
+          </Text>
+        )}
+
+        {job.paymentType && (
+          <Text style={styles.detailText}>
+            <Text style={styles.boldText}>Payment Type: </Text>
+            {job.paymentType}
+          </Text>
+        )}
+
+        {/* Attached Files */}
+        {job.attached_files && job.attached_files.length > 0 && (
+          <View style={styles.attachedFilesContainer}>
+            <Text style={styles.sectionTitle}>Attached Files</Text>
+            <View style={styles.filePreviewContainer}>
+              {job.attached_files.map((fileUri, index) => (
+                <TouchableOpacity
+                  key={index}
+                  onPress={() => openImageModal(fileUri)}
+                >
+                  <Image
+                    source={{ uri: fileUri }}
+                    style={styles.filePreview}
+                    resizeMode="cover"
+                  />
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* Action Buttons */}
+        <View style={styles.actionContainer}>
+          <TouchableOpacity
+            style={styles.backActionButton}
+            onPress={handleGoBack}
+          >
+            <Text style={styles.actionButtonText}>Back to Jobs</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
-    </ScrollView>
+    </View>
   );
 };
 
 // Styles
-const getStyles = (currentTheme) =>
+const getStyles = (currentTheme = {}) =>
   StyleSheet.create({
     container: {
       flex: 1,
       backgroundColor: currentTheme.background || "#fff",
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: currentTheme.background || "#fff",
+    },
+    loadingText: {
+      marginTop: 10,
+      fontSize: 16,
+      color: currentTheme.text || "#000",
+    },
+    errorContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: currentTheme.background || "#fff",
       padding: 20,
-      paddingTop: 40,
+    },
+    errorText: {
+      fontSize: 18,
+      color: "#FF3B30",
+      marginBottom: 20,
+      textAlign: "center",
+    },
+    backButton: {
+      backgroundColor: "#4e2587",
+      paddingHorizontal: 20,
+      paddingVertical: 10,
+      borderRadius: 8,
+    },
+    backButtonText: {
+      color: "#fff",
+      fontSize: 16,
     },
     scrollContent: {
       padding: 20,
-      marginBottom: 30,
+      paddingTop: 50,
+    },
+    modalCloseButton: {
+      position: "absolute",
+      top: 50,
+      left: 20,
+      zIndex: 10,
+      backgroundColor: "rgba(0,0,0,0.5)",
+      borderRadius: 20,
+      padding: 10,
     },
     jobHeader: {
+      marginBottom: 25,
+    },
+    jobInfo: {
       flexDirection: "row",
-      marginBottom: 20,
+      justifyContent: "space-between",
+      alignItems: "flex-start",
     },
     jobTitlebar: {
       flex: 1,
-      gap: 10,
+      paddingRight: 15,
     },
-    avatar: {
-      width: 80,
-      height: 80,
-      borderRadius: 40,
-      marginRight: 20,
+    jobTitle: {
+      fontSize: 22,
+      fontWeight: "bold",
+      color: currentTheme.primary || "#4e2587",
+      marginBottom: 8,
+      lineHeight: 28,
     },
-    jobInfo: {
-      flex: 1,
+    flagIcon: {
+      padding: 5,
+    },
+    clientSection: {
+      backgroundColor: currentTheme.cardBackground || "#f9f9f9",
+      padding: 15,
+      borderRadius: 12,
+      marginBottom: 20,
+    },
+    clientInfo: {
+      marginTop: 5,
+    },
+    clientName: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: currentTheme.text || "#000",
+      marginBottom: 3,
+    },
+    clientType: {
+      fontSize: 14,
+      color: "#666",
+      marginBottom: 2,
+    },
+    clientLocation: {
+      fontSize: 14,
+      color: "#666",
+    },
+    sectionTitle: {
+      fontSize: 18,
+      fontWeight: "bold",
+      color: currentTheme.text || "#000",
+      marginBottom: 8,
+      marginTop: 20,
+    },
+    jobDescription: {
+      backgroundColor: currentTheme.cardBackground || "#f9f9f9",
+      padding: 15,
+      borderRadius: 12,
+      marginBottom: 10,
+    },
+    descriptionText: {
+      fontSize: 15,
+      color: currentTheme.text || "#333",
+      lineHeight: 22,
+    },
+    skillText: {
+      fontSize: 15,
+      color: "#4e2587",
+      fontWeight: "500",
+      marginBottom: 10,
+      lineHeight: 20,
+    },
+    detailsGrid: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      justifyContent: "space-between",
+      marginVertical: 15,
+    },
+    detailItem: {
+      width: "48%",
+      backgroundColor: currentTheme.cardBackground || "#f9f9f9",
+      padding: 12,
+      borderRadius: 8,
+      marginBottom: 10,
+    },
+    detailValue: {
+      fontSize: 14,
+      color: currentTheme.text || "#666",
+      marginTop: 2,
+    },
+    detailText: {
+      fontSize: 15,
+      color: currentTheme.text || "#666",
+      marginBottom: 10,
+      lineHeight: 20,
+    },
+    boldText: {
+      fontWeight: "bold",
+      color: currentTheme.text || "#000",
+    },
+    statusSection: {
       flexDirection: "row",
       justifyContent: "space-between",
       alignItems: "center",
+      backgroundColor: currentTheme.cardBackground || "#f9f9f9",
+      padding: 15,
+      borderRadius: 12,
+      marginVertical: 15,
     },
-    jobTitle: {
-      fontSize: 18,
-      fontWeight: "bold",
-      color: currentTheme.primary || "#4e2587",
+    statusItem: {
       flex: 1,
     },
-    flagIcon: {
-      marginLeft: 10,
-    },
-    jobDetails: {
-      backgroundColor: currentTheme.subText || "#f9f9f9",
-      padding: 10,
-      borderRadius: 10,
-      marginBottom: 20,
-      shadowColor: "#000",
-      shadowOpacity: 0.1,
-      shadowRadius: 5,
-      shadowOffset: { width: 0, height: 2 },
-      elevation: 3,
-    },
-    detailText: {
+    statusValue: {
       fontSize: 14,
-      color: "#4e2587",
-      marginBottom: 10,
+      fontWeight: "600",
+      marginTop: 2,
     },
-    boldText: {
+    urgentBadge: {
+      backgroundColor: "#FF3B30",
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 15,
+    },
+    urgentText: {
+      color: "#fff",
+      fontSize: 12,
       fontWeight: "bold",
-    },
-    jobDescription: {
-      marginBottom: 20,
-    },
-    descriptionText: {
-      fontSize: 14,
-      color: "#555",
-      lineHeight: 22,
-      marginBottom: 10,
     },
     attachedFilesContainer: {
+      marginTop: 20,
       marginBottom: 30,
-    },
-    attachedFilesTitle: {
-      fontSize: 16,
-      fontWeight: "bold",
-      color: "#4e2587",
-      marginBottom: 10,
     },
     filePreviewContainer: {
       flexDirection: "row",
       flexWrap: "wrap",
-      gap: 20,
-      justifyContent: "center",
+      justifyContent: "flex-start",
+      marginTop: 10,
     },
     filePreview: {
-      width: 80,
-      height: 80,
+      width: 100,
+      height: 100,
       backgroundColor: "#ccc",
-      borderRadius: 5,
+      borderRadius: 8,
       marginRight: 10,
       marginBottom: 10,
     },
-    applyButton: {
+    actionContainer: {
+      marginTop: 30,
+      marginBottom: 20,
+      alignItems: "center",
+    },
+    backActionButton: {
       backgroundColor: "#4e2587",
-      // paddingHorizontal: 15,
+      paddingHorizontal: 30,
+      paddingVertical: 12,
       borderRadius: 25,
+      minWidth: 150,
       alignItems: "center",
-      marginBottom: 20,
-      paddingVertical: 8,
     },
-    applyButtonText: {
+    actionButtonText: {
       color: "#fff",
-      fontWeight: "bold",
-      fontSize: 24,
-    },
-    alreadyapplyButtonText: {
-      color: "#36454F",
-      fontWeight: "bold",
-      fontSize: 24,
-      backgroundColor: "#c2c2c2",
-      borderRadius: 25,
-      alignItems: "center",
-      marginBottom: 20,
-      paddingVertical: 10,
-      textAlign: "center",
-    },
-    reportText: {
-      color: "#555",
-      textAlign: "center",
-      textDecorationLine: "underline",
-      fontSize: 14,
-    },
-    detailText: {
-      fontSize: 14,
-      color: "#595858",
-      marginBottom: 10,
-    },
-    skillText: {
-      fontSize: 14,
-      color: currentTheme.subText || "#595858",
-      marginBottom: 10,
-    },
-    detailText: {
-      color: currentTheme.subText,
-    },
-    boldText: {
-      fontWeight: "bold",
-    },
-    desText: {
-      fontWeight: "bold",
       fontSize: 16,
-      marginBottom: 3,
-      color: currentTheme.text,
-    },
-    jobDescription: {
-      marginBottom: 20,
-    },
-    descriptionText: {
-      fontSize: 14,
-      color: "#555",
-      lineHeight: 22,
-      marginBottom: 10,
-    },
-    attachedFilesContainer: {
-      marginBottom: 30,
-    },
-    attachedFilesTitle: {
-      fontSize: 16,
-      fontWeight: "bold",
-      color: "#4e2587",
-      marginBottom: 10,
-    },
-    filePreviewContainer: {
-      flexDirection: "row",
-      flexWrap: "wrap",
-      gap: 20,
-      justifyContent: "center",
-    },
-    filePreview: {
-      width: 80,
-      height: 80,
-      backgroundColor: "#ccc",
-      borderRadius: 5,
-      marginRight: 10,
-      marginBottom: 10,
-    },
-    applyButtoncon: {
-      flex: 1,
-      flexDirection: "row",
-      justifyContent: "center",
-      gap: 15,
-      shadowColor: "#000000",
-      shadowOffset: {
-        width: 0,
-        height: 3,
-      },
-      shadowOpacity: 0.17,
-      shadowRadius: 3.05,
-      elevation: 4,
-    },
-    applyButtonText: {
-      color: "#fff",
-      fontWeight: "bold",
-      fontSize: 20,
-    },
-    conColor: {
-      backgroundColor: "#00871E",
-      paddingHorizontal: 20,
-      borderRadius: 12,
-      alignItems: "center",
-      marginBottom: 20,
-      paddingVertical: 10,
-      shadowColor: "#000000",
-      shadowOffset: {
-        width: 0,
-        height: 3,
-      },
-      shadowOpacity: 0.17,
-      shadowRadius: 3.05,
-      elevation: 4,
-    },
-    repColor: {
-      backgroundColor: "#B64928",
-      paddingHorizontal: 20,
-      borderRadius: 12,
-      alignItems: "center",
-      marginBottom: 20,
-      paddingVertical: 10,
-      shadowColor: "#000000",
-      shadowOffset: {
-        width: 0,
-        height: 3,
-      },
-      shadowOpacity: 0.17,
-      shadowRadius: 3.05,
-      elevation: 4,
-    },
-    reportText: {
-      color: "#555",
-      textAlign: "center",
-      textDecorationLine: "underline",
-      fontSize: 14,
+      fontWeight: "600",
     },
   });
 

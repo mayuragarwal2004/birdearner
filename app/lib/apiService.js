@@ -1,7 +1,7 @@
 // API service for communicating with the Bird Earner Node.js backend
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const API_BASE_URL = "https://caribbean-jeans-facial-medal.trycloudflare.com/api"; // Local network IP "<url>/api"
+const API_BASE_URL = "https://diy-located-reasons-understanding.trycloudflare.com/api"; // Local development server
 
 
 class ApiService {
@@ -16,9 +16,14 @@ class ApiService {
       const token = await AsyncStorage.getItem("authToken");
       if (token) {
         this.token = token;
+        console.log("API Service initialized with token from storage");
+      } else {
+        console.log("No token found in storage during API Service initialization");
       }
+      return this.token;
     } catch (error) {
       console.error("Error loading auth token:", error);
+      return null;
     }
   }
 
@@ -27,9 +32,12 @@ class ApiService {
     this.token = token;
     if (token) {
       await AsyncStorage.setItem("authToken", token);
+      console.log("Auth token set in API Service");
     } else {
       await AsyncStorage.removeItem("authToken");
+      console.log("Auth token removed from API Service");
     }
+    return token;
   }
 
   // Make authenticated requests
@@ -47,14 +55,17 @@ class ApiService {
     // Add auth token if available
     if (this.token) {
       config.headers["Authorization"] = `Bearer ${this.token}`;
+    } else {
+      console.warn(`No auth token available for request to ${endpoint}`);
     }
 
     try {
       console.log(`API Request: ${config.method || "GET"} ${url}`);
+      console.log(`Auth header present: ${config.headers["Authorization"] ? "Yes" : "No"}`);
+      
       const response = await fetch(url, config);
-      console.log(`API Response: ${response.status} ${url}` );
-      console.log(`Response Status: ${response.status} for ${endpoint}`);
-      // console.log('Response Headers:', JSON.stringify([...response.headers.entries()], null, 2));
+      console.log(`API Response: ${response.status} ${url}`);
+      
       const responseText = await response.text();
       let data;
       try {
@@ -64,11 +75,19 @@ class ApiService {
         console.error('Response was not valid JSON:', responseText);
         throw new Error(`Invalid JSON response: ${responseText}`);
       }
+      
       if (!response.ok) {
+        // Check for authentication errors specifically
+        if (response.status === 401 || response.status === 403) {
+          console.error("Authentication error:", data.message || "Access denied");
+          throw new Error(`Authentication failed: ${data.message || "Access denied, please login again"}`);
+        }
+        
         throw new Error(
           data.message || `HTTP error! status: ${response.status}`
         );
       }
+      
       return data;
     } catch (error) {
       console.error(`API Error for ${endpoint}:`, error);
@@ -91,6 +110,16 @@ class ApiService {
       method: "POST",
       body: JSON.stringify(clientData),
     });
+    
+    if (response.success && response.data && response.data.token) {
+      // Set token in the API service instance
+      await this.setAuthToken(response.data.token);
+      
+      // Store user data without token to avoid duplication
+      const { token, ...userData } = response.data;
+      await AsyncStorage.setItem("userData", JSON.stringify(userData));
+    }
+    
     return response;
   }
 
@@ -102,6 +131,16 @@ class ApiService {
       method: "POST",
       body: JSON.stringify(freelancerData),
     });
+    
+    if (response.success && response.data && response.data.token) {
+      // Set token in the API service instance
+      await this.setAuthToken(response.data.token);
+      
+      // Store user data without token to avoid duplication
+      const { token, ...userData } = response.data;
+      await AsyncStorage.setItem("userData", JSON.stringify(userData));
+    }
+    
     return response;
   }
 
@@ -114,7 +153,15 @@ class ApiService {
 
     if (response.success && response.data) {
       // Store user data
-      await AsyncStorage.setItem("userData", JSON.stringify(response.data));
+      console.log("Login successful, storing user data and token");
+      
+      // Set token in the API service instance
+      await this.setAuthToken(response.data.token);
+      
+      // Store user data without token to avoid duplication
+      const { token, ...userData } = response.data;
+      await AsyncStorage.setItem("userData", JSON.stringify(userData));
+      
       return response.data;
     }
 
@@ -244,6 +291,28 @@ class ApiService {
     }
   }
 
+  // Get all jobs categorized by priority levels (Immediate, High, Standard)
+  async getAllJobsCategorizedByPriority(filters = {}) {
+    try {
+      // Remove undefined/null values
+      const cleanFilters = Object.entries(filters).reduce((acc, [key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          acc[key] = value;
+        }
+        return acc;
+      }, {});
+      
+      const queryParams = new URLSearchParams(cleanFilters).toString();
+      const response = await this.makeRequest(`/jobs/categorized/priority${queryParams ? `?${queryParams}` : ""}`);
+      
+      console.log('Categorized jobs response:', response);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching categorized jobs:', error);
+      throw new Error(`Failed to fetch categorized jobs: ${error.message}`);
+    }
+  }
+
   // Get job by ID
   async getJobById(jobId) {
     try {
@@ -319,7 +388,7 @@ class ApiService {
         method: "PUT",
         body: JSON.stringify(jobData),
       });
-      return response.data;
+      return response; // Return full response to include wallet update info
     } catch (error) {
       throw new Error(`Failed to update job: ${error.message}`);
     }
@@ -675,7 +744,255 @@ class ApiService {
       throw new Error(`Failed to update client profile: ${error.message}`);
     }
   }
+
+  // ==================== WALLET MANAGEMENT ====================
+  
+  // Get client wallet information
+  async getClientWallet(userId) {
+    try {
+      const response = await this.makeRequest(`/clients/user/${userId}/wallet`);
+      return response.data;
+    } catch (error) {
+      throw new Error(`Failed to fetch wallet information: ${error.message}`);
+    }
+  }
+
+  // Update client wallet balance
+  async updateClientWallet(userId, amount, operation = 'add') {
+    try {
+      const response = await this.makeRequest(`/clients/user/${userId}/wallet`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          amount: parseFloat(amount),
+          operation
+        }),
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(`Failed to update wallet: ${error.message}`);
+    }
+  }
+
+  // Get client payment history
+  async getClientPaymentHistory(userId, page = 1, limit = 20, status = null) {
+    try {
+      const queryParams = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString(),
+        ...(status && { status })
+      }).toString();
+      
+      const response = await this.makeRequest(`/clients/user/${userId}/payment-history?${queryParams}`);
+      return response.data;
+    } catch (error) {
+      throw new Error(`Failed to fetch payment history: ${error.message}`);
+    }
+  }
+
+  // Create payment record
+  async createPaymentRecord(paymentData) {
+    try {
+      const response = await this.makeRequest('/payments', {
+        method: 'POST',
+        body: JSON.stringify(paymentData),
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(`Failed to create payment record: ${error.message}`);
+    }
+  }
+
+  // Update payment status
+  async updatePaymentStatus(paymentId, status, transactionId = null) {
+    try {
+      const response = await this.makeRequest(`/payments/${paymentId}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          status,
+          ...(transactionId && { transactionId })
+        }),
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(`Failed to update payment status: ${error.message}`);
+    }
+  }
+
+  // ==================== ENHANCED WALLET API ====================
+  
+  // Get current client wallet information (using auth token)
+  async getClientWalletInfo() {
+    try {
+      const response = await this.makeRequest('/wallet/client/info');
+      return response;
+    } catch (error) {
+      console.error("Wallet info fetch error:", error);
+      throw new Error(`Failed to fetch client wallet info: ${error.message}`);
+    }
+  }
+
+  // Get freelancer wallet information
+  async getFreelancerWalletInfo() {
+    try {
+      const response = await this.makeRequest('/wallet/freelancer/info');
+      return response;
+    } catch (error) {
+      throw new Error(`Failed to fetch freelancer wallet info: ${error.message}`);
+    }
+  }
+
+  // Add money to client wallet
+  async addMoneyToWallet(amount, paymentMethod = 'online') {
+    try {
+      const response = await this.makeRequest('/wallet/client/deposit', {
+        method: 'POST',
+        body: JSON.stringify({ amount, paymentMethod }),
+      });
+      return response;
+    } catch (error) {
+      throw new Error(`Failed to add money to wallet: ${error.message}`);
+    }
+  }
+
+  // Request freelancer withdrawal
+  async requestWithdrawal(amount, paymentDetails = {}) {
+    try {
+      const response = await this.makeRequest('/wallet/freelancer/withdraw', {
+        method: 'POST',
+        body: JSON.stringify({ amount, paymentDetails }),
+      });
+      return response;
+    } catch (error) {
+      throw new Error(`Failed to request withdrawal: ${error.message}`);
+    }
+  }
+
+  // Get client transaction history
+  async getClientTransactionHistory(page = 1, limit = 20) {
+    try {
+      const response = await this.makeRequest(`/wallet/transactions?page=${page}&limit=${limit}`);
+      return response;
+    } catch (error) {
+      throw new Error(`Failed to fetch client transaction history: ${error.message}`);
+    }
+  }
+
+  // Get freelancer transaction history
+  async getFreelancerTransactionHistory(page = 1, limit = 20) {
+    try {
+      const response = await this.makeRequest(`/wallet/freelancer/transactions?page=${page}&limit=${limit}`);
+      return response;
+    } catch (error) {
+      throw new Error(`Failed to fetch freelancer transaction history: ${error.message}`);
+    }
+  }
+
+  // Get transaction by ID
+  async getTransactionById(transactionId) {
+    try {
+      const response = await this.makeRequest(`/wallet/transactions/${transactionId}`);
+      return response;
+    } catch (error) {
+      throw new Error(`Failed to fetch transaction: ${error.message}`);
+    }
+  }
+
+  // Get job payment status
+  async getJobPaymentStatus(jobId) {
+    try {
+      const response = await this.makeRequest(`/wallet/jobs/${jobId}/payment-status`);
+      return response;
+    } catch (error) {
+      throw new Error(`Failed to fetch job payment status: ${error.message}`);
+    }
+  }
+
+  // Process job payment (for freelancers when completing jobs)
+  async processJobPayment(jobId) {
+    try {
+      const response = await this.makeRequest(`/wallet/jobs/${jobId}/process-payment`, {
+        method: 'POST',
+      });
+      return response;
+    } catch (error) {
+      throw new Error(`Failed to process job payment: ${error.message}`);
+    }
+  }
+
+  // ==================== JOB BOOKMARKS ====================
+  
+  // Toggle job bookmark
+  async toggleJobBookmark(jobId) {
+    try {
+      const response = await this.makeRequest(`/bookmarks/jobs/${jobId}/toggle`, {
+        method: "POST",
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(`Failed to toggle job bookmark: ${error.message}`);
+    }
+  }
+
+  // Check if job is bookmarked
+  async isJobBookmarked(jobId) {
+    try {
+      const response = await this.makeRequest(`/bookmarks/jobs/${jobId}/status`);
+      return response.data.bookmarked;
+    } catch (error) {
+      throw new Error(`Failed to check bookmark status: ${error.message}`);
+    }
+  }
+
+  // Get user's bookmarked jobs
+  async getBookmarkedJobs(page = 1, limit = 10) {
+    try {
+      const response = await this.makeRequest(`/bookmarks/jobs?page=${page}&limit=${limit}`);
+      return response.data;
+    } catch (error) {
+      throw new Error(`Failed to get bookmarked jobs: ${error.message}`);
+    }
+  }
+
+  // Add job bookmark
+  async addJobBookmark(jobId) {
+    try {
+      const response = await this.makeRequest(`/bookmarks/jobs/${jobId}`, {
+        method: "POST",
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(`Failed to bookmark job: ${error.message}`);
+    }
+  }
+
+  // Remove job bookmark
+  async removeJobBookmark(jobId) {
+    try {
+      const response = await this.makeRequest(`/bookmarks/jobs/${jobId}`, {
+        method: "DELETE",
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(`Failed to remove bookmark: ${error.message}`);
+    }
+  }
+  loadImageURI = (uri) => {
+    if (!uri) {
+      return null;
+    } else if (uri.startsWith("http://") || uri.startsWith("https://")) {
+      return uri; // Return remote URL as is
+    } else if (uri.startsWith("/")) {
+      return `${this.baseURL}${uri}`; // Convert relative path to absolute URL
+    } else if (uri.startsWith("file://")) {
+      console.warn("File is being loaded from local storage, ensure this is intended.");
+      return uri; // Handle other cases (e.g., local paths)
+    } else {
+      console.error("Invalid URI format:", uri);
+      return null; // Return null for invalid URIs
+    }
+  };
 }
+
 
 // Create singleton instance
 const apiService = new ApiService();

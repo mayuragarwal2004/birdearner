@@ -9,15 +9,17 @@ import {
   Alert,
   ActivityIndicator,
   Animated,
-  PanResponder,
   Platform,
+  RefreshControl,
 } from "react-native";
 import Entypo from "@expo/vector-icons/Entypo";
 import MapView, { PROVIDER_GOOGLE, Marker, Circle } from "react-native-maps";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Location from "expo-location";
-import { useAppwrite } from "../context/AppwriteContext";
+import { useAuth } from "../context/NewAuthContext";
 import { useTheme } from "../context/ThemeContext";
+import apiService from "../lib/apiService";
+import Toast from "react-native-toast-message";
 
 const colors = {
   Immediate: ["#E22323", "#7C1313"],
@@ -28,7 +30,7 @@ const colors = {
 const maxDist = 20;
 
 const MarketplaceScreen = ({ navigation }) => {
-  const { appwriteConfig, databases } = useAppwrite();
+  const { user, userData, userProfile, fetchUserProfile } = useAuth();
   const mapRef = useRef(null);
   const [distance, setDistance] = useState(20);
   const [sliderWidth, setSliderWidth] = useState(0);
@@ -42,11 +44,72 @@ const MarketplaceScreen = ({ navigation }) => {
     Standard: [],
   });
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [availableServices, setAvailableServices] = useState([]);
+  const [currentUserRole, setCurrentUserRole] = useState(userData?.role || 'FREELANCER');
+  const [userServices, setUserServices] = useState([]);
 
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
 
   const styles = getStyles(currentTheme);
+
+  // Toast helper
+  const showToast = (type, text1, text2) => {
+    Toast.show({ type, text1, text2, position: "top" });
+  };
+
+  // Load user services and role info
+  useEffect(() => {
+    const loadUserInfo = async () => {
+      try {
+        if (userData && userData.role === 'FREELANCER' && userProfile?.selectedServices) {
+          console.log('Loading services for user:', userData.id);
+          console.log('Selected services:', userProfile.selectedServices);
+          
+          // Load service details for the user's selected services
+          const services = await Promise.all(
+            userProfile.selectedServices.map(async (serviceId) => {
+              try {
+                console.log(`Loading service: ${serviceId}`);
+                const service = await apiService.getServiceById(serviceId);
+                console.log(`Service ${serviceId} loaded:`, service);
+                return service;
+              } catch (error) {
+                console.error(`Error loading service ${serviceId}:`, error.message);
+                // Return null for invalid services instead of breaking
+                return null;
+              }
+            })
+          );
+          
+          // Filter out null services (failed to load)
+          const validServices = services.filter(s => s !== null);
+          console.log('Valid services loaded:', validServices.length);
+          setUserServices(validServices);
+          
+          // Show warning if some services failed to load
+          if (validServices.length < userProfile.selectedServices.length) {
+            const failedCount = userProfile.selectedServices.length - validServices.length;
+            console.warn(`${failedCount} service(s) failed to load`);
+            showToast("warning", "Warning", `Some services could not be loaded (${failedCount} failed)`);
+          }
+        } else {
+          // Clear services if user is not a freelancer or has no selected services
+          setUserServices([]);
+        }
+        setCurrentUserRole(userData?.role || 'FREELANCER');
+      } catch (error) {
+        console.error('Error loading user info:', error);
+        setUserServices([]);
+        showToast("error", "Error", "Failed to load user services");
+      }
+    };
+
+    if (userData) {
+      loadUserInfo();
+    }
+  }, [userData, userProfile]);
 
   const updateDistance = (newDistance) => {
     const boundedDistance = Math.min(maxDist, Math.max(0, newDistance));
@@ -85,62 +148,84 @@ const MarketplaceScreen = ({ navigation }) => {
     return R * c; // Distance in kilometers
   };
 
-  const categorizeJobs = (jobs) => {
-    const currentDate = new Date();
-    const categorizedJobs = {
-      Immediate: [],
-      High: [],
-      Standard: [],
-    };
-
-    jobs.forEach((job) => {
-      const deadline = new Date(job.deadline);
-      const timeDiff = (deadline - currentDate) / (1000 * 60 * 60 * 24);
-      if (timeDiff < 2) {
-        categorizedJobs.Immediate.push(job);
-      } else if (timeDiff <= 10) {
-        categorizedJobs.High.push(job);
-      } else {
-        categorizedJobs.Standard.push(job);
-      }
-    });
-
-    return categorizedJobs;
-  };
-
   const fetchJobs = async (filterByLocation = false) => {
     try {
-      const response = await databases.listDocuments(
-        appwriteConfig.databaseId,
-        appwriteConfig.jobCollectionID
-      );
-      const allJobs = response.documents;
+      setLoading(true);
+      
+      // Build filter parameters
+      const filters = {
+        status: 'OPEN', // Only get open jobs that are available
+        unassigned: true, // Filter out jobs that already have freelancers
+      };
 
-      const remainingJobs = allJobs.filter(
-        (job) => job?.assigned_freelancer === null
-      );
-      // console.log(remainingJobs);
-
-      if (filterByLocation && location) {
-        const filteredJobs = remainingJobs.filter((job) => {
-          const jobDistance = calculateDistance(
-            location.latitude,
-            location.longitude,
-            job.latitude,
-            job.longitude
-          );
-          return jobDistance <= distance;
-        });
-        setJobs(categorizeJobs(filteredJobs));
-      } else {
-        setJobs(categorizeJobs(remainingJobs));
+      // If user is a freelancer, filter jobs by their services
+      if (currentUserRole === 'FREELANCER' && userServices.length > 0) {
+        filters.serviceIds = userServices.map(service => service.id);
       }
+
+      // Add location filtering if requested
+      if (filterByLocation && location) {
+        filters.latitude = location.latitude;
+        filters.longitude = location.longitude;
+        filters.maxDistance = distance;
+      }
+
+      console.log('Fetching jobs with filters:', filters);
+
+      // Get jobs categorized by priority from the new backend
+      const categorizedJobs = await apiService.getAllJobsCategorizedByPriority(filters);
+
+      console.log('Categorized jobs API response:', categorizedJobs);
+
+      setJobs(categorizedJobs);
     } catch (error) {
-      Alert.alert("Error", "Failed to fetch jobs. Please try again later.", [
-        { text: "OK" },
-      ]);
+      console.error("Error fetching jobs:", error);
+      console.error("Error details:", {
+        message: error.message,
+        stack: error.stack
+      });
+      showToast("error", "Error", "Failed to fetch jobs. Please try again later.");
+      // Set empty jobs on error
+      setJobs({
+        Immediate: [],
+        High: [],
+        Standard: [],
+      });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const onRefresh = async () => {
+    try {
+      setRefreshing(true);
+      console.log('Starting refresh...');
+      
+      // Refresh user profile to get latest services
+      if (fetchUserProfile) {
+        try {
+          console.log('Refreshing user profile...');
+          await fetchUserProfile();
+          console.log('User profile refreshed successfully');
+        } catch (error) {
+          console.error('Error refreshing user profile:', error);
+          // Don't block the entire refresh if profile fails
+          showToast("warning", "Warning", "Could not refresh user profile");
+        }
+      }
+      
+      // Refresh jobs data
+      console.log('Refreshing jobs data...');
+      await fetchJobs(location ? true : false);
+      console.log('Jobs data refreshed successfully');
+      
+      showToast("success", "Refreshed", "Jobs data updated successfully");
+    } catch (error) {
+      console.error('Error during refresh:', error);
+      showToast("error", "Error", "Failed to refresh data");
+    } finally {
+      setRefreshing(false);
+      console.log('Refresh completed');
     }
   };
 
@@ -169,18 +254,45 @@ const MarketplaceScreen = ({ navigation }) => {
   };
 
   useEffect(() => {
-    getLocation();
-    fetchJobs();
+    const initializeApp = async () => {
+      try {
+        // Ensure API service is initialized
+        await apiService.init();
+        // Get location and fetch jobs
+        getLocation();
+        fetchJobs();
+      } catch (error) {
+        console.error('Error initializing app:', error);
+        showToast("error", "Error", "Failed to initialize app");
+      }
+    };
+
+    initializeApp();
   }, []);
 
   useEffect(() => {
-    if (location) {
+    if (location && userData) {
       fetchJobs(true);
     }
-  }, [distance, location]);
+  }, [distance, location, currentUserRole, userServices]);
 
   const handlePriorityPress = (priority) => {
-    navigation.navigate("JobPriority", { priority, jobs });
+    // Pass the jobs data with the new backend format
+    const jobsData = {
+      Immediate: jobs.Immediate,
+      High: jobs.High,
+      Standard: jobs.Standard,
+    };
+    navigation.navigate("JobPriority", { priority, jobs: jobsData });
+  };
+
+  const handleAllJobsPress = () => {
+    // Navigate to a screen showing all jobs regardless of priority
+    const allJobs = [...jobs.Immediate, ...jobs.High, ...jobs.Standard];
+    navigation.navigate("JobPriority", { 
+      priority: "All", 
+      jobs: { All: allJobs, Immediate: [], High: [], Standard: [] }
+    });
   };
 
   const renderLines = () => {
@@ -212,8 +324,56 @@ const MarketplaceScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#762BAD']} // Android
+            tintColor={'#762BAD'} // iOS
+            title="Pull to refresh jobs..."
+            titleColor={'#762BAD'}
+          />
+        }
+      >
+        {/* Header */}
         <Text style={styles.title}>Marketplace</Text>
+
+        {/* User services section for freelancers */}
+        {currentUserRole === 'FREELANCER' && (
+          <View style={styles.servicesContainer}>
+            {userServices.length > 0 ? (
+              <>
+                <Text style={styles.servicesTitle}>Your Services:</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.servicesScroll}>
+                  {userServices.map((service, index) => (
+                    <View key={service.id} style={styles.serviceTag}>
+                      <Text style={styles.serviceTagText}>{service.name}</Text>
+                    </View>
+                  ))}
+                </ScrollView>
+                <Text style={styles.servicesSubtext}>
+                  Showing jobs matching your services ({userServices.length} services)
+                </Text>
+              </>
+            ) : (
+              <View style={styles.noServicesContainer}>
+                <Text style={styles.noServicesTitle}>No Services Selected</Text>
+                <Text style={styles.noServicesText}>
+                  You haven't selected any services yet. Showing all available jobs.
+                </Text>
+                <TouchableOpacity 
+                  style={styles.addServicesButton}
+                  onPress={() => navigation.navigate('Profile')}
+                >
+                  <Text style={styles.addServicesButtonText}>Add Services</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        )}
+
         <View style={styles.sliderContainer}>
           <Text style={styles.distanceText}>{distance} km</Text>
 
@@ -325,10 +485,10 @@ const MarketplaceScreen = ({ navigation }) => {
           {jobs.Immediate.map((job, index) =>
             job.latitude && job.longitude ? (
               <Marker
-                key={`immediate-${index}`}
+                key={`immediate-${job.id}-${index}`}
                 coordinate={{
-                  latitude: job.latitude,
-                  longitude: job.longitude,
+                  latitude: parseFloat(job.latitude),
+                  longitude: parseFloat(job.longitude),
                 }}
                 title={job.title}
                 description={job.description}
@@ -340,10 +500,10 @@ const MarketplaceScreen = ({ navigation }) => {
           {jobs.High.map((job, index) =>
             job.latitude && job.longitude ? (
               <Marker
-                key={`high-${index}`}
+                key={`high-${job.id}-${index}`}
                 coordinate={{
-                  latitude: job.latitude,
-                  longitude: job.longitude,
+                  latitude: parseFloat(job.latitude),
+                  longitude: parseFloat(job.longitude),
                 }}
                 title={job.title}
                 description={job.description}
@@ -355,10 +515,10 @@ const MarketplaceScreen = ({ navigation }) => {
           {jobs.Standard.map((job, index) =>
             job.latitude && job.longitude ? (
               <Marker
-                key={`standard-${index}`}
+                key={`standard-${job.id}-${index}`}
                 coordinate={{
-                  latitude: job.latitude,
-                  longitude: job.longitude,
+                  latitude: parseFloat(job.latitude),
+                  longitude: parseFloat(job.longitude),
                 }}
                 title={job.title}
                 description={job.description}
@@ -421,10 +581,12 @@ const MarketplaceScreen = ({ navigation }) => {
         end={{ x: 1, y: 0 }}
         style={styles.allJobsContainer}
       >
-        <TouchableOpacity style={styles.allJobsButton}>
+        <TouchableOpacity style={styles.allJobsButton} onPress={handleAllJobsPress}>
           <Text style={styles.allJobsText}>All Jobs</Text>
         </TouchableOpacity>
       </LinearGradient>
+
+      <Toast />
     </SafeAreaView>
   );
 };
@@ -445,6 +607,65 @@ const getStyles = (currentTheme) =>
       textAlign: "center",
       marginBottom: 20,
       color: currentTheme.text,
+    },
+    servicesContainer: {
+      marginBottom: 20,
+      backgroundColor: '#f8f9fa',
+      padding: 15,
+      borderRadius: 12,
+    },
+    servicesTitle: {
+      fontSize: 16,
+      fontWeight: 'bold',
+      color: '#333',
+      marginBottom: 8,
+    },
+    servicesScroll: {
+      marginBottom: 8,
+    },
+    serviceTag: {
+      backgroundColor: '#762BAD',
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 16,
+      marginRight: 8,
+    },
+    serviceTagText: {
+      color: '#fff',
+      fontSize: 12,
+      fontWeight: '500',
+    },
+    servicesSubtext: {
+      fontSize: 12,
+      color: '#666',
+      fontStyle: 'italic',
+    },
+    noServicesContainer: {
+      alignItems: 'center',
+      padding: 16,
+    },
+    noServicesTitle: {
+      fontSize: 16,
+      fontWeight: 'bold',
+      color: '#333',
+      marginBottom: 8,
+    },
+    noServicesText: {
+      fontSize: 14,
+      color: '#666',
+      textAlign: 'center',
+      marginBottom: 12,
+    },
+    addServicesButton: {
+      backgroundColor: '#762BAD',
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 20,
+    },
+    addServicesButtonText: {
+      color: '#fff',
+      fontSize: 14,
+      fontWeight: '600',
     },
     sliderContainer: {
       alignItems: "center",

@@ -9,20 +9,20 @@ import {
   Modal,
   Alert,
   TextInput,
+  ActivityIndicator,
 } from "react-native";
-import { FontAwesome } from "@expo/vector-icons";
-import { useAppwrite } from "../context/AppwriteContext";
+import { FontAwesome, Ionicons } from "@expo/vector-icons";
 import ImageViewer from "react-native-image-zoom-viewer";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useTheme } from "../context/ThemeContext";
 import * as ImagePicker from "expo-image-picker";
+import apiService from "../lib/apiService";
 
 const UpdateJobDetailsScreen = ({ route, navigation }) => {
-  const { appwriteConfig, databases, uploadFile } = useAppwrite();
   const [deadline, setDeadline] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
 
-  const { projectId } = route.params;
+  const { jobId } = route.params;
   const [modalVisible, setModalVisible] = useState(false);
   const [images, setImages] = useState([]);
   const [job, setJob] = useState(null);
@@ -30,6 +30,16 @@ const UpdateJobDetailsScreen = ({ route, navigation }) => {
   const [updatedJob, setUpdatedJob] = useState({});
   const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
   const [portfolioImages, setPortfolioImages] = useState([]);
+  
+  // Budget and wallet management
+  const [walletData, setWalletData] = useState(null);
+  const [walletLoading, setWalletLoading] = useState(false);
+  const [budgetError, setBudgetError] = useState("");
+  const [showWalletInfo, setShowWalletInfo] = useState(false);
+  const [budgetValidating, setBudgetValidating] = useState(false);
+  
+  // Skills management
+  const [skillsArray, setSkillsArray] = useState([""]);
 
   const onChangeDeadline = (event, selectedDate) => {
     const currentDate = selectedDate || deadline;
@@ -44,22 +54,124 @@ const UpdateJobDetailsScreen = ({ route, navigation }) => {
 
   const fetchJobDetails = async () => {
     try {
-      const jobDoc = await databases.getDocument(
-        appwriteConfig.databaseId,
-        appwriteConfig.jobCollectionID,
-        projectId
-      );
-      setJob(jobDoc);
-      setUpdatedJob({ ...jobDoc }); // Clone the job details for editing
-      setDeadline(new Date(jobDoc.deadline));
+      await apiService.init(); // Initialize the API service with token
+      const response = await apiService.getJobById(jobId);
+      const jobDoc = response; // API service returns the job data directly
+      
+      // Map database field names to frontend field names
+      const mappedJob = {
+        ...jobDoc,
+        title: jobDoc.jobTitle,
+        description: jobDoc.jobDescription,
+        budget: jobDoc.budgetAmount?.toString() || '',
+        skills: jobDoc.skillsRequired,
+        deadline: jobDoc.deadlineDate,
+        attached_files: jobDoc.attachedFiles || [],
+      };
+      
+      setJob(mappedJob);
+      setUpdatedJob({ ...mappedJob }); // Clone the job details for editing
+      setDeadline(new Date(jobDoc.deadlineDate || new Date()));
+      
+      // Set skills array for proper editing
+      if (mappedJob.skills && Array.isArray(mappedJob.skills)) {
+        setSkillsArray(mappedJob.skills.length > 0 ? mappedJob.skills : [""]);
+      }
+      
     } catch (error) {
       Alert.alert("Error", `Failed to fetch job details: ${error.message}`);
     }
   };
+
+  const fetchWalletData = async () => {
+    try {
+      setWalletLoading(true);
+      await apiService.init();
+      const response = await apiService.getClientWalletInfo();
+      console.log("Wallet data fetched:", response);
+      if (response.success) {
+                setWalletData(response.data);
+      }
+    } catch (error) {
+      console.error("Error fetching wallet data:", error);
+      setWalletData(null);
+    } finally {
+      setWalletLoading(false);
+    }
+  };
+
+  const validateBudget = (budgetValue) => {
+    const budgetNum = parseFloat(budgetValue);
+    setBudgetError("");
+    setBudgetValidating(false);
+
+    if (!budgetValue || isNaN(budgetNum) || budgetNum <= 0) {
+      setBudgetError("Please enter a valid budget amount");
+      return false;
+    }
+
+    if (!walletData || !job) {
+      setBudgetError("Unable to verify wallet balance. Please try again.");
+      return false;
+    }
+
+    // Calculate max allowed budget: available balance + current job budget
+    const currentJobBudget = parseFloat(job.budget) || 0;
+    const maxAllowedBudget = walletData.availableBalance + currentJobBudget;
+
+    if (budgetNum > maxAllowedBudget) {
+      setBudgetError(
+        `Maximum budget allowed: ₹${maxAllowedBudget.toFixed(2)} (Available: ₹${walletData.availableBalance?.toFixed(2)} + Current: ₹${currentJobBudget.toFixed(2)})`
+      );
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleBudgetChange = (value) => {
+    setUpdatedJob({ ...updatedJob, budget: value });
+    if (value && walletData) {
+      setBudgetValidating(true);
+      // Add a slight delay to show loading state
+      setTimeout(() => {
+        validateBudget(value);
+      }, 300);
+    } else {
+      setBudgetError("");
+      setBudgetValidating(false);
+    }
+  };
+
+  const addSkill = () => {
+    setSkillsArray([...skillsArray, ""]);
+  };
+
+  const removeSkill = (index) => {
+    if (skillsArray.length > 1) {
+      const newSkills = skillsArray.filter((_, i) => i !== index);
+      setSkillsArray(newSkills);
+      setUpdatedJob({ ...updatedJob, skills: newSkills });
+    }
+  };
+
+  const updateSkill = (index, value) => {
+    const newSkills = [...skillsArray];
+    newSkills[index] = value;
+    setSkillsArray(newSkills);
+    setUpdatedJob({ ...updatedJob, skills: newSkills });
+  };
   
   useEffect(() => {
     fetchJobDetails();
-  }, [projectId]);
+    fetchWalletData();
+  }, [jobId]);
+
+  useEffect(() => {
+    if (isEditing) {
+      fetchWalletData();
+    }
+  }, [isEditing]);
 
   const handleDateConfirm = (date) => {
     setUpdatedJob((prev) => ({ ...prev, deadline: date.toISOString() }));
@@ -79,12 +191,27 @@ const UpdateJobDetailsScreen = ({ route, navigation }) => {
       return;
     }
 
+    // Validate skills
+    if (skillsArray.some((skill) => skill.trim() === "")) {
+      Alert.alert("Error", "Please enter all required skills or remove empty skill fields.");
+      return;
+    }
+
+    // Validate budget
+    if (!validateBudget(updatedJob.budget)) {
+      return;
+    }
+
     try {
+      await apiService.init(); // Ensure API service has token
+      
       const uploadedImageURLs = await Promise.all(
         portfolioImages.map(async (imageUri) => {
           try {
-            const fileResponse = await uploadFile({ uri: imageUri }, "image");
-            return fileResponse.url; // Assuming fileResponse contains a URL
+            // Extract filename from URI or generate one
+            const filename = imageUri.split('/').pop() || `image_${Date.now()}.jpg`;
+            const fileUrl = await apiService.uploadFile(imageUri, filename, 'jpg');
+            return fileUrl; // API service returns the URL directly
           } catch (err) {
             console.error(`Failed to upload: ${err.message}`);
             return null;
@@ -99,26 +226,49 @@ const UpdateJobDetailsScreen = ({ route, navigation }) => {
       ];
 
       const payload = {
-        title: updatedJob.title,
-        description: updatedJob.description,
-        budget: parseInt(updatedJob.budget, 10),
-        skills: updatedJob.skills,
-        deadline: deadline.toISOString(),
-        attached_files: allImageUrls,
-        updated_at: new Date().toISOString(),
+        jobTitle: updatedJob.title,
+        jobDescription: updatedJob.description,
+        budgetAmount: parseFloat(updatedJob.budget),
+        skillsRequired: skillsArray.filter(skill => skill.trim() !== ""),
+        deadlineDate: deadline.toISOString(),
+        attachedFiles: allImageUrls,
       };
 
-      await databases.updateDocument(
-        appwriteConfig.databaseId,
-        appwriteConfig.jobCollectionID,
-        projectId,
-        payload
-      );
+      const response = await apiService.updateJob(jobId, payload);
+      const updatedJobData = response.data; // Extract data from response
+      
+      // Map database field names to frontend field names for display
+      const mappedUpdatedJob = {
+        ...updatedJobData,
+        title: updatedJobData.jobTitle,
+        description: updatedJobData.jobDescription,
+        budget: updatedJobData.budgetAmount?.toString() || '',
+        skills: updatedJobData.skillsRequired,
+        deadline: updatedJobData.deadlineDate,
+        attached_files: allImageUrls,
+      };
 
-      setJob({ ...updatedJob, attached_files: allImageUrls });
+      setJob(mappedUpdatedJob);
       setPortfolioImages([]);
       setIsEditing(false);
-      Alert.alert("Success", "Job updated successfully!");
+      setBudgetError("");
+      
+      // Show success message with wallet update info if present
+      let successMessage = "Job updated successfully!";
+      if (response.walletUpdate) {
+        const { budgetDifference, newAvailableBalance } = response.walletUpdate;
+        if (budgetDifference > 0) {
+          successMessage += `\n\nBudget increased by ₹${budgetDifference.toFixed(2)}`;
+        } else if (budgetDifference < 0) {
+          successMessage += `\n\nBudget decreased by ₹${Math.abs(budgetDifference).toFixed(2)}`;
+        }
+        successMessage += `\nNew available balance: ₹${newAvailableBalance.toFixed(2)}`;
+      }
+      
+      Alert.alert("Success", successMessage);
+      
+      // Refresh wallet data to reflect changes
+      fetchWalletData();
       fetchJobDetails();
     } catch (error) {
       console.error("Error updating job:", error);
@@ -210,42 +360,134 @@ const UpdateJobDetailsScreen = ({ route, navigation }) => {
       />
 
       {/* Budget */}
-      <Text style={styles.label1}>Budget</Text>
-      <TextInput
-        style={styles.input1}
-        value={String(updatedJob.budget)}
-        keyboardType="numeric"
-        onChangeText={(text) =>
-          setUpdatedJob({ ...updatedJob, budget: parseInt(text, 10) })
-        }
-      />
+      <View style={styles.budgetSection}>
+        <View style={styles.budgetHeader}>
+          <Text style={styles.label1}>Budget</Text>
+          <TouchableOpacity
+            onPress={() => setShowWalletInfo(!showWalletInfo)}
+            style={styles.walletToggle}
+          >
+            <Ionicons
+              name={showWalletInfo ? "wallet" : "wallet-outline"}
+              size={18}
+              color="#6A0DAD"
+            />
+            <Text style={styles.walletToggleText}>
+              {walletLoading ? "Loading..." : "Wallet Info"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {showWalletInfo && walletData && (
+          <View style={styles.walletInfoContainer}>
+            <View style={styles.walletInfoRow}>
+              <Text style={styles.walletInfoLabel}>Available Balance:</Text>
+              <Text style={styles.walletInfoAmount}>
+                ₹{walletData.availableBalance?.toFixed(2) || "0.00"}
+              </Text>
+            </View>
+            {walletData.reservedAmount > 0 && (
+              <View style={styles.walletInfoRow}>
+                <Text style={styles.walletInfoLabel}>Reserved:</Text>
+                <Text style={styles.walletInfoReserved}>
+                  ₹{walletData.reservedAmount?.toFixed(2)}
+                </Text>
+              </View>
+            )}
+            <View style={styles.walletInfoRow}>
+              <Text style={styles.walletInfoLabel}>Total Balance:</Text>
+              <Text style={styles.walletInfoTotal}>
+                ₹{walletData.totalBalance?.toFixed(2) || "0.00"}
+              </Text>
+            </View>
+          </View>
+        )}
+
+        <TextInput
+          style={[styles.input1, budgetError ? styles.inputError : null]}
+          placeholder={
+            walletData && job
+              ? `Max: ₹${(walletData.availableBalance + parseFloat(job.budget || 0)).toFixed(2)}`
+              : "Enter budget amount"
+          }
+          keyboardType="numeric"
+          value={updatedJob.budget?.toString()}
+          onChangeText={handleBudgetChange}
+        />
+
+        {budgetValidating && (
+          <View style={styles.budgetValidationContainer}>
+            <View style={styles.budgetValidationRow}>
+              <ActivityIndicator size="small" color="#6A0DAD" />
+              <Text style={styles.budgetValidationText}>Validating budget...</Text>
+            </View>
+          </View>
+        )}
+
+        {budgetError ? (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{budgetError}</Text>
+            {walletData && job && parseFloat(updatedJob.budget || 0) > (walletData.availableBalance + parseFloat(job.budget || 0)) && (
+              <TouchableOpacity
+                style={styles.addMoneyButton}
+                onPress={() => navigation.navigate('Wallet')}
+              >
+                <Ionicons name="add-circle-outline" size={16} color="#6A0DAD" />
+                <Text style={styles.addMoneyText}>Add Money to Wallet</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        ) : null}
+      </View>
 
       {/* Skills */}
-      <Text style={styles.label1}>Skills</Text>
-      <TextInput
-        style={styles.input1}
-        value={updatedJob.skills?.join(", ")}
-        onChangeText={(text) =>
-          setUpdatedJob({
-            ...updatedJob,
-            skills: text.split(",").map((skill) => skill.trim()),
-          })
-        }
-      />
+      <View style={styles.skillsSection}>
+        <Text style={styles.label1}>Skills Required</Text>
+        {skillsArray.map((skill, index) => (
+          <View key={index} style={styles.skillInputContainer}>
+            <TextInput
+              style={[styles.input1, styles.skillInput]}
+              placeholder="Add required skill"
+              value={skill}
+              onChangeText={(text) => updateSkill(index, text)}
+            />
+            {skillsArray.length > 1 && (
+              <TouchableOpacity
+                style={styles.removeSkillButton}
+                onPress={() => removeSkill(index)}
+              >
+                <FontAwesome name="minus-circle" size={20} color="#B64928" />
+              </TouchableOpacity>
+            )}
+          </View>
+        ))}
+        <TouchableOpacity onPress={addSkill} style={styles.addSkillButton}>
+          <FontAwesome name="plus-circle" size={16} color="#6A0DAD" />
+          <Text style={styles.addSkillText}>+ Add more skills</Text>
+        </TouchableOpacity>
+      </View>
 
-      <View>
-        <Text style={styles.label}>Deadline</Text>
+      {/* Deadline */}
+      <View style={styles.deadlineSection}>
+        <Text style={styles.label1}>Deadline</Text>
         <TouchableOpacity
-          style={styles.dob}
+          style={styles.datePickerButton}
           onPress={() => setShowDatePicker(true)}
         >
-          <Text>{deadline ? deadline.toDateString() : "Deadline"}</Text>
+          <View style={styles.datePickerContent}>
+            <FontAwesome name="calendar" size={20} color="#6A0DAD" />
+            <Text style={styles.datePickerText}>
+              {deadline ? deadline.toDateString() : "Select Deadline"}
+            </Text>
+            <FontAwesome name="chevron-down" size={16} color="#999" />
+          </View>
         </TouchableOpacity>
         {showDatePicker && (
           <DateTimePicker
             value={deadline}
             mode="date"
             display="default"
+            minimumDate={new Date()}
             onChange={onChangeDeadline}
           />
         )}
@@ -720,6 +962,162 @@ const getStyles = (currentTheme) =>
       paddingVertical: 12,
       paddingHorizontal: 30,
       borderRadius: 12,
+    },
+    
+    // Budget section styles
+    budgetSection: {
+      marginBottom: 20,
+    },
+    budgetHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 8,
+    },
+    walletToggle: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: 4,
+      paddingHorizontal: 8,
+      backgroundColor: "#f0f0f0",
+      borderRadius: 12,
+      gap: 4,
+    },
+    walletToggleText: {
+      fontSize: 12,
+      color: "#6A0DAD",
+      fontWeight: "500",
+    },
+    walletInfoContainer: {
+      backgroundColor: "#f8f9fa",
+      padding: 12,
+      borderRadius: 8,
+      marginBottom: 10,
+      borderWidth: 1,
+      borderColor: "#e9ecef",
+    },
+    walletInfoRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 6,
+    },
+    walletInfoLabel: {
+      fontSize: 14,
+      color: "#6c757d",
+      fontWeight: "500",
+    },
+    walletInfoAmount: {
+      fontSize: 14,
+      color: "#28A745",
+      fontWeight: "600",
+    },
+    walletInfoReserved: {
+      fontSize: 14,
+      color: "#FFC107",
+      fontWeight: "600",
+    },
+    walletInfoTotal: {
+      fontSize: 14,
+      color: "#343a40",
+      fontWeight: "600",
+    },
+    inputError: {
+      borderColor: "#DC3545",
+      borderWidth: 1.5,
+      backgroundColor: "#fef2f2",
+    },
+    errorContainer: {
+      marginTop: 5,
+      paddingHorizontal: 5,
+    },
+    errorText: {
+      fontSize: 12,
+      color: "#DC3545",
+      marginBottom: 5,
+    },
+    addMoneyButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: 6,
+      paddingHorizontal: 12,
+      backgroundColor: "#f8f9ff",
+      borderRadius: 12,
+      alignSelf: "flex-start",
+      gap: 4,
+    },
+    addMoneyText: {
+      fontSize: 12,
+      color: "#6A0DAD",
+      fontWeight: "600",
+    },
+    budgetValidationContainer: {
+      marginTop: 5,
+      paddingHorizontal: 5,
+    },
+    budgetValidationRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
+    budgetValidationText: {
+      fontSize: 12,
+      color: "#28A745",
+      fontWeight: "500",
+    },
+    
+    // Skills section styles
+    skillsSection: {
+      marginBottom: 20,
+    },
+    skillInputContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: 10,
+    },
+    skillInput: {
+      flex: 1,
+      marginBottom: 0,
+    },
+    removeSkillButton: {
+      marginLeft: 10,
+      padding: 5,
+    },
+    addSkillButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: 8,
+      paddingHorizontal: 12,
+      gap: 8,
+    },
+    addSkillText: {
+      fontSize: 14,
+      color: "#6A0DAD",
+      fontWeight: "600",
+    },
+    
+    // Deadline section styles
+    deadlineSection: {
+      marginBottom: 20,
+    },
+    datePickerButton: {
+      borderWidth: 1,
+      borderColor: "#ccc",
+      borderRadius: 8,
+      paddingHorizontal: 15,
+      paddingVertical: 12,
+      backgroundColor: "#fff",
+    },
+    datePickerContent: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    datePickerText: {
+      flex: 1,
+      marginLeft: 12,
+      fontSize: 16,
+      color: "#333",
     },
   });
 

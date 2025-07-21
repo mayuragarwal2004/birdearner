@@ -116,12 +116,13 @@ const JobsPostedScreen = ({ navigation }) => {
   };
 
   const handleOptionSelect = (option) => {
+    console.log({ option, selectedJob });
     setModalVisible(false); // Close the modal
     if (option === "View Details") {
-      navigation.navigate("JobDetailsChat", { projectId: selectedJob.id });
+      navigation.navigate("JobDetailsChat", { jobId: selectedJob.id });
     } else if (option === "Update") {
       navigation.navigate("UpdateJobDetailsScreen", {
-        projectId: selectedJob.id,
+        jobId: selectedJob.id,
       });
     } else if (option === "Delete") {
       Alert.alert("Delete Job", "Are you sure you want to delete this job?", [
@@ -172,7 +173,7 @@ const JobsPostedScreen = ({ navigation }) => {
       >
         {hasPortfolioImages ? (
           <Image
-            source={{ uri: firstPortfolioImage }}
+            source={{ uri: apiService.loadImageURI(firstPortfolioImage) }}
             style={styles.avatar}
           />
         ) : (
@@ -391,6 +392,12 @@ const getStyles = (currentTheme) =>
       position: "relative",
     },
     threedots: {
+      padding: 10,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: currentTheme.cardBackground || "#F5F5F5",
+      borderRadius: 20,
+      marginLeft: 10,
       // position: "absolute",
       // top: 20,
       // right: -7,

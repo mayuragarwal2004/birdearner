@@ -11,11 +11,13 @@ import {
 import RazorpayCheckout from "react-native-razorpay";
 import { useAuth } from "../context/NewAuthContext";
 import { Ionicons } from "@expo/vector-icons";
-import { useAppwrite } from "../context/AppwriteContext";
 import { useTheme } from "../context/ThemeContext";
+import apiService from "../lib/apiService"; // Import the singleton instance
+
+// Development mode flag - set to false for production
+const DEV_MODE = true;
 
 const PaymentScreen = ({ navigation }) => {
-  const { appwriteConfig, databases } = useAppwrite();
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const { userData, userProfile } = useAuth();
   const pic =
@@ -35,81 +37,82 @@ const PaymentScreen = ({ navigation }) => {
 
   const handlePayment = async () => {
     try {
-      const options = {
-        description: `Add ₹${amount} to wallet`,
-        image: pic,
-        currency: "INR",
-        key: "rzp_test_Jl7LJ6dEC1YfnX",
-        amount: amount * 100,
-        name: name,
-        prefill: {
-          email: email,
-          phone: "4141414141",
-          name: name,
-        },
-        theme: { color: "#4B0082" },
-      };
+      // Validate amount
+      if (!amount || parseFloat(amount) <= 0) {
+        alert("Please enter a valid amount greater than 0");
+        return;
+      }
 
-      const paymentData = await RazorpayCheckout.open(options);
+      await apiService.init(); // Initialize API service with token
+
+      let paymentData;
+
+      if (DEV_MODE) {
+        // Simulate payment in development mode
+        console.log("DEV MODE: Simulating Razorpay payment");
+        alert("DEV MODE: Simulating payment success");
+        
+        // Simulate payment data
+        paymentData = {
+          razorpay_payment_id: `dev_payment_${Date.now()}`,
+          razorpay_order_id: `dev_order_${Date.now()}`,
+          razorpay_signature: "dev_signature_mock"
+        };
+      } else {
+        // Real Razorpay checkout for production
+        const options = {
+          description: `Add ₹${amount} to wallet`,
+          image: pic,
+          currency: "INR",
+          key: "rzp_test_Jl7LJ6dEC1YfnX",
+          amount: amount * 100,
+          name: name,
+          prefill: {
+            email: email,
+            phone: "4141414141",
+            name: name,
+          },
+          theme: { color: "#4B0082" },
+        };
+
+        paymentData = await RazorpayCheckout.open(options);
+      }
 
       await updateWalletAmount(amount, paymentData.razorpay_payment_id);
       setPaymentSuccess(true);
     } catch (error) {
-      console.error(error);
-      alert("Payment failed. Please try again.");
+      console.error("Payment error:", error);
+      const errorMessage = DEV_MODE 
+        ? "DEV MODE: Simulated payment failed" 
+        : "Payment failed. Please try again.";
+      alert(errorMessage);
     }
   };
 
   const updateWalletAmount = async (addedAmount, paymentId) => {
     try {
-      if (userData) {
-        const userId = userData?.$id;
+      if (!userData || !userData.id) {
+        throw new Error("User not authenticated");
+      }
 
-        // Collection IDs
-        const clientCollectionId = appwriteConfig.clientCollectionId;
-        const paymentHistoryCollectionId =
-          appwriteConfig.paymentHistoryCollectionId;
+      // Add money to wallet using Node.js API
+      const result = await apiService.addMoneyToWallet(
+        parseFloat(addedAmount),
+        `Razorpay deposit - Payment ID: ${paymentId}`,
+        paymentId
+      );
 
-        // Fetch user document to get the current wallet amount
-        const userDoc = await databases.getDocument(
-          appwriteConfig.databaseId,
-          clientCollectionId,
-          userId
-        );
-
-        const currentWallet = userDoc.wallet || 0;
-        const newWalletAmount = currentWallet + parseFloat(addedAmount);
-
-        // Update wallet amount in the user's document
-        await databases.updateDocument(
-          appwriteConfig.databaseId,
-          clientCollectionId,
-          userId,
-          {
-            wallet: newWalletAmount,
-          }
-        );
-
-        // Add a new payment history document
-        await databases.createDocument(
-          appwriteConfig.databaseId,
-          paymentHistoryCollectionId,
-          "unique()",
-          {
-            userId: userId,
-            paymentId: paymentId,
-            amount: parseFloat(addedAmount),
-            status: "Success",
-            date: new Date().toISOString(),
-          }
-        );
-
+      if (result.success) {
         alert(
-          `₹${addedAmount} added successfully! Your new wallet balance is ₹${newWalletAmount}.`
+          `₹${addedAmount} added successfully! Your new wallet balance is ₹${result.data.newBalance}.`
         );
+      } else {
+        throw new Error(result.message || "Failed to update wallet");
       }
     } catch (error) {
+      console.error("Wallet update error:", error);
       alert("Failed to update wallet. Please contact support.");
+      throw error; // Re-throw to prevent setting payment success
     }
   };
 
@@ -124,7 +127,7 @@ const PaymentScreen = ({ navigation }) => {
             <Ionicons
               name="arrow-back"
               size={24}
-              color={currentTheme.text || black}
+              color={currentTheme.text || "#000"}
             />
           </TouchableOpacity>
           <Text style={styles.header}>Add Amount to Wallet</Text>
@@ -156,14 +159,16 @@ const PaymentScreen = ({ navigation }) => {
             <Ionicons
               name="arrow-back"
               size={20}
-              color={currentTheme.subText || black}
+              color={currentTheme.subText || "#000"}
             />
             <Text style={{ color: currentTheme.subText }}>Go Back</Text>
           </TouchableOpacity>
         </View>
       ) : (
         <TouchableOpacity style={styles.signupButton} onPress={handlePayment}>
-          <Text style={styles.signupButtonText}>Add Now</Text>
+          <Text style={styles.signupButtonText}>
+            {DEV_MODE ? "Add Now (DEV)" : "Add Now"}
+          </Text>
         </TouchableOpacity>
       )}
     </View>

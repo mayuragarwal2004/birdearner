@@ -11,8 +11,10 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { PanResponder, Animated } from "react-native";
-import { useAppwrite } from "../context/AppwriteContext";
 import { useTheme } from "../context/ThemeContext";
+import { useAuth } from "../context/NewAuthContext";
+import apiService from "../lib/apiService";
+import Toast from "react-native-toast-message";
 
 const colors = {
   Immediate: ["#E22323", "#7C1313"],
@@ -23,25 +25,31 @@ const colors = {
 const priorities = ["Immediate", "High", "Standard"];
 
 const JobPriority = ({ navigation, route }) => {
-  const { appwriteConfig, databases } = useAppwrite();
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const { userData } = useAuth();
+
   const [rotation] = useState(new Animated.Value(0)); // Handle rotation animation
 
   const { priority, jobs } = route.params;
+  console.log({ priority, jobs });
 
   const [priorityJob, setPriorityJob] = useState([]);
   const [clientProfiles, setClientProfiles] = useState({});
   const [clientName, setClientName] = useState({});
+  const [loading, setLoading] = useState(false);
 
-  // const currentColors = colors[priority] || ["#000", "#333"];
-
-  const currentColors = colors[priorities[currentIndex]] || ["#000", "#333"];
-  const currentPriority = priorities[currentIndex];
+  // Use the priority value from route.params
+  const currentPriority = priority;
+  const currentColors = colors[currentPriority] || ["#000", "#333"];
 
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
 
   const styles = getStyles(currentTheme);
+
+  // Toast helper
+  const showToast = (type, text1, text2) => {
+    Toast.show({ type, text1, text2, position: "top" });
+  };
 
   useEffect(() => {
     if (currentPriority === "Immediate") {
@@ -56,41 +64,38 @@ const JobPriority = ({ navigation, route }) => {
     }
   }, [currentPriority]);
 
-  useEffect(() => {
-    priorityJob.forEach((job) => {
-      getProfile(job.job_created_by);
-    });
-  }, [priorityJob]);
-
-  const getProfile = async (id) => {
-    try {
-      const response = await databases.getDocument(
-        appwriteConfig.databaseId,
-        appwriteConfig.clientCollectionId,
-        id
-      );
-      const profile = response;
-      setClientProfiles((prevProfiles) => ({
-        ...prevProfiles,
-        [id]: profile.profile_photo,
-      }));
-
-      setClientName((prevProfiles) => ({
-        ...prevProfiles,
-        [id]: profile.full_name,
-      }));
-    } catch (error) {
-      Alert.alert("Error fetching client profile:", error);
-    }
-  };
-
   const formatDeadline = (deadline) => {
-    const currentDate = new Date();
-    const deadlineDate = new Date(deadline);
-    const timeDiff = Math.ceil(
-      (deadlineDate - currentDate) / (1000 * 60 * 60 * 24)
-    );
-    return timeDiff > 0 ? `${timeDiff} days` : "Deadline passed";
+    try {
+      if (!deadline) return "No deadline";
+
+      const currentDate = new Date();
+      let deadlineDate;
+
+      // Handle different date formats that might come from the backend
+      if (deadline instanceof Date) {
+        deadlineDate = deadline;
+      } else if (typeof deadline === "string") {
+        // Try parsing the date string
+        deadlineDate = new Date(deadline);
+
+        // Check if the date is valid
+        if (isNaN(deadlineDate.getTime())) {
+          console.log("Invalid date format:", deadline);
+          return "Invalid date";
+        }
+      } else {
+        console.log("Unknown deadline format:", deadline);
+        return "Unknown format";
+      }
+
+      const timeDiff = Math.ceil(
+        (deadlineDate - currentDate) / (1000 * 60 * 60 * 24)
+      );
+      return timeDiff > 0 ? `${timeDiff} days` : "Deadline passed";
+    } catch (error) {
+      console.error("Error formatting deadline:", error);
+      return "Date error";
+    }
   };
 
   const formatBudget = (budget) => {
@@ -100,15 +105,43 @@ const JobPriority = ({ navigation, route }) => {
   };
 
   const renderJobItem = ({ item: job }) => {
-    const clientProfileImage = clientProfiles[job.job_created_by];
-    const full_name = clientName[job.job_created_by];
+    // Use job.client object directly for client info
+    const client = job.client || {};
+    const clientProfileImage =
+      client.profilePhoto ||
+      "https://via.placeholder.com/95x95/CCCCCC/666666?text=User";
+    const full_name =
+      client.user?.fullName || client.companyName || "Unknown User";
+
+    // Handle different possible field names for job data
+    const jobTitle = job.jobTitle || job.title || job.name || "Untitled Job";
+    const jobBudget = job.budgetAmount || job.budget || job.price || 0;
+    const jobDeadline = job.deadlineDate || job.deadline || job.due_date;
+    const jobDescription =
+      job.jobDescription ||
+      job.description ||
+      job.details ||
+      "No description available";
+    const jobId = job.id || job.job_id || job._id;
+
+    console.log({ clientProfileImage });
 
     return (
       <TouchableOpacity
         style={styles.jobCard}
         onPress={() => {
           navigation.navigate("JobDescription", {
-            job,
+            job: {
+              ...job,
+              // Ensure consistent field names for JobDescription screen
+              id: jobId,
+              title: jobTitle,
+              budget: jobBudget,
+              deadline: jobDeadline,
+              description: jobDescription,
+              clientId: client.companyName,
+              client: client,
+            },
             clientProfileImage,
             full_name,
           });
@@ -116,18 +149,34 @@ const JobPriority = ({ navigation, route }) => {
       >
         {/* Displaying the client's profile image */}
         <Image
-          source={{ uri: clientProfileImage || "../assets/profile.png" }}
+          source={
+            clientProfileImage
+              ? { uri: clientProfileImage }
+              : require("../assets/profile.png")
+          }
           style={styles.profileImage}
+          onError={() => {
+            console.log("Failed to load profile image for:", full_name);
+          }}
         />
         <View style={{ flex: 1, paddingVertical: 2 }}>
-          <Text style={styles.jobTitle}>{job.title}</Text>
+          <Text style={styles.jobTitle} numberOfLines={2}>
+            {jobTitle}
+          </Text>
           <Text style={styles.jobDetails}>
-            Budget: ₹{formatBudget(job.budget)} Deadline:{" "}
-            {formatDeadline(job.deadline)}
+            Budget: ₹{formatBudget(jobBudget)} • Deadline:{" "}
+            {formatDeadline(jobDeadline)}
           </Text>
           <Text style={styles.jobDescription} numberOfLines={2}>
-            {job.description}
+            {jobDescription}
           </Text>
+          {/* Show client info */}
+          {/* <Text style={styles.jobDetails}>
+            {client.companyName} • {client.organizationType}
+          </Text>
+          <Text style={styles.jobDetails}>
+            {client.user?.fullName}
+          </Text> */}
         </View>
       </TouchableOpacity>
     );
@@ -183,10 +232,21 @@ const JobPriority = ({ navigation, route }) => {
       <FlatList
         data={priorityJob}
         renderItem={renderJobItem}
-        keyExtractor={(item, index) => `${item.job_id}_${index}`}
+        keyExtractor={(item, index) => {
+          // Handle different possible ID field names
+          const jobId = item.id || item.job_id || item._id;
+          return jobId ? `${jobId}_${index}` : `job_${index}`;
+        }}
         contentContainerStyle={{ paddingBottom: 20 }}
         style={{ flex: 1, paddingHorizontal: 20 }}
         showsVerticalScrollIndicator={false}
+        ListEmptyComponent={() => (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>
+              No {currentPriority.toLowerCase()} priority jobs available
+            </Text>
+          </View>
+        )}
       />
 
       <Animated.View
@@ -219,6 +279,8 @@ const JobPriority = ({ navigation, route }) => {
           </TouchableOpacity>
         </LinearGradient>
       </Animated.View>
+
+      <Toast />
     </SafeAreaView>
   );
 };
@@ -334,6 +396,18 @@ const getStyles = (currentTheme) =>
       fontWeight: "500",
       textAlign: "center",
       marginTop: 20,
+    },
+    emptyContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      paddingTop: 50,
+    },
+    emptyText: {
+      fontSize: 16,
+      color: currentTheme.subText || "#666",
+      textAlign: "center",
+      fontStyle: "italic",
     },
   });
 
