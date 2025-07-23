@@ -265,7 +265,9 @@ const ClientHomeScreen = () => {
   };
 
   const openChat = (receiverId, full_name, profileImage, projectId) => {
-    navigation.navigate("Chat", {
+    console.log("Opening chat with:", { receiverId, full_name, profileImage, projectId });
+    
+    navigation.navigate("ClientChatList", {
       receiverId,
       full_name,
       profileImage,
@@ -680,7 +682,12 @@ const ClientHomeScreen = () => {
         <TouchableOpacity
           style={styles.chats}
           onPress={() => {
-            navigation.navigate("Inbox");
+            openChat(
+              userData?.id,
+              userData?.full_name || "User",
+              userData?.profile_photo || placeholderImageURL,
+              null // Assuming no projectId for direct chat
+            );
           }}
         >
           <FontAwesome name="comments" size={28} color="#fff" />

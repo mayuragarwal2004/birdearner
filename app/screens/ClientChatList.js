@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,16 +7,15 @@ import {
   StyleSheet,
   Image,
   ActivityIndicator,
-  Alert,
   RefreshControl,
 } from "react-native";
 import { useAuth } from "../context/NewAuthContext";
-import { Ionicons, MaterialIcons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { useTheme } from "../context/ThemeContext";
 import ApiService from "../lib/apiService";
 
-const ChatList = () => {
+const ClientChatList = () => {
   const [chatThreads, setChatThreads] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -24,6 +23,8 @@ const ChatList = () => {
   const { userData } = useAuth();
   const navigation = useNavigation();
   const api = ApiService;
+
+  console.log({chatThreads});
   
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
@@ -31,7 +32,7 @@ const ChatList = () => {
   const styles = getStyles(currentTheme);
 
   const fetchChatThreads = async (isRefreshing = false) => {
-    console.log("Fetching chat threads for user:", userData?.id);
+    console.log("Fetching chat threads for client:", userData?.id);
     
     if (!isRefreshing) {
       setLoading(true);
@@ -42,26 +43,15 @@ const ChatList = () => {
       
       await api.init();
 
-      console.log("Fetching user conversations...");
+      console.log("Fetching client conversations...");
       
-      // Use the correct endpoint for getting user conversations
-      const response = await api.getUserConversations(userData.id);
+      const response = await api.getClientConversations(userData?.client?.id);
       console.log("Fetched chat threads:", response);
-      
       
       if (response) {
         // Format conversations into chat threads
         const formattedThreads = response.map(conv => ({
-          id: conv.id || `${conv.jobId}-${conv.senderId}-${conv.receiverId}`,
-          jobId: conv.jobId,
-          client: conv.otherUser,
-          lastMessage: conv.lastMessage || "No messages yet",
-          timestamp: conv.updatedAt || conv.createdAt,
-          projectData: {
-            title: conv.job?.title || "Job",
-            status: conv.job?.status?.toLowerCase() || "pending",
-            deadline: conv.job?.deadline,
-          },
+          ...conv,
           isStarred: conv.isStarred || false
         }));
         
@@ -78,40 +68,37 @@ const ChatList = () => {
   useFocusEffect(
     React.useCallback(() => {
       fetchChatThreads();
-    }, [navigation, userData?.freelancer?.id])
+    }, [navigation, userData?.id])
   );
-
-
-
 
   useEffect(() => {
     fetchChatThreads();
   }, []);
 
   const renderChatThread = ({ item }) => {
-    const projectData = item.projectData || {};
-    const clientName = item.client?.user?.fullName || "Unknown";
+    const job = item.job || {};
+    const freelancerName = item.freelancer?.user.fullName || "Unknown mayur";
     const lastMessage = item.lastMessage || "No messages yet";
-    const profileImage = item.client?.profilePhoto
-      ? { uri: item.client.profilePhoto }
+    const profileImage = item.freelancer?.profilePhoto
+      ? { uri: item.freelancer.profilePhoto }
       : require("../assets/profile.png");
 
     return (
       <TouchableOpacity
         style={styles.jobContainer}
-        onPress={() => navigation.navigate('FreelancerChat', {
-          projectId: item.projectId,
-          full_name: clientName,
-          profileImage: item.client?.profilePhoto,
-          client: item.client
+        onPress={() => navigation.navigate('ClientChat', {
+          jobId: item.jobId,
+          full_name: freelancerName,
+          profileImage: item.freelancer?.profilePhoto,
+          freelancer: item.freelancer
         })}
       >
         <Image source={profileImage} style={styles.avatar} />
         <View style={styles.jobContent}>
           <Text style={styles.jobTitle} numberOfLines={1}>
-            {projectData.title || "Untitled"}
+            {job.title}
           </Text>
-          <Text style={styles.username}>@{clientName}</Text>
+          <Text style={styles.username}>@{freelancerName}</Text>
           <Text style={styles.lastMessage} numberOfLines={1}>
             {lastMessage}
           </Text>
@@ -121,9 +108,9 @@ const ChatList = () => {
             styles.statusIndicator,
             {
               backgroundColor:
-                projectData.status === 'completed'
+                job.status === 'completed'
                   ? '#4CAF50'
-                  : projectData.status === 'in-progress'
+                  : job.status === 'in-progress'
                   ? '#2196F3'
                   : '#FFC107',
             },
@@ -145,7 +132,7 @@ const ChatList = () => {
   if (error) {
     return (
       <View style={styles.errorContainer}>
-        <Text style={styles.errorMessage}>Failed to load threads. Please try again later.</Text>
+        <Text style={styles.errorMessage}>Failed to load threads. Please try again later. client chat list</Text>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.retryButton}>
           <Text style={styles.retryButtonText}>Go Back</Text>
         </TouchableOpacity>
@@ -168,57 +155,14 @@ const ChatList = () => {
     <View style={styles.container}>
       <View style={styles.main}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={currentTheme.text || black} />
+          <Ionicons name="arrow-back" size={24} color={currentTheme.text || 'black'} />
         </TouchableOpacity>
-        <Text style={styles.header}>Inbox</Text>
+        <Text style={styles.header}>Client Inbox</Text>
       </View>
       <FlatList
         data={chatThreads}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => {
-          const projectData = item.projectData || {};
-          const clientName = item.client?.user?.fullName || "Unknown";
-          const lastMessage = item.lastMessage || "No messages yet";
-          const profileImage = item.client?.profilePhoto
-            ? { uri: item.client.profilePhoto }
-            : require("../assets/profile.png");
-
-          return (
-            <TouchableOpacity
-              style={styles.jobContainer}
-              onPress={() => navigation.navigate('FreelancerChat', {
-                jobId: item.jobId,
-                full_name: clientName,
-                profileImage: item.client?.profilePhoto,
-                client: item.client
-              })}
-            >
-              <Image source={profileImage} style={styles.avatar} />
-              <View style={styles.jobContent}>
-                <Text style={styles.jobTitle} numberOfLines={1}>
-                  {projectData.title}
-                </Text>
-                <Text style={styles.username}>@{clientName}</Text>
-                <Text style={styles.lastMessage} numberOfLines={1}>
-                  {lastMessage}
-                </Text>
-              </View>
-              <View
-                style={[
-                  styles.statusIndicator,
-                  {
-                    backgroundColor:
-                      projectData.status === 'completed'
-                        ? '#4CAF50'
-                        : projectData.status === 'in-progress'
-                        ? '#2196F3'
-                        : '#FFC107',
-                  },
-                ]}
-              />
-            </TouchableOpacity>
-          );
-        }}
+        renderItem={renderChatThread}
         contentContainerStyle={styles.chatListContainer}
         refreshControl={
           <RefreshControl
@@ -240,7 +184,8 @@ const ChatList = () => {
 const getStyles = (currentTheme) =>
   StyleSheet.create({
     container: {
-      flex: 1, backgroundColor: currentTheme.background || "#fff",
+      flex: 1,
+      backgroundColor: currentTheme.background || "#fff",
       paddingHorizontal: 20,
       paddingTop: 40
     },
@@ -255,49 +200,21 @@ const getStyles = (currentTheme) =>
     header: {
       fontSize: 24,
       fontWeight: 'bold',
-      // marginBottom: 20,
       textAlign: 'center',
       color: currentTheme.text
     },
-    loadingText: { textAlign: "center", marginTop: 20,  color: currentTheme.subText || "#888" },
-    chatListContainer: { padding: 10 },
-    chatThread: {
-      flexDirection: "row",
-      alignItems: "center",
-      padding: 15,
-      borderBottomWidth: 1,
-      borderColor: currentTheme.border || "#ddd",
-      justifyContent: "space-between",
+    loadingText: {
+      textAlign: "center",
+      marginTop: 20,
+      color: currentTheme.subText || "#888"
     },
-    profileSection: {
-      flexDirection: "row",
-      alignItems: "center",
-      flex: 1,
+    chatListContainer: {
+      padding: 10
     },
-    profileImage: {
-      width: 50,
-      height: 50,
-      borderRadius: 25,
-      marginRight: 10,
-      backgroundColor: "#e0e0e0", // Fallback background for images
-    },
-    textSection: {
-      flex: 1,
-      justifyContent: "center",
-    },
-    receiverName: { fontSize: 16, fontWeight: "bold", color: "#000" },
-    lastMessage: { fontSize: 14, color: "#666", marginTop: 1, marginBottom: 5 },
-    timestamp: {
-      fontSize: 12,
-      color: "#aaa",
-      alignSelf: "flex-start",
-    },
-
     jobContainer: {
       flexDirection: 'row',
       alignItems: 'center',
       backgroundColor: currentTheme.cardBackground || '#F5F5F5',
-      // padding: 10,
       borderTopRightRadius: 10,
       borderBottomRightRadius: 10,
       borderTopLeftRadius: 40,
@@ -325,7 +242,11 @@ const getStyles = (currentTheme) =>
       fontWeight: 'bold',
       color: '#5A4CAE',
     },
-    jobStatus: {
+    username: {
+      fontSize: 14,
+      color: currentTheme.subText || '#6D6D6D',
+    },
+    lastMessage: {
       fontSize: 14,
       color: currentTheme.subText || '#6D6D6D',
     },
@@ -370,7 +291,7 @@ const getStyles = (currentTheme) =>
     },
     emptyMessage: {
       fontSize: 16,
-      color:  '#6D6D6D',
+      color: '#6D6D6D',
       textAlign: 'center',
       marginBottom: 20,
     },
@@ -380,4 +301,4 @@ const getStyles = (currentTheme) =>
     },
   });
 
-export default ChatList;
+export default ClientChatList;

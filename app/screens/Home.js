@@ -460,7 +460,7 @@ const HomeScreen = () => {
       <View style={styles.stickyButton}>
         <TouchableOpacity
           style={styles.chatIcon}
-          onPress={() => navigation.navigate("Chatlist")}
+          onPress={() => navigation.navigate(userData.role === 'FREELANCER' ? 'FreelancerChatList' : 'ClientChatList')}
         >
           <FontAwesome name="comments" size={28} color="#fff" />
         </TouchableOpacity>

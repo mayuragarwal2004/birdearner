@@ -2,8 +2,8 @@ import React from "react";
 import { createStackNavigator } from "@react-navigation/stack";
 import NotificationScreen from "../screens/Notification";
 import HomeScreen from "../screens/Home";
-import ChatList from "../screens/ChatList";
-import Chat from "../screens/Chat";
+import FreelancerChatList from "../screens/FreelancerChatList";
+import FreelancerChat from "../screens/FreelancerChat";
 import Inbox from "../screens/Inbox";
 
 const Stack = createStackNavigator();
@@ -30,8 +30,13 @@ const HomeStack = () =>
         }}
       />
       <Stack.Screen
-        name="Chat"
-        component={Chat}
+        name="FreelancerChatList"
+        component={FreelancerChatList}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="FreelancerChat"
+        component={FreelancerChat}
         options={{ headerShown: false }}
       />
     </Stack.Navigator>

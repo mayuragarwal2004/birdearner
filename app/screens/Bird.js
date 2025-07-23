@@ -93,10 +93,43 @@ const Bird = () => {
           isUser ? styles.userMessage : styles.botMessage,
         ]}
       >
-        <Text style={styles.messageText}>{item.text}</Text>
+        <Text style={[
+          styles.messageText,
+          isUser ? { color: '#fff' } : null
+        ]}>{item.text}</Text>
       </View>
     );
   };
+
+  const EmptyChat = () => (
+    <View style={styles.emptyContainer}>
+      <Text style={styles.welcomeTitle}>Welcome to BirdBot! 🦜</Text>
+      <Text style={styles.welcomeSubtitle}>Your AI Assistant</Text>
+      <Text style={styles.welcomeText}>
+        I can help you with:
+      </Text>
+      <View style={styles.suggestionContainer}>
+        <TouchableOpacity 
+          style={styles.suggestionButton}
+          onPress={() => setInput("What is BirdEarner?")}
+        >
+          <Text style={styles.suggestionText}>🦜 What is BirdEarner?</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.suggestionButton}
+          onPress={() => setInput("What services can I offer?")}
+        >
+          <Text style={styles.suggestionText}>🛠️ What services can I offer?</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.suggestionButton}
+          onPress={() => setInput("How does payment work?")}
+        >
+          <Text style={styles.suggestionText}>💰 How does payment work?</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
 
   return (
     <View style={styles.container}>
@@ -106,6 +139,7 @@ const Bird = () => {
         renderItem={renderMessage}
         style={styles.chatList}
         contentContainerStyle={styles.chatListContainer}
+        ListEmptyComponent={EmptyChat}
       />
 
       <View style={styles.inputContainer}>
@@ -134,48 +168,115 @@ const getStyles = (currentTheme) =>
       flex: 1,
       backgroundColor: currentTheme.background || "#fff",
       paddingHorizontal: 20,
-      // marginHorizontal: 10,
       paddingTop: 50
     },
-    chatList: { flex: 1 },
-    chatListContainer: { padding: 10 },
+    chatList: { 
+      flex: 1 
+    },
+    chatListContainer: { 
+      padding: 10,
+      flexGrow: 1 
+    },
     messageContainer: {
       marginVertical: 5,
-      padding: 10,
-      borderRadius: 8,
+      padding: 12,
+      borderRadius: 15,
+      maxWidth: '85%',
+      shadowColor: "#000",
+      shadowOffset: {
+        width: 0,
+        height: 1,
+      },
+      shadowOpacity: 0.18,
+      shadowRadius: 1.0,
+      elevation: 1,
     },
     userMessage: {
-      backgroundColor: currentTheme.cardBackground || "#d1e7dd",
+      backgroundColor: "#4C0183",
       alignSelf: "flex-end",
+      borderTopRightRadius: 5,
     },
     botMessage: {
       backgroundColor: currentTheme.cardBackground || "#f1f1f1",
       alignSelf: "flex-start",
+      borderTopLeftRadius: 5,
     },
-    messageText: { fontSize: 16, color: currentTheme.text || "#000" },
+    messageText: { 
+      fontSize: 16, 
+      color: props => props.sender === 'user' ? '#fff' : currentTheme.text || "#000",
+      lineHeight: 22 
+    },
     inputContainer: {
       flexDirection: "row",
-      padding: 10,
+      padding: 15,
       borderTopWidth: 1,
-      borderColor: "#ddd",
+      borderColor: currentTheme.border || "#ddd",
+      backgroundColor: currentTheme.background || "#fff",
     },
     input: {
       flex: 1,
-      padding: 10,
+      padding: 12,
       borderWidth: 1,
       borderColor: currentTheme.border || "#ddd",
-      borderRadius: 8,
-      color: currentTheme.subText || "#000000",
+      borderRadius: 20,
+      color: currentTheme.text || "#000000",
       backgroundColor: currentTheme.background3 || '#fff',
+      fontSize: 16,
     },
     sendButton: {
       marginLeft: 10,
-      padding: 10,
-      backgroundColor: "#5c2d91",
-      borderRadius: 8,
+      padding: 12,
+      backgroundColor: "#4C0183",
+      borderRadius: 25,
       justifyContent: "center",
+      width: 50,
+      height: 50,
+      alignItems: 'center',
     },
-    sendButtonText: { color: "#fff", fontWeight: "bold" },
+    sendButtonText: { 
+      color: "#fff", 
+      fontWeight: "bold",
+      fontSize: 16,
+    },
+    emptyContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: 20,
+      paddingBottom: 100,
+    },
+    welcomeTitle: {
+      fontSize: 28,
+      fontWeight: 'bold',
+      color: '#4C0183',
+      marginBottom: 8,
+    },
+    welcomeSubtitle: {
+      fontSize: 18,
+      color: currentTheme.text || '#666',
+      marginBottom: 24,
+    },
+    welcomeText: {
+      fontSize: 16,
+      color: currentTheme.text || '#666',
+      marginBottom: 20,
+      textAlign: 'center',
+    },
+    suggestionContainer: {
+      width: '100%',
+      gap: 12,
+    },
+    suggestionButton: {
+      backgroundColor: currentTheme.cardBackground || '#f5f5f5',
+      padding: 16,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: currentTheme.border || '#eee',
+    },
+    suggestionText: {
+      color: currentTheme.text || '#333',
+      fontSize: 16,
+    },
   });
 
 export default Bird;

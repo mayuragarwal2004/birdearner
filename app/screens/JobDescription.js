@@ -22,14 +22,16 @@ import apiService from "../lib/apiService";
 
 const JobDescriptionScreen = ({ route, navigation }) => {
   // Handler for Apply button
+  const { job } = route.params || {};
   const handleApply = () => {
     // Extract required params
     const projectId = job.id || job._id || job.projectId;
     const full_name = job.client?.user?.fullName || job.client?.companyName || "";
-    const receiverId = job.client?.user?.id || job.client?.userId || job.client?.id || "";
-    navigation.navigate("Chat", { projectId, full_name, receiverId });
+    const client = job.client;
+    navigation.navigate("FreelancerChat", { projectId, full_name, client });
   };
-  const { job } = route.params || {};
+  console.log("Job data received:", job);
+  
   // Defensive fallback for missing job
   if (!job) {
     return (

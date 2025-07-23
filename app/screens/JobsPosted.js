@@ -152,7 +152,7 @@ const JobsPostedScreen = ({ navigation }) => {
     const title = item.jobTitle;
     const proposalCount = item.proposalCount || 0;
     const color = item.color;
-    const projectId = item.id;
+    const jobId = item.id;
     
     // Check if there are portfolio images attached to this job
     const hasPortfolioImages = item.attachedFiles && item.attachedFiles.length > 0;
@@ -167,7 +167,7 @@ const JobsPostedScreen = ({ navigation }) => {
             proposalCount,
             color,
             item,
-            projectId,
+            jobId,
           });
         }}
       >

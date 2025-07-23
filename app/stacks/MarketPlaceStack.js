@@ -4,6 +4,8 @@ import MarketplaceScreen from '../screens/Marketplace';
 import JobPriority from '../screens/JobPriority';
 import JobDescriptionScreen from '../screens/JobDescription';
 import Chat from '../screens/Chat';
+import ClientChat from '../screens/ClientChat';
+import FreelancerChat from '../screens/FreelancerChat';
 
 
 const Stack = createStackNavigator();
@@ -27,8 +29,13 @@ const MarketPlaceStack = () =>
         options={{headerShown: false}}
       />
       <Stack.Screen
-        name="Chat"
-        component={Chat}
+        name="ClientChat"
+        component={ClientChat}
+        options={{headerShown: false}}
+      />
+      <Stack.Screen
+        name="FreelancerChat"
+        component={FreelancerChat}
         options={{headerShown: false}}
       />
     </Stack.Navigator>

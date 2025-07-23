@@ -1,7 +1,7 @@
 // API service for communicating with the Bird Earner Node.js backend
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const API_BASE_URL = "https://diy-located-reasons-understanding.trycloudflare.com/api"; // Local development server
+const API_BASE_URL = "https://softball-permalink-newer-secondary.trycloudflare.com/api"; // Local development server
 
 
 class ApiService {
@@ -458,9 +458,16 @@ class ApiService {
     return response.data;
   }
 
-  async getUserConversations(userId, page = 1, limit = 20) {
+  async getFreelancerConversations(freelancerId, page = 1, limit = 20) {
     const response = await this.makeRequest(
-      `/messages/conversations/${userId}?page=${page}&limit=${limit}`
+      `/messages/freelancer/conversations/${freelancerId}?page=${page}&limit=${limit}`
+    );
+    return response.data;
+  }
+
+  async getClientConversations(clientId, page = 1, limit = 20) {
+    const response = await this.makeRequest(
+      `/messages/client/conversations/${clientId}?page=${page}&limit=${limit}`
     );
     return response.data;
   }
@@ -977,7 +984,9 @@ class ApiService {
     }
   }
   loadImageURI = (uri) => {
-    if (!uri) {
+    console.log({ uri });
+    
+    if (!Boolean(uri)) {
       return null;
     } else if (uri.startsWith("http://") || uri.startsWith("https://")) {
       return uri; // Return remote URL as is
