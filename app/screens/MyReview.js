@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -16,120 +16,76 @@ import { FontAwesome, MaterialIcons } from "@expo/vector-icons";
 import { TouchableOpacity } from "react-native";
 import ReviewCard from "../components/ReviewCard";
 import { useAuth } from "../context/NewAuthContext";
-import { useAppwrite } from "../context/AppwriteContext";
-import { Query } from "react-native-appwrite";
 import { useTheme } from "../context/ThemeContext";
+import ApiService from "../lib/apiService";
 
-export default function ReviewsScreen({ navigation }) {
-    const { appwriteConfig, databases } = useAppwrite();
-  const { user, loading, userData, setUserData } = useAuth();
-  const [data, setData] = useState(null);
+export default function MyReview({ navigation }) {
+  const { userData } = useAuth();
+  const [profileData, setProfileData] = useState(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [reviews, setReviews] = useState([]);
+  const [reviewStats, setReviewStats] = useState(null);
 
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
-
   const styles = getStyles(currentTheme);
 
-  const role = userData?.role
 
-
-  useEffect(() => {
+  const fetchData = useCallback(async () => {
+    if (!userData?.id) return;
+    
+    setLoadingProfile(true);
     try {
-      setData(userData)
+      // Get complete profile data
+      const profileResponse = await ApiService.getCompleteProfile(userData.id);
+      if (profileResponse.success) {
+        setProfileData(profileResponse.data);
+      }
+
+      // Get reviews
+      const reviewsResponse = await ApiService.getReviewsByUserId(userData.id);
+      if (reviewsResponse.success) {
+        setReviews(reviewsResponse.data);
+      }
+
+      // Get review statistics
+      const statsResponse = await ApiService.getReviewStats(userData.id);
+      if (statsResponse.success) {
+        setReviewStats(statsResponse.data);
+      }
     } catch (error) {
-      Alert.alert("Failed to fetch freelancer data")
+      Alert.alert("Error", "Failed to fetch data");
     } finally {
       setLoadingProfile(false);
     }
-  }, [user]);
+  }, [userData?.id]);
 
   useEffect(() => {
-    const flagsData = async () => {
-      if (userData) {
-        try {
-          const freelancerId = userData?.$id;
+    fetchData();
+  }, [fetchData]);
 
-          const collectionId = userData?.role === "client" ? appwriteConfig.clientCollectionId : appwriteConfig.freelancerCollectionId
-
-
-          const freelancerDoc = await databases.getDocument(
-            appwriteConfig.databaseId,
-            collectionId,
-            freelancerId
-          );
-          setUserData(freelancerDoc)
-        } catch (error) {
-          Alert.alert("Error updating flags:", error)
-        }
-      }
-    }
-
-    flagsData()
-  }, [refreshing])
-
-  useEffect(() => {
-    const fetchReviews = async () => {
-      try {
-        const receiverId = userData?.$id;
-        const userCollectionId =
-          role === "client"
-            ? appwriteConfig.freelancerCollectionId
-            : appwriteConfig.clientCollectionId;
-
-        // Fetch reviews for the current user (receiverId)
-        const response = await databases.listDocuments(
-          appwriteConfig.databaseId,
-          appwriteConfig.reviewCollectionId,
-          [Query.equal("receiverId", receiverId)] // Correct query syntax
-        );
-
-        // Sort reviews by createdAt field in descending order
-        const sortedDocuments = response.documents.sort((a, b) =>
-          new Date(b.$createdAt) - new Date(a.$createdAt)
-        );
-
-        const reviewsWithGiverData = await Promise.all(
-          sortedDocuments.map(async (review) => {
-            try {
-              const giverResponse = await databases.getDocument(
-                appwriteConfig.databaseId,
-                userCollectionId,
-                review.giverId
-              );
-
-              return {
-                ...review,
-                giverName: giverResponse.full_name,
-                giverPhoto: giverResponse.profile_photo,
-                state: giverResponse.state,
-                country: giverResponse.country,
-              };
-            } catch (giverError) {
-              Alert.alert("Error fetching giver data")
-              return review; // Return review without giver info if fetch fails
-            }
-          })
-        );
-
-        setReviews(reviewsWithGiverData); // Update state with enriched reviews
-      } catch (error) {
-        Alert.alert("Failed to fetch reviews")
-      }
-    };
-
-    fetchReviews();
-  }, [refreshing]);
-
-
-  const onRefresh = () => {
+  const onRefresh = useCallback(() => {
     setRefreshing(true);
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1000);
-  };
+    fetchData().finally(() => setRefreshing(false));
+  }, [fetchData]);
+
+  // const onShare = async () => {
+  //   try {
+  //     const profileLink = `https://birdearner.com/profile/${userData.id}`;
+  //     const result = await Share.share({
+  //       message: `Check out my profile on Bird Earner! Name: ${profileData?.user?.fullName}\n\nProfile Link: ${profileLink}`,
+  //     });
+      
+  //     if (result.action === Share.sharedAction) {
+  //       console.log(result.activityType ? 
+  //         `Shared with activity: ${result.activityType}` : 
+  //         "Profile shared successfully.");
+  //     }
+  //   } catch (error) {
+  //     Alert.alert("Error", "Failed to share the profile.");
+  //   }
+  // };
 
   const onShare = async () => {
     try {
@@ -154,33 +110,44 @@ export default function ReviewsScreen({ navigation }) {
     }
   };
 
-  if (loading || loadingProfile) {
+  const RatingBar = ({ rating, count, total }) => {
+    const percentage = total > 0 ? (count / total) * 100 : 0;
+    return (
+      <View style={styles.ratingBarContainer}>
+        <Text style={styles.ratingNumber}>{rating}★</Text>
+        <View style={styles.ratingBarBg}>
+          <View style={[styles.ratingBarFg, { width: `${percentage}%` }]} />
+        </View>
+        <Text style={styles.ratingCount}>{count}</Text>
+      </View>
+    );
+  };
+
+  if (loadingProfile) {
     return (
       <SafeAreaView style={styles.centered}>
-        <ActivityIndicator size="large" color="#000" />
+        <ActivityIndicator size="large" color="#4C0183" />
       </SafeAreaView>
     );
   }
 
-
   return (
-    <SafeAreaView>
-      <ScrollView style={styles.container}
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView
+        style={styles.container}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={["#3b006b"]}
-            progressBackgroundColor={currentTheme.cardBackground || "#fff"}
+            colors={["#4C0183"]}
+            progressBackgroundColor={currentTheme.cardBackground}
           />
         }
       >
         <View style={styles.tab}>
           <TouchableOpacity
             style={styles.tabButtonL}
-            onPress={() => {
-              navigation.navigate("MyProfile");
-            }}
+            onPress={() => navigation.navigate("MyProfile")}
           >
             <Text style={styles.tabTextL}>My Profile</Text>
           </TouchableOpacity>
@@ -191,63 +158,99 @@ export default function ReviewsScreen({ navigation }) {
 
         <ImageBackground
           source={
-            data?.cover_photo ? { uri: data.cover_photo } : require("../assets/backGroungBanner.png")
+            profileData?.coverPhoto
+              ? { uri: profileData.coverPhoto }
+              : require("../assets/backGroungBanner.png")
           }
           style={styles.backgroundImg}
+          imageStyle={styles.backgroundImgStyle}
         >
           <Image
             source={
-              data?.profile_photo ? { uri: data.profile_photo } : require("../assets/profile.png")
+              profileData?.profilePhoto
+                ? { uri: profileData.profilePhoto }
+                : require("../assets/profile.png")
             }
             style={styles.profileImage}
           />
-          {/* <TouchableOpacity
-            style={styles.settings}
-            onPress={() => {
-              navigation.navigate("Settings");
-            }}
-          >
-            <MaterialIcons name="settings" size={30} />
-          </TouchableOpacity>
           <TouchableOpacity style={styles.share} onPress={onShare}>
-            <FontAwesome name="share" size={24} />
-          </TouchableOpacity> */}
+            <FontAwesome name="share" size={24} color="#4C0183" />
+          </TouchableOpacity>
         </ImageBackground>
 
         <View style={styles.userDetails}>
-          <Text style={styles.nameText}>{data?.full_name}</Text>
-          {role === "client" ? (
-            <Text style={styles.roleText}>{data?.organization_type}</Text>
-          ) : (
-            <View style={styles.roleWrap}>
-              {data?.role_designation?.map((item, idx) => (
-                <Text key={idx} style={styles.roleText}>
-                  {item}
-                  {", "}
-                </Text>
-              ))}
+          <Text style={styles.nameText}>{profileData?.user?.fullName}</Text>
+          <Text style={styles.roleText}>
+            {profileData?.organizationType || profileData?.profileHeading}
+          </Text>
+          <View style={styles.locationContainer}>
+            <MaterialIcons name="location-on" size={16} color="#4C0183" />
+            <Text style={styles.locationText}>
+              {profileData?.city}, {profileData?.state}, {profileData?.country}
+            </Text>
+          </View>
+          
+          <View style={styles.statusContainer}>
+            <Text style={styles.statusText}>
+              Status: {profileData?.currentlyAvailable ? "Active" : "Inactive"}
+            </Text>
+            <FontAwesome 
+              name="circle" 
+              size={12} 
+              color={profileData?.currentlyAvailable ? "#6BCD2F" : "#FF3131"} 
+              style={styles.statusIcon}
+            />
+          </View>
+
+          {reviewStats && (
+            <View style={styles.statsContainer}>
+              <View style={styles.ratingHeader}>
+                <View style={styles.averageRating}>
+                  <Text style={styles.averageRatingNumber}>
+                    {reviewStats.averageRating}
+                  </Text>
+                  <Text style={styles.ratingLabel}>out of 5</Text>
+                </View>
+                <View style={styles.totalReviews}>
+                  <Text style={styles.totalNumber}>
+                    {reviewStats.totalReviews}
+                  </Text>
+                  <Text style={styles.reviewsLabel}>Total Reviews</Text>
+                </View>
+              </View>
+
+              <View style={styles.ratingBars}>
+                {[5, 4, 3, 2, 1].map((rating) => (
+                  <RatingBar
+                    key={rating}
+                    rating={rating}
+                    count={reviewStats.ratingDistribution[rating]}
+                    total={reviewStats.totalReviews}
+                  />
+                ))}
+              </View>
             </View>
           )}
-          <Text style={styles.statusText}>
-            Status:
-            {userData?.currently_available === true ? " Active " : " Inactive "}
-            {userData?.currently_available === true ? (<FontAwesome name="circle" size={12} color="#6BCD2F" />)
-              : (<FontAwesome name="circle" size={12} color="#FF3131" />)}
-          </Text>
         </View>
 
         <View style={styles.reviewSection}>
-          {reviews?.map((review, index) => (
-            <ReviewCard
-              key={index}
-              reviewerName={review?.giverName}
-              reviewerstate={review?.state}
-              reviewerCountry={review?.country}
-              starRating={review?.rating}
-              reviewText={review?.message_text}
-              reviewerPhoto={review?.giverPhoto}
-            />
-          ))}
+          <Text style={styles.reviewSectionTitle}>Recent Reviews</Text>
+          {reviews.length > 0 ? (
+            reviews.map((review) => (
+              <ReviewCard
+                key={review.id}
+                reviewerName={review.clientReviewer?.user?.fullName}
+                reviewerLocation={`${review.clientReviewer?.city}, ${review.clientReviewer?.country}`}
+                starRating={review.rating}
+                reviewText={review.reviewText}
+                reviewerPhoto={review.clientReviewer?.profilePhoto}
+                jobTitle={review.job?.jobTitle}
+                date={new Date(review.createdAt).toLocaleDateString()}
+              />
+            ))
+          ) : (
+            <Text style={styles.noReviewsText}>No reviews yet</Text>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -256,22 +259,29 @@ export default function ReviewsScreen({ navigation }) {
 
 const getStyles = (currentTheme) =>
   StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: currentTheme.background,
+    },
     container: {
-      backgroundColor: currentTheme.background || "#fff",
+      backgroundColor: currentTheme.background,
       paddingTop: 35,
-      paddingBottom: 500,
+    },
+    centered: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: currentTheme.background,
     },
     tab: {
-      display: "flex",
       flexDirection: "row",
       justifyContent: "center",
       gap: 2,
     },
     tabButtonL: {
-      backgroundColor: currentTheme.background3 || "#DADADA",
+      backgroundColor: currentTheme.background3,
       width: "50%",
       height: 40,
-      display: "flex",
       justifyContent: "center",
       alignItems: "center",
       borderTopRightRadius: 80,
@@ -280,13 +290,12 @@ const getStyles = (currentTheme) =>
       backgroundColor: "#4C0183",
       width: "50%",
       height: 40,
-      display: "flex",
       justifyContent: "center",
       alignItems: "center",
       borderTopLeftRadius: 80,
     },
     tabTextL: {
-      color: currentTheme.text || "#000",
+      color: currentTheme.text,
       fontSize: 20,
       fontWeight: "bold",
     },
@@ -295,11 +304,13 @@ const getStyles = (currentTheme) =>
       fontSize: 20,
       fontWeight: "bold",
     },
-
     backgroundImg: {
       width: "100%",
       height: 150,
       position: "relative",
+    },
+    backgroundImgStyle: {
+      opacity: 0.7,
     },
     profileImage: {
       width: 100,
@@ -308,58 +319,145 @@ const getStyles = (currentTheme) =>
       position: "absolute",
       bottom: -20,
       left: "38%",
+      borderWidth: 3,
+      borderColor: "#fff",
     },
     share: {
       position: "absolute",
-      bottom: 5,
-      right: 80,
-      backgroundColor: "#fff",
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      display: "flex",
-      justifyContent: "center",
-      alignItems: "center",
-    },
-    settings: {
-      position: "absolute",
-      bottom: 5,
+      bottom: 10,
       right: 20,
       backgroundColor: "#fff",
       width: 40,
       height: 40,
       borderRadius: 20,
-      display: "flex",
       justifyContent: "center",
       alignItems: "center",
+      elevation: 4,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.25,
+      shadowRadius: 3.84,
     },
     userDetails: {
-      display: "flex",
-      justifyContent: "center",
       alignItems: "center",
       paddingTop: 30,
+      paddingHorizontal: 20,
     },
     nameText: {
       fontSize: 28,
       fontWeight: "600",
-      color: currentTheme.text
-    },
-    roleWrap: {
-      display: "flex",
-      flexDirection: "row",
-      flexWrap: "wrap",
+      color: currentTheme.text,
+      marginBottom: 5,
     },
     roleText: {
+      fontSize: 16,
+      color: currentTheme.text,
+      marginBottom: 10,
+    },
+    locationContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: 15,
+    },
+    locationText: {
       fontSize: 14,
-      fontWeight: "400",
-      color: currentTheme.text
+      color: currentTheme.subText,
+      marginLeft: 5,
+    },
+    statusContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: 20,
     },
     statusText: {
       fontSize: 14,
       fontWeight: "600",
-      color: currentTheme.text
+      color: currentTheme.text,
+      marginRight: 5,
+    },
+    statusIcon: {
+      marginLeft: 5,
+    },
+    statsContainer: {
+      width: "100%",
+      backgroundColor: currentTheme.cardBackground,
+      borderRadius: 15,
+      padding: 20,
+      marginBottom: 20,
+    },
+    ratingHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginBottom: 20,
+      paddingHorizontal: 10,
+    },
+    averageRating: {
+      alignItems: "center",
+    },
+    averageRatingNumber: {
+      fontSize: 48,
+      fontWeight: "bold",
+      color: "#4C0183",
+    },
+    ratingLabel: {
+      color: currentTheme.subText,
+      fontSize: 14,
+    },
+    totalReviews: {
+      alignItems: "center",
+    },
+    totalNumber: {
+      fontSize: 24,
+      fontWeight: "bold",
+      color: currentTheme.text,
+    },
+    reviewsLabel: {
+      color: currentTheme.subText,
+      fontSize: 14,
+    },
+    ratingBars: {
+      gap: 10,
+    },
+    ratingBarContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+    },
+    ratingNumber: {
+      width: 30,
+      fontSize: 14,
+      color: currentTheme.text,
+    },
+    ratingBarBg: {
+      flex: 1,
+      height: 8,
+      backgroundColor: currentTheme.border,
+      borderRadius: 4,
+    },
+    ratingBarFg: {
+      height: "100%",
+      backgroundColor: "#4C0183",
+      borderRadius: 4,
+    },
+    ratingCount: {
+      width: 30,
+      fontSize: 14,
+      color: currentTheme.subText,
+      textAlign: "right",
     },
     reviewSection: {
       padding: 20,
     },
-  }); 
+    reviewSectionTitle: {
+      fontSize: 20,
+      fontWeight: "600",
+      color: currentTheme.text,
+      marginBottom: 15,
+    },
+    noReviewsText: {
+      textAlign: "center",
+      color: currentTheme.subText,
+      fontSize: 16,
+      marginTop: 20,
+    },
+  });

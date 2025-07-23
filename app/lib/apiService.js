@@ -267,6 +267,66 @@ class ApiService {
 
   // ==================== JOB MANAGEMENT ====================
   
+  // ==================== REVIEW MANAGEMENT ====================
+
+  // Get reviews for a user
+  async getReviewsByUserId(userId) {
+    try {
+      const response = await this.makeRequest(`/reviews/user/${userId}`);
+      return response;
+    } catch (error) {
+      this.handleApiError(error);
+    }
+  }
+
+  // Get review statistics
+  async getReviewStats(userId) {
+    try {
+      const response = await this.makeRequest(`/reviews/stats/${userId}`);
+      return response;
+    } catch (error) {
+      this.handleApiError(error);
+    }
+  }
+
+  // Create a review
+  async createReview(reviewData) {
+    try {
+      const response = await this.makeRequest('/reviews', {
+        method: 'POST',
+        body: JSON.stringify(reviewData)
+      });
+      return response;
+    } catch (error) {
+      this.handleApiError(error);
+    }
+  }
+
+  // Update a review
+  async updateReview(reviewId, reviewData) {
+    try {
+      const response = await this.makeRequest(`/reviews/${reviewId}`, {
+        method: 'PUT',
+        body: JSON.stringify(reviewData)
+      });
+      return response;
+    } catch (error) {
+      this.handleApiError(error);
+    }
+  }
+
+  // Delete a review
+  async deleteReview(reviewId) {
+    try {
+      const response = await this.makeRequest(`/reviews/${reviewId}`, {
+        method: 'DELETE'
+      });
+      return response;
+    } catch (error) {
+      this.handleApiError(error);
+    }
+  }
+
   // Create a new job
   async createJob(jobData) {
     try {
