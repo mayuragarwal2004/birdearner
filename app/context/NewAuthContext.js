@@ -14,9 +14,8 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import apiService from '../lib/apiService';
-import { setActiveRole, clearProfileStatus } from '../lib/profileStatusStorage';
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import apiService from "../lib/apiService";
 import Toast from "react-native-toast-message";
 
 const AuthContext = createContext();
@@ -40,50 +39,54 @@ export const AuthProvider = ({ children }) => {
       try {
         const userExists = await apiService.getUserById(userId);
         if (!userExists) {
-          console.log('User not found in database, triggering logout');
+          console.log("User not found in database, triggering logout");
           Toast.show({
-            type: 'error',
-            text1: 'Session Expired',
-            text2: 'Please log in again.',
+            type: "error",
+            text1: "Session Expired",
+            text2: "Please log in again.",
           });
           await logout();
           return null;
         }
       } catch (error) {
         // If user is not found (404 or similar), logout the user
-        if (error.message && (error.message.includes('User not found') || error.message.includes('404'))) {
-          console.log('User not found in database, triggering logout');
+        if (
+          error.message &&
+          (error.message.includes("User not found") ||
+            error.message.includes("404"))
+        ) {
+          console.log("User not found in database, triggering logout");
           await logout();
           return null;
         }
         // For other errors, continue with the normal flow
-        console.warn('Error checking user existence:', error.message);
+        console.warn("Error checking user existence:", error.message);
       }
 
       let profileData = null;
-      
-      if (userRole === 'FREELANCER') {
+
+      if (userRole === "FREELANCER") {
         try {
           profileData = await apiService.getFreelancerProfile(userId);
         } catch (error) {
-          console.log('No freelancer profile found for user');
+          console.log("No freelancer profile found for user");
         }
-      } else if (userRole === 'CLIENT') {
+      } else if (userRole === "CLIENT") {
         try {
           profileData = await apiService.getClientProfile(userId);
         } catch (error) {
-          console.log('No client profile found for user');
+          console.log("No client profile found for user");
         }
       }
 
       // Always set userProfile, even if it's null
       setUserProfile(profileData);
-      
+
       if (profileData) {
-        await AsyncStorage.setItem('userProfile', JSON.stringify(profileData));
+        await AsyncStorage.setItem("userProfile", JSON.stringify(profileData));
       } else {
         // Remove stored profile if none exists
-        await AsyncStorage.removeItem('userProfile');
+        await AsyncStorage.removeItem("userProfile");
       }
 
       return profileData;
@@ -99,23 +102,30 @@ export const AuthProvider = ({ children }) => {
   const checkUserSession = async () => {
     try {
       setLoading(true);
-      
+
       // Check for stored user data
-      const [storedUserData, storedUserProfile, storedAuthToken] = await Promise.all([
-        AsyncStorage.getItem('userData'),
-        AsyncStorage.getItem('userProfile'),
-        AsyncStorage.getItem('authToken'),
-      ]);
+      const [storedUserData, storedUserProfile, storedAuthToken] =
+        await Promise.all([
+          AsyncStorage.getItem("userData"),
+          AsyncStorage.getItem("userProfile"),
+          AsyncStorage.getItem("authToken"),
+        ]);
 
       if (storedUserData) {
         const userData = JSON.parse(storedUserData);
-        
+
         // Verify user still exists in database before setting state
         try {
           const userExists = await apiService.getUserById(userData.id);
           if (!userExists) {
-            console.log('Stored user not found in database during session check, clearing session');
-            await AsyncStorage.multiRemove(['userData', 'userProfile', 'authToken']);
+            console.log(
+              "Stored user not found in database during session check, clearing session"
+            );
+            await AsyncStorage.multiRemove([
+              "userData",
+              "userProfile",
+              "authToken",
+            ]);
             setUser(null);
             setUserData(null);
             setUserProfile(null);
@@ -123,9 +133,19 @@ export const AuthProvider = ({ children }) => {
             return;
           }
         } catch (error) {
-          if (error.message && (error.message.includes('User not found') || error.message.includes('404'))) {
-            console.log('Stored user not found in database during session check, clearing session');
-            await AsyncStorage.multiRemove(['userData', 'userProfile', 'authToken']);
+          if (
+            error.message &&
+            (error.message.includes("User not found") ||
+              error.message.includes("404"))
+          ) {
+            console.log(
+              "Stored user not found in database during session check, clearing session"
+            );
+            await AsyncStorage.multiRemove([
+              "userData",
+              "userProfile",
+              "authToken",
+            ]);
             setUser(null);
             setUserData(null);
             setUserProfile(null);
@@ -133,7 +153,10 @@ export const AuthProvider = ({ children }) => {
             return;
           }
           // For other errors, continue with normal flow but log the warning
-          console.warn('Error verifying user existence during session check:', error.message);
+          console.warn(
+            "Error verifying user existence during session check:",
+            error.message
+          );
         }
 
         setUser(userData);
@@ -152,7 +175,7 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error("Error checking user session :", error);
       // Clear invalid session data
-      await AsyncStorage.multiRemove(['userData', 'userProfile', 'authToken']);
+      await AsyncStorage.multiRemove(["userData", "userProfile", "authToken"]);
       setUser(null);
       setUserData(null);
       setUserProfile(null);
@@ -170,65 +193,75 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     try {
       const loginResponse = await apiService.login(email, password);
-      
+
       if (loginResponse) {
         setUser(loginResponse);
-        
+
         // Check for both freelancer and client profiles
         let freelancerProfile = null;
         let clientProfile = null;
-        
+
         try {
-          freelancerProfile = await apiService.getFreelancerProfile(loginResponse.id);
+          freelancerProfile = await apiService.getFreelancerProfile(
+            loginResponse.id
+          );
         } catch (error) {
           console.log("No freelancer profile found");
         }
-        
+
         try {
           clientProfile = await apiService.getClientProfile(loginResponse.id);
         } catch (error) {
           console.log("No client profile found");
         }
-        
+
         // Handle dual-role scenario
         if (freelancerProfile && clientProfile) {
           // User has both roles, show selection modal
           setRoleOptions({
-            freelancerData: { ...loginResponse, role: 'FREELANCER', profile: freelancerProfile },
-            clientData: { ...loginResponse, role: 'CLIENT', profile: clientProfile }
+            freelancerData: {
+              ...loginResponse,
+              role: "FREELANCER",
+              profile: freelancerProfile,
+            },
+            clientData: {
+              ...loginResponse,
+              role: "CLIENT",
+              profile: clientProfile,
+            },
           });
           setRoleSelectionVisible(true);
-          
+
           // Store user data but don't set userData yet (wait for role selection)
-          await AsyncStorage.setItem('userData', JSON.stringify(loginResponse));
+          await AsyncStorage.setItem("userData", JSON.stringify(loginResponse));
           return loginResponse;
         } else if (freelancerProfile) {
           // Only freelancer profile
-          const userData = { ...loginResponse, role: 'FREELANCER' };
+          const userData = { ...loginResponse, role: "FREELANCER" };
           setUserData(userData);
           setUserProfile(freelancerProfile);
-          await AsyncStorage.setItem('userData', JSON.stringify(userData));
-          await AsyncStorage.setItem('userProfile', JSON.stringify(freelancerProfile));
-          
-          // Set active role in profile status
-          await setActiveRole('FREELANCER');
+          await AsyncStorage.setItem("userData", JSON.stringify(userData));
+          await AsyncStorage.setItem(
+            "userProfile",
+            JSON.stringify(freelancerProfile)
+          );
         } else if (clientProfile) {
           // Only client profile
-          const userData = { ...loginResponse, role: 'CLIENT' };
+          const userData = { ...loginResponse, role: "CLIENT" };
           setUserData(userData);
           setUserProfile(clientProfile);
-          await AsyncStorage.setItem('userData', JSON.stringify(userData));
-          await AsyncStorage.setItem('userProfile', JSON.stringify(clientProfile));
-          
-          // Set active role in profile status
-          await setActiveRole('CLIENT');
+          await AsyncStorage.setItem("userData", JSON.stringify(userData));
+          await AsyncStorage.setItem(
+            "userProfile",
+            JSON.stringify(clientProfile)
+          );
         } else {
           // No profile found, set basic user data
           setUserData(loginResponse);
           setUserProfile(null);
-          await AsyncStorage.setItem('userData', JSON.stringify(loginResponse));
+          await AsyncStorage.setItem("userData", JSON.stringify(loginResponse));
         }
-        
+
         return loginResponse;
       }
     } catch (error) {
@@ -240,61 +273,88 @@ export const AuthProvider = ({ children }) => {
   // Register function
   const register = async (userData) => {
     try {
-      console.log('Starting registration with data:', userData);
+      console.log("Starting registration with data:", userData);
       let registrationResponse;
-      
+
       // Use specific signup endpoints based on role
-      if (userData.role === 'FREELANCER') {
+      if (userData.role === "FREELANCER") {
         registrationResponse = await apiService.signupFreelancer(userData);
-      } else if (userData.role === 'CLIENT') {
+      } else if (userData.role === "CLIENT") {
         registrationResponse = await apiService.signupClient(userData);
       } else {
         // Fallback to generic register for backward compatibility
         registrationResponse = await apiService.register(userData);
       }
-      
-      console.log('Registration response:', registrationResponse);
-      
-      if (registrationResponse && registrationResponse.success && registrationResponse.data) {
-        console.log('Registration successful, user authenticated automatically');
+
+      console.log("Registration response:", registrationResponse);
+
+      if (
+        registrationResponse &&
+        registrationResponse.success &&
+        registrationResponse.data
+      ) {
+        console.log(
+          "Registration successful, user authenticated automatically"
+        );
         const authenticatedUser = registrationResponse.data;
-        
-        console.log('Setting user state with:', authenticatedUser);
-        
+
+        console.log("Setting user state with:", authenticatedUser);
+
         // Set states with the authenticated user data
         setUser(authenticatedUser);
         setUserData(authenticatedUser);
-        
+
         // Extract profile data from the response
         let profileData = null;
-        if (authenticatedUser.role === 'FREELANCER' && authenticatedUser.freelancer) {
+        if (
+          authenticatedUser.role === "FREELANCER" &&
+          authenticatedUser.freelancer
+        ) {
           profileData = authenticatedUser.freelancer;
-          console.log('Found freelancer profile:', profileData);
-        } else if (authenticatedUser.role === 'CLIENT' && authenticatedUser.client) {
+          console.log("Found freelancer profile:", profileData);
+        } else if (
+          authenticatedUser.role === "CLIENT" &&
+          authenticatedUser.client
+        ) {
           profileData = authenticatedUser.client;
-          console.log('Found client profile:', profileData);
+          console.log("Found client profile:", profileData);
         }
-        
+
         if (profileData) {
           setUserProfile(profileData);
-          await AsyncStorage.setItem('userProfile', JSON.stringify(profileData));
-          console.log('Stored user profile in AsyncStorage');
+          await AsyncStorage.setItem(
+            "userProfile",
+            JSON.stringify(profileData)
+          );
+          console.log("Stored user profile in AsyncStorage");
         }
-        
+
         // Store user data
-        await AsyncStorage.setItem('userData', JSON.stringify(authenticatedUser));
-        
-        console.log('Registration and authentication completed successfully');
-        console.log('Final user state - user:', !!authenticatedUser, 'userData:', !!authenticatedUser, 'userProfile:', !!profileData);
-        
+        await AsyncStorage.setItem(
+          "userData",
+          JSON.stringify(authenticatedUser)
+        );
+
+        console.log("Registration and authentication completed successfully");
+        console.log(
+          "Final user state - user:",
+          !!authenticatedUser,
+          "userData:",
+          !!authenticatedUser,
+          "userProfile:",
+          !!profileData
+        );
+
         return authenticatedUser;
       } else {
-        console.log('Registration was not successful:', registrationResponse);
+        console.log("Registration was not successful:", registrationResponse);
         throw new Error("Registration failed");
       }
     } catch (error) {
       console.error("Registration error:", error);
-      throw new Error(error.message || "Registration failed. Please try again.");
+      throw new Error(
+        error.message || "Registration failed. Please try again."
+      );
     }
   };
 
@@ -306,19 +366,13 @@ export const AuthProvider = ({ children }) => {
       setUserData(null);
       setUserProfile(null);
       setRoleOptions({ freelancerData: null, clientData: null });
-      
-      // Clear profile status on logout
-      await clearProfileStatus();
     } catch (error) {
       console.error("Logout error:", error);
       // Force logout even if API call fails
-      await AsyncStorage.multiRemove(['userData', 'userProfile', 'authToken']);
+      await AsyncStorage.multiRemove(["userData", "userProfile", "authToken"]);
       setUser(null);
       setUserData(null);
       setUserProfile(null);
-      
-      // Clear profile status on logout
-      await clearProfileStatus();
     }
   }, []);
 
@@ -335,11 +389,16 @@ export const AuthProvider = ({ children }) => {
         email: user.email,
       };
 
-      const freelancerProfile = await apiService.createFreelancerProfile(profileData);
-      
+      const freelancerProfile = await apiService.createFreelancerProfile(
+        profileData
+      );
+
       if (freelancerProfile) {
         setUserProfile(freelancerProfile);
-        await AsyncStorage.setItem('userProfile', JSON.stringify(freelancerProfile));
+        await AsyncStorage.setItem(
+          "userProfile",
+          JSON.stringify(freelancerProfile)
+        );
         return freelancerProfile;
       }
     } catch (error) {
@@ -362,10 +421,13 @@ export const AuthProvider = ({ children }) => {
       };
 
       const clientProfile = await apiService.createClientProfile(profileData);
-      
+
       if (clientProfile) {
         setUserProfile(clientProfile);
-        await AsyncStorage.setItem('userProfile', JSON.stringify(clientProfile));
+        await AsyncStorage.setItem(
+          "userProfile",
+          JSON.stringify(clientProfile)
+        );
         return clientProfile;
       }
     } catch (error) {
@@ -382,16 +444,25 @@ export const AuthProvider = ({ children }) => {
       }
 
       let updatedProfile;
-      
-      if (user.role === 'FREELANCER') {
-        updatedProfile = await apiService.updateFreelancerProfile(userProfile.id, updateData);
-      } else if (user.role === 'CLIENT') {
-        updatedProfile = await apiService.updateClientProfile(userProfile.id, updateData);
+
+      if (user.role === "FREELANCER") {
+        updatedProfile = await apiService.updateFreelancerProfile(
+          userProfile.id,
+          updateData
+        );
+      } else if (user.role === "CLIENT") {
+        updatedProfile = await apiService.updateClientProfile(
+          userProfile.id,
+          updateData
+        );
       }
 
       if (updatedProfile) {
         setUserProfile(updatedProfile);
-        await AsyncStorage.setItem('userProfile', JSON.stringify(updatedProfile));
+        await AsyncStorage.setItem(
+          "userProfile",
+          JSON.stringify(updatedProfile)
+        );
         return updatedProfile;
       }
     } catch (error) {
@@ -403,37 +474,30 @@ export const AuthProvider = ({ children }) => {
   // Role selection modal handlers
   const selectRole = async (selectedRole) => {
     try {
-      if (selectedRole === 'FREELANCER' && roleOptions.freelancerData) {
+      if (selectedRole === "FREELANCER" && roleOptions.freelancerData) {
         const userData = roleOptions.freelancerData;
         const profileData = userData.profile;
-        
+
         setUserData(userData);
         setUserProfile(profileData);
-        
+
         // Store the selected role data
-        await AsyncStorage.setItem('userData', JSON.stringify(userData));
-        await AsyncStorage.setItem('userProfile', JSON.stringify(profileData));
-        
-        // Set active role in profile status
-        await setActiveRole('FREELANCER');
-        
-      } else if (selectedRole === 'CLIENT' && roleOptions.clientData) {
+        await AsyncStorage.setItem("userData", JSON.stringify(userData));
+        await AsyncStorage.setItem("userProfile", JSON.stringify(profileData));
+      } else if (selectedRole === "CLIENT" && roleOptions.clientData) {
         const userData = roleOptions.clientData;
         const profileData = userData.profile;
-        
+
         setUserData(userData);
         setUserProfile(profileData);
-        
+
         // Store the selected role data
-        await AsyncStorage.setItem('userData', JSON.stringify(userData));
-        await AsyncStorage.setItem('userProfile', JSON.stringify(profileData));
-        
-        // Set active role in profile status
-        await setActiveRole('CLIENT');
+        await AsyncStorage.setItem("userData", JSON.stringify(userData));
+        await AsyncStorage.setItem("userProfile", JSON.stringify(profileData));
       }
-      
+
       setRoleSelectionVisible(false);
-      
+
       // Clear role options after selection
       setRoleOptions({
         freelancerData: null,
@@ -453,19 +517,18 @@ export const AuthProvider = ({ children }) => {
       }
 
       // Update user role on backend
-      const updatedUser = await apiService.updateUser(user.id, { role: newRole });
-      
+      const updatedUser = await apiService.updateUser(user.id, {
+        role: newRole,
+      });
+
       if (updatedUser) {
         // Update local state
         setUserData(updatedUser);
-        await AsyncStorage.setItem('userData', JSON.stringify(updatedUser));
-        
+        await AsyncStorage.setItem("userData", JSON.stringify(updatedUser));
+
         // Fetch the corresponding profile
         await fetchUserProfile(updatedUser.id, newRole);
-        
-        // Set active role in profile status
-        await setActiveRole(newRole);
-        
+
         return updatedUser;
       }
     } catch (error) {
@@ -480,32 +543,39 @@ export const AuthProvider = ({ children }) => {
       try {
         // Fetch fresh user data from backend
         const freshUserData = await apiService.getUserById(user.id);
-        
+
         if (freshUserData) {
           setUserData(freshUserData);
-          
+
           // Extract profile data from the response
           let profileData = null;
-          if (freshUserData.role === 'FREELANCER' && freshUserData.freelancer) {
+          if (freshUserData.role === "FREELANCER" && freshUserData.freelancer) {
             profileData = freshUserData.freelancer;
-          } else if (freshUserData.role === 'CLIENT' && freshUserData.client) {
+          } else if (freshUserData.role === "CLIENT" && freshUserData.client) {
             profileData = freshUserData.client;
           }
-          
+
           if (profileData) {
             setUserProfile(profileData);
-            await AsyncStorage.setItem('userProfile', JSON.stringify(profileData));
+            await AsyncStorage.setItem(
+              "userProfile",
+              JSON.stringify(profileData)
+            );
           }
-          
+
           // Update stored user data
-          await AsyncStorage.setItem('userData', JSON.stringify(freshUserData));
+          await AsyncStorage.setItem("userData", JSON.stringify(freshUserData));
         }
       } catch (error) {
         console.error("Error refreshing user data:", error);
-        
+
         // If user is not found in database, logout automatically
-        if (error.message && (error.message.includes('User not found') || error.message.includes('404'))) {
-          console.log('User not found during refresh, triggering logout');
+        if (
+          error.message &&
+          (error.message.includes("User not found") ||
+            error.message.includes("404"))
+        ) {
+          console.log("User not found during refresh, triggering logout");
           await logout();
         }
       }
@@ -515,18 +585,24 @@ export const AuthProvider = ({ children }) => {
   // Validate if current user still exists in database
   const validateUserExists = async () => {
     if (!user) return false;
-    
+
     try {
       const userExists = await apiService.getUserById(user.id);
       return !!userExists;
     } catch (error) {
-      if (error.message && (error.message.includes('User not found') || error.message.includes('404'))) {
-        console.log('User validation failed: user not found, triggering logout');
+      if (
+        error.message &&
+        (error.message.includes("User not found") ||
+          error.message.includes("404"))
+      ) {
+        console.log(
+          "User validation failed: user not found, triggering logout"
+        );
         await logout();
         return false;
       }
       // For other errors, assume user exists to avoid unnecessary logouts
-      console.warn('Error validating user existence:', error.message);
+      console.warn("Error validating user existence:", error.message);
       return true;
     }
   };
@@ -565,7 +641,7 @@ export const AuthProvider = ({ children }) => {
   return (
     <AuthContext.Provider value={value}>
       {children}
-      
+
       {/* Role Selection Modal */}
       <Modal
         visible={roleSelectionVisible}
@@ -579,20 +655,20 @@ export const AuthProvider = ({ children }) => {
             Multiple accounts found for your email. Please choose a role to
             continue:
           </Text>
-          
+
           {roleOptions.freelancerData && (
             <TouchableOpacity
               style={[styles.button, styles.freelancerButton]}
-              onPress={() => selectRole('FREELANCER')}
+              onPress={() => selectRole("FREELANCER")}
             >
               <Text style={styles.buttonText}>Freelancer</Text>
             </TouchableOpacity>
           )}
-          
+
           {roleOptions.clientData && (
             <TouchableOpacity
               style={[styles.button, styles.clientButton]}
-              onPress={() => selectRole('CLIENT')}
+              onPress={() => selectRole("CLIENT")}
             >
               <Text style={styles.buttonText}>Client</Text>
             </TouchableOpacity>
@@ -606,7 +682,7 @@ export const AuthProvider = ({ children }) => {
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };
@@ -614,14 +690,14 @@ export const useAuth = () => {
 const styles = StyleSheet.create({
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#f5f5f5",
   },
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: '#666',
+    color: "#666",
   },
   modalContainer: {
     flex: 1,

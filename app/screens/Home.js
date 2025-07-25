@@ -12,8 +12,6 @@ import { FontAwesome, MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "../context/NewAuthContext";
 import { useTheme } from "../context/ThemeContext";
 import { useNavigation } from "@react-navigation/native";
-import { getProfileStatus, isProfileSetupNeeded, isPhaseCompleteOrSkipped } from "../lib/profileStatusStorage";
-// import { useAppwrite } from "../context/AppwriteContext";
 
 const HomeScreen = () => {
   // const { appwriteConfig, databases } = useAppwrite();

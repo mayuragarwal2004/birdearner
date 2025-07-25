@@ -15,7 +15,6 @@ import UserSvg from "./assets/UserSvg";
 import JobIconSvg from "./assets/JobIconSvg";
 // import JobIconSvg from "./assets/jobIconSvg";
 import { useAuth } from "./context/NewAuthContext";
-import skipTracker from "./lib/skipTracker";
 
 // Authentication Screens
 import LoginScreen from "./screens/Login";
@@ -37,15 +36,12 @@ import ClientHomeStack from "./stacks/ClientHomeStack";
 // Individual Screens (for stack navigation)
 import PortfolioScreen from "./screens/Portfolio";
 import Chat from "./screens/Chat";
-import DescribeRole from "./screens/DescribeRole";
-import TellUsAboutYouScreen from "./screens/TellUsAboutYou";
 import Inbox from "./screens/Inbox";
 import JobDetailsChatScreen from "./screens/JobDetailsChat";
 import ReviewGive from "./screens/ReviewGive";
 import PortfolioComScreen from "./screens/PortfolioCom";
 import ChatList from "./screens/ChatList";
 import OffersScreen from "./screens/Offers";
-import DescribeRoleCom from "./screens/DescribeRoleCom";
 import ProfileScreen from "./screens/ProfileScreen";
 import ReviewsScreen from "./screens/ReviewsScreen";
 import SubmitSolutionScreen from "./screens/SubmitSolutionScreen";
@@ -252,30 +248,6 @@ export function App() {
   const [skipTrackingHealthy, setSkipTrackingHealthy] = useState(true);
   const { userData, loading } = useAuth();
 
-  // Emergency fallback: If skip tracking is broken, allow app access after timeout
-  useEffect(() => {
-    const checkSkipTrackingHealth = async () => {
-      try {
-        const isHealthy = await skipTracker.healthCheck();
-        setSkipTrackingHealthy(isHealthy);
-
-        if (!isHealthy) {
-          console.warn("Skip tracking system unhealthy, enabling emergency fallback");
-          // After 10 seconds, allow app access regardless of profile setup
-          setTimeout(() => {
-            console.log("Emergency fallback: Allowing app access to prevent signup failure");
-          }, 10000);
-        }
-      } catch (error) {
-        console.error("Skip tracking health check failed:", error);
-        setSkipTrackingHealthy(false);
-      }
-    };
-
-    if (userData) {
-      checkSkipTrackingHealth();
-    }
-  }, [userData]);
   async function requestUserPermission() {
     const authStatus = await messaging().requestPermission();
     const enabled =
@@ -338,24 +310,6 @@ export function App() {
     }
   }, []);
 
-  // Simple authentication check
-  useEffect(() => {
-    console.log('App: User state changed - user:', !!userData, 'userData:', !!userData);
-    if (userData) {
-      console.log("User authenticated:", userData.email, "role:", userData.role);
-      // Log profile setup status for debugging
-        
-      // Log skip analytics for monitoring
-      skipTracker.getSkipStatus().then(skipStatus => {
-        if (skipStatus && skipStatus.skipCount > 0) {
-          console.log("Skip analytics:", skipStatus);
-        }
-      }).catch(err => console.log("Skip status check failed:", err));
-    } else {
-      console.log("User not authenticated");
-    }
-  }, [userData]);
-
   if (loading) {
     console.log("App: Loading state, showing intro screen");
     return <IntroScreen />;
@@ -380,8 +334,6 @@ export function App() {
           
           {/* Profile Setup Screens - Available for navigation */}
           <Stack.Screen name="Role" component={Role} />
-          <Stack.Screen name="DescribeRole" component={DescribeRole} />
-          <Stack.Screen name="TellUsAboutYou" component={TellUsAboutYouScreen} />
           <Stack.Screen name="Portfolio" component={PortfolioScreen} />
           
           {/* Additional authenticated screens available for navigation */}
@@ -390,8 +342,6 @@ export function App() {
           <Stack.Screen name="Chatlist" component={ChatList} />
           <Stack.Screen name="JobDetailsChat" component={JobDetailsChatScreen} />
           <Stack.Screen name="PortfolioCom" component={PortfolioComScreen} />
-          <Stack.Screen name="TellUsAboutYouCom" component={TellUsAboutYouScreen} />
-          <Stack.Screen name="DescribeRoleCom" component={DescribeRoleCom} />
           <Stack.Screen name="ProfileScreen" component={ProfileScreen} />
           <Stack.Screen name="Offers" component={OffersScreen} />
           <Stack.Screen name="ReviewGive" component={ReviewGive} />
