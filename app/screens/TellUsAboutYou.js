@@ -254,7 +254,7 @@ const TellUsAboutYouScreen = ({ route }) => {
         if (!userProfile?.id) {
           return handleError("Client profile not found. Please contact support.");
         }
-        await apiService.updateClientPhase2(userProfile.id, updateData);
+        // await apiService.updateClientPhase2(userProfile.id, updateData);
       }
 
       handleSuccess("Your details have been updated successfully.");

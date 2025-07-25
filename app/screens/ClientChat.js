@@ -8,25 +8,30 @@ import {
   Modal,
   Alert,
   StyleSheet,
+  ActivityIndicator,
+  Platform,
 } from "react-native";
 import { useAuth } from "../context/NewAuthContext";
-import { Ionicons } from "@expo/vector-icons";
-import Toast from 'react-native-toast-message';
+import { Ionicons, MaterialIcons } from "@expo/vector-icons";
+import Toast from "react-native-toast-message";
 import { useTheme } from "../context/ThemeContext";
 import ApiService from "../lib/apiService";
-import DeadlineTimer from '../components/DeadlineTimer';
+import DeadlineTimer from "../components/DeadlineTimer";
+import MessageItem from "../components/MessageItem";
+import * as DocumentPicker from "expo-document-picker";
+import * as FileSystem from "expo-file-system";
 
 const ClientChat = ({ route, navigation }) => {
   const { full_name, freelancer, jobId } = route.params;
-  console.log({jobId, freelancer});
-  
+  console.log({ jobId, freelancer });
+
   const [messages, setMessages] = useState([]);
   const [thread, setThread] = useState(null);
   const [input, setInput] = useState("");
   const { userData } = useAuth();
   const api = ApiService;
   const flatListRef = useRef();
-  const [chatStatus, setChatStatus] = useState('PENDING');
+  const [chatStatus, setChatStatus] = useState("PENDING");
   const [characterLimit, setCharacterLimit] = useState(200);
   const [modalVisible, setModalVisible] = useState(false);
   const [reportModalVisible, setReportModalVisible] = useState(false);
@@ -37,18 +42,23 @@ const ClientChat = ({ route, navigation }) => {
   const [job, setJob] = useState(null);
   const [cancelModalVisible, setCancelModalVisible] = useState(false);
   const [countdown, setCountdown] = useState(30);
+  const [fileInfo, setFileInfo] = useState(null);
+  const [fileContent, setFileContent] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [sending, setSending] = useState(false);
+
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
   const styles = getStyles(currentTheme);
-  console.log({job});
-  
-  
+  console.log({ job });
+
   const reportOptions = [
     "Inappropriate content",
     "Spam",
     "Harassment",
     "Fraud",
-    "Other"
+    "Other",
   ];
 
   const dotMapData = ["View Profile", "Block", "Report"];
@@ -59,61 +69,69 @@ const ClientChat = ({ route, navigation }) => {
   };
 
   useEffect(() => {
-    if(job?.jobStatus)
-    setChatStatus(job.jobStatus.toUpperCase())
+    if (job?.jobStatus) setChatStatus(job.jobStatus.toUpperCase());
     if (job?.characterLimit) {
       setCharacterLimit(job.characterLimit);
     }
-    if (job?.assignedFreelancerId === freelancer.id) {
-      setChatStatus('ACCEPTED');
+    if (
+      job?.jobStatus === "ACCEPTED" &&
+      job?.assignedFreelancerId === freelancer.id
+    ) {
+      setChatStatus("ACCEPTED");
     }
-    if (job?.assignedFreelancerId && job?.assignedFreelancerId !== freelancer.id) {
-      setChatStatus('REJECTED');
+    if (
+      job?.assignedFreelancerId &&
+      job?.assignedFreelancerId !== freelancer.id
+    ) {
+      setChatStatus("REJECTED");
     }
     if (job?.assignedFreelancerId === null) {
-      setChatStatus('PENDING');
+      setChatStatus("PENDING");
     }
     return () => {
-      setChatStatus('PENDING');
-    }
+      setChatStatus("PENDING");
+    };
   }, [job?.assignedFreelancerId, job?.jobStatus, freelancer.id]);
-  
+
   const handleReject = async () => {
     try {
       await api.init();
-      
+
       // First update the chat thread status
-      const threadRes = await api.makeRequest(`/chat/thread/${thread.id}/status`, {
-        method: 'PATCH',
-        body: JSON.stringify({
-          status: 'REJECTED'
-        })
-      });
+      const threadRes = await api.makeRequest(
+        `/chat/thread/${thread.id}/status`,
+        {
+          method: "PATCH",
+          body: JSON.stringify({
+            status: "REJECTED",
+          }),
+        }
+      );
 
       // Then update the job status
       const res = await api.makeRequest(`/jobs/${jobId}/reject-freelancer`, {
-        method: 'POST',
+        method: "POST",
         body: JSON.stringify({
           freelancerId: freelancer.id,
-          threadId: thread.id
-        })
+          threadId: thread.id,
+        }),
       });
-      
+
       if (res.success) {
-        Toast.show({ 
-          type: 'success', 
-          text1: 'Success', 
-          text2: 'Freelancer rejected successfully' 
+        Toast.show({
+          type: "success",
+          text1: "Success",
+          text2: "Freelancer rejected successfully",
         });
-        setThread({ ...thread, status: 'REJECTED' });
+        setThread({ ...thread, status: "REJECTED" });
         navigation.goBack();
       }
     } catch (err) {
-      console.error('Rejection error:', err);
-      Toast.show({ 
-        type: 'error', 
-        text1: 'Error', 
-        text2: 'Failed to reject freelancer' 
+      console.error("Rejection error:", err);
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: "Failed to reject freelancer",
       });
     }
   };
@@ -123,22 +141,28 @@ const ClientChat = ({ route, navigation }) => {
     try {
       await api.init();
       const res = await api.makeRequest(`/jobs/${jobId}/assign`, {
-        method: 'PATCH',
+        method: "PATCH",
         body: JSON.stringify({
           freelancerId: freelancer.id,
-          jobStatus: 'IN_PROGRESS',
-          deadlineDate: new Date(Date.now() + (parseInt(job.projectDuration) * 24 * 60 * 60 * 1000)) // Convert project duration to milliseconds
-        })
+          jobStatus: "IN_PROGRESS",
+          deadlineDate: new Date(
+            Date.now() + parseInt(job.projectDuration) * 24 * 60 * 60 * 1000
+          ), // Convert project duration to milliseconds
+        }),
       });
-      
+
       if (res.success) {
-        Toast.show({ type: 'success', text1: 'Success', text2: 'Freelancer assigned successfully' });
+        Toast.show({
+          type: "success",
+          text1: "Success",
+          text2: "Freelancer assigned successfully",
+        });
         setJob(res.data);
         // Remove character limit after accepting
         setCharacterLimit(undefined);
       }
     } catch (err) {
-      Toast.show({ type: 'error', text1: 'Error', text2: err.message });
+      Toast.show({ type: "error", text1: "Error", text2: err.message });
     }
   };
 
@@ -165,18 +189,26 @@ const ClientChat = ({ route, navigation }) => {
     try {
       await api.init();
       const res = await api.makeRequest(`/jobs/${jobId}/cancel`, {
-        method: 'PATCH',
+        method: "PATCH",
         body: JSON.stringify({
-          userRole: 'client'
-        })
+          userRole: "client",
+        }),
       });
-      
+
       if (res.success) {
-        Toast.show({ type: 'success', text1: 'Success', text2: 'Job cancelled successfully' });
+        Toast.show({
+          type: "success",
+          text1: "Success",
+          text2: "Job cancelled successfully",
+        });
         navigation.goBack();
       }
     } catch (err) {
-      Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to cancel job' });
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: "Failed to cancel job",
+      });
     }
   };
 
@@ -184,15 +216,23 @@ const ClientChat = ({ route, navigation }) => {
     try {
       await api.init();
       const res = await api.makeRequest(`/jobs/${jobId}/complete`, {
-        method: 'PATCH'
+        method: "PATCH",
       });
-      
+
       if (res.success) {
-        Toast.show({ type: 'success', text1: 'Success', text2: 'Project marked as complete' });
+        Toast.show({
+          type: "success",
+          text1: "Success",
+          text2: "Project marked as complete",
+        });
         setJob(res.data);
       }
     } catch (err) {
-      Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to complete project' });
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: "Failed to complete project",
+      });
     }
   };
 
@@ -205,66 +245,112 @@ const ClientChat = ({ route, navigation }) => {
           setJob(res.data);
         }
       } catch (err) {
-        Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to fetch job details' });
+        Toast.show({
+          type: "error",
+          text1: "Error",
+          text2: "Failed to fetch job details",
+        });
       }
     };
 
     fetchJobDetails();
   }, [jobId]);
 
-
-
   const handleViewProfile = () => {
-    navigation.navigate('Profile', { userId: freelancer.user.id });
+    navigation.navigate("Profile", { userId: freelancer.user.id });
+  };
+
+  const handleFilePick = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: "*/*", // You can filter for specific mime types like 'application/pdf'
+        copyToCacheDirectory: true,
+      });
+      console.log({ result });
+
+      if (result.canceled === false) {
+        const file = result.assets[0];
+        console.log("Picked file:", file);
+        setFileInfo(file);
+
+        // Read file content if it's a text-based file (like .txt, .json, etc.)
+        const content = await FileSystem.readAsStringAsync(file.uri);
+        setFileContent(content);
+      } else {
+        console.log("File picking cancelled.");
+      }
+    } catch (error) {
+      console.error("Error picking file:", error);
+    }
   };
 
   const handleBlock = async () => {
     try {
       await api.init();
       const res = await api.makeRequest(`/chat/block`, {
-        method: 'POST',
+        method: "POST",
         body: JSON.stringify({
           threadId: thread.id,
           userId: userData.id,
-          blockedUserId: freelancer.user.id
-        })
+          blockedUserId: freelancer.user.id,
+        }),
       });
-      
+
       if (res.success) {
         setIsBlocked(true);
         setShowMenu(false);
-        Toast.show({ type: 'success', text1: 'Success', text2: 'User blocked successfully' });
+        Toast.show({
+          type: "success",
+          text1: "Success",
+          text2: "User blocked successfully",
+        });
       }
     } catch (err) {
-      Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to block user' });
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: "Failed to block user",
+      });
     }
   };
 
   const handleReport = async () => {
     if (!selectedReportReason) {
-      Toast.show({ type: 'error', text1: 'Error', text2: 'Please select a reason for reporting' });
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: "Please select a reason for reporting",
+      });
       return;
     }
 
     try {
       await api.init();
       const res = await api.makeRequest(`/chat/report`, {
-        method: 'POST',
+        method: "POST",
         body: JSON.stringify({
           threadId: thread.id,
           userId: userData.id,
           reportedUserId: freelancer.user.id,
-          reason: selectedReportReason
-        })
+          reason: selectedReportReason,
+        }),
       });
-      
+
       if (res.success) {
         setReportModalVisible(false);
         setSelectedReportReason(null);
-        Toast.show({ type: 'success', text1: 'Success', text2: 'Report submitted successfully' });
+        Toast.show({
+          type: "success",
+          text1: "Success",
+          text2: "Report submitted successfully",
+        });
       }
     } catch (err) {
-      Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to submit report' });
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: "Failed to submit report",
+      });
     }
   };
 
@@ -297,36 +383,136 @@ const ClientChat = ({ route, navigation }) => {
         });
         setThread(resThread.data);
         setCharacterLimit(resThread.data.characterLimit || 200);
-        const resMessages = await api.makeRequest(`/chat/messages/${resThread.data.id}`);
+        const resMessages = await api.makeRequest(
+          `/chat/messages/${resThread.data.id}`
+        );
         setMessages(resMessages.data);
       } catch (err) {
-        Toast.show({ type: 'error', text1: 'Error', text2: err.message });
+        Toast.show({ type: "error", text1: "Error", text2: err.message });
       }
     };
     getThreadAndMessages();
   }, [freelancer, userData.id, jobId]);
 
+  const refreshMessages = async () => {
+    try {
+      await api.init();
+      const resMessages = await api.makeRequest(`/chat/messages/${thread.id}`);
+      setMessages(resMessages.data);
+    } catch (err) {
+      Toast.show({ type: "error", text1: "Error", text2: err.message });
+    }
+  };
+
   const sendMessage = async () => {
-    if (input.trim() && thread) {
-      try {
-        await api.init();
-        const res = await api.makeRequest("/chat/message", {
-          method: "POST",
-          body: JSON.stringify({
-            chatThreadId: thread.id,
+    setSending(true);
+    if (fileInfo && fileInfo.name) {
+      if (input.trim() || fileContent.trim()) {
+        try {
+          setIsUploading(true);
+          await api.init();
+          const formData = new FormData();
+          formData.append("threadId", thread.id);
+          formData.append("senderId", userData.id);
+          formData.append("receiverId", freelancer.user.id);
+          formData.append("messageContent", input);
+          formData.append("messageType", "file");
+          formData.append("senderType", "CLIENT");
+          formData.append("file", {
+            uri:
+              Platform.OS === "ios"
+                ? fileInfo.uri.replace("file://", "")
+                : fileInfo.uri,
+            name: fileInfo.name,
+            type: fileInfo.mimeType || "application/octet-stream",
+          });
+
+          console.log("Sending file with data:", {
+            threadId: thread.id,
             senderId: userData.id,
             receiverId: freelancer.user.id,
             messageContent: input,
-            messageType: "text",
-            senderType: "client",
-          }),
-        });
-        setMessages((prev) => [...prev, res.data]);
-        setInput("");
-      } catch (err) {
-        Alert.alert("Error sending message:", err.message);
+            messageType: "file",
+            senderType: "CLIENT",
+            file: {
+              uri:
+                Platform.OS === "ios"
+                  ? fileInfo.uri.replace("file://", "")
+                  : fileInfo.uri,
+              name: fileInfo.name,
+              type: fileInfo.mimeType || "application/octet-stream",
+            },
+          });
+          console.log(`baseURL: ${api.baseURL}`);
+
+          const uploadOptions = {
+            method: "POST",
+            body: formData,
+            headers: {
+              ...(api.getAuthHeaders ? api.getAuthHeaders() : {}),
+            },
+          };
+
+          console.log("Upload options:", uploadOptions);
+
+          const res = await fetch(
+            `${api.baseURL}/chat/message/attachment`,
+            uploadOptions
+          );
+
+          console.log({ res });
+          // const result = await res.json();
+          // console.log({result});
+          if (res.status === 200) {
+            const result = await res.json();
+            console.log({ result });
+
+            setUploadProgress(100);
+            setIsUploading(false);
+            refreshMessages();
+            setInput("");
+            setFileInfo(null);
+            setFileContent("");
+          } else {
+            Toast.show({
+              type: "error",
+              text1: "Error",
+              text2: "Failed to send file",
+            });
+          }
+        } catch (err) {
+          console.error("Error sending message:", err);
+          Alert.alert("Error sending message:", err.message);
+        } finally {
+          setIsUploading(false);
+          setSending(false);
+        }
+      }
+    } else {
+      if (input.trim() && thread) {
+        try {
+          await api.init();
+          const res = await api.makeRequest("/chat/message", {
+            method: "POST",
+            body: JSON.stringify({
+              chatThreadId: thread.id,
+              senderId: userData.id,
+              receiverId: freelancer.user.id,
+              messageContent: input,
+              messageType: "text",
+              senderType: "CLIENT",
+            }),
+          });
+          setMessages((prev) => [...prev, res.data]);
+          setInput("");
+        } catch (err) {
+          Alert.alert("Error sending message:", err.message);
+        } finally {
+          setSending(false);
+        }
       }
     }
+    setSending(false);
   };
 
   const WarningModal = ({ visible, onConfirm, onCancel }) => {
@@ -379,7 +565,8 @@ const ClientChat = ({ route, navigation }) => {
               Why are you reporting this user?
             </Text>
             <Text style={styles.modalDescription}>
-              Your report is anonymous. If someone is in immediate danger, call the local emergency services - don't wait.
+              Your report is anonymous. If someone is in immediate danger, call
+              the local emergency services - don't wait.
             </Text>
             {reportOptions.map((option, index) => (
               <TouchableOpacity
@@ -445,43 +632,63 @@ const ClientChat = ({ route, navigation }) => {
           <Text style={styles.profile}>Tap for contact details</Text>
           <Text style={styles.username}>@{full_name}</Text>
           <Text style={styles.profile}>Last online 3 hrs ago</Text>
-          <View style={[styles.statusContainer, 
-            chatStatus === 'ACCEPTED' ? styles.statusAccepted :
-            chatStatus === 'REJECTED' ? styles.statusRejected :
-            chatStatus === 'COMPLETED' ? styles.statusCompleted :
-            styles.statusPending
-          ]}>
+          <View
+            style={[
+              styles.statusContainer,
+              chatStatus === "ACCEPTED"
+                ? styles.statusAccepted
+                : chatStatus === "REJECTED"
+                ? styles.statusRejected
+                : chatStatus === "COMPLETED"
+                ? styles.statusCompleted
+                : styles.statusPending,
+            ]}
+          >
             <Text style={styles.statusText}>{chatStatus}</Text>
           </View>
-          {job?.assignedFreelancerId && job.assignedFreelancerId !== freelancer.id && (
-            <View style={styles.assignedBanner}>
-              <Text style={styles.assignedText}>You have assigned this job to another freelancer</Text>
-            </View>
-          )}
+          {job?.assignedFreelancerId &&
+            job.assignedFreelancerId !== freelancer.id && (
+              <View style={styles.assignedBanner}>
+                <Text style={styles.assignedText}>
+                  You have assigned this job to another freelancer
+                </Text>
+              </View>
+            )}
 
           {job?.assignedFreelancerId === null ? (
             <View style={styles.actionButtons}>
-              <TouchableOpacity style={styles.acceptButton} onPress={handleAccept}>
+              <TouchableOpacity
+                style={styles.acceptButton}
+                onPress={handleAccept}
+              >
                 <Text style={styles.buttonText}>Accept</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.rejectButton} onPress={handleReject}>
+              <TouchableOpacity
+                style={styles.rejectButton}
+                onPress={handleReject}
+              >
                 <Text style={styles.buttonText}>Reject</Text>
               </TouchableOpacity>
             </View>
           ) : (
             <View>
-              <Text style={styles.deadline}>
-                {job?.deadlineDate && new Date(job.deadlineDate) < new Date()
-                  ? "Deadline Over"
-                  : "Deadline Timer"}
-              </Text>
+              {chatStatus !== "COMPLETED" && (
+                <Text style={styles.deadline}>
+                  {job?.deadlineDate && new Date(job.deadlineDate) < new Date()
+                    ? "Deadline Over"
+                    : "Deadline Timer"}
+                </Text>
+              )}
               <View style={styles.deadlineTimerContainer}>
-                {job?.deadlineDate && new Date(job.deadlineDate) < new Date() ? (
+                {job?.deadlineDate &&
+                new Date(job.deadlineDate) < new Date() ? (
                   <View style={styles.timeBoxCon}>
-                    <Text style={styles.penaltyText}>
-                      Deadline has passed
-                    </Text>
-                    {!job?.completed_status && (
+                    {chatStatus !== "COMPLETED" && (
+                      <Text style={styles.penaltyText}>
+                        Deadline has passed
+                      </Text>
+                    )}
+                    {chatStatus && chatStatus !== "COMPLETED" && (
                       <TouchableOpacity
                         style={styles.conColor}
                         onPress={handleConfirmProjComp}
@@ -491,20 +698,20 @@ const ClientChat = ({ route, navigation }) => {
                         </Text>
                       </TouchableOpacity>
                     )}
-                    {job?.completed_status && (
+                    {chatStatus === "COMPLETED" && (
                       <Text style={styles.conColorc}>Project Completed</Text>
                     )}
                   </View>
                 ) : (
-                  <DeadlineTimer 
+                  <DeadlineTimer
                     deadline={job?.deadlineDate}
-                    jobCompleted={job?.jobStatus === 'COMPLETED'}
+                    jobCompleted={job?.jobStatus === "COMPLETED"}
                     style={{
                       timeBox: styles.timeBox,
                       timeText: styles.timeText,
                       unitText: styles.unitText,
                       completedText: styles.conColorc,
-                      timeContainer: styles.timeContainer
+                      timeContainer: styles.timeContainer,
                     }}
                   />
                 )}
@@ -512,9 +719,13 @@ const ClientChat = ({ route, navigation }) => {
             </View>
           )}
         </View>
-        
+
         <TouchableOpacity onPress={() => setShowMenu(!showMenu)}>
-          <Ionicons name="ellipsis-horizontal" size={24} color={currentTheme.text || "black"} />
+          <Ionicons
+            name="ellipsis-horizontal"
+            size={24}
+            color={currentTheme.text || "black"}
+          />
         </TouchableOpacity>
         {showMenu && (
           <View style={styles.menuContainer}>
@@ -536,35 +747,77 @@ const ClientChat = ({ route, navigation }) => {
         ref={flatListRef}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <View style={[
-            styles.messageContainer,
-            item.senderId === userData.id ? styles.currentUserMessage : styles.otherUserMessage
-          ]}>
-            <Text style={[
-              styles.message,
-              item.senderId === userData.id ? {} : { color: '#fff' }
-            ]}>{item.messageContent}</Text>
-          </View>
+          <MessageItem
+            message={item.messageContent}
+            isCurrentUser={item.senderId === userData.id}
+            media={item.userMedia}
+            isUploading={item.isUploading}
+          />
         )}
         style={styles.chatList}
         contentContainerStyle={styles.chatListContainer}
       />
-      <View style={styles.limit}>
-        <Text style={styles.limitchar}>Character Limit</Text>
-        <Text style={styles.limitvar}>{characterLimit} characters remaining</Text>
-      </View>
+      {chatStatus && chatStatus === "PENDING" && (
+        <View style={styles.limit}>
+          <Text style={styles.limitchar}>Character Limit</Text>
+          <Text style={styles.limitvar}>
+            {characterLimit} characters remaining
+          </Text>
+        </View>
+      )}
       <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          value={input}
-          onChangeText={setInput}
-          placeholder="Type your message..."
-          maxLength={characterLimit || undefined}
-        />
-        <TouchableOpacity style={styles.sendButton} onPress={sendMessage}>
-          <Text style={styles.sendButtonText}>Send</Text>
-        </TouchableOpacity>
+        {fileInfo && (
+          <View style={styles.selectedFileContainer}>
+            {fileInfo && fileInfo.name && (
+              <View style={styles.fileInfo}>
+                <Text style={styles.fileName}>{fileInfo.name}</Text>
+                <TouchableOpacity
+                  style={styles.removeFileButton}
+                  onPress={() => {
+                    setFileInfo(null);
+                    setFileContent("");
+                  }}
+                >
+                  <MaterialIcons name="cancel" size={24} color="#4C0183" />
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        )}
+        <View style={styles.inputRow}>
+          <TextInput
+            style={styles.input}
+            value={input}
+            onChangeText={setInput}
+            placeholder="Type your message..."
+            maxLength={characterLimit || undefined}
+          />
+          {!fileContent && (
+            <TouchableOpacity
+              style={styles.attachButton}
+              onPress={handleFilePick}
+            >
+              <MaterialIcons name="attach-file" size={24} color="#4C0183" />
+            </TouchableOpacity>
+          )}
+
+          {sending ? (
+            <ActivityIndicator size="small" color="#4C0183" />
+          ) : (
+            <TouchableOpacity style={styles.sendButton} onPress={sendMessage}>
+              <Text style={styles.sendButtonText}>Send</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
+      {isUploading && (
+        <View style={styles.uploadProgress}>
+          <Text style={styles.uploadText}>
+            Uploading file... {Math.round(uploadProgress)}%
+          </Text>
+          <ActivityIndicator size="small" color="#4C0183" />
+        </View>
+      )}
       <Toast />
     </View>
   );
@@ -572,56 +825,66 @@ const ClientChat = ({ route, navigation }) => {
 
 const getStyles = (currentTheme) =>
   StyleSheet.create({
-    container: { flex: 1, backgroundColor: currentTheme.background || "#fff", paddingTop: 30 },
+    container: {
+      flex: 1,
+      backgroundColor: currentTheme.background || "#fff",
+      paddingTop: 30,
+    },
     header: {
       padding: 15,
       alignItems: "center",
       flex: 0,
       flexDirection: "row",
-      justifyContent: "space-around"
+      justifyContent: "space-around",
     },
-    actionButtons: { 
-      flexDirection: "row", 
-      justifyContent: "space-between", 
-      marginBottom: 10, 
-      gap: 10, 
-      marginTop: 25 
+    actionButtons: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginBottom: 10,
+      gap: 10,
+      marginTop: 25,
     },
-    acceptButton: { 
-      backgroundColor: "#4C0183", 
-      paddingHorizontal: 22, 
-      paddingVertical: 7, 
-      borderRadius: 8 
+    acceptButton: {
+      backgroundColor: "#4C0183",
+      paddingHorizontal: 22,
+      paddingVertical: 7,
+      borderRadius: 8,
     },
-    rejectButton: { 
-      backgroundColor: "#A00B0B", 
-      paddingHorizontal: 22, 
-      paddingVertical: 7, 
-      borderRadius: 8 
+    rejectButton: {
+      backgroundColor: "#A00B0B",
+      paddingHorizontal: 22,
+      paddingVertical: 7,
+      borderRadius: 8,
     },
-    buttonText: { 
-      color: "#fff", 
-      textAlign: "center", 
-      fontSize: 16, 
-      fontWeight: "600" 
+    buttonText: {
+      color: "#fff",
+      textAlign: "center",
+      fontSize: 16,
+      fontWeight: "600",
     },
     deadlineTimer: { fontSize: 12, color: currentTheme.subText || "#888" },
-    deadline: { fontSize: 15, fontWeight: "500", color: currentTheme.text || "#000000", paddingTop: 6, textAlign: "center" },
+    deadline: {
+      fontSize: 15,
+      fontWeight: "500",
+      color: currentTheme.text || "#000000",
+      paddingTop: 6,
+      textAlign: "center",
+    },
     timeBoxCon: {
       alignItems: "center",
       flexDirection: "column",
-      gap: 12
+      gap: 12,
     },
     applyButtonText: {
-      color: '#fff',
-      fontWeight: 'bold',
+      color: "#fff",
+      fontWeight: "bold",
       fontSize: 16,
     },
     conColor: {
-      backgroundColor: '#00871E',
+      backgroundColor: "#00871E",
       paddingHorizontal: 15,
       borderRadius: 10,
-      alignItems: 'center',
+      alignItems: "center",
       marginBottom: 0,
       paddingVertical: 10,
       shadowColor: "#000000",
@@ -631,19 +894,19 @@ const getStyles = (currentTheme) =>
       },
       shadowOpacity: 0.17,
       shadowRadius: 3.05,
-      elevation: 4
+      elevation: 4,
     },
     conColorc: {
       paddingHorizontal: 15,
-      alignItems: 'center',
+      alignItems: "center",
       marginBottom: 0,
-      color: "#00871E"
+      color: "#00871E",
     },
     penaltyText: {
-      backgroundColor: '#B64928',
+      backgroundColor: "#B64928",
       paddingHorizontal: 10,
       borderRadius: 6,
-      alignItems: 'center',
+      alignItems: "center",
       paddingVertical: 3,
       shadowColor: currentTheme.shadow || "#000000",
       shadowOffset: {
@@ -652,7 +915,7 @@ const getStyles = (currentTheme) =>
       },
       shadowOpacity: 0.17,
       shadowRadius: 3.05,
-      elevation: 4
+      elevation: 4,
     },
     deadlineTimerContainer: {
       flexDirection: "row",
@@ -693,7 +956,7 @@ const getStyles = (currentTheme) =>
       shadowOpacity: 0.2,
       shadowRadius: 5,
       shadowOffset: { width: 0, height: 2 },
-      zIndex: 2334
+      zIndex: 2334,
     },
     menuItem: { paddingVertical: 10 },
     menuItemText: { fontSize: 16, color: currentTheme.text || "black" },
@@ -701,7 +964,7 @@ const getStyles = (currentTheme) =>
       flex: 1,
       justifyContent: "center",
       alignItems: "center",
-      backgroundColor: "rgba(0, 0, 0, 0.5)"
+      backgroundColor: "rgba(0, 0, 0, 0.5)",
     },
     modalContent: {
       width: "100%",
@@ -709,36 +972,36 @@ const getStyles = (currentTheme) =>
       padding: 30,
       backgroundColor: "#121212",
       borderRadius: 10,
-      alignItems: "center"
+      alignItems: "center",
     },
     modalTitle: {
       fontSize: 24,
       fontWeight: "bold",
       color: "#fff",
-      marginBottom: 10
+      marginBottom: 10,
     },
     modalSubtitle: {
       fontSize: 16,
       fontWeight: "600",
       color: "#fff",
-      marginBottom: 10
+      marginBottom: 10,
     },
     modalDescription: {
       fontSize: 14,
       color: "#b0b0b0",
       textAlign: "center",
-      marginBottom: 20
+      marginBottom: 20,
     },
     optionButton: {
       width: "100%",
       paddingVertical: 12,
       borderBottomWidth: 1,
-      borderBottomColor: "#303030"
+      borderBottomColor: "#303030",
     },
     optionText: {
       fontSize: 16,
       color: "#fff",
-      textAlign: "left"
+      textAlign: "left",
     },
     modalContainer1: {
       flex: 1,
@@ -821,20 +1084,29 @@ const getStyles = (currentTheme) =>
       flex: 0,
       flexDirection: "column",
     },
-    profile: { fontSize: 12, fontWeight: "400", color: currentTheme.text || "#000000" },
-    username: { fontSize: 24, fontWeight: "600", color: "#5c2d91", paddingVertical: 4 },
+    profile: {
+      fontSize: 12,
+      fontWeight: "400",
+      color: currentTheme.text || "#000000",
+    },
+    username: {
+      fontSize: 24,
+      fontWeight: "600",
+      color: "#5c2d91",
+      paddingVertical: 4,
+    },
     chatList: {
       flex: 1,
       backgroundColor: currentTheme.cardBackground || "#F1F1F1",
       marginHorizontal: 15,
-      borderRadius: 10
+      borderRadius: 10,
     },
     chatListContainer: { padding: 10 },
     messageContainer: {
       marginVertical: 5,
       paddingHorizontal: 15,
       borderRadius: 10,
-      paddingVertical: 6
+      paddingVertical: 6,
     },
     currentUserMessage: {
       backgroundColor: "#DADADA",
@@ -843,7 +1115,7 @@ const getStyles = (currentTheme) =>
     otherUserMessage: {
       backgroundColor: "#4C0183",
       alignSelf: "flex-start",
-      color: "#fff"
+      color: "#fff",
     },
     profileImage: {
       width: 50,
@@ -855,11 +1127,43 @@ const getStyles = (currentTheme) =>
     sender: { fontWeight: "bold", color: "#5c2d91" },
     message: { marginTop: 5, color: "#000" },
     inputContainer: {
-      flexDirection: "row",
+      flexDirection: "column",
       alignItems: "center",
       padding: 10,
       borderTopWidth: 1,
       borderColor: currentTheme.border || "#ddd",
+    },
+    inputRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      // flex: 1,
+      backgroundColor: currentTheme.background3 || "#fff",
+    },
+    selectedFileContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      backgroundColor: currentTheme.background3 || "#fff",
+      padding: 10,
+      borderRadius: 5,
+      marginBottom: 10,
+    },
+    fileInfo: {
+      flexDirection: "row",
+      alignItems: "center",
+      flex: 1,
+      marginRight: 10,
+    },
+    fileName: {
+      color: currentTheme.text || "#000",
+      fontSize: 14,
+      flex: 1,
+      marginRight: 10,
+    },
+    removeFileButton: {
+      padding: 5,
+      backgroundColor: "#f44336",
+      borderRadius: 5,
     },
     input: {
       flex: 1,
@@ -869,6 +1173,11 @@ const getStyles = (currentTheme) =>
       borderRadius: 5,
       color: currentTheme.subText,
     },
+    attachButton: {
+      padding: 10,
+      justifyContent: "center",
+      alignItems: "center",
+    },
     sendButton: {
       marginLeft: 10,
       padding: 10,
@@ -876,6 +1185,19 @@ const getStyles = (currentTheme) =>
       borderRadius: 5,
     },
     sendButtonText: { color: "#fff" },
+    uploadProgress: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 10,
+      backgroundColor: currentTheme.cardBackground,
+      borderTopWidth: 1,
+      borderColor: currentTheme.border,
+    },
+    uploadText: {
+      color: currentTheme.text,
+      marginRight: 10,
+    },
     limit: {
       flex: 0,
       backgroundColor: currentTheme.cardBackground || "#F1F1F1",
@@ -899,24 +1221,24 @@ const getStyles = (currentTheme) =>
       paddingHorizontal: 12,
       paddingVertical: 4,
       borderRadius: 12,
-      marginTop: 8
+      marginTop: 8,
     },
     statusText: {
-      color: '#FFFFFF',
-      fontWeight: '600',
-      fontSize: 12
+      color: "#FFFFFF",
+      fontWeight: "600",
+      fontSize: 12,
     },
     statusPending: {
-      backgroundColor: '#FFA500'
+      backgroundColor: "#FFA500",
     },
     statusAccepted: {
-      backgroundColor: '#4CAF50'
+      backgroundColor: "#4CAF50",
     },
     statusRejected: {
-      backgroundColor: '#F44336'
+      backgroundColor: "#F44336",
     },
     statusCompleted: {
-      backgroundColor: '#2196F3'
+      backgroundColor: "#2196F3",
     },
     // Warning Modal Styles
     modalContainer: {
@@ -958,19 +1280,19 @@ const getStyles = (currentTheme) =>
       borderRadius: 5,
     },
     assignedBanner: {
-      backgroundColor: '#E3F2FD',
+      backgroundColor: "#E3F2FD",
       padding: 10,
       marginTop: 10,
       borderRadius: 8,
       borderWidth: 1,
-      borderColor: '#90CAF9'
+      borderColor: "#90CAF9",
     },
     assignedText: {
-      color: '#1565C0',
-      textAlign: 'center',
+      color: "#1565C0",
+      textAlign: "center",
       fontSize: 14,
-      fontWeight: '500'
-    }
+      fontWeight: "500",
+    },
   });
 
 export default ClientChat;

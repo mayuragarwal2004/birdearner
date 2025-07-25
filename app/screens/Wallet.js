@@ -140,6 +140,9 @@ const WalletScreen = ({ navigation, route }) => {
     );
   };
 
+  console.log({history});
+  
+
   return (
     <View style={styles.container}>
       <View style={styles.main}>

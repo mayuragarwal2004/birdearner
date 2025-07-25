@@ -250,7 +250,7 @@ async function requestUserPermission() {
 export function App() {
   console.log("hi");
   const [skipTrackingHealthy, setSkipTrackingHealthy] = useState(true);
-  const { user, loading, userData, userProfile } = useAuth();
+  const { userData, loading } = useAuth();
 
   // Emergency fallback: If skip tracking is broken, allow app access after timeout
   useEffect(() => {
@@ -272,38 +272,10 @@ export function App() {
       }
     };
 
-    if (user) {
+    if (userData) {
       checkSkipTrackingHealth();
     }
-  }, [user]);
-
-  // Helper function to determine if user needs profile setup (for logging only)
-  const logProfileSetupStatus = async () => {
-    try {
-      if (!user || !userProfile) return;
-
-      // Check phase completion flags from database
-      const hasPhase1Complete = userProfile && userProfile.phase1Completed;
-      const hasPhase2Complete = userProfile && userProfile.phase2Completed;
-
-      // Check if phases were skipped locally
-      const phase1Skipped = await skipTracker.isPhaseSkipped("describe_role");
-      const phase2Skipped = await skipTracker.isPhaseSkipped("tell_us_about_you");
-
-      console.log("Phase 1 completed:", hasPhase1Complete, "skipped:", phase1Skipped);
-      console.log("Phase 2 completed:", hasPhase2Complete, "skipped:", phase2Skipped);
-
-      // User needs profile setup if either phase is incomplete AND not skipped
-      const needsPhase1 = !hasPhase1Complete && !phase1Skipped;
-      const needsPhase2 = !hasPhase2Complete && !phase2Skipped;
-      const needsSetup = needsPhase1 || needsPhase2;
-
-      console.log(`Profile setup needed: ${needsSetup}`);
-    } catch (error) {
-      console.error("Error checking profile setup status:", error);
-    }
-  };
-
+  }, [userData]);
   async function requestUserPermission() {
     const authStatus = await messaging().requestPermission();
     const enabled =
@@ -368,11 +340,10 @@ export function App() {
 
   // Simple authentication check
   useEffect(() => {
-    console.log('App: User state changed - user:', !!user, 'userData:', !!userData, 'userProfile:', !!userProfile);
-    if (user) {
-      console.log("User authenticated:", user.email, "role:", user.role);
+    console.log('App: User state changed - user:', !!userData, 'userData:', !!userData);
+    if (userData) {
+      console.log("User authenticated:", userData.email, "role:", userData.role);
       // Log profile setup status for debugging
-      logProfileSetupStatus();
         
       // Log skip analytics for monitoring
       skipTracker.getSkipStatus().then(skipStatus => {
@@ -383,21 +354,21 @@ export function App() {
     } else {
       console.log("User not authenticated");
     }
-  }, [user, userProfile]);
+  }, [userData]);
 
   if (loading) {
     console.log("App: Loading state, showing intro screen");
     return <IntroScreen />;
   }
 
-  console.log("App: Rendering navigation - user authenticated:", !!user);
+  console.log("App: Rendering navigation - user authenticated:", !!userData);
 
   return (
     <Stack.Navigator 
       screenOptions={{ headerShown: false }}
-      initialRouteName={user ? "MainTabs" : "Login"}
+      initialRouteName={userData ? "MainTabs" : "Login"}
     >
-      {user ? (
+      {userData ? (
         // Authenticated Stack - Route directly to role dashboard
         <>
           {/* Main App Tabs - Available after profile setup */}

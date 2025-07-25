@@ -60,7 +60,6 @@ const JobDescriptionScreen = ({ route, navigation }) => {
     );
   }
 
-  const { user } = useAuth();
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme] || themeStyles.light;
   const styles = getStyles(currentTheme);

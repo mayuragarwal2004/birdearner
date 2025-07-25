@@ -20,11 +20,14 @@ import gifAnimation from "../assets/loading.gif";
 import { useTheme } from "../context/ThemeContext";
 import { useNavigation } from "@react-navigation/native";
 import apiService from "../lib/apiService";
-import { getProfileStatus, isProfileSetupNeeded, isPhaseCompleteOrSkipped } from "../lib/profileStatusStorage";
+import {
+  getProfileStatus,
+  isProfileSetupNeeded,
+  isPhaseCompleteOrSkipped,
+} from "../lib/profileStatusStorage";
 // import { useAppwrite } from "../context/AppwriteContext";
 
 const placeholderImageURL = "https://picsum.photos/seed/";
-
 
 const ClientHomeScreen = () => {
   const [search, setSearch] = useState("");
@@ -45,78 +48,13 @@ const ClientHomeScreen = () => {
   const [profilePercentage, setProfilePercentage] = useState(20);
   const [refreshing, setRefreshing] = useState(false);
   const [combinedData, setCombinedData] = useState([]);
-  const { userData, setUserData, logout, userProfile, user } = useAuth();
+  const { userData, logout } = useAuth();
   const navigation = useNavigation();
 
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
 
   const styles = getStyles(currentTheme);
-
-  // Check profile setup status and determine if setup is needed
-  const checkProfileSetupStatus = async () => {
-    try {
-      if (!user || !userData || userData.role !== 'CLIENT') {
-        setShowProfileSetup(false);
-        return;
-      }
-
-      // Check if profile setup is needed using the new status storage
-      const setupNeeded = await isProfileSetupNeeded('CLIENT');
-      
-      if (!setupNeeded) {
-        setShowProfileSetup(false);
-        navigation.replace('MainTabs');
-        return;
-      }
-
-      // Check phase completion flags from database
-      const hasPhase1Complete = userProfile && userProfile.phase1Completed;
-      const hasPhase2Complete = userProfile && userProfile.phase2Completed;
-
-      // Check if phases were skipped using the new status storage
-      const phase1SkippedOrComplete = await isPhaseCompleteOrSkipped('CLIENT', 1);
-      const phase2SkippedOrComplete = await isPhaseCompleteOrSkipped('CLIENT', 2);
-
-      console.log("Client profile setup status check:");
-      console.log("Phase 1 completed:", hasPhase1Complete, "skipped or complete:", phase1SkippedOrComplete);
-      console.log("Phase 2 completed:", hasPhase2Complete, "skipped or complete:", phase2SkippedOrComplete);
-
-      // Determine which phase needs to be completed
-      if (!hasPhase1Complete && !phase1SkippedOrComplete) {
-        setCurrentSetupStep('DescribeRole');
-        setShowProfileSetup(true);
-      } else if (!hasPhase2Complete && !phase2SkippedOrComplete) {
-        setCurrentSetupStep('TellUsAboutYou');
-        setShowProfileSetup(true);
-      } else {
-        setShowProfileSetup(false);
-        // If all phases are complete or skipped, navigate to main tabs
-        navigation.replace('MainTabs');
-      }
-    } catch (error) {
-      console.error("Error checking profile setup status:", error);
-      setShowProfileSetup(false);
-    }
-  };
-
-  useEffect(() => {
-    checkProfileSetupStatus();
-  }, [user, userData, userProfile]);
-
-  // Handle profile setup navigation
-  const handleProfileSetupNavigation = () => {
-    if (currentSetupStep) {
-      console.log("Navigating to profile setup step:", currentSetupStep);
-      
-      navigation.navigate(currentSetupStep);
-    }
-  };
-
-  // Handle skip profile setup (go to main tabs)
-  const handleSkipProfileSetup = () => {
-    navigation.replace('MainTabs');
-  };
 
   const categorizeJobs = (jobs) => {
     const today = new Date();
@@ -154,7 +92,11 @@ const ClientHomeScreen = () => {
           />
         </View>
         <View style={styles.serviceTextlay}>
-          <Text style={styles.serviceText} numberOfLines={2} ellipsizeMode="tail">
+          <Text
+            style={styles.serviceText}
+            numberOfLines={2}
+            ellipsizeMode="tail"
+          >
             {item.title}
           </Text>
         </View>
@@ -165,13 +107,13 @@ const ClientHomeScreen = () => {
   useEffect(() => {
     let percentage = 0;
 
-    if (userProfile?.fullName) percentage = 20;
-    if (userProfile?.country) percentage = 40;
-    if (userProfile?.profilePhoto) percentage = 70;
-    if (userProfile?.termsAccepted) percentage = 100;
+    if (userData.client?.fullName) percentage = 20;
+    if (userData.client?.country) percentage = 40;
+    if (userData.client?.profilePhoto) percentage = 70;
+    if (userData.client?.termsAccepted) percentage = 100;
 
     setProfilePercentage(percentage);
-  }, [userProfile, refreshing]);
+  }, [userData, refreshing]);
 
   const sendTitle = (item) => {
     const title = item.title;
@@ -183,11 +125,13 @@ const ClientHomeScreen = () => {
   useEffect(() => {
     const fetchOngoingJobs = async () => {
       try {
-        if (userData?.role === "CLIENT" && userProfile?.id) {
+        if (userData?.role === "CLIENT" && userData?.id) {
           setLoadingJobs(true); // Start loading
           // Fetch ongoing jobs from the new backend API
-          const ongoingJobsData = await apiService.getOngoingJobsByClientId(userProfile.id);
-          
+          const ongoingJobsData = await apiService.getOngoingJobsByClientId(
+            userData.id
+          );
+
           if (ongoingJobsData && ongoingJobsData.length > 0) {
             setOngoingJobs(ongoingJobsData);
             setCombinedData(ongoingJobsData);
@@ -216,7 +160,7 @@ const ClientHomeScreen = () => {
       } catch (error) {
         console.error("Error fetching ongoing jobs:", error);
         Alert.alert("Error", "Failed to fetch ongoing jobs: " + error.message);
-        
+
         // Fallback to empty placeholders on error
         const emptySlots = Array(3).fill({
           jobDetails: null,
@@ -232,41 +176,26 @@ const ClientHomeScreen = () => {
     };
 
     fetchOngoingJobs();
-  }, [refreshing, userData, userProfile]);
+  }, [refreshing, userData]);
 
   const handleCompleteProfile = () => {
-    if (userData && userProfile) {
-      // Check if userData and userProfile are not null
-      const fullName = userProfile.fullName;
-      const email = userData.email;
-      const password = userData.password;
-      const role = userData.role;
-
-      if (profilePercentage < 20) {
-        navigation.navigate("DescribeRoleCom", {
-          fullName,
-          email,
-          password,
-          role,
-        });
-      } else if (profilePercentage >= 20 && profilePercentage < 40) {
-        navigation.navigate("DescribeRoleCom", {
-          fullName,
-          email,
-          password,
-          role,
-        });
-      } else if (profilePercentage >= 40 && profilePercentage < 70) {
-        navigation.navigate("TellUsAboutYouCom", { role });
-      } else if (profilePercentage >= 70 && profilePercentage < 100) {
-        navigation.navigate("PortfolioCom", { role });
+    if (userData) {
+      if (userData.role === "FREELANCER") {
+        navigation.navigate("FreelancerProfileSetup");
+      } else if (userData.role === "CLIENT") {
+        navigation.navigate("ClientProfileSetup");
       }
     }
   };
 
   const openChat = (receiverId, full_name, profileImage, projectId) => {
-    console.log("Opening chat with:", { receiverId, full_name, profileImage, projectId });
-    
+    console.log("Opening chat with:", {
+      receiverId,
+      full_name,
+      profileImage,
+      projectId,
+    });
+
     navigation.navigate("ClientChatList", {
       receiverId,
       full_name,
@@ -297,7 +226,7 @@ const ClientHomeScreen = () => {
         if (userData?.id) {
           // Fetch updated user data from the new backend API
           const updatedUserData = await apiService.getUserProfile(userData.id);
-          
+
           if (updatedUserData) {
             // Update the auth context with fresh data
             console.log("Updated user data:", updatedUserData);
@@ -380,15 +309,18 @@ const ClientHomeScreen = () => {
   };
 
   const renderFreelanceService = useCallback(
-    ({ item }) => <RenderServiceItem item={item} onPress={sendTitle} borderRadius={45} />,
+    ({ item }) => (
+      <RenderServiceItem item={item} onPress={sendTitle} borderRadius={45} />
+    ),
     []
   );
 
   const renderHouseholdService = useCallback(
-    ({ item }) => <RenderServiceItem item={item} onPress={sendTitle} borderRadius={7} />,
+    ({ item }) => (
+      <RenderServiceItem item={item} onPress={sendTitle} borderRadius={7} />
+    ),
     []
   );
-
 
   return (
     <SafeAreaView
@@ -409,14 +341,21 @@ const ClientHomeScreen = () => {
           {showGif ? (
             <Image source={gifAnimation} style={styles.gifStyle} />
           ) : (
-            <TouchableOpacity style={styles.notificationIcon} onPress={handlePress}>
+            <TouchableOpacity
+              style={styles.notificationIcon}
+              onPress={handlePress}
+            >
               <Image
                 source={
-                  userProfile?.profilePhoto
-                    ? { uri: userProfile.profilePhoto }
+                  userData.client?.profilePhoto
+                    ? {
+                        uri: apiService.loadImageURI(
+                          userData.client.profilePhoto
+                        ),
+                      }
                     : require("../assets/profile.png")
                 }
-                style={styles.proileImage}
+                style={styles.profileImage}
               />
             </TouchableOpacity>
           )}
@@ -435,101 +374,115 @@ const ClientHomeScreen = () => {
           />
         }
       >
-
-
         <View style={styles.ongoingJobsContainer}>
           <Text style={styles.ongoingTitle}>Your Ongoing Jobs</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.StoryContainer}>
-            <TouchableOpacity onPress={() => navigation.navigate("Job Requirements")}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.StoryContainer}
+          >
+            <TouchableOpacity
+              onPress={() => navigation.navigate("Job Requirements")}
+            >
               <View style={styles.addStory}>
                 <Text style={styles.addText}>+</Text>
               </View>
             </TouchableOpacity>
 
-            {combinedData.length > 0 ? (
-              combinedData.map((item, index) => {
-                const { jobDetails, full_name, profile_photo, color } = item;
-                const receiverId = jobDetails?.assigned_freelancer || null;
-                const projectId = jobDetails?.$id || null;
+            {combinedData.length > 0
+              ? combinedData.map((item, index) => {
+                  const { jobDetails, full_name, profile_photo, color } = item;
+                  const receiverId = jobDetails?.assigned_freelancer || null;
+                  const projectId = jobDetails?.$id || null;
 
-                return (
-                  <TouchableOpacity
-                    key={index}
-                    onPress={() =>
-                      openChat(receiverId, full_name, profile_photo, projectId)
-                    }
-                    disabled={!jobDetails}
-                  >
-                    <View
+                  return (
+                    <TouchableOpacity
                       key={index}
-                      style={[
-                        styles.onGoItem,
-                        {
-                          borderWidth: 4,
-                          borderColor: color,
-                          borderRadius: 50,
-                          opacity: jobDetails ? 1 : 0.5,
-                        },
-                      ]}
+                      onPress={() =>
+                        openChat(
+                          receiverId,
+                          full_name,
+                          profile_photo,
+                          projectId
+                        )
+                      }
+                      disabled={!jobDetails}
                     >
-                      {jobDetails ? (
-                        <Image
-                          source={{ 
-                            uri: profile_photo || `${placeholderImageURL}${index}/100/100`
-                          }}
-                          style={styles.ongoingImage}
-                          onError={(e) => {
-                            console.log('Image load error:', e.nativeEvent.error);
-                          }}
-                        />
-                      ) : (
-                        <Text style={styles.placeholderText}>?</Text>
-                      )}
-                    </View>
-                  </TouchableOpacity>
-                );
-              })
-            ) : (
-              [0, 1, 2].map((item, index) => {
-
-                return (
-                  <TouchableOpacity
-                    key={index}
-                  >
-                    <View
-                      key={index}
-                      style={[
-                        styles.onGoItem,
-                        {
-                          borderWidth: 4,
-                          borderColor: "#D3D3D3",
-                          borderRadius: 50,
-                          opacity: 0.5,
-                        },
-                      ]}
-                    >
-                      <Text style={styles.placeholderText}>?</Text>
-                    </View>
-                  </TouchableOpacity>
-                )
+                      <View
+                        key={index}
+                        style={[
+                          styles.onGoItem,
+                          {
+                            borderWidth: 4,
+                            borderColor: color,
+                            borderRadius: 50,
+                            opacity: jobDetails ? 1 : 0.5,
+                          },
+                        ]}
+                      >
+                        {jobDetails ? (
+                          <Image
+                            source={{
+                              uri:
+                                profile_photo ||
+                                `${placeholderImageURL}${index}/100/100`,
+                            }}
+                            style={styles.ongoingImage}
+                            onError={(e) => {
+                              console.log(
+                                "Image load error:",
+                                e.nativeEvent.error
+                              );
+                            }}
+                          />
+                        ) : (
+                          <Text style={styles.placeholderText}>?</Text>
+                        )}
+                      </View>
+                    </TouchableOpacity>
+                  );
                 })
-              )}
-              </ScrollView>
-            </View>
+              : [0, 1, 2].map((item, index) => {
+                  return (
+                    <TouchableOpacity key={index}>
+                      <View
+                        key={index}
+                        style={[
+                          styles.onGoItem,
+                          {
+                            borderWidth: 4,
+                            borderColor: "#D3D3D3",
+                            borderRadius: 50,
+                            opacity: 0.5,
+                          },
+                        ]}
+                      >
+                        <Text style={styles.placeholderText}>?</Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+          </ScrollView>
+        </View>
 
-            <View style={styles.searchContainer}>
-              <TextInput
-              style={styles.searchInput}
-              placeholder="Search"
-              value={search}
-              onChangeText={handleSearch}
-              autoFocus={false}
-              />
-              <FontAwesome name="search" size={20} color={currentTheme.subText} style={styles.searchIcon} />
-            </View>
+        <View style={styles.searchContainer}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search"
+            value={search}
+            onChangeText={handleSearch}
+            autoFocus={false}
+          />
+          <FontAwesome
+            name="search"
+            size={20}
+            color={currentTheme.subText}
+            style={styles.searchIcon}
+          />
+        </View>
 
-            <View>
-              {/* Freelance Services */}
+        <View>
+          {/* Freelance Services */}
           <FlatList
             data={filteredFreelanceServices}
             renderItem={renderFreelanceService}
@@ -575,7 +528,6 @@ const ClientHomeScreen = () => {
             )}
           />
         </View>
-
 
         {/* Job Notifications */}
         <View style={styles.sectionContainer}>
@@ -717,7 +669,7 @@ const getStyles = (currentTheme) =>
       paddingHorizontal: 20,
       alignItems: "center",
       // gap: 140,
-      position: "static"
+      position: "static",
     },
     headerRight: {
       flexDirection: "row",
@@ -749,12 +701,12 @@ const getStyles = (currentTheme) =>
       fontFamily: "Poppins-Regular",
       fontSize: 40,
       fontWeight: "600",
-      color: currentTheme.text
+      color: currentTheme.text,
     },
     how: {
       fontSize: 25,
       fontWeight: "300",
-      color: currentTheme.subText
+      color: currentTheme.subText,
     },
     squareBox: {
       backgroundColor: "#5DE895",
@@ -785,7 +737,7 @@ const getStyles = (currentTheme) =>
     },
     searchIcon: {
       marginRight: 5, // Adjust to fine-tune icon positioning
-    },    
+    },
     carousel: {
       marginBottom: 20,
       paddingHorizontal: 20,
@@ -811,9 +763,9 @@ const getStyles = (currentTheme) =>
       fontWeight: "500",
       textAlign: "center",
       flexWrap: "wrap",
-      color: "#555"
+      color: "#555",
     },
-    proileImage: {
+    profileImage: {
       width: 60,
       height: 60,
       borderRadius: 45,
@@ -979,7 +931,7 @@ const getStyles = (currentTheme) =>
       fontSize: 16,
       fontWeight: "480",
       marginLeft: 44,
-      color: currentTheme.text
+      color: currentTheme.text,
     },
     storyItem: {
       marginRight: 10,
@@ -1000,11 +952,11 @@ const getStyles = (currentTheme) =>
       // alignContent: "center",
       fontSize: 36,
       paddingTop: 10,
-      color: currentTheme.subText
+      color: currentTheme.subText,
     },
     onGoItem: {
       marginRight: 8,
-      marginTop: 15
+      marginTop: 15,
     },
     addStory: {
       width: 80,
@@ -1036,7 +988,7 @@ const getStyles = (currentTheme) =>
       fontSize: 24,
       fontWeight: "500",
       textAlign: "center",
-      color: currentTheme.text
+      color: currentTheme.text,
     },
     boxColor: {
       flex: 1,
@@ -1105,23 +1057,23 @@ const getStyles = (currentTheme) =>
     },
     // Profile Setup Overlay Styles
     profileSetupOverlay: {
-      position: 'absolute',
+      position: "absolute",
       top: 0,
       left: 0,
       right: 0,
       bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.8)',
+      backgroundColor: "rgba(0, 0, 0, 0.8)",
       zIndex: 1000,
-      justifyContent: 'center',
-      alignItems: 'center',
+      justifyContent: "center",
+      alignItems: "center",
     },
     profileSetupContainer: {
-      backgroundColor: 'white',
+      backgroundColor: "white",
       borderRadius: 16,
       padding: 24,
       margin: 20,
-      alignItems: 'center',
-      shadowColor: '#000',
+      alignItems: "center",
+      shadowColor: "#000",
       shadowOffset: {
         width: 0,
         height: 2,
@@ -1132,20 +1084,20 @@ const getStyles = (currentTheme) =>
     },
     profileSetupTitle: {
       fontSize: 24,
-      fontWeight: 'bold',
+      fontWeight: "bold",
       marginBottom: 12,
-      color: '#333',
-      textAlign: 'center',
+      color: "#333",
+      textAlign: "center",
     },
     profileSetupMessage: {
       fontSize: 16,
-      textAlign: 'center',
+      textAlign: "center",
       marginBottom: 24,
-      color: '#666',
+      color: "#666",
       lineHeight: 22,
     },
     profileSetupButton: {
-      backgroundColor: currentTheme.primary || '#3b006b',
+      backgroundColor: currentTheme.primary || "#3b006b",
       paddingVertical: 12,
       paddingHorizontal: 24,
       borderRadius: 8,
@@ -1153,26 +1105,26 @@ const getStyles = (currentTheme) =>
       minWidth: 200,
     },
     profileSetupButtonText: {
-      color: 'white',
+      color: "white",
       fontSize: 16,
-      fontWeight: '600',
-      textAlign: 'center',
+      fontWeight: "600",
+      textAlign: "center",
     },
     profileSetupSkipButton: {
-      backgroundColor: 'transparent',
+      backgroundColor: "transparent",
       paddingVertical: 12,
       paddingHorizontal: 24,
       borderRadius: 8,
       marginVertical: 8,
       minWidth: 200,
       borderWidth: 1,
-      borderColor: currentTheme.primary || '#3b006b',
+      borderColor: currentTheme.primary || "#3b006b",
     },
     profileSetupSkipButtonText: {
-      color: currentTheme.primary || '#3b006b',
+      color: currentTheme.primary || "#3b006b",
       fontSize: 16,
-      fontWeight: '600',
-      textAlign: 'center',
+      fontWeight: "600",
+      textAlign: "center",
     },
   });
 

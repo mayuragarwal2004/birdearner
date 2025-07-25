@@ -20,6 +20,7 @@ import PrivacyPolicyScreen from "../screens/PrivacyPolicyScreen";
 import BlogsAndForumScreen from "../screens/BlogsAndForumScreen";
 import PortfolioScreen from "../screens/Portfolio";
 import DeleteAccountScreen from "../screens/DeleteAccount";
+import WalletFreelancerScreen from "../screens/WalletFreelancer";
 
 const Stack = createStackNavigator();
 
@@ -78,6 +79,11 @@ const ProfileStack = () => (
     <Stack.Screen
       name="Wallet"
       component={WalletScreen}
+      options={{ headerShown: false }}
+    />
+    <Stack.Screen
+      name="WalletFreelancer"
+      component={WalletFreelancerScreen}
       options={{ headerShown: false }}
     />
     <Stack.Screen

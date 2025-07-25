@@ -1,7 +1,7 @@
 // API service for communicating with the Bird Earner Node.js backend
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const API_BASE_URL = "https://softball-permalink-newer-secondary.trycloudflare.com/api"; // Local development server
+const API_BASE_URL = "https://brown-roses-active-rare.trycloudflare.com/api"; // Local development server
 
 
 class ApiService {
@@ -189,8 +189,8 @@ class ApiService {
   // User endpoints
   async getCurrentUser() {
     try {
-      const userData = await AsyncStorage.getItem("userData");
-      return userData ? JSON.parse(userData) : null;
+      const userData = await this.makeRequest("/users/me");
+      return userData ? userData : null;
     } catch (error) {
       console.error("Error getting current user:", error);
       return null;
@@ -764,54 +764,6 @@ class ApiService {
     }
   }
 
-  // ==================== PROFILE UPDATE METHODS ====================
-  
-  // Update freelancer profile with phase 2 data
-  async updateFreelancerPhase2(freelancerId, profileData) {
-    try {
-      const updateData = {
-        ...profileData,
-        phase2Completed: true,
-      };
-      
-      const response = await this.updateFreelancerProfile(freelancerId, updateData);
-      
-      // Update local user profile cache
-      const userProfile = await AsyncStorage.getItem('userProfile');
-      if (userProfile) {
-        const updatedProfile = { ...JSON.parse(userProfile), ...updateData };
-        await AsyncStorage.setItem('userProfile', JSON.stringify(updatedProfile));
-      }
-      
-      return response;
-    } catch (error) {
-      throw new Error(`Failed to update freelancer profile: ${error.message}`);
-    }
-  }
-
-  // Update client profile with phase 2 data
-  async updateClientPhase2(clientId, profileData) {
-    try {
-      const updateData = {
-        ...profileData,
-        phase2Completed: true,
-      };
-      
-      const response = await this.updateClientProfile(clientId, updateData);
-      
-      // Update local user profile cache
-      const userProfile = await AsyncStorage.getItem('userProfile');
-      if (userProfile) {
-        const updatedProfile = { ...JSON.parse(userProfile), ...updateData };
-        await AsyncStorage.setItem('userProfile', JSON.stringify(updatedProfile));
-      }
-      
-      return response;
-    } catch (error) {
-      throw new Error(`Failed to update client profile: ${error.message}`);
-    }
-  }
-
   // ==================== WALLET MANAGEMENT ====================
   
   // Get client wallet information
@@ -937,7 +889,7 @@ class ApiService {
   // Get client transaction history
   async getClientTransactionHistory(page = 1, limit = 20) {
     try {
-      const response = await this.makeRequest(`/wallet/transactions?page=${page}&limit=${limit}`);
+      const response = await this.makeRequest(`/wallet/transactions?page=${page}&limit=${limit}&userType=CLIENT`);
       return response;
     } catch (error) {
       throw new Error(`Failed to fetch client transaction history: ${error.message}`);
@@ -947,7 +899,7 @@ class ApiService {
   // Get freelancer transaction history
   async getFreelancerTransactionHistory(page = 1, limit = 20) {
     try {
-      const response = await this.makeRequest(`/wallet/freelancer/transactions?page=${page}&limit=${limit}`);
+      const response = await this.makeRequest(`/wallet/transactions?page=${page}&limit=${limit}&userType=FREELANCER`);
       return response;
     } catch (error) {
       throw new Error(`Failed to fetch freelancer transaction history: ${error.message}`);

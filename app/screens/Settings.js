@@ -33,21 +33,21 @@ const SettingsScreen = ({ navigation }) => {
     {
       title: "Payment Settings",
       options:
-        role === "freelancer"
+        role === "FREELANCER"
           ? [
               { name: "Withdrawal Earning", stack_name: "Withdrawal Earning" },
               {
                 name: "Link your wallet/Bank account",
                 stack_name: "Bank Account details",
               },
-              { name: "Your Wallet & History", stack_name: "Wallet" },
+              { name: "Your Wallet & History", stack_name: "WalletFreelancer" },
             ]
           : [
               {
                 name: "Link your wallet/Bank account",
                 stack_name: "Bank Account details",
               },
-              { name: "Your Wallet & History", stack_name: "WalletClient" },
+              { name: "Your Wallet & History 2", stack_name: "WalletClient" },
             ],
     },
     {

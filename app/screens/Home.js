@@ -17,7 +17,7 @@ import { getProfileStatus, isProfileSetupNeeded, isPhaseCompleteOrSkipped } from
 
 const HomeScreen = () => {
   // const { appwriteConfig, databases } = useAppwrite();
-  const { user, userData, userProfile, logout } = useAuth();
+  const { userData, logout } = useAuth();
   const [profilePercentage, setProfilePercentage] = useState(20);
   const [flagsCount, setFlagsCount] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
@@ -34,63 +34,6 @@ const HomeScreen = () => {
 
   const styles = getStyles(currentTheme);
 
-  // Check profile setup status and determine if setup is needed
-  const checkProfileSetupStatus = async () => {
-    try {
-      if (!user || !userData || userData.role !== 'FREELANCER') {
-        setShowProfileSetup(false);
-        return;
-      }
-
-      // Check if profile setup is needed using the new status storage
-      const setupNeeded = await isProfileSetupNeeded('FREELANCER');
-      
-      if (!setupNeeded) {
-        setShowProfileSetup(false);
-        navigation.replace('MainTabs');
-        return;
-      }
-
-      // Check phase completion flags from database
-      const hasPhase1Complete = userProfile && userProfile.phase1Completed;
-      const hasPhase2Complete = userProfile && userProfile.phase2Completed;
-      const hasPhase3Complete = userProfile && userProfile.phase3Completed;
-
-      // Check if phases were skipped using the new status storage
-      const phase1SkippedOrComplete = await isPhaseCompleteOrSkipped('FREELANCER', 1);
-      const phase2SkippedOrComplete = await isPhaseCompleteOrSkipped('FREELANCER', 2);
-      const phase3SkippedOrComplete = await isPhaseCompleteOrSkipped('FREELANCER', 3);
-
-      console.log("Profile setup status check:");
-      console.log("Phase 1 completed:", hasPhase1Complete, "skipped or complete:", phase1SkippedOrComplete);
-      console.log("Phase 2 completed:", hasPhase2Complete, "skipped or complete:", phase2SkippedOrComplete);
-      console.log("Phase 3 completed:", hasPhase3Complete, "skipped or complete:", phase3SkippedOrComplete);
-
-      // Determine which phase needs to be completed
-      if (!hasPhase1Complete && !phase1SkippedOrComplete) {
-        setCurrentSetupStep('DescribeRole');
-        setShowProfileSetup(true);
-      } else if (!hasPhase2Complete && !phase2SkippedOrComplete) {
-        setCurrentSetupStep('TellUsAboutYou');
-        setShowProfileSetup(true);
-      } else if (!hasPhase3Complete && !phase3SkippedOrComplete) {
-        setCurrentSetupStep('Portfolio');
-        setShowProfileSetup(true);
-      } else {
-        setShowProfileSetup(false);
-        // If all phases are complete or skipped, navigate to main tabs
-        navigation.replace('MainTabs');
-      }
-    } catch (error) {
-      console.error("Error checking profile setup status:", error);
-      setShowProfileSetup(false);
-    }
-  };
-
-  useEffect(() => {
-    return
-    checkProfileSetupStatus();
-  }, [user, userData, userProfile]);
 
   // Handle profile setup navigation
   const handleProfileSetupNavigation = () => {
@@ -165,7 +108,7 @@ const HomeScreen = () => {
     let percentage = 20; // Start with basic profile
     
     // Update profile percentage based on available user data
-    console.log({ userData, userProfile });
+    console.log({ userData });
     
     if (userData?.email) percentage = 40;
     if (userData?.role) percentage = 60;
@@ -298,7 +241,7 @@ const HomeScreen = () => {
           <Text style={styles.welcomeText}>Welcome Back</Text>
           {/* Make sure to wrap dynamic content with Text component */}
           <Text style={styles.usernameText}>
-            {user ? `${userData?.email || "User"}` : "User"}
+            {userData ? `${userData?.email || "User"}` : "User"}
           </Text>
         </View>
 

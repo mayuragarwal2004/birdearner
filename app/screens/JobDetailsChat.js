@@ -17,9 +17,7 @@ import { useTheme } from "../context/ThemeContext";
 import apiService from "../lib/apiService";
 
 const JobDetailsChatScreen = ({ route, navigation }) => {
-
   const { jobId } = route.params || {};
-  const { user } = useAuth();
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme] || themeStyles.light;
 
