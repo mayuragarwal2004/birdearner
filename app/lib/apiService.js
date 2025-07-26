@@ -2,7 +2,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const API_BASE_URL =
-  "https://regarding-pump-occupations-interfaces.trycloudflare.com/api"; // Local development server
+  "https://accepts-monetary-pension-athletes.trycloudflare.com/api"; // Local development server
 
 // upload image categories are mentioned over here, above uploadImage function and in backend at /upload route
 /** @type {const} */
@@ -1085,6 +1085,27 @@ class ApiService {
       return response.data;
     } catch (error) {
       throw new Error(`Failed to update bank details: ${error.message}`);
+    }
+  }
+
+  async getOffersData() {
+    try {
+      const response = await this.makeRequest("/cashback-offers");
+      return response;
+    } catch (error) {
+      throw new Error(`Failed to get offers data: ${error.message}`);
+    }
+  }
+
+  async updateOfferData(data) {
+    try {
+      const response = await this.makeRequest("/cashback-offers", {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(`Failed to update offer data: ${error.message}`);
     }
   }
 

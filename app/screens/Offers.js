@@ -16,16 +16,21 @@ import nest from "../assets/nest.png";
 import tree from "../assets/tree.png";
 import brEgg from "../assets/brEgg.png";
 import { useAuth } from "../context/NewAuthContext";
-import { useAppwrite } from "../context/AppwriteContext";
-import { Query } from "react-native-appwrite";
+// import { useAppwrite } from "../context/AppwriteContext";
+// import { Query } from "react-native-appwrite";
 import { useTheme } from "../context/ThemeContext";
+import apiService from "../lib/apiService";
+import Toast from "react-native-toast-message";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const offers = [10, 50, 0, 25, 15];
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 const OffersScreen = ({ navigation }) => {
-  const { appwriteConfig, databases } = useAppwrite();
+  // const { appwriteConfig, databases } = useAppwrite();
   const [eggStatus, setEggStatus] = useState([
-    false,
+    true,
     false,
     false,
     false,
@@ -38,12 +43,14 @@ const OffersScreen = ({ navigation }) => {
     false,
     false,
   ]);
+  const [loading, setLoading] = useState(false);
+  const [availableOffers, setAvailableOffers] = useState([]);
   const [showOfferPopup, setShowOfferPopup] = useState(false);
   const [showRulesPopup, setShowRulesPopup] = useState(false);
   const [showVideoPopup, setShowVideoPopup] = useState(false);
   const [selectedOffer, setSelectedOffer] = useState(null);
   const { userData } = useAuth();
-  const userId = userData?.$id;
+  const userId = userData?.id;
 
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
@@ -59,8 +66,20 @@ const OffersScreen = ({ navigation }) => {
   ).current;
 
   useEffect(() => {
+    const checkRules = async () => {
+      const rulePopUpShown = await AsyncStorage.getItem("offer-rules-shown");
+
+      if (rulePopUpShown) {
+        setShowRulesPopup(false);
+      } else {
+        setShowRulesPopup(true);
+      }
+    };
+    checkRules();
     checkUserOfferStatus();
   }, []);
+
+  console.log({ showRulesPopup });
 
   useEffect(() => {
     Animated.timing(slideAnimation, {
@@ -72,88 +91,21 @@ const OffersScreen = ({ navigation }) => {
 
   const checkUserOfferStatus = async () => {
     try {
-      const response = await databases.listDocuments(
-        appwriteConfig.databaseId,
-        appwriteConfig.userEggsCollectionId,
-        [Query.equal("userId", userId)]
-      );
+      const response = await apiService.getOffersData();
+      console.log({ response });
 
-      if (response.documents.length === 0) {
-        const currentDate = new Date();
-        const eggStatusInitial = [false, false, false, false, false];
-        const brokenEggInitial = [false, false, false, false, false];
-        setShowRulesPopup(true);
-        await createOfferDocument(
-          eggStatusInitial,
-          brokenEggInitial,
-          currentDate
-        );
-      } else {
-        const userEggData = response.documents[0];
-        const { eggStatus, brokenEggs, lastRefreshDate } = userEggData;
+      setAvailableOffers(response.availableOffers || []);
+      const { discoveredOffers } = response;
 
-        eggStatus.forEach((status, index) => {
-          if (status) {
-            startShakeAnimation(index);
-          }
-        });
+      let updatedBrokenEggs = [...brokenEggs];
 
-        let lastRefreshMonth = -1;
-        if (lastRefreshDate) {
-          const lastDate = new Date(lastRefreshDate);
-          lastRefreshMonth = lastDate.getMonth();
-        }
-
-        const currentDate = new Date();
-        const currentMonth = currentDate.getMonth();
-
-        if (currentMonth !== lastRefreshMonth) {
-          const newEggStatus = [false, false, false, false, false];
-          const newBrokenEggs = [false, false, false, false, false];
-          setEggStatus(newEggStatus);
-          setBrokenEggs(newBrokenEggs);
-
-          await databases.updateDocument(
-            appwriteConfig.databaseId,
-            appwriteConfig.userEggsCollectionId,
-            userEggData?.$id,
-            {
-              eggStatus: newEggStatus,
-              brokenEggs: newBrokenEggs,
-              lastRefreshDate: currentDate.toISOString(),
-            }
-          );
-        } else {
-          setEggStatus(eggStatus || [false, false, false, false, false]);
-          setBrokenEggs(brokenEggs || [false, false, false, false, false]);
-        }
+      for (let i = 0; i < updatedBrokenEggs.length; i++) {
+        if (discoveredOffers[i]) updatedBrokenEggs[i] = true;
       }
+      setBrokenEggs(updatedBrokenEggs);
+      setEggStatus(updatedBrokenEggs);
     } catch (error) {
-      console.error("Error checking user offer status:", error);
-    }
-  };
-
-  const createOfferDocument = async (
-    eggStatusInitial,
-    brokenEggInitial,
-    currentDate
-  ) => {
-    try {
-      await databases.createDocument(
-        appwriteConfig.databaseId,
-        appwriteConfig.userEggsCollectionId,
-        "unique()",
-        {
-          userId,
-          eggStatus: eggStatusInitial,
-          brokenEggs: brokenEggInitial,
-          lastRefreshDate: currentDate.toISOString(),
-        }
-      );
-      setEggStatus(eggStatusInitial);
-      setBrokenEggs(brokenEggInitial);
-    } catch (error) {
-      console.error("Error creating offer document:", error);
+      console.error(error);
     }
   };
 
@@ -184,79 +136,76 @@ const OffersScreen = ({ navigation }) => {
   };
 
   const handleEggClick = async (index) => {
-    if (eggStatus[index]) {
-      const randomOffer = offers[Math.floor(Math.random() * offers.length)];
-      setSelectedOffer(randomOffer);
-      setShowOfferPopup(true);
+    console.log({ index });
 
-      const updatedBrokenEggs = [...brokenEggs];
-      updatedBrokenEggs[index] = true;
-      setBrokenEggs(updatedBrokenEggs);
+    const firstAvailableEggIndex = brokenEggs.indexOf(false);
 
-      try {
-        const clientCollectionId = appwriteConfig.clientCollectionId;
-        const paymentHistoryCollectionId =
-          appwriteConfig.paymentHistoryCollectionId;
+    if (firstAvailableEggIndex === -1) {
+      console.log({ firstAvailableEggIndex });
+      // should never happen
+      return;
+    }
 
-        // Fetch user document to get the current wallet amount
-        const userDoc = await databases.getDocument(
-          appwriteConfig.databaseId,
-          clientCollectionId,
-          userId
-        );
+    if (firstAvailableEggIndex !== index || availableOffers.length == 0) {
+      startShakeAnimation(index);
+      // timeout and stop
+      await wait(2000);
+      stopShakeAnimation(index);
+      return;
+    }
 
-        const currentWallet = userDoc?.wallet || 0;
-        const newWalletAmount = currentWallet + parseFloat(randomOffer);
+    let waitingPromise;
 
-        // Update wallet amount in the user's document
-        await databases.updateDocument(
-          appwriteConfig.databaseId,
-          clientCollectionId,
-          userId,
-          {
-            wallet: newWalletAmount,
-          }
-        );
+    try {
+      if (firstAvailableEggIndex === index && availableOffers.length > 0) {
+        startShakeAnimation(index);
+        // timeout and stop
+        waitingPromise = wait(2000);
 
-        // Add a new payment history document
-        await databases.createDocument(
-          appwriteConfig.databaseId,
-          paymentHistoryCollectionId,
-          "unique()",
-          {
-            userId: userId,
-            paymentId: "Cashback Amount",
-            amount: parseFloat(randomOffer),
-            status: "Recieved",
-            date: new Date().toISOString(),
-          }
-        );
+        if (availableOffers.keys()) {
+          const offer =
+            availableOffers[Math.floor(Math.random() * availableOffers.length)];
 
-        const response = await databases.listDocuments(
-          appwriteConfig.databaseId,
-          appwriteConfig.userEggsCollectionId,
-          [Query.equal("userId", userId)]
-        );
+          const response = await apiService.updateOfferData({
+            offerId: offer.id,
+            index,
+          });
 
-        if (response.documents.length > 0) {
-          const userEggData = response.documents[0];
+          console.log({ updatedresponse: response });
 
-          await databases.updateDocument(
-            appwriteConfig.databaseId,
-            appwriteConfig.userEggsCollectionId,
-            userEggData.$id,
-            {
-              brokenEggs: updatedBrokenEggs,
-            }
-          );
-
+          Promise.resolve(waitingPromise);
           stopShakeAnimation(index);
+
+          if (response.success && offer) {
+            if (offer.amount > 0) {
+              const updatedBrokenEggs = [...brokenEggs];
+              updatedBrokenEggs[index] = true;
+              setBrokenEggs(updatedBrokenEggs);
+              setShowOfferPopup(true);
+              setSelectedOffer(offer);
+            } else {
+              setShowVideoPopup(true);
+            }
+          } else {
+            console.log({ error: response.error });
+            Toast.show({
+              type: "error",
+              text1: "Error updating offer data",
+              text2: "Please try again later",
+            });
+          }
         }
-      } catch (error) {
-        console.error("Error updating document:", error);
       }
-    } else {
-      setShowVideoPopup(true);
+    } catch (error) {
+      console.error(error);
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: "Couldn't open the Egg. Please try again later.",
+      });
+    } finally {
+      Promise.resolve(waitingPromise);
+      stopShakeAnimation(index);
     }
   };
 
@@ -265,7 +214,9 @@ const OffersScreen = ({ navigation }) => {
     setShowVideoPopup(false);
   };
 
-  const closeRulesPopup = () => {
+  const closeRulesPopup = async () => {
+    await AsyncStorage.setItem("offer-rules-shown", "true");
+
     setShowRulesPopup(false);
   };
 
@@ -318,7 +269,11 @@ const OffersScreen = ({ navigation }) => {
           <View style={styles.popupContent}>
             <Text style={styles.popupTitle}>Congratulations!</Text>
             <Text style={styles.popupText}>
-              You've earned a cashback of ₹{selectedOffer}!
+              {selectedOffer?.amountType === "LUMPSUM"
+                ? `You have earned a cashback of ₹${selectedOffer.amount}`
+                : selectedOffer?.amountType === "PERCENT"
+                ? `You have won cashback of ${selectedOffer.amount}% on your next job!`
+                : null}
             </Text>
             <TouchableOpacity style={styles.popupButton} onPress={closePopup}>
               <Text style={styles.popupButtonText}>Claim Cashback</Text>
