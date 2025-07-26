@@ -9,9 +9,7 @@ import {
   ScrollView,
   SafeAreaView,
   Image,
-  Alert,
 } from "react-native";
-import { Picker } from "@react-native-picker/picker";
 import Checkbox from "expo-checkbox";
 import Toast from "react-native-toast-message";
 import * as ImagePicker from "expo-image-picker";
@@ -19,45 +17,64 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { z } from "zod";
 import apiService from "../lib/apiService";
 import { useAuth } from "../context/NewAuthContext";
+import PickerModal from "../components/CustomPicker";
 
-const indianStates = [
-  "Andhra Pradesh",
-  "Arunachal Pradesh",
-  "Assam",
-  "Bihar",
-  "Chhattisgarh",
-  "Goa",
-  "Gujarat",
-  "Haryana",
-  "Himachal Pradesh",
-  "Jharkhand",
-  "Karnataka",
-  "Kerala",
-  "Madhya Pradesh",
-  "Maharashtra",
-  "Manipur",
-  "Meghalaya",
-  "Mizoram",
-  "Nagaland",
-  "Odisha",
-  "Punjab",
-  "Rajasthan",
-  "Sikkim",
-  "Tamil Nadu",
-  "Telangana",
-  "Tripura",
-  "Uttar Pradesh",
-  "Uttarakhand",
-  "West Bengal",
-  "Andaman and Nicobar Islands",
-  "Chandigarh",
-  "Dadra and Nagar Haveli and Daman and Diu",
-  "Delhi",
-  "Lakshadweep",
-  "Puducherry",
+const GENDER_OPTIONS = [
+  { label: "Select Gender", value: "" },
+  { label: "Male", value: "Male" },
+  { label: "Female", value: "Female" },
+  { label: "Other", value: "Other" },
 ];
 
-const assetSchema = z.any()
+const COUNTRY_OPTIONS = [
+  { label: "Select Country", value: "" },
+  { label: "India", value: "India" },
+];
+
+const indianStates = [
+  { label: "Andhra Pradesh", value: "Andhra Pradesh" },
+  { label: "Arunachal Pradesh", value: "Arunachal Pradesh" },
+  { label: "Assam", value: "Assam" },
+  { label: "Bihar", value: "Bihar" },
+  { label: "Chhattisgarh", value: "Chhattisgarh" },
+  { label: "Goa", value: "Goa" },
+  { label: "Gujarat", value: "Gujarat" },
+  { label: "Haryana", value: "Haryana" },
+  { label: "Himachal Pradesh", value: "Himachal Pradesh" },
+  { label: "Jharkhand", value: "Jharkhand" },
+  { label: "Karnataka", value: "Karnataka" },
+  { label: "Kerala", value: "Kerala" },
+  { label: "Madhya Pradesh", value: "Madhya Pradesh" },
+  { label: "Maharashtra", value: "Maharashtra" },
+  { label: "Manipur", value: "Manipur" },
+  { label: "Meghalaya", value: "Meghalaya" },
+  { label: "Mizoram", value: "Mizoram" },
+  { label: "Nagaland", value: "Nagaland" },
+  { label: "Odisha", value: "Odisha" },
+  { label: "Punjab", value: "Punjab" },
+  { label: "Rajasthan", value: "Rajasthan" },
+  { label: "Sikkim", value: "Sikkim" },
+  { label: "Tamil Nadu", value: "Tamil Nadu" },
+  { label: "Telangana", value: "Telangana" },
+  { label: "Tripura", value: "Tripura" },
+  { label: "Uttar Pradesh", value: "Uttar Pradesh" },
+  { label: "Uttarakhand", value: "Uttarakhand" },
+  { label: "West Bengal", value: "West Bengal" },
+  {
+    label: "Andaman and Nicobar Islands",
+    value: "Andaman and Nicobar Islands",
+  },
+  { label: "Chandigarh", value: "Chandigarh" },
+  {
+    label: "Dadra and Nagar Haveli and Daman and Diu",
+    value: "Dadra and Nagar Haveli and Daman and Diu",
+  },
+  { label: "Delhi", value: "Delhi" },
+  { label: "Lakshadweep", value: "Lakshadweep" },
+  { label: "Puducherry", value: "Puducherry" },
+];
+
+const assetSchema = z.any();
 
 const schema = z
   .object({
@@ -356,7 +373,7 @@ const FreelancerSignup = ({ navigation, route }) => {
 
     // Validate with Zod
     const result = schema.safeParse(form);
-    console.log({result});
+    console.log({ result });
     if (!result.success) {
       setIsLoading(false);
       console.log("Validation failed:", result.error.errors);
@@ -478,6 +495,7 @@ const FreelancerSignup = ({ navigation, route }) => {
           <View style={styles.card}>
             <Text style={styles.label}>Full Name</Text>
             <TextInput
+              placeholderTextColor="#c4c4c4"
               style={styles.input}
               placeholder="Enter your full name"
               value={form.full_name}
@@ -486,6 +504,7 @@ const FreelancerSignup = ({ navigation, route }) => {
             />
             <Text style={styles.label}>Email</Text>
             <TextInput
+              placeholderTextColor="#c4c4c4"
               style={styles.input}
               placeholder="Enter your email"
               value={form.email}
@@ -496,6 +515,7 @@ const FreelancerSignup = ({ navigation, route }) => {
             />
             <Text style={styles.label}>Password</Text>
             <TextInput
+              placeholderTextColor="#c4c4c4"
               style={styles.input}
               placeholder="Enter your password"
               value={form.password}
@@ -504,6 +524,7 @@ const FreelancerSignup = ({ navigation, route }) => {
             />
             <Text style={styles.label}>Confirm Password</Text>
             <TextInput
+              placeholderTextColor="#c4c4c4"
               style={styles.input}
               placeholder="Confirm your password"
               value={form.confirmPassword}
@@ -546,6 +567,7 @@ const FreelancerSignup = ({ navigation, route }) => {
             {/* Search Input */}
             <View style={styles.searchContainer}>
               <TextInput
+                placeholderTextColor="#c4c4c4"
                 style={styles.searchInput}
                 placeholder="Search for services (e.g., graphic design, web developer)..."
                 value={searchQuery}
@@ -698,6 +720,7 @@ const FreelancerSignup = ({ navigation, route }) => {
           <View style={styles.card}>
             <Text style={styles.label}>Highest Qualification</Text>
             <TextInput
+              placeholderTextColor="#c4c4c4"
               style={styles.input}
               placeholder="E.g. Bachelor's Degree"
               value={form.qualification}
@@ -705,6 +728,7 @@ const FreelancerSignup = ({ navigation, route }) => {
             />
             <Text style={styles.label}>Experience (In months)</Text>
             <TextInput
+              placeholderTextColor="#c4c4c4"
               style={styles.input}
               keyboardType="numeric"
               placeholder="E.g. 24"
@@ -713,6 +737,7 @@ const FreelancerSignup = ({ navigation, route }) => {
             />
             <Text style={styles.label}>Heading on your profile</Text>
             <TextInput
+              placeholderTextColor="#c4c4c4"
               style={styles.input}
               placeholder="E.g. I am a designer"
               value={form.heading}
@@ -722,6 +747,8 @@ const FreelancerSignup = ({ navigation, route }) => {
               <View style={styles.inputContainer}>
                 <Text style={styles.label}>City</Text>
                 <TextInput
+                  placeholderTextColor="#c4c4c4"
+                  placeholder="Pune"
                   style={styles.input}
                   value={form.city}
                   onChangeText={(v) => setForm({ ...form, city: v })}
@@ -729,23 +756,22 @@ const FreelancerSignup = ({ navigation, route }) => {
               </View>
               <View style={styles.dropdownContainer}>
                 <Text style={styles.label}>State</Text>
-                <View style={styles.dropdown}>
-                  <Picker
-                    selectedValue={form.state}
-                    onValueChange={(v) => setForm({ ...form, state: v })}
-                  >
-                    <Picker.Item label="Select State" value="" />
-                    {indianStates.map((state, i) => (
-                      <Picker.Item key={i} label={state} value={state} />
-                    ))}
-                  </Picker>
-                </View>
+                <PickerModal
+                  items={indianStates}
+                  value={form.state}
+                  onValueChange={(v) => setForm({ ...form, state: v })}
+                  placeholder="Select State"
+                  innerStyle={{ backgroundColor: "#f5f5f5" }}
+                  style={{ marginVertical: 0 }}
+                />
               </View>
             </View>
             <View style={styles.row}>
               <View style={styles.inputContainer}>
                 <Text style={styles.label}>Zip Code</Text>
                 <TextInput
+                  placeholderTextColor="#c4c4c4"
+                  placeholder="123456"
                   style={styles.input}
                   keyboardType="numeric"
                   maxLength={6}
@@ -755,19 +781,19 @@ const FreelancerSignup = ({ navigation, route }) => {
               </View>
               <View style={styles.dropdownContainer}>
                 <Text style={styles.label}>Country</Text>
-                <View style={styles.dropdown}>
-                  <Picker
-                    selectedValue={form.country}
-                    onValueChange={(v) => setForm({ ...form, country: v })}
-                  >
-                    <Picker.Item label="Select Country" value="" />
-                    <Picker.Item label="India" value="India" />
-                  </Picker>
-                </View>
+                <PickerModal
+                  items={COUNTRY_OPTIONS}
+                  value={form.country}
+                  onValueChange={(v) => setForm({ ...form, country: v })}
+                  placeholder="Select Country"
+                  innerStyle={{ backgroundColor: "#f5f5f5" }}
+                  style={{ marginVertical: 0 }}
+                />
               </View>
             </View>
             <Text style={styles.label}>Describe yourself</Text>
             <TextInput
+              placeholderTextColor="#c4c4c4"
               style={styles.textArea}
               placeholder="Describe yourself"
               value={form.bio}
@@ -791,17 +817,14 @@ const FreelancerSignup = ({ navigation, route }) => {
         {step === 4 && (
           <View style={styles.card}>
             <Text style={styles.label}>Gender</Text>
-            <View style={styles.dropdown}>
-              <Picker
-                selectedValue={form.gender}
-                onValueChange={(v) => setForm({ ...form, gender: v })}
-              >
-                <Picker.Item label="Select Gender" value="" />
-                <Picker.Item label="Male" value="Male" />
-                <Picker.Item label="Female" value="Female" />
-                <Picker.Item label="Others" value="Others" />
-              </Picker>
-            </View>
+            <PickerModal
+              items={GENDER_OPTIONS}
+              value={form.gender}
+              onValueChange={(v) => setForm({ ...form, gender: v })}
+              placeholder="Select Gender"
+              innerStyle={{ backgroundColor: "#f5f5f5" }}
+              style={{ marginVertical: 0, marginBottom: 20 }}
+            />
             <Text style={styles.label}>Date of Birth</Text>
             <TouchableOpacity
               style={styles.input}
@@ -831,6 +854,7 @@ const FreelancerSignup = ({ navigation, route }) => {
             {form.certifications.map((cert, i) => (
               <View key={i} style={styles.socialRow}>
                 <TextInput
+                  placeholderTextColor="#c4c4c4"
                   style={styles.input}
                   placeholder="Certification"
                   value={cert}
@@ -852,6 +876,7 @@ const FreelancerSignup = ({ navigation, route }) => {
             {form.socialLinks.map((link, i) => (
               <View key={i} style={styles.socialRow}>
                 <TextInput
+                  placeholderTextColor="#c4c4c4"
                   style={styles.input}
                   placeholder="www.instagram.com/xyz"
                   value={link}
@@ -875,7 +900,7 @@ const FreelancerSignup = ({ navigation, route }) => {
                 onPress={() => handleImageUpload("profile")}
                 style={styles.uploadButton}
               >
-                <Text>Click here to upload</Text>
+                <Text style={{ color: "#fff" }}>Click here to upload</Text>
               </TouchableOpacity>
               {form.profileImage && (
                 <Image
@@ -884,13 +909,13 @@ const FreelancerSignup = ({ navigation, route }) => {
                 />
               )}
             </View>
-            <Text style={styles.label}>Add your cover art</Text>
+            <Text style={styles.label}>Add your cover picture</Text>
             <View style={styles.profileUploadContainer}>
               <TouchableOpacity
                 onPress={() => handleImageUpload("cover")}
                 style={styles.uploadButton}
               >
-                <Text>Click here to upload</Text>
+                <Text style={{ color: "#fff" }}>Click here to upload</Text>
               </TouchableOpacity>
               {form.coverImage && (
                 <Image
@@ -1388,7 +1413,11 @@ const styles = StyleSheet.create({
   },
   disabledButton: {
     backgroundColor: "#ccc",
-    opacity: 0.5
+    opacity: 0.5,
+  },
+  coverImage: {
+    width: 100,
+    height: 67,
   },
 });
 

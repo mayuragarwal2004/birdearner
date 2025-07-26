@@ -289,7 +289,7 @@ const JobRequirementsScreen = ({ navigation, route }) => {
       if (result) {
         setLatitude(parseFloat(result.latitude));
         setLongitude(parseFloat(result.longitude));
-        Alert.alert("Success", "Location coordinates found successfully!");
+        // Alert.alert("Success", "Location coordinates found successfully!");
       } else {
         Alert.alert("Error", "Unable to fetch coordinates. Please try again.");
       }
@@ -336,7 +336,7 @@ const JobRequirementsScreen = ({ navigation, route }) => {
           address.city || ""
         } ${address.region || ""} ${address.country || ""}`.trim();
         setJobLocation(formattedAddress);
-        Alert.alert("Success", "Current location detected successfully!");
+        // Alert.alert("Success", "Current location detected successfully!");
       }
     } catch (error) {
       Alert.alert("Error", `Failed to get current location: ${error.message}`);
@@ -388,7 +388,7 @@ const JobRequirementsScreen = ({ navigation, route }) => {
       }
 
       setShowMapModal(false);
-      Alert.alert("Success", "Location selected successfully!");
+      // Alert.alert("Success", "Location selected successfully!");
     } catch (error) {
       Alert.alert("Error", `Failed to get address: ${error.message}`);
       // Still save the coordinates even if reverse geocoding fails
@@ -663,6 +663,7 @@ const JobRequirementsScreen = ({ navigation, route }) => {
           <View style={styles.locationSection}>
             <Text style={styles.label}>Job Location</Text>
             <TextInput
+              placeholderTextColor="#999999"
               style={styles.input}
               placeholder="Enter job address (e.g., 123 Main St, City, State)"
               value={jobLocation}
@@ -815,6 +816,7 @@ const JobRequirementsScreen = ({ navigation, route }) => {
             )}
 
             <TextInput
+              placeholderTextColor="#999999"
               style={[styles.input, budgetError ? styles.inputError : null]}
               placeholder={
                 walletData
@@ -879,6 +881,7 @@ const JobRequirementsScreen = ({ navigation, route }) => {
 
         <Text style={styles.label}>Job Title</Text>
         <TextInput
+          placeholderTextColor="#999999"
           style={styles.input}
           placeholder="Looking for a ...."
           value={jobTitle}
@@ -888,6 +891,7 @@ const JobRequirementsScreen = ({ navigation, route }) => {
         <Text style={styles.label}>Skills Required</Text>
         {skills.map((skill, index) => (
           <TextInput
+            placeholderTextColor="#999999"
             key={index}
             style={styles.input}
             placeholder="Add the required skills"
@@ -905,6 +909,7 @@ const JobRequirementsScreen = ({ navigation, route }) => {
 
         <Text style={styles.label}>Job Description</Text>
         <TextInput
+          placeholderTextColor="#999999"
           style={styles.textArea}
           placeholder="Describe your job"
           value={jobDes}

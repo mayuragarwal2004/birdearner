@@ -299,11 +299,11 @@ const ClientHomeScreen = () => {
                           {
                             borderWidth: 4,
                             borderColor:
-                              jobDetails.jobStatus === "COMPLETED"
+                              jobDetails?.jobStatus === "COMPLETED"
                                 ? "#4CAF50"
-                                : jobDetails.jobStatus === "IN_PROGRESS"
+                                : jobDetails?.jobStatus === "IN_PROGRESS"
                                 ? "#2196F3"
-                                : jobDetails.jobStatus === "OPEN"
+                                : jobDetails?.jobStatus === "OPEN"
                                 ? "#FFCC00"
                                 : "#aba8a6",
                             borderRadius: 50,

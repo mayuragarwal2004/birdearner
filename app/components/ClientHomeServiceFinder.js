@@ -118,6 +118,7 @@ const ClientHomeServiceFinder = forwardRef((props, ref) => {
         <TextInput
           style={styles.searchInput}
           placeholder="Search"
+          placeholderTextColor="#c4c4c4"
           value={search}
           onChangeText={setSearch}
         />
