@@ -31,14 +31,32 @@ const JobSubmissionTimmerScreen = ({ route, navigation }) => {
     try {
       setIsSubmitting(true); // Set loading state
       await apiService.init(); // Initialize the API service
-      
+
       // Validate that we have the required profile data
       if (!userProfile || !userProfile.id) {
         console.log("Debug - userData:", userData);
         console.log("Debug - userProfile:", userProfile);
-        throw new Error("Client profile not found. Please complete your profile setup.");
+        throw new Error(
+          "Client profile not found. Please complete your profile setup."
+        );
       }
-      
+
+      let uploadedUrls = [];
+
+      for (let i = 0; i < formData.portfolioImages.length; i++) {
+        const response = await apiService.uploadImage(
+          formData.portfolioImages[i],
+          "job_portfolios"
+        );
+        console.log({response});
+        
+        if (response.success) {
+          uploadedUrls.push(response.url);
+        } else {
+          console.log("Error uploading image:", response);
+        }
+      }
+
       // Create job data object
       const jobData = {
         jobTitle: formData.jobTitle,
@@ -52,7 +70,7 @@ const JobSubmissionTimmerScreen = ({ route, navigation }) => {
         budgetType: "Fixed", // Default value
         budgetAmount: parseFloat(formData.budget),
         deadlineDate: new Date(formData.deadline),
-        attachedFiles: formData.portfolioImages, // Send image URIs as is - backend will handle file upload
+        attachedFiles: uploadedUrls, // Send image URIs as is - backend will handle file upload
         location: formData.jobLocation,
       };
 
@@ -61,7 +79,7 @@ const JobSubmissionTimmerScreen = ({ route, navigation }) => {
 
       // Create the job using apiService
       const response = await apiService.createJob(jobData);
-      
+
       Alert.alert("Success", "Job has been created successfully.");
       navigation.reset({
         index: 0,
@@ -139,7 +157,10 @@ const JobSubmissionTimmerScreen = ({ route, navigation }) => {
       </View>
 
       <TouchableOpacity
-        style={[styles.submitButton, (submitted || isSubmitting) && styles.disabledButton]}
+        style={[
+          styles.submitButton,
+          (submitted || isSubmitting) && styles.disabledButton,
+        ]}
         onPress={handleManualSubmit}
         disabled={submitted || isSubmitting}
       >

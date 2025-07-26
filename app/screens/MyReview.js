@@ -10,7 +10,7 @@ import {
   Share,
   RefreshControl,
   Alert,
-  SafeAreaView
+  SafeAreaView,
 } from "react-native";
 import { FontAwesome, MaterialIcons } from "@expo/vector-icons";
 import { TouchableOpacity } from "react-native";
@@ -18,68 +18,131 @@ import ReviewCard from "../components/ReviewCard";
 import { useAuth } from "../context/NewAuthContext";
 import { useTheme } from "../context/ThemeContext";
 import ApiService from "../lib/apiService";
+import apiService from "../lib/apiService";
 
 export default function MyReview({ navigation }) {
-  const { userData } = useAuth();
-  const [profileData, setProfileData] = useState(null);
-  const [loadingProfile, setLoadingProfile] = useState(true);
+  const { userData, userProfile } = useAuth();
+  const [loadingProfile, setLoadingProfile] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [reviews, setReviews] = useState([]);
   const [reviewStats, setReviewStats] = useState(null);
+  const [userServices, setUserServices] = useState([]);
 
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
   const styles = getStyles(currentTheme);
 
+  // const fetchData = useCallback(async () => {
+  //   if (!userData?.id) return;
 
-  const fetchData = useCallback(async () => {
-    if (!userData?.id) return;
-    
-    setLoadingProfile(true);
-    try {
-      // Get complete profile data
-      const profileResponse = await ApiService.getCompleteProfile(userData.id);
-      if (profileResponse.success) {
-        setProfileData(profileResponse.data);
-      }
+  //   setLoadingProfile(true);
+  //   try {
+  //     // Get complete profile data
+  //     const profileResponse = await ApiService.getCompleteProfile(userData.id);
+  //     if (profileResponse.success) {
+  //       setProfileData(profileResponse.data);
+  //     }
 
-      // Get reviews
-      const reviewsResponse = await ApiService.getReviewsByUserId(userData.id);
-      if (reviewsResponse.success) {
-        setReviews(reviewsResponse.data);
-      }
+  //     // Get reviews
+  //     const reviewsResponse = await ApiService.getReviewsByUserId(userData.id);
+  //     if (reviewsResponse.success) {
+  //       setReviews(reviewsResponse.data);
+  //     }
 
-      // Get review statistics
-      const statsResponse = await ApiService.getReviewStats(userData.id);
-      if (statsResponse.success) {
-        setReviewStats(statsResponse.data);
-      }
-    } catch (error) {
-      Alert.alert("Error", "Failed to fetch data");
-    } finally {
-      setLoadingProfile(false);
-    }
-  }, [userData?.id]);
+  //     // Get review statistics
+  //     const statsResponse = await ApiService.getReviewStats(userData.id);
+  //     if (statsResponse.success) {
+  //       setReviewStats(statsResponse.data);
+  //     }
+  //   } catch (error) {
+  //     Alert.alert("Error", "Failed to fetch data");
+  //   } finally {
+  //     setLoadingProfile(false);
+  //   }
+  // }, [userData?.id]);
 
+  // useEffect(() => {
+  //   fetchData();
+  // }, [fetchData]);
+
+  // Load user services and role info
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    const loadUserInfo = async () => {
+      try {
+        if (
+          userData &&
+          userData.role === "FREELANCER" &&
+          userProfile?.selectedServices
+        ) {
+          console.log("Loading services for user:", userData.id);
+          console.log("Selected services:", userProfile.selectedServices);
+
+          // Load service details for the user's selected services
+          const services = await Promise.all(
+            userProfile.selectedServices.map(async (serviceId) => {
+              try {
+                console.log(`Loading service: ${serviceId}`);
+                const service = await apiService.getServiceById(serviceId);
+                console.log(`Service ${serviceId} loaded:`, service);
+                return service;
+              } catch (error) {
+                console.error(
+                  `Error loading service ${serviceId}:`,
+                  error.message
+                );
+                // Return null for invalid services instead of breaking
+                return null;
+              }
+            })
+          );
+
+          // Filter out null services (failed to load)
+          const validServices = services.filter((s) => s !== null);
+          console.log("Valid services loaded:", validServices.length);
+          setUserServices(validServices);
+
+          // Show warning if some services failed to load
+          if (validServices.length < userProfile.selectedServices.length) {
+            const failedCount =
+              userProfile.selectedServices.length - validServices.length;
+            console.warn(`${failedCount} service(s) failed to load`);
+            showToast(
+              "warning",
+              "Warning",
+              `Some services could not be loaded (${failedCount} failed)`
+            );
+          }
+        } else {
+          // Clear services if user is not a freelancer or has no selected services
+          setUserServices([]);
+        }
+      } catch (error) {
+        console.error("Error loading user info:", error);
+        setUserServices([]);
+        showToast("error", "Error", "Failed to load user services");
+      }
+    };
+
+    if (userData) {
+      loadUserInfo();
+    }
+  }, [userData, userProfile]);
 
   const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    fetchData().finally(() => setRefreshing(false));
-  }, [fetchData]);
+    // setRefreshing(true);
+    // fetchData().finally(() => setRefreshing(false));
+  }, []);
 
   // const onShare = async () => {
   //   try {
   //     const profileLink = `https://birdearner.com/profile/${userData.id}`;
   //     const result = await Share.share({
-  //       message: `Check out my profile on Bird Earner! Name: ${profileData?.user?.fullName}\n\nProfile Link: ${profileLink}`,
+  //       message: `Check out my profile on Bird Earner! Name: ${userProfile?.user?.fullName}\n\nProfile Link: ${profileLink}`,
   //     });
-      
+
   //     if (result.action === Share.sharedAction) {
-  //       console.log(result.activityType ? 
-  //         `Shared with activity: ${result.activityType}` : 
+  //       console.log(result.activityType ?
+  //         `Shared with activity: ${result.activityType}` :
   //         "Profile shared successfully.");
   //     }
   //   } catch (error) {
@@ -158,8 +221,8 @@ export default function MyReview({ navigation }) {
 
         <ImageBackground
           source={
-            profileData?.coverPhoto
-              ? { uri: profileData.coverPhoto }
+            userProfile?.coverPhoto
+              ? { uri: apiService.loadImageURI(userProfile.coverPhoto) }
               : require("../assets/backGroungBanner.png")
           }
           style={styles.backgroundImg}
@@ -167,8 +230,8 @@ export default function MyReview({ navigation }) {
         >
           <Image
             source={
-              profileData?.profilePhoto
-                ? { uri: profileData.profilePhoto }
+              userProfile?.profilePhoto
+                ? { uri: apiService.loadImageURI(userProfile.profilePhoto) }
                 : require("../assets/profile.png")
             }
             style={styles.profileImage}
@@ -179,25 +242,32 @@ export default function MyReview({ navigation }) {
         </ImageBackground>
 
         <View style={styles.userDetails}>
-          <Text style={styles.nameText}>{profileData?.user?.fullName}</Text>
+          <Text style={styles.nameText}>{userProfile?.user?.fullName}</Text>
           <Text style={styles.roleText}>
-            {profileData?.organizationType || profileData?.profileHeading}
+            {userProfile?.organizationType ||
+              (userServices.length > 0 &&
+                userServices.map((item, idx) => (
+                  <Text key={idx} style={styles.roleText}>
+                    {item.name}
+                    {idx < userServices.length - 1 ? ", " : ""}
+                  </Text>
+                )))}
           </Text>
           <View style={styles.locationContainer}>
             <MaterialIcons name="location-on" size={16} color="#4C0183" />
             <Text style={styles.locationText}>
-              {profileData?.city}, {profileData?.state}, {profileData?.country}
+              {userProfile?.city}, {userProfile?.state}, {userProfile?.country}
             </Text>
           </View>
-          
+
           <View style={styles.statusContainer}>
             <Text style={styles.statusText}>
-              Status: {profileData?.currentlyAvailable ? "Active" : "Inactive"}
+              Status: {userProfile?.currentlyAvailable ? "Active" : "Inactive"}
             </Text>
-            <FontAwesome 
-              name="circle" 
-              size={12} 
-              color={profileData?.currentlyAvailable ? "#6BCD2F" : "#FF3131"} 
+            <FontAwesome
+              name="circle"
+              size={12}
+              color={userProfile?.currentlyAvailable ? "#6BCD2F" : "#FF3131"}
               style={styles.statusIcon}
             />
           </View>
@@ -353,6 +423,7 @@ const getStyles = (currentTheme) =>
       fontSize: 16,
       color: currentTheme.text,
       marginBottom: 10,
+      textAlign: "center",
     },
     locationContainer: {
       flexDirection: "row",

@@ -25,10 +25,10 @@ const JobDescriptionScreen = ({ route, navigation }) => {
   const { job } = route.params || {};
   const handleApply = () => {
     // Extract required params
-    const projectId = job.id || job._id || job.projectId;
+    const jobId = job.id || job.jobId;
     const full_name = job.client?.user?.fullName || job.client?.companyName || "";
     const client = job.client;
-    navigation.navigate("FreelancerChat", { projectId, full_name, client });
+    navigation.navigate("FreelancerChat", { jobId, full_name, client });
   };
   console.log("Job data received:", job);
   

@@ -7,6 +7,7 @@ import {
   StyleSheet,
   ImageBackground,
   ActivityIndicator,
+  Share,
   RefreshControl,
   Alert,
   SafeAreaView,
@@ -16,67 +17,162 @@ import { TouchableOpacity } from "react-native";
 import ReviewCard from "../components/ReviewCard";
 import { useAuth } from "../context/NewAuthContext";
 import { useTheme } from "../context/ThemeContext";
-import ApiService from "../lib/apiService";
+import apiService from "../lib/apiService";
 
-export default function ReviewsScreen({ route, navigation }) {
-  const { receiverId } = route.params;
+export default function MyReview({ navigation, route }) {
+  const { profileData } = route.params;
+  console.log({ review: profileData });
+
   const { userData } = useAuth();
-  const [profileData, setProfileData] = useState(null);
-  const [loadingProfile, setLoadingProfile] = useState(true);
+  const [loadingProfile, setLoadingProfile] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [reviews, setReviews] = useState([]);
   const [reviewStats, setReviewStats] = useState(null);
-  const role = userData?.role === "CLIENT" ? "FREELANCER" : "CLIENT";
+  const [userServices, setUserServices] = useState([]);
 
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
-
   const styles = getStyles(currentTheme);
 
-  // Fetch profile and review data
-  const fetchData = useCallback(async () => {
-    setLoadingProfile(true);
-    try {
-      // Get complete profile data
-      const profileResponse = await ApiService.getCompleteProfile(receiverId);
-      if (profileResponse.success) {
-        setProfileData(profileResponse.data);
-      }
+  // const fetchData = useCallback(async () => {
+  //   if (!userData?.id) return;
 
-      // Get reviews
-      const reviewsResponse = await ApiService.getReviewsByUserId(receiverId);
-      if (reviewsResponse.success) {
-        setReviews(reviewsResponse.data);
-      }
+  //   setLoadingProfile(true);
+  //   try {
+  //     // Get complete profile data
+  //     const profileResponse = await ApiService.getCompleteProfile(userData.id);
+  //     if (profileResponse.success) {
+  //       setProfileData(profileResponse.data);
+  //     }
 
-      // Get review statistics
-      const statsResponse = await ApiService.getReviewStats(receiverId);
-      if (statsResponse.success) {
-        setReviewStats(statsResponse.data);
-      }
-    } catch (error) {
-      Alert.alert("Error", "Failed to fetch data");
-    } finally {
-      setLoadingProfile(false);
-    }
-  }, [receiverId]);
+  //     // Get reviews
+  //     const reviewsResponse = await ApiService.getReviewsByUserId(userData.id);
+  //     if (reviewsResponse.success) {
+  //       setReviews(reviewsResponse.data);
+  //     }
 
+  //     // Get review statistics
+  //     const statsResponse = await ApiService.getReviewStats(userData.id);
+  //     if (statsResponse.success) {
+  //       setReviewStats(statsResponse.data);
+  //     }
+  //   } catch (error) {
+  //     Alert.alert("Error", "Failed to fetch data");
+  //   } finally {
+  //     setLoadingProfile(false);
+  //   }
+  // }, [userData?.id]);
+
+  // useEffect(() => {
+  //   fetchData();
+  // }, [fetchData]);
+
+  // Load user services and role info
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    const loadUserInfo = async () => {
+      try {
+        if (
+          userData &&
+          userData.role === "CLIENT" &&
+          profileData?.selectedServices
+        ) {
+          console.log("Selected services:", profileData.selectedServices);
+
+          // Load service details for the user's selected services
+          const services = await Promise.all(
+            profileData.selectedServices.map(async (serviceId) => {
+              try {
+                console.log(`Loading service: ${serviceId}`);
+                const service = await apiService.getServiceById(serviceId);
+                console.log(`Service ${serviceId} loaded:`, service);
+                return service;
+              } catch (error) {
+                console.error(
+                  `Error loading service ${serviceId}:`,
+                  error.message
+                );
+                // Return null for invalid services instead of breaking
+                return null;
+              }
+            })
+          );
+
+          // Filter out null services (failed to load)
+          const validServices = services.filter((s) => s !== null);
+          console.log("Valid services loaded:", validServices.length);
+          setUserServices(validServices);
+
+          // Show warning if some services failed to load
+          if (validServices.length < profileData.selectedServices.length) {
+            const failedCount =
+              profileData.selectedServices.length - validServices.length;
+            console.warn(`${failedCount} service(s) failed to load`);
+            showToast(
+              "warning",
+              "Warning",
+              `Some services could not be loaded (${failedCount} failed)`
+            );
+          }
+        } else {
+          // Clear services if user is not a freelancer or has no selected services
+          setUserServices([]);
+        }
+      } catch (error) {
+        console.error("Error loading user info:", error);
+        setUserServices([]);
+        showToast("error", "Error", "Failed to load user services");
+      }
+    };
+
+    if (profileData) {
+      loadUserInfo();
+    }
+  }, [userData, profileData]);
 
   const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    fetchData().finally(() => setRefreshing(false));
-  }, [fetchData]);
+    // setRefreshing(true);
+    // fetchData().finally(() => setRefreshing(false));
+  }, []);
 
-  if (loadingProfile) {
-    return (
-      <SafeAreaView style={styles.centered}>
-        <ActivityIndicator size="large" color="#4C0183" />
-      </SafeAreaView>
-    );
-  }
+  // const onShare = async () => {
+  //   try {
+  //     const profileLink = `https://birdearner.com/profile/${userData.id}`;
+  //     const result = await Share.share({
+  //       message: `Check out my profile on Bird Earner! Name: ${profileData?.user?.fullName}\n\nProfile Link: ${profileLink}`,
+  //     });
+
+  //     if (result.action === Share.sharedAction) {
+  //       console.log(result.activityType ?
+  //         `Shared with activity: ${result.activityType}` :
+  //         "Profile shared successfully.");
+  //     }
+  //   } catch (error) {
+  //     Alert.alert("Error", "Failed to share the profile.");
+  //   }
+  // };
+
+  const onShare = async () => {
+    try {
+      const profileLink = `https://birdearner.com/profile/${profileData.$id}`;
+
+      const result = await Share.share({
+        message: `Check out my profile on our app! Name: ${data?.full_name}\n\nProfile Link: ${profileLink}`,
+      });
+      if (result.action === Share.sharedAction) {
+        if (result.activityType) {
+          // shared with specific activity
+          console.log("Shared with activity:", result.activityType);
+        } else {
+          // shared without specific activity
+          console.log("Profile shared successfully.");
+        }
+      } else if (result.action === Share.dismissedAction) {
+        console.log("Share dismissed.");
+      }
+    } catch (error) {
+      Alert.alert("Error", "Failed to share the profile.");
+    }
+  };
 
   const RatingBar = ({ rating, count, total }) => {
     const percentage = total > 0 ? (count / total) * 100 : 0;
@@ -90,6 +186,14 @@ export default function ReviewsScreen({ route, navigation }) {
       </View>
     );
   };
+
+  if (loadingProfile) {
+    return (
+      <SafeAreaView style={styles.centered}>
+        <ActivityIndicator size="large" color="#4C0183" />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -107,19 +211,19 @@ export default function ReviewsScreen({ route, navigation }) {
         <View style={styles.tab}>
           <TouchableOpacity
             style={styles.tabButtonL}
-            onPress={() => navigation.navigate("ProfileScreen", { receiverId })}
+            onPress={() => navigation.goBack()}
           >
-            <Text style={styles.tabTextL}>Profile</Text>
+            <Text style={styles.tabTextL}>My Profile</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.tabButtonR}>
-            <Text style={styles.tabTextR}>Reviews</Text>
+            <Text style={styles.tabTextR}>My Reviews</Text>
           </TouchableOpacity>
         </View>
 
         <ImageBackground
           source={
             profileData?.coverPhoto
-              ? { uri: profileData.coverPhoto }
+              ? { uri: apiService.loadImageURI(profileData.coverPhoto) }
               : require("../assets/backGroungBanner.png")
           }
           style={styles.backgroundImg}
@@ -128,29 +232,47 @@ export default function ReviewsScreen({ route, navigation }) {
           <Image
             source={
               profileData?.profilePhoto
-                ? { uri: profileData.profilePhoto }
+                ? { uri: apiService.loadImageURI(profileData.profilePhoto) }
                 : require("../assets/profile.png")
             }
             style={styles.profileImage}
           />
+          <TouchableOpacity style={styles.share} onPress={onShare}>
+            <FontAwesome name="share" size={24} color="#4C0183" />
+          </TouchableOpacity>
         </ImageBackground>
 
         <View style={styles.userDetails}>
           <Text style={styles.nameText}>{profileData?.user?.fullName}</Text>
-          {role === "CLIENT" ? (
-            <Text style={styles.roleText}>
-              {profileData?.organizationType}
-            </Text>
-          ) : (
-            <Text style={styles.roleText}>{profileData?.profileHeading}</Text>
-          )}
+          <Text style={styles.roleText}>
+            {profileData?.organizationType ||
+              (userServices.length > 0 &&
+                userServices.map((item, idx) => (
+                  <Text key={idx} style={styles.roleText}>
+                    {item.name}
+                    {idx < userServices.length - 1 ? ", " : ""}
+                  </Text>
+                )))}
+          </Text>
           <View style={styles.locationContainer}>
             <MaterialIcons name="location-on" size={16} color="#4C0183" />
             <Text style={styles.locationText}>
               {profileData?.city}, {profileData?.state}, {profileData?.country}
             </Text>
           </View>
-          
+
+          <View style={styles.statusContainer}>
+            <Text style={styles.statusText}>
+              Status: {profileData?.currentlyAvailable ? "Active" : "Inactive"}
+            </Text>
+            <FontAwesome
+              name="circle"
+              size={12}
+              color={profileData?.currentlyAvailable ? "#6BCD2F" : "#FF3131"}
+              style={styles.statusIcon}
+            />
+          </View>
+
           {reviewStats && (
             <View style={styles.statsContainer}>
               <View style={styles.ratingHeader}>
@@ -271,6 +393,22 @@ const getStyles = (currentTheme) =>
       borderWidth: 3,
       borderColor: "#fff",
     },
+    share: {
+      position: "absolute",
+      bottom: 10,
+      right: 20,
+      backgroundColor: "#fff",
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      justifyContent: "center",
+      alignItems: "center",
+      elevation: 4,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.25,
+      shadowRadius: 3.84,
+    },
     userDetails: {
       alignItems: "center",
       paddingTop: 30,
@@ -286,15 +424,30 @@ const getStyles = (currentTheme) =>
       fontSize: 16,
       color: currentTheme.text,
       marginBottom: 10,
+      textAlign: "center",
     },
     locationContainer: {
       flexDirection: "row",
       alignItems: "center",
-      marginBottom: 20,
+      marginBottom: 15,
     },
     locationText: {
       fontSize: 14,
       color: currentTheme.subText,
+      marginLeft: 5,
+    },
+    statusContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: 20,
+    },
+    statusText: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: currentTheme.text,
+      marginRight: 5,
+    },
+    statusIcon: {
       marginLeft: 5,
     },
     statsContainer: {

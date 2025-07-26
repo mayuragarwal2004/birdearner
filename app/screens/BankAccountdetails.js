@@ -2,27 +2,26 @@ import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
-  StyleSheet,
-  TouchableOpacity,
   TextInput,
   ScrollView,
+  StyleSheet,
+  TouchableOpacity,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useAuth } from "../context/AuthContext";
 import Toast from "react-native-toast-message";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import apiService from "../lib/apiService";
 import { useTheme } from "../context/ThemeContext";
-import { useAppwrite } from "../context/AppwriteContext";
 
+// Define state hooks
 const BankAccountDetailsScreen = ({ navigation }) => {
   const [bankName, setBankName] = useState("");
   const [accountHolderName, setAccountHolderName] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
-  const [isEditingAccountNumber, setIsEditingAccountNumber] = useState(false);
   const [confirmAccountNumber, setConfirmAccountNumber] = useState("");
   const [ifscCode, setIfscCode] = useState("");
+  const [isEditingAccountNumber, setIsEditingAccountNumber] = useState(false);
   const [isEditingIfscCode, setIsEditingIfscCode] = useState(false);
-  const { userData } = useAuth();
-  const { appwriteConfig, databases } = useAppwrite();
 
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
@@ -30,75 +29,65 @@ const BankAccountDetailsScreen = ({ navigation }) => {
   const styles = getStyles(currentTheme);
 
   useEffect(() => {
+    const fetchBankDetails = async () => {
+      try {
+        const res = await apiService.getUserBankDetails();
+        console.log({res});
+        
+        if (res) {
+          const { bankName, accountHolderName, accountNumber, ifscCode } = res;
+          setBankName(bankName || "");
+          setAccountHolderName(accountHolderName || "");
+          setAccountNumber(accountNumber || "");
+          setIfscCode(ifscCode || "");
+        }
+      } catch (err) {
+        console.error("Failed to fetch bank details", err);
+        Toast.show({
+          type: "error",
+          text1: "Error fetching bank details",
+        });
+      }
+    };
+
     fetchBankDetails();
   }, []);
 
-  const handleError = (message) => {
-    Toast.show({
-      type: "error",
-      text1: "Error",
-      text2: message,
-    });
-  };
-
-  const handleSuccess = (message) => {
-    Toast.show({
-      type: "success",
-      text1: "Success",
-      text2: message,
-    });
-  };
-
-  const maskValue = (value) => {
-    if (!value || value.length <= 4) return value;
-    return "x".repeat(value.length - 4) + value.slice(-4);
-  };
-
-  const fetchBankDetails = async () => {
-    try {
-      if (userData) {
-        setBankName(userData?.bankName || "");
-        setAccountHolderName(userData?.accountHolderName || "");
-
-        const accountNumber = userData?.accountNumber;
-        setAccountNumber(accountNumber ? accountNumber.toString() : "");
-        const ifsc = userData?.ifscCode;
-        setIfscCode(ifsc || "");
-      }
-    } catch (error) {
-      handleError("Error fetching bank details");
-    }
-  };
-
   const handleSave = async () => {
-    if (accountNumber === confirmAccountNumber) {
-      const collectionId =
-        userData?.role === "client"
-          ? appwriteConfig.clientCollectionId
-          : appwriteConfig.freelancerCollectionId;
-
-      try {
-        const document = {
-          bankName,
-          accountHolderName,
-          accountNumber: parseInt(accountNumber),
-          ifscCode,
-        };
-        await databases.updateDocument(
-          appwriteConfig.databaseId,
-          collectionId,
-          userData?.$id,
-          document
-        );
-
-        handleSuccess("Bank Details Saved successfully!");
-        navigation.goBack();
-      } catch (error) {
-        handleError("Error saving bank details");
-      }
-    } else {
-      handleError("Account numbers do not match!");
+    if (accountNumber !== confirmAccountNumber) {
+      Toast.show({
+        type: "error",
+        text1: "Account numbers do not match",
+      });
+      return;
     }
+
+    try {
+      await apiService.updateBankDetails({
+        bankName,
+        accountHolderName,
+        accountNumber,
+        ifscCode,
+      });
+
+      Toast.show({
+        type: "success",
+        text1: "Bank details saved successfully",
+      });
+
+      // Optionally clear input or navigate back
+    } catch (err) {
+      console.error("Error saving bank details:", err);
+      Toast.show({
+        type: "error",
+        text1: "Failed to save bank details",
+      });
+    }
+  };
+
+  const maskValue = (val) => {
+    if (!val) return "";
+    return "*".repeat(val.length - 2) + val.slice(-2);
   };
 
   return (

@@ -53,6 +53,10 @@ const FreelancerChat = ({ route, navigation }) => {
   const [fileContent, setFileContent] = useState("");
   const [sending, setSending] = useState(false);
 
+  if (!userData?.freelancer){
+    return <Text>Not a freelancer</Text>;
+  }
+
   console.log({ messages });
 
   const reportOptions = [
@@ -444,28 +448,30 @@ const FreelancerChat = ({ route, navigation }) => {
               </View>
             )}
 
-          <View>
-            {chatStatus !== "COMPLETED" && (
-              <Text style={styles.deadline}>
-                {job?.deadlineDate && new Date(job.deadlineDate) < new Date()
-                  ? "Deadline Over"
-                  : "Deadline Timer"}
-              </Text>
-            )}
-            <View style={styles.deadlineTimerContainer}>
-              <DeadlineTimer
-                deadline={job?.deadlineDate}
-                jobCompleted={job?.jobStatus === "COMPLETED"}
-                style={{
-                  timeBox: styles.timeBox,
-                  timeText: styles.timeText,
-                  unitText: styles.unitText,
-                  completedText: styles.conColorc,
-                  timeContainer: styles.timeContainer,
-                }}
-              />
+          {chatStatus === "ACCEPTED" && (
+            <View>
+              {chatStatus !== "COMPLETED" && (
+                <Text style={styles.deadline}>
+                  {job?.deadlineDate && new Date(job.deadlineDate) < new Date()
+                    ? "Deadline Over"
+                    : "Deadline Timer"}
+                </Text>
+              )}
+              <View style={styles.deadlineTimerContainer}>
+                <DeadlineTimer
+                  deadline={job?.deadlineDate}
+                  jobCompleted={job?.jobStatus === "COMPLETED"}
+                  style={{
+                    timeBox: styles.timeBox,
+                    timeText: styles.timeText,
+                    unitText: styles.unitText,
+                    completedText: styles.conColorc,
+                    timeContainer: styles.timeContainer,
+                  }}
+                />
+              </View>
             </View>
-          </View>
+          )}
         </View>
 
         <TouchableOpacity onPress={() => setShowMenu(!showMenu)}>

@@ -37,11 +37,11 @@ const categorizeJobs = (jobs) => {
       priority = `${proposalCount} Entries Received`;
     }
 
-    if (daysRemaining <= 2) {
-      color = "#FF3B30";
-    } else if (daysRemaining <= 10) {
-      color = "#34C759";
-    }
+    // if (daysRemaining <= 2) {
+    //   color = "#FF3B30";
+    // } else if (daysRemaining <= 10) {
+    //   color = "#34C759";
+    // }
 
     return {
       ...job,
@@ -72,7 +72,7 @@ const JobsPostedScreen = ({ navigation }) => {
     setError(false);
     try {
       await apiService.init(); // Initialize the API service
-      
+
       // Check if we have a valid client profile
       if (!userProfile || !userProfile.id) {
         console.log("No client profile found");
@@ -82,10 +82,10 @@ const JobsPostedScreen = ({ navigation }) => {
 
       // Fetch jobs for this client
       const response = await apiService.getJobsByClientId(userProfile.id);
-      
+
       // The API returns paginated data, so we get the jobs from response.jobs
       const fetchedJobs = response.jobs || response;
-      
+
       if (JSON.stringify(fetchedJobs) !== JSON.stringify(cachedJobs.current)) {
         const categorizedJobs = categorizeJobs(fetchedJobs);
         cachedJobs.current = fetchedJobs;
@@ -149,14 +149,19 @@ const JobsPostedScreen = ({ navigation }) => {
   };
 
   const renderJobItem = ({ item }) => {
+    console.log({ item });
+
     const title = item.jobTitle;
     const proposalCount = item.proposalCount || 0;
     const color = item.color;
     const jobId = item.id;
-    
+
     // Check if there are portfolio images attached to this job
-    const hasPortfolioImages = item.attachedFiles && item.attachedFiles.length > 0;
-    const firstPortfolioImage = hasPortfolioImages ? item.attachedFiles[0] : null;
+    const hasPortfolioImages =
+      item.attachedFiles && item.attachedFiles.length > 0;
+    const firstPortfolioImage = hasPortfolioImages
+      ? item.attachedFiles[0]
+      : null;
 
     return (
       <TouchableOpacity
@@ -168,6 +173,7 @@ const JobsPostedScreen = ({ navigation }) => {
             color,
             item,
             jobId,
+            job: item,
           });
         }}
       >
@@ -178,11 +184,7 @@ const JobsPostedScreen = ({ navigation }) => {
           />
         ) : (
           <View style={[styles.avatar, styles.iconContainer]}>
-            <Briefcase 
-              size={40} 
-              color="#6A0DAD" 
-              strokeWidth={2}
-            />
+            <Briefcase size={40} color="#6A0DAD" strokeWidth={2} />
           </View>
         )}
         <View style={styles.jobContent}>
@@ -205,7 +207,17 @@ const JobsPostedScreen = ({ navigation }) => {
           />
         </TouchableOpacity>
         <View
-          style={[styles.statusIndicator, { backgroundColor: item.color }]}
+          style={[
+            styles.statusIndicator,
+            {
+              backgroundColor:
+                item.jobStatus === "COMPLETED"
+                  ? "#4CAF50"
+                  : item.jobStatus === "PENDING"
+                  ? "#FF9800"
+                  : "#FF0000",
+            },
+          ]}
         />
       </TouchableOpacity>
     );

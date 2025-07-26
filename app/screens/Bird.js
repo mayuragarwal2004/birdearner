@@ -8,6 +8,7 @@ import {
   StyleSheet,
 } from "react-native";
 import { useTheme } from "../context/ThemeContext";
+import { MaterialIcons } from "@expo/vector-icons";
 
 const Bird = () => {
   const [messages, setMessages] = useState([]); // Chat messages
@@ -38,7 +39,6 @@ const Bird = () => {
       const history = messages.map((msg) => msg.text);
 
       console.log("test 1");
-      
 
       // API request to backend
       const response = await fetch("https://api.birdearner.com/faq", {
@@ -52,7 +52,6 @@ const Bird = () => {
       console.log("test 3");
 
       console.log(response);
-      
 
       if (response.ok) {
         const botMessage = {
@@ -63,8 +62,8 @@ const Bird = () => {
 
         // Add bot response to the chat
         setMessages((prevMessages) => [...prevMessages, botMessage]);
-      console.log("test 5");
-    } else {
+        console.log("test 5");
+      } else {
         throw new Error(data.error || "An error occurred.");
       }
     } catch (error) {
@@ -93,10 +92,9 @@ const Bird = () => {
           isUser ? styles.userMessage : styles.botMessage,
         ]}
       >
-        <Text style={[
-          styles.messageText,
-          isUser ? { color: '#fff' } : null
-        ]}>{item.text}</Text>
+        <Text style={[styles.messageText, isUser ? { color: "#fff" } : null]}>
+          {item.text}
+        </Text>
       </View>
     );
   };
@@ -105,23 +103,23 @@ const Bird = () => {
     <View style={styles.emptyContainer}>
       <Text style={styles.welcomeTitle}>Welcome to BirdBot! 🦜</Text>
       <Text style={styles.welcomeSubtitle}>Your AI Assistant</Text>
-      <Text style={styles.welcomeText}>
-        I can help you with:
-      </Text>
+      <Text style={styles.welcomeText}>I can help you with:</Text>
       <View style={styles.suggestionContainer}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.suggestionButton}
           onPress={() => setInput("What is BirdEarner?")}
         >
           <Text style={styles.suggestionText}>🦜 What is BirdEarner?</Text>
         </TouchableOpacity>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.suggestionButton}
           onPress={() => setInput("What services can I offer?")}
         >
-          <Text style={styles.suggestionText}>🛠️ What services can I offer?</Text>
+          <Text style={styles.suggestionText}>
+            🛠️ What services can I offer?
+          </Text>
         </TouchableOpacity>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.suggestionButton}
           onPress={() => setInput("How does payment work?")}
         >
@@ -155,7 +153,13 @@ const Bird = () => {
           onPress={sendMessage}
           disabled={loading}
         >
-          <Text style={styles.sendButtonText}>{loading ? "..." : "Send"}</Text>
+          <Text style={styles.sendButtonText}>
+            {loading ? (
+              "..."
+            ) : (
+              <MaterialIcons name="send" color="#fff" size={28} />
+            )}
+          </Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -168,20 +172,20 @@ const getStyles = (currentTheme) =>
       flex: 1,
       backgroundColor: currentTheme.background || "#fff",
       paddingHorizontal: 20,
-      paddingTop: 50
+      paddingTop: 50,
     },
-    chatList: { 
-      flex: 1 
+    chatList: {
+      flex: 1,
     },
-    chatListContainer: { 
+    chatListContainer: {
       padding: 10,
-      flexGrow: 1 
+      flexGrow: 1,
     },
     messageContainer: {
       marginVertical: 5,
       padding: 12,
       borderRadius: 15,
-      maxWidth: '85%',
+      maxWidth: "85%",
       shadowColor: "#000",
       shadowOffset: {
         width: 0,
@@ -201,10 +205,11 @@ const getStyles = (currentTheme) =>
       alignSelf: "flex-start",
       borderTopLeftRadius: 5,
     },
-    messageText: { 
-      fontSize: 16, 
-      color: props => props.sender === 'user' ? '#fff' : currentTheme.text || "#000",
-      lineHeight: 22 
+    messageText: {
+      fontSize: 16,
+      color: (props) =>
+        props.sender === "user" ? "#fff" : currentTheme.text || "#000",
+      lineHeight: 22,
     },
     inputContainer: {
       flexDirection: "row",
@@ -220,7 +225,7 @@ const getStyles = (currentTheme) =>
       borderColor: currentTheme.border || "#ddd",
       borderRadius: 20,
       color: currentTheme.text || "#000000",
-      backgroundColor: currentTheme.background3 || '#fff',
+      backgroundColor: currentTheme.background3 || "#fff",
       fontSize: 16,
     },
     sendButton: {
@@ -231,50 +236,50 @@ const getStyles = (currentTheme) =>
       justifyContent: "center",
       width: 50,
       height: 50,
-      alignItems: 'center',
+      alignItems: "center",
     },
-    sendButtonText: { 
-      color: "#fff", 
+    sendButtonText: {
+      color: "#fff",
       fontWeight: "bold",
       fontSize: 16,
     },
     emptyContainer: {
       flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
+      justifyContent: "center",
+      alignItems: "center",
       paddingHorizontal: 20,
       paddingBottom: 100,
     },
     welcomeTitle: {
       fontSize: 28,
-      fontWeight: 'bold',
-      color: '#4C0183',
+      fontWeight: "bold",
+      color: "#4C0183",
       marginBottom: 8,
     },
     welcomeSubtitle: {
       fontSize: 18,
-      color: currentTheme.text || '#666',
+      color: currentTheme.text || "#666",
       marginBottom: 24,
     },
     welcomeText: {
       fontSize: 16,
-      color: currentTheme.text || '#666',
+      color: currentTheme.text || "#666",
       marginBottom: 20,
-      textAlign: 'center',
+      textAlign: "center",
     },
     suggestionContainer: {
-      width: '100%',
+      width: "100%",
       gap: 12,
     },
     suggestionButton: {
-      backgroundColor: currentTheme.cardBackground || '#f5f5f5',
+      backgroundColor: currentTheme.cardBackground || "#f5f5f5",
       padding: 16,
       borderRadius: 12,
       borderWidth: 1,
-      borderColor: currentTheme.border || '#eee',
+      borderColor: currentTheme.border || "#eee",
     },
     suggestionText: {
-      color: currentTheme.text || '#333',
+      color: currentTheme.text || "#333",
       fontSize: 16,
     },
   });

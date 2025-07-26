@@ -73,6 +73,9 @@ const ClientChat = ({ route, navigation }) => {
     if (job?.characterLimit) {
       setCharacterLimit(job.characterLimit);
     }
+    if (job?.jobStatus === "REJECTED") {
+      setChatStatus("REJECTED");
+    }
     if (
       job?.jobStatus === "ACCEPTED" &&
       job?.assignedFreelancerId === freelancer.id
@@ -85,9 +88,6 @@ const ClientChat = ({ route, navigation }) => {
     ) {
       setChatStatus("REJECTED");
     }
-    if (job?.assignedFreelancerId === null) {
-      setChatStatus("PENDING");
-    }
     return () => {
       setChatStatus("PENDING");
     };
@@ -96,18 +96,6 @@ const ClientChat = ({ route, navigation }) => {
   const handleReject = async () => {
     try {
       await api.init();
-
-      // First update the chat thread status
-      const threadRes = await api.makeRequest(
-        `/chat/thread/${thread.id}/status`,
-        {
-          method: "PATCH",
-          body: JSON.stringify({
-            status: "REJECTED",
-          }),
-        }
-      );
-
       // Then update the job status
       const res = await api.makeRequest(`/jobs/${jobId}/reject-freelancer`, {
         method: "POST",
@@ -629,9 +617,19 @@ const ClientChat = ({ route, navigation }) => {
 
       <View style={styles.header}>
         <View style={styles.headerData}>
-          <Text style={styles.profile}>Tap for contact details</Text>
-          <Text style={styles.username}>@{full_name}</Text>
-          <Text style={styles.profile}>Last online 3 hrs ago</Text>
+          <Text style={styles.profile}>Tap to view profile</Text>
+          <TouchableOpacity
+            onPress={() =>
+              navigation.navigate("ProfileScreen", {
+                receiverId: freelancer.user.id,
+              })
+            }
+          >
+            <Text style={styles.username}>@{full_name}</Text>
+          </TouchableOpacity>
+
+          {/* TODO */}
+          {/* <Text style={styles.profile}>Last online 3 hrs ago</Text> */}
           <View
             style={[
               styles.statusContainer,
@@ -670,15 +668,8 @@ const ClientChat = ({ route, navigation }) => {
                 <Text style={styles.buttonText}>Reject</Text>
               </TouchableOpacity>
             </View>
-          ) : (
+          ) : job?.assignedFreelancerId === freelancer.id ? (
             <View>
-              {chatStatus !== "COMPLETED" && (
-                <Text style={styles.deadline}>
-                  {job?.deadlineDate && new Date(job.deadlineDate) < new Date()
-                    ? "Deadline Over"
-                    : "Deadline Timer"}
-                </Text>
-              )}
               <View style={styles.deadlineTimerContainer}>
                 {job?.deadlineDate &&
                 new Date(job.deadlineDate) < new Date() ? (
@@ -717,6 +708,8 @@ const ClientChat = ({ route, navigation }) => {
                 )}
               </View>
             </View>
+          ) : (
+            <></>
           )}
         </View>
 
@@ -756,6 +749,9 @@ const ClientChat = ({ route, navigation }) => {
         )}
         style={styles.chatList}
         contentContainerStyle={styles.chatListContainer}
+        onContentSizeChange={() => {
+          flatListRef.current?.scrollToEnd({ animated: true });
+        }}
       />
       {chatStatus && chatStatus === "PENDING" && (
         <View style={styles.limit}>

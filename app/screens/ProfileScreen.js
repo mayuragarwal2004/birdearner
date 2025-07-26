@@ -14,13 +14,12 @@ import {
   SafeAreaView,
 } from "react-native";
 import { FontAwesome } from "@expo/vector-icons";
-import { useAppwrite } from "../context/AppwriteContext";
 import { useAuth } from "../context/NewAuthContext";
 import ImageViewer from "react-native-image-zoom-viewer";
 import { useTheme } from "../context/ThemeContext";
+import apiService from "../lib/apiService";
 
 export default function ProfileScreen({ route, navigation }) {
-  const { appwriteConfig, databases } = useAppwrite();
   const { receiverId } = route.params;
   const { user, userData } = useAuth();
   const [profileData, setProfileData] = useState(null);
@@ -28,14 +27,16 @@ export default function ProfileScreen({ route, navigation }) {
   const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [images, setImages] = useState([]);
-  const role = userData?.role === "client" ? "freelancer" : "client";
+  const [userServices, setUserServices] = useState([]);
+
+  const role = userData?.role === "CLIENT" ? "FREELANCER" : "CLIENT";
 
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
 
   const styles = getStyles(currentTheme);
 
-  const createdAt = profileData?.$createdAt;
+  const createdAt = profileData?.createdAt;
   const date = new Date(createdAt);
   const formattedDate = date.toLocaleDateString("en-US", {
     year: "numeric",
@@ -43,21 +44,21 @@ export default function ProfileScreen({ route, navigation }) {
     day: "numeric",
   });
 
+  console.log({ profileData });
+
   // Fetch profile data on component mount or when receiverId changes
   const fetchProfile = useCallback(async () => {
     setLoadingProfile(true);
     try {
-      const collectionId =
-        userData?.role === "client"
-          ? appwriteConfig.freelancerCollectionId
-          : appwriteConfig.clientCollectionId;
-
-      const profileDoc = await databases.getDocument(
-        appwriteConfig.databaseId,
-        collectionId,
-        receiverId
-      );
-      setProfileData(profileDoc);
+      let response;
+      if (userData?.role === "CLIENT") {
+        response = await apiService.getFreelancerProfile(receiverId);
+        response.role = "FREELANCER";
+      } else {
+        response = await apiService.getClientProfile(receiverId);
+        response.role = "CLIENT";
+      }
+      setProfileData(response);
     } catch (error) {
       Alert.alert("Error fetching profile data");
     } finally {
@@ -74,6 +75,64 @@ export default function ProfileScreen({ route, navigation }) {
     fetchProfile();
     setTimeout(() => setRefreshing(false), 1000);
   };
+
+  // Load user services and role info
+  useEffect(() => {
+    const loadUserInfo = async () => {
+      try {
+        if (profileData?.selectedServices) {
+          console.log("Selected services:", profileData.selectedServices);
+
+          // Load service details for the user's selected services
+          const services = await Promise.all(
+            profileData.selectedServices.map(async (serviceId) => {
+              try {
+                console.log(`Loading service: ${serviceId}`);
+                const service = await apiService.getServiceById(serviceId);
+                console.log(`Service ${serviceId} loaded:`, service);
+                return service;
+              } catch (error) {
+                console.error(
+                  `Error loading service ${serviceId}:`,
+                  error.message
+                );
+                // Return null for invalid services instead of breaking
+                return null;
+              }
+            })
+          );
+
+          // Filter out null services (failed to load)
+          const validServices = services.filter((s) => s !== null);
+          console.log("Valid services loaded:", validServices.length);
+          setUserServices(validServices);
+
+          // Show warning if some services failed to load
+          if (validServices.length < profileData.selectedServices.length) {
+            const failedCount =
+              profileData.selectedServices.length - validServices.length;
+            console.warn(`${failedCount} service(s) failed to load`);
+            showToast(
+              "warning",
+              "Warning",
+              `Some services could not be loaded (${failedCount} failed)`
+            );
+          }
+        } else {
+          // Clear services if user is not a FREELANCER or has no selected services
+          setUserServices([]);
+        }
+      } catch (error) {
+        console.error("Error loading user info:", error);
+        setUserServices([]);
+        showToast("error", "Error", "Failed to load user services");
+      }
+    };
+
+    if (userData) {
+      loadUserInfo();
+    }
+  }, [userData, profileData]);
 
   const formatXP = (xp) => {
     if (xp >= 1000000) return (xp / 1000000).toFixed(1) + "M";
@@ -143,7 +202,7 @@ export default function ProfileScreen({ route, navigation }) {
           <TouchableOpacity
             style={styles.tabButtonR}
             onPress={() => {
-              navigation.navigate("ReviewsScreen", { receiverId });
+              navigation.navigate("ReviewsScreen", { receiverId, profileData });
             }}
           >
             <Text style={styles.tabTextR}>Reviews</Text>
@@ -151,20 +210,20 @@ export default function ProfileScreen({ route, navigation }) {
         </View>
         <ImageBackground
           source={
-            profileData?.cover_photo
-              ? { uri: profileData.cover_photo }
+            profileData?.coverPhoto
+              ? { uri: apiService.loadImageURI(profileData.coverPhoto) }
               : require("../assets/backGroungBanner.png")
           }
           style={styles.backgroundImg}
         >
           <TouchableOpacity
-            onPress={() => openImageModal(profileData?.profile_photo)}
+            onPress={() => openImageModal(profileData?.profilePhoto)}
             style={{ zIndex: 1 }}
           >
             <Image
               source={
-                profileData?.profile_photo
-                  ? { uri: profileData.profile_photo }
+                profileData?.profilePhoto
+                  ? { uri: apiService.loadImageURI(profileData.profilePhoto) }
                   : require("../assets/profile.png")
               }
               style={styles.profileImage}
@@ -175,36 +234,40 @@ export default function ProfileScreen({ route, navigation }) {
         {/* User Details */}
         <View style={styles.userDetails}>
           <Text style={styles.nameText}>
-            {profileData?.full_name || "User"}
+            {profileData?.user.fullName || "User"}
           </Text>
-          {role === "client" ? (
+          {role === "CLIENT" ? (
             <Text style={styles.roleText}>
               {profileData?.organization_type || "Not found"}
             </Text>
           ) : (
             <View style={styles.roleWrap}>
               <Text>
-                {profileData?.role_designation?.map((item, idx) => (
+                {userServices?.map((item, idx) => (
                   <Text key={idx} style={styles.roleText}>
-                    {item}
-                    {", "}
+                    {item.name}
+                    {idx < userServices.length - 1 ? ", " : ""}
                   </Text>
-                )) || "No role designation available"}
+                )) || (
+                  <Text style={styles.roleText}>
+                    No role designation available
+                  </Text>
+                )}
               </Text>
             </View>
           )}
           <Text style={styles.statusText}>
-            Status: {profileData?.currently_available ? "Active" : "Inactive"}
+            Status: {profileData?.currentlyAvailable ? "Active" : "Inactive"}
             <FontAwesome
               name="circle"
               size={12}
-              color={profileData?.currently_available ? "#6BCD2F" : "#FF3131"}
+              color={profileData?.currentlyAvailable ? "#6BCD2F" : "#FF3131"}
             />
           </Text>
         </View>
 
-        {/* Freelancer Level & XP */}
-        {profileData?.role === "freelancer" && (
+        {/* FREELANCER Level & XP */}
+        {profileData?.role === "FREELANCER" && (
           <View style={styles.levelContainer}>
             <View style={styles.xpRan}>
               <View style={styles.xp}>
@@ -226,7 +289,7 @@ export default function ProfileScreen({ route, navigation }) {
 
         {/* Profile Heading */}
         <Text style={styles.Profile_heading}>
-          {role === "client"
+          {role === "CLIENT"
             ? `Company Name: ${profileData?.company_name}`
             : profileData?.profile_heading}
         </Text>
@@ -234,11 +297,11 @@ export default function ProfileScreen({ route, navigation }) {
         {/* About Section */}
         <Text style={styles.about}>About me</Text>
         <Text style={styles.about_des}>
-          {profileData?.profile_description || "No description available"}
+          {profileData?.profileDescription || "No description available"}
         </Text>
 
         {/* Portfolio Section */}
-        {profileData?.role === "freelancer" &&
+        {profileData?.role === "FREELANCER" &&
           profileData?.portfolio_images?.length > 0 && (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Portfolio</Text>
@@ -249,7 +312,7 @@ export default function ProfileScreen({ route, navigation }) {
                     onPress={() => openImageModal(image)}
                   >
                     <Image
-                      source={{ uri: image }}
+                      source={{ uri: apiService.loadImageURI(image) }}
                       style={styles.portfolioImage}
                     />
                   </TouchableOpacity>
@@ -259,7 +322,7 @@ export default function ProfileScreen({ route, navigation }) {
           )}
 
         {/* Experience & Certifications */}
-        {profileData?.role === "freelancer" &&
+        {profileData?.role === "FREELANCER" &&
           (profileData?.experience ||
             profileData?.certifications?.length > 0) && (
             <View style={styles.section}>
@@ -267,7 +330,7 @@ export default function ProfileScreen({ route, navigation }) {
                 <>
                   <Text style={styles.sectionTitle}>Experience</Text>
                   <Text style={styles.sectionContent}>
-                    {profileData?.experience} months of experience
+                    {profileData?.experience / 12} years of experience
                   </Text>
                 </>
               )}
@@ -404,11 +467,13 @@ const getStyles = (currentTheme) =>
       display: "flex",
       flexDirection: "row",
       flexWrap: "wrap",
+      paddingHorizontal: 30,
     },
     roleText: {
       fontSize: 14,
       fontWeight: "400",
       color: currentTheme.text,
+      textAlign: "center",
     },
     statusText: {
       fontSize: 14,

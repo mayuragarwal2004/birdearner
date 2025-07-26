@@ -83,6 +83,9 @@ const FreelancerChatList = () => {
       ? { uri: api.loadImageURI(item.client.profilePhoto) }
       : require("../assets/profile.png");
 
+      console.log({item});
+      
+
     return (
       <TouchableOpacity
         style={styles.jobContainer}

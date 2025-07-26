@@ -56,7 +56,73 @@ export default function ProfileScreen({ navigation }) {
   const [images, setImages] = useState([]);
   const [modalVisiblet, setModalVisiblet] = useState(false);
   const animationProgress = useRef(new Animated.Value(0));
+  const [userServices, setUserServices] = useState([]);
+
   const role = userData?.role;
+  console.log(userData);
+
+  // Load user services and role info
+  useEffect(() => {
+    const loadUserInfo = async () => {
+      try {
+        if (
+          userData &&
+          userData.role === "FREELANCER" &&
+          userProfile?.selectedServices
+        ) {
+          console.log("Loading services for user:", userData.id);
+          console.log("Selected services:", userProfile.selectedServices);
+
+          // Load service details for the user's selected services
+          const services = await Promise.all(
+            userProfile.selectedServices.map(async (serviceId) => {
+              try {
+                console.log(`Loading service: ${serviceId}`);
+                const service = await apiService.getServiceById(serviceId);
+                console.log(`Service ${serviceId} loaded:`, service);
+                return service;
+              } catch (error) {
+                console.error(
+                  `Error loading service ${serviceId}:`,
+                  error.message
+                );
+                // Return null for invalid services instead of breaking
+                return null;
+              }
+            })
+          );
+
+          // Filter out null services (failed to load)
+          const validServices = services.filter((s) => s !== null);
+          console.log("Valid services loaded:", validServices.length);
+          setUserServices(validServices);
+
+          // Show warning if some services failed to load
+          if (validServices.length < userProfile.selectedServices.length) {
+            const failedCount =
+              userProfile.selectedServices.length - validServices.length;
+            console.warn(`${failedCount} service(s) failed to load`);
+            showToast(
+              "warning",
+              "Warning",
+              `Some services could not be loaded (${failedCount} failed)`
+            );
+          }
+        } else {
+          // Clear services if user is not a freelancer or has no selected services
+          setUserServices([]);
+        }
+      } catch (error) {
+        console.error("Error loading user info:", error);
+        setUserServices([]);
+        showToast("error", "Error", "Failed to load user services");
+      }
+    };
+
+    if (userData) {
+      loadUserInfo();
+    }
+  }, [userData, userProfile]);
 
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
@@ -114,7 +180,7 @@ export default function ProfileScreen({ navigation }) {
   const fetchProfileData = async () => {
     try {
       setLoadingProfile(true);
-      
+
       if (!userData || !userData.id) {
         console.log("No user data available");
         setData(null);
@@ -127,9 +193,11 @@ export default function ProfileScreen({ navigation }) {
       } else {
         // Fetch complete profile data from API
         try {
-          const completeProfile = await apiService.getCompleteProfile(userData.id);
+          const completeProfile = await apiService.getCompleteProfile(
+            userData.id
+          );
           setData(completeProfile);
-          
+
           // Update the userProfile in context if we got data
           if (completeProfile.profile) {
             setUserProfile(completeProfile.profile);
@@ -156,7 +224,7 @@ export default function ProfileScreen({ navigation }) {
   const onRefresh = async () => {
     console.log("Refreshing...");
     setRefreshing(true);
-    
+
     try {
       // Refresh user data through auth context
       await refreshUserData();
@@ -190,7 +258,9 @@ export default function ProfileScreen({ navigation }) {
       const profileLink = `https://birdearner.com/profile/${userData?.id}`;
 
       const result = await Share.share({
-        message: `Check out my profile on our app! Name: ${data?.fullName || userData?.fullName || "User"}\n\nProfile Link: ${profileLink}`,
+        message: `Check out my profile on our app! Name: ${
+          data?.fullName || userData?.fullName || "User"
+        }\n\nProfile Link: ${profileLink}`,
       });
       if (result.action === Share.sharedAction) {
         if (result.activityType) {
@@ -271,7 +341,7 @@ export default function ProfileScreen({ navigation }) {
         <ImageBackground
           source={
             data?.coverPhoto
-              ? { uri: data.coverPhoto }
+              ? { uri: apiService.loadImageURI(data.coverPhoto) }
               : require("../assets/backGroungBanner.png")
           }
           style={styles.backgroundImg}
@@ -280,7 +350,7 @@ export default function ProfileScreen({ navigation }) {
             <Image
               source={
                 data?.profilePhoto
-                  ? { uri: data.profilePhoto }
+                  ? { uri: apiService.loadImageURI(data.profilePhoto) }
                   : require("../assets/profile.png")
               }
               style={styles.profileImage}
@@ -310,7 +380,9 @@ export default function ProfileScreen({ navigation }) {
         </ImageBackground>
 
         <View style={styles.userDetails}>
-          <Text style={styles.nameText}>{data?.fullName || userData?.fullName || "User"}</Text>
+          <Text style={styles.nameText}>
+            {data?.fullName || userData?.fullName || "User"}
+          </Text>
           {role === "CLIENT" ? (
             <Text style={styles.roleText}>
               {data?.organizationType || "Organization"}
@@ -318,12 +390,16 @@ export default function ProfileScreen({ navigation }) {
           ) : (
             <View style={styles.roleWrap}>
               <Text>
-                {data?.roleDesignation?.map((item, idx) => (
+                {userServices?.map((item, idx) => (
                   <Text key={idx} style={styles.roleText}>
-                    {item}
-                    {idx < data.roleDesignation.length - 1 ? ", " : ""}
+                    {item.name}
+                    {idx < userServices.length - 1 ? ", " : ""}
                   </Text>
-                )) || <Text style={styles.roleText}>No role designation available</Text>}
+                )) || (
+                  <Text style={styles.roleText}>
+                    No role designation available
+                  </Text>
+                )}
               </Text>
             </View>
           )}
@@ -342,9 +418,7 @@ export default function ProfileScreen({ navigation }) {
           <View style={styles.levelContainer}>
             <View style={styles.xpRan}>
               <View style={styles.xp}>
-                <Text style={styles.xpText}>
-                  {formatXP(data?.xp || 0)} xp
-                </Text>
+                <Text style={styles.xpText}>{formatXP(data?.xp || 0)} xp</Text>
               </View>
               <Text style={styles.randomText}>
                 Earn xp and promote to next level
@@ -378,7 +452,7 @@ export default function ProfileScreen({ navigation }) {
                   onPress={() => openImageModal(image)}
                 >
                   <Image
-                    source={{ uri: image }}
+                    source={{ uri: apiService.loadImageURI(image) }}
                     style={styles.portfolioImage}
                   />
                 </TouchableOpacity>
@@ -419,13 +493,16 @@ export default function ProfileScreen({ navigation }) {
 
         <Text style={styles.locTitle}>Location</Text>
         <Text style={styles.locSubTitle}>
-          {data?.city || userData?.city}, {data?.state || userData?.state} ({data?.country || userData?.country})
+          {data?.city ? `${data?.city}, ` : ""}{" "}
+          {data?.state ? `${data?.state} ` : ""}(
+          {data?.country || userData?.country})
         </Text>
 
         <Text style={styles.locTitle}>Member Since</Text>
         <Text style={styles.locSubTitle}>{formattedDate}</Text>
 
-        {userData ? (
+        {/* TODO */}
+        {userData && false && (
           <>
             {roleOptions?.freelancerData && roleOptions?.clientData ? (
               <TouchableOpacity
@@ -465,8 +542,6 @@ export default function ProfileScreen({ navigation }) {
               </>
             )}
           </>
-        ) : (
-          <Text style={styles.infoText}>No user data available</Text>
         )}
 
         {/* Modal for Transition Animation */}
@@ -672,11 +747,13 @@ const getStyles = (currentTheme) =>
       display: "flex",
       flexDirection: "row",
       flexWrap: "wrap",
+      paddingHorizontal: 30,
     },
     roleText: {
       fontSize: 14,
       fontWeight: "400",
       color: currentTheme.text,
+      textAlign: "center",
     },
     statusText: {
       fontSize: 14,
@@ -732,6 +809,7 @@ const getStyles = (currentTheme) =>
       borderRadius: 12,
       borderColor: "#4C0183",
       marginHorizontal: 20,
+      marginTop: 20,
     },
     Profile_heading: {
       textAlign: "center",

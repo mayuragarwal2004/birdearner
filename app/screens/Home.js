@@ -221,21 +221,6 @@ const HomeScreen = () => {
             <MaterialIcons name="notifications" size={24} color="#fff" />
           </TouchableOpacity>
           
-          {/* Temporary Logout Button for Testing */}
-          <TouchableOpacity
-            style={styles.logoutButton}
-            onPress={async () => {
-              try {
-                await logout();
-                console.log("Logged out successfully");
-              } catch (error) {
-                console.error("Logout error:", error);
-              }
-            }}
-          >
-            <MaterialIcons name="logout" size={24} color="#fff" />
-          </TouchableOpacity>
-          
           <Text style={styles.welcomeText}>Welcome Back</Text>
           {/* Make sure to wrap dynamic content with Text component */}
           <Text style={styles.usernameText}>

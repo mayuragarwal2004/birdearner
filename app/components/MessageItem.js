@@ -9,10 +9,12 @@ import {
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import apiService from "../lib/apiService";
+import { Modal } from "react-native";
 
 const MessageItem = ({ messageData, message, isCurrentUser, media = [] }) => {
   const [downloadingIndex, setDownloadingIndex] = useState(null);
   const [loadingImages, setLoadingImages] = useState({});
+  const [fullImage, setFullImage] = useState(null); // { uri: string, name: string, index: number }
 
   const handleDownload = async (url, index) => {
     try {
@@ -51,6 +53,34 @@ const MessageItem = ({ messageData, message, isCurrentUser, media = [] }) => {
         isCurrentUser ? styles.currentUserMessage : styles.otherUserMessage,
       ]}
     >
+      <Modal
+        animationType="slide"
+        visible={!!fullImage}
+        onRequestClose={() => {
+          setFullImage(null);
+        }}
+        onBackdropPress={() => setFullImage(null)}
+        onBackButtonPress={() => setFullImage(null)} // For Android back button
+        style={{ margin: 0 }}
+      >
+        <View style={styles.fullScreenModal}>
+          <Image
+            source={{ uri: fullImage?.uri }}
+            style={styles.fullScreenImage}
+            resizeMode="contain"
+          />
+          <TouchableOpacity
+            style={styles.downloadBtn}
+            onPress={async () => {
+              handleDownload(fullImage?.uri, fullImage?.index)
+            }}
+          >
+            <MaterialIcons name="file-download" size={28} color="#fff" />
+            <Text style={{ color: "#fff", marginLeft: 5 }}>Download</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
+
       {message && (
         <Text
           style={[
@@ -81,20 +111,33 @@ const MessageItem = ({ messageData, message, isCurrentUser, media = [] }) => {
                       <Text style={styles.loaderText}>Loading...</Text>
                     </View>
                   )}
-                  <Image
-                    source={{ uri: apiService.loadImageURI(item.path) }}
-                    style={styles.imagePreview}
-                    resizeMode="cover"
-                    onLoadStart={() =>
-                      setLoadingImages((prev) => ({ ...prev, [item.id]: true }))
+                  <TouchableOpacity
+                    onPress={() =>
+                      setFullImage({
+                        uri: apiService.loadImageURI(item.path),
+                        name: item.fileName,
+                        index: index,
+                      })
                     }
-                    onLoadEnd={() =>
-                      setLoadingImages((prev) => ({
-                        ...prev,
-                        [item.id]: false,
-                      }))
-                    }
-                  />
+                  >
+                    <Image
+                      source={{ uri: apiService.loadImageURI(item.path) }}
+                      style={styles.imagePreview}
+                      resizeMode="cover"
+                      onLoadStart={() =>
+                        setLoadingImages((prev) => ({
+                          ...prev,
+                          [item.id]: true,
+                        }))
+                      }
+                      onLoadEnd={() =>
+                        setLoadingImages((prev) => ({
+                          ...prev,
+                          [item.id]: false,
+                        }))
+                      }
+                    />
+                  </TouchableOpacity>
                 </View>
               ) : (
                 <View style={styles.fileInfo}>
@@ -272,6 +315,26 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontSize: 12,
     color: "#666",
+  },
+  fullScreenModal: {
+    flex: 1,
+    backgroundColor: "#000",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  fullScreenImage: {
+    width: "100%",
+    height: "80%",
+  },
+  downloadBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    backgroundColor: "#4C0183",
+    borderRadius: 6,
+    marginTop: 20,
   },
 });
 

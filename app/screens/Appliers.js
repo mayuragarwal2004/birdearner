@@ -8,18 +8,19 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
-  Alert
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../context/NewAuthContext";
 import { useTheme } from "../context/ThemeContext";
 import ApiService from "../lib/apiService";
+import apiService from "../lib/apiService";
 
 const AppliersScreen = ({ navigation, route }) => {
   const { userData } = useAuth();
   const [freelancers, setFreelancers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const { title, jobId } = route.params;
+  const { title, jobId, job } = route.params;
   const [refreshing, setRefreshing] = useState(false);
   const api = ApiService;
 
@@ -57,7 +58,7 @@ const AppliersScreen = ({ navigation, route }) => {
       jobId,
       full_name: freelancer.fullName,
       freelancer: freelancer,
-      receiverId: freelancer.userId
+      receiverId: freelancer.userId,
     });
   };
 
@@ -70,7 +71,7 @@ const AppliersScreen = ({ navigation, route }) => {
         <Image
           source={
             item.profilePhoto
-              ? { uri: item.profilePhoto }
+              ? { uri: apiService.loadImageURI(item.profilePhoto) }
               : require("../assets/logo.png")
           }
           style={styles.profileImage}
@@ -84,7 +85,7 @@ const AppliersScreen = ({ navigation, route }) => {
           </Text>
           <View style={styles.statsContainer}>
             <Text style={[styles.statsText, { color: currentTheme.subText }]}>
-              Experience: {item.experience || 0} years
+              Experience: {item.experience ? item.experience / 12 : 0} years
             </Text>
             <Text style={[styles.statsText, { color: currentTheme.subText }]}>
               Rating: {item.rating || 0}/5
@@ -93,7 +94,7 @@ const AppliersScreen = ({ navigation, route }) => {
               Level {item.level}
             </Text>
           </View>
-          {item.isAccepted && (
+          {job?.assignedFreelancerId === item?.id && (
             <View style={styles.acceptedBadge}>
               <Text style={styles.acceptedText}>Accepted</Text>
             </View>
@@ -105,7 +106,12 @@ const AppliersScreen = ({ navigation, route }) => {
 
   if (loading) {
     return (
-      <View style={[styles.loadingContainer, { backgroundColor: currentTheme.background }]}>
+      <View
+        style={[
+          styles.loadingContainer,
+          { backgroundColor: currentTheme.background },
+        ]}
+      >
         <ActivityIndicator size="large" color="#4C0183" />
         <Text style={[styles.emptyText, { color: currentTheme.subText }]}>
           Loading freelancers...
@@ -116,7 +122,12 @@ const AppliersScreen = ({ navigation, route }) => {
 
   if (freelancers.length === 0) {
     return (
-      <View style={[styles.noAppliersContainer, { backgroundColor: currentTheme.background }]}>
+      <View
+        style={[
+          styles.noAppliersContainer,
+          { backgroundColor: currentTheme.background },
+        ]}
+      >
         <Text style={[styles.noAppliersText, { color: currentTheme.text2 }]}>
           There are no appliers for this job.
         </Text>
@@ -125,19 +136,25 @@ const AppliersScreen = ({ navigation, route }) => {
           style={styles.backButton}
         >
           <Ionicons name="arrow-back" size={24} color={currentTheme.text} />
-          <Text style={[styles.goBackText, { color: currentTheme.text }]}>Go Back</Text>
+          <Text style={[styles.goBackText, { color: currentTheme.text }]}>
+            Go Back
+          </Text>
         </TouchableOpacity>
       </View>
     );
-  }
+  }  
 
   return (
-    <View style={[styles.container, { backgroundColor: currentTheme.background }]}>
+    <View
+      style={[styles.container, { backgroundColor: currentTheme.background }]}
+    >
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color={currentTheme.text} />
         </TouchableOpacity>
-        <Text style={[styles.title, { color: currentTheme.text }]}>{title}</Text>
+        <Text style={[styles.title, { color: currentTheme.text }]}>
+          {title}
+        </Text>
         <View style={styles.placeholder} />
       </View>
 
@@ -147,8 +164,8 @@ const AppliersScreen = ({ navigation, route }) => {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContainer}
         refreshControl={
-          <RefreshControl 
-            refreshing={refreshing} 
+          <RefreshControl
+            refreshing={refreshing}
             onRefresh={onRefresh}
             colors={["#4C0183"]}
             progressBackgroundColor={currentTheme.cardBackground}
@@ -266,7 +283,7 @@ const styles = StyleSheet.create({
   goBackText: {
     fontSize: 16,
     marginLeft: 8,
-  }
+  },
 });
 
 export default AppliersScreen;

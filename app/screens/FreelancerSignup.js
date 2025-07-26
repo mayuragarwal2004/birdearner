@@ -57,36 +57,42 @@ const indianStates = [
   "Puducherry",
 ];
 
-const schema = z.object({
-  full_name: z.string().min(1, "Full name is required"),
-  email: z.string().email("Valid email is required"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-  confirmPassword: z.string().min(8, "Confirm password is required"),
-  termsAccepted: z.boolean().refine((val) => val === true, {
-    message: "You must accept the Terms and Conditions.",
-  }),
-  selectedServices: z.array(z.string()).min(1, "You must select at least one service"),
-  // Make optional fields truly optional
-  qualification: z.string().optional(),
-  experience: z.string().optional(),
-  heading: z.string().optional(),
-  city: z.string().optional(),
-  state: z.string().optional(),
-  zipCode: z.string().optional(),
-  country: z.string().optional(),
-  bio: z.string().optional(),
-  gender: z.string().optional(),
-  dob: z.date().optional(),
-  certifications: z.array(z.string()).optional(),
-  socialLinks: z.array(z.string()).optional(),
-  profileImage: z.any().optional(),
-  coverImage: z.any().optional(),
-  portfolioImages: z.array(z.string()).optional(),
-  agreePortfolioTerms: z.boolean().optional(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-});
+const assetSchema = z.any()
+
+const schema = z
+  .object({
+    full_name: z.string().min(1, "Full name is required"),
+    email: z.string().email("Valid email is required"),
+    password: z.string().min(8, "Password must be at least 8 characters"),
+    confirmPassword: z.string().min(8, "Confirm password is required"),
+    termsAccepted: z.boolean().refine((val) => val === true, {
+      message: "You must accept the Terms and Conditions.",
+    }),
+    selectedServices: z
+      .array(z.string())
+      .min(1, "You must select at least one service"),
+    // Make optional fields truly optional
+    qualification: z.string().optional(),
+    experience: z.string().optional(),
+    heading: z.string().optional(),
+    city: z.string().optional(),
+    state: z.string().optional(),
+    zipCode: z.string().optional(),
+    country: z.string().optional(),
+    bio: z.string().optional(),
+    gender: z.string().optional(),
+    dob: z.date().optional(),
+    certifications: z.array(z.string()).optional(),
+    socialLinks: z.array(z.string()).optional(),
+    profileImage: z.any().optional(),
+    coverImage: z.any().optional(),
+    portfolioImages: z.array(assetSchema).optional(),
+    agreePortfolioTerms: z.boolean().optional(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
+  });
 
 const FreelancerSignup = ({ navigation, route }) => {
   const { register } = useAuth(); // Get register function from AuthContext
@@ -95,14 +101,17 @@ const FreelancerSignup = ({ navigation, route }) => {
   const [emailChecked, setEmailChecked] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const { email: initialEmail } = route.params || {};
-  
+
+  const [uploadingPortfolioImages, setUploadingPortfolioImages] =
+    useState(false);
+
   // Services state
   const [availableServices, setAvailableServices] = useState([]);
   const [selectedServices, setSelectedServices] = useState([]);
   const [servicesLoading, setServicesLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredServices, setFilteredServices] = useState([]);
-  
+
   const [form, setForm] = useState({
     full_name: "",
     email: initialEmail || "",
@@ -175,7 +184,7 @@ const FreelancerSignup = ({ navigation, route }) => {
         allowsMultipleSelection: true,
       });
       if (!pickerResult.canceled) {
-        const newImages = pickerResult.assets.map((asset) => asset.uri);
+        const newImages = pickerResult.assets;
         setForm({
           ...form,
           portfolioImages: [...form.portfolioImages, ...newImages],
@@ -205,12 +214,12 @@ const FreelancerSignup = ({ navigation, route }) => {
       try {
         setServicesLoading(true);
         await apiService.init();
-        const services = await apiService.getServicesByCategory('freelance');
+        const services = await apiService.getServicesByCategory("freelance");
         setAvailableServices(services);
         setFilteredServices([]); // Start with empty filtered services
       } catch (error) {
-        console.error('Error loading services:', error);
-        showToast('error', 'Error', 'Failed to load services');
+        console.error("Error loading services:", error);
+        showToast("error", "Error", "Failed to load services");
       } finally {
         setServicesLoading(false);
       }
@@ -224,9 +233,13 @@ const FreelancerSignup = ({ navigation, route }) => {
     if (searchQuery.trim() === "") {
       setFilteredServices([]);
     } else {
-      const filtered = availableServices.filter(service => 
-        service.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (service.description && service.description.toLowerCase().includes(searchQuery.toLowerCase()))
+      const filtered = availableServices.filter(
+        (service) =>
+          service.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (service.description &&
+            service.description
+              .toLowerCase()
+              .includes(searchQuery.toLowerCase()))
       );
       setFilteredServices(filtered);
     }
@@ -236,10 +249,10 @@ const FreelancerSignup = ({ navigation, route }) => {
   const toggleServiceSelection = (service) => {
     const serviceId = service.id;
     const currentlySelected = selectedServices.includes(serviceId);
-    
+
     if (currentlySelected) {
       // Remove service
-      const newSelected = selectedServices.filter(id => id !== serviceId);
+      const newSelected = selectedServices.filter((id) => id !== serviceId);
       setSelectedServices(newSelected);
       setForm({ ...form, selectedServices: newSelected });
     } else {
@@ -249,15 +262,15 @@ const FreelancerSignup = ({ navigation, route }) => {
         setSelectedServices(newSelected);
         setForm({ ...form, selectedServices: newSelected });
       } else {
-        showToast('info', 'Limit Reached', 'You can select maximum 5 services');
+        showToast("info", "Limit Reached", "You can select maximum 5 services");
       }
     }
   };
 
   // Get service name by ID for display
   const getServiceNameById = (serviceId) => {
-    const service = availableServices.find(s => s.id === serviceId);
-    return service ? service.name : 'Unknown Service';
+    const service = availableServices.find((s) => s.id === serviceId);
+    return service ? service.name : "Unknown Service";
   };
 
   // Step navigation
@@ -321,8 +334,8 @@ const FreelancerSignup = ({ navigation, route }) => {
       // Validate service selection
       if (selectedServices.length === 0) {
         showToast(
-          "error", 
-          "Services Required", 
+          "error",
+          "Services Required",
           "Please select at least one service you want to offer"
         );
         return;
@@ -337,16 +350,17 @@ const FreelancerSignup = ({ navigation, route }) => {
   // Final API call
   const handleSubmit = async () => {
     console.log("Triggered handleSubmit");
-    
+
     setIsLoading(true);
     console.log("Submitting form:", form);
 
     // Validate with Zod
     const result = schema.safeParse(form);
+    console.log({result});
     if (!result.success) {
+      setIsLoading(false);
       console.log("Validation failed:", result.error.errors);
       showToast("error", "Validation Error", result.error.errors[0].message);
-      setIsLoading(false);
       return;
     }
 
@@ -355,39 +369,99 @@ const FreelancerSignup = ({ navigation, route }) => {
     // Clean up the form data - remove empty strings and arrays
     const cleanedForm = {
       ...form,
-      certifications: form.certifications.filter(cert => cert.trim() !== ""),
-      socialLinks: form.socialLinks.filter(link => link.trim() !== ""),
+      certifications: form.certifications.filter((cert) => cert.trim() !== ""),
+      socialLinks: form.socialLinks.filter((link) => link.trim() !== ""),
     };
 
     console.log("Cleaned form data:", cleanedForm);
 
+    // upload profile photo
+    if (cleanedForm.profileImage) {
+      const result = await apiService.uploadImage(
+        cleanedForm.profileImage,
+        "freelancer_profile_photos"
+      );
+      console.log("Profile photo uploaded:", result);
+      if (result.success) {
+        cleanedForm.profileImage = result.url;
+      } else {
+        showToast("error", "Error Uploading Profile Photo", result.message);
+        setIsLoading(false);
+        return;
+      }
+    }
+
+    // upload cover photo
+    if (cleanedForm.coverImage) {
+      const result = await apiService.uploadImage(
+        cleanedForm.coverImage,
+        "freelancer_cover_photos"
+      );
+      console.log("Cover photo uploaded:", result);
+      if (result.success) {
+        cleanedForm.coverImage = result.url;
+      } else {
+        showToast("error", "Error Uploading Cover Photo", result.message);
+        setIsLoading(false);
+        return;
+      }
+    }
+
+    // upload portfolio images
+    if (cleanedForm.portfolioImages && cleanedForm.portfolioImages.length > 0) {
+      let uploadedImages = [];
+      for (let i = 0; i < cleanedForm.portfolioImages.length; i++) {
+        const result = await apiService.uploadImage(
+          cleanedForm.portfolioImages[i],
+          "freelancer_portfolios"
+        );
+        console.log("Portfolio image uploaded:", result);
+        if (result.success) {
+          uploadedImages.push(result.url);
+        } else {
+          showToast("error", "Error Uploading Portfolio Image", result.message);
+          setIsLoading(false);
+          return;
+        }
+      }
+      cleanedForm.portfolioImages = uploadedImages;
+    }
+
     try {
       console.log("About to call register function from AuthContext");
-      
+
       // Use the register function from AuthContext which handles both signup and login
       const userData = await register({
         ...cleanedForm,
-        role: 'FREELANCER'
+        role: "FREELANCER",
       });
-      
+
       console.log("Registration successful:", userData);
-      
+
       if (userData) {
         showToast("success", "Signup Complete", "Welcome to BirdEarner!");
         // The AuthContext will automatically handle navigation by setting user state
         // This will cause the app to re-render with the authenticated stack
         navigation.replace("MainTabs");
       } else {
-        showToast("error", "Signup Failed", "Registration failed. Please try again.");
+        showToast(
+          "error",
+          "Signup Failed",
+          "Registration failed. Please try again."
+        );
       }
     } catch (error) {
       console.log("Registration error caught:", error);
       console.log("Error details:", {
         message: error.message,
         stack: error.stack,
-        name: error.name
+        name: error.name,
       });
-      showToast("error", "Signup Failed", error.message || "Registration failed");
+      showToast(
+        "error",
+        "Signup Failed",
+        error.message || "Registration failed"
+      );
     } finally {
       console.log("Setting loading to false");
       setIsLoading(false);
@@ -468,7 +542,7 @@ const FreelancerSignup = ({ navigation, route }) => {
             <Text style={styles.label}>
               Choose up to 5 services you want to offer (minimum 1 required):
             </Text>
-            
+
             {/* Search Input */}
             <View style={styles.searchContainer}>
               <TextInput
@@ -495,7 +569,9 @@ const FreelancerSignup = ({ navigation, route }) => {
                       </Text>
                       <TouchableOpacity
                         onPress={() => {
-                          const service = availableServices.find(s => s.id === serviceId);
+                          const service = availableServices.find(
+                            (s) => s.id === serviceId
+                          );
                           if (service) toggleServiceSelection(service);
                         }}
                         style={styles.removeServiceButton}
@@ -507,11 +583,15 @@ const FreelancerSignup = ({ navigation, route }) => {
                 </View>
               </View>
             )}
-            
+
             {servicesLoading ? (
-              <ActivityIndicator size="large" color="#6A0DAD" style={{ marginVertical: 20 }} />
+              <ActivityIndicator
+                size="large"
+                color="#6A0DAD"
+                style={{ marginVertical: 20 }}
+              />
             ) : (
-              <ScrollView 
+              <ScrollView
                 style={styles.servicesContainer}
                 nestedScrollEnabled={true}
                 showsVerticalScrollIndicator={true}
@@ -539,38 +619,49 @@ const FreelancerSignup = ({ navigation, route }) => {
                     ) : (
                       <>
                         <Text style={styles.searchResultsHeader}>
-                          Found {filteredServices.length} service{filteredServices.length !== 1 ? 's' : ''}:
+                          Found {filteredServices.length} service
+                          {filteredServices.length !== 1 ? "s" : ""}:
                         </Text>
                         {filteredServices.map((service) => (
                           <TouchableOpacity
                             key={service.id}
                             style={[
                               styles.serviceItem,
-                              selectedServices.includes(service.id) && styles.serviceItemSelected
+                              selectedServices.includes(service.id) &&
+                                styles.serviceItemSelected,
                             ]}
                             onPress={() => toggleServiceSelection(service)}
                             activeOpacity={0.7}
                           >
                             <View style={styles.serviceContent}>
-                              <Text style={[
-                                styles.serviceName,
-                                selectedServices.includes(service.id) && styles.serviceNameSelected
-                              ]}>
+                              <Text
+                                style={[
+                                  styles.serviceName,
+                                  selectedServices.includes(service.id) &&
+                                    styles.serviceNameSelected,
+                                ]}
+                              >
                                 {service.name}
                               </Text>
                               {service.description && (
-                                <Text style={[
-                                  styles.serviceDescription,
-                                  selectedServices.includes(service.id) && styles.serviceDescriptionSelected
-                                ]}>
+                                <Text
+                                  style={[
+                                    styles.serviceDescription,
+                                    selectedServices.includes(service.id) &&
+                                      styles.serviceDescriptionSelected,
+                                  ]}
+                                >
                                   {service.description}
                                 </Text>
                               )}
                             </View>
-                            <View style={[
-                              styles.serviceCheckbox,
-                              selectedServices.includes(service.id) && styles.serviceCheckboxSelected
-                            ]}>
+                            <View
+                              style={[
+                                styles.serviceCheckbox,
+                                selectedServices.includes(service.id) &&
+                                  styles.serviceCheckboxSelected,
+                              ]}
+                            >
                               {selectedServices.includes(service.id) && (
                                 <Text style={styles.checkmark}>✓</Text>
                               )}
@@ -583,16 +674,16 @@ const FreelancerSignup = ({ navigation, route }) => {
                 )}
               </ScrollView>
             )}
-            
+
             <View style={styles.buttonRow}>
               <TouchableOpacity style={styles.backButton} onPress={prevStep}>
                 <Text style={styles.backButtonText}>Back</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[
                   styles.nextButton,
-                  selectedServices.length === 0 && styles.disabledButton
-                ]} 
+                  selectedServices.length === 0 && styles.disabledButton,
+                ]}
                 onPress={nextStep}
                 disabled={selectedServices.length === 0}
               >
@@ -601,7 +692,7 @@ const FreelancerSignup = ({ navigation, route }) => {
             </View>
           </View>
         )}
-        
+
         {/* Step 3: Freelancer Details */}
         {step === 3 && (
           <View style={styles.card}>
@@ -833,7 +924,10 @@ const FreelancerSignup = ({ navigation, route }) => {
             <View style={styles.uploadedImages}>
               {form.portfolioImages.map((image, i) => (
                 <View key={i} style={styles.imagePreviewContainer}>
-                  <Image source={{ uri: image }} style={styles.uploadedImage} />
+                  <Image
+                    source={{ uri: apiService.loadImageURI(image.uri) }}
+                    style={styles.uploadedImage}
+                  />
                   <TouchableOpacity
                     style={styles.removeButton}
                     onPress={() => removePortfolioImage(i)}
@@ -857,10 +951,32 @@ const FreelancerSignup = ({ navigation, route }) => {
               </Text>
             </View>
             <View style={styles.buttonRow}>
-              <TouchableOpacity style={styles.backButton} onPress={prevStep}>
+              <TouchableOpacity
+                style={[
+                  styles.backButton,
+                  form.portfolioImages.length > 0 && !form.agreePortfolioTerms
+                    ? styles.disabledButton
+                    : styles.enabledButton,
+                ]}
+                onPress={prevStep}
+                disabled={
+                  form.portfolioImages.length > 0 && !form.agreePortfolioTerms
+                }
+              >
                 <Text style={styles.backButtonText}>Back</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.nextButton} onPress={nextStep}>
+              <TouchableOpacity
+                style={[
+                  styles.nextButton,
+                  form.portfolioImages.length > 0 && !form.agreePortfolioTerms
+                    ? styles.disabledButton
+                    : styles.enabledButton,
+                ]}
+                onPress={nextStep}
+                disabled={
+                  form.portfolioImages.length > 0 && !form.agreePortfolioTerms
+                }
+              >
                 <Text style={styles.nextButtonText}>Next</Text>
               </TouchableOpacity>
             </View>
@@ -870,9 +986,9 @@ const FreelancerSignup = ({ navigation, route }) => {
         {step === 6 && (
           <View style={styles.card}>
             <Text style={styles.cardHeading}>Review & Submit</Text>
-           <Text style={styles.label}>
+            <Text style={styles.label}>
               Please review your details before submitting.
-          </Text>
+            </Text>
             {/* Show summary here if desired */}
             <View style={styles.buttonRow}>
               <TouchableOpacity style={styles.backButton} onPress={prevStep}>
@@ -1272,6 +1388,7 @@ const styles = StyleSheet.create({
   },
   disabledButton: {
     backgroundColor: "#ccc",
+    opacity: 0.5
   },
 });
 

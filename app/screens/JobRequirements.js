@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -23,6 +23,8 @@ import MapView, { PROVIDER_GOOGLE, Marker } from "react-native-maps";
 import apiService from "../lib/apiService";
 import { useTheme } from "../context/ThemeContext";
 import { useAuth } from "../context/NewAuthContext";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useFocusEffect } from "@react-navigation/native";
 
 const JobRequirementsScreen = ({ navigation, route }) => {
   const [jobLocation, setJobLocation] = useState("");
@@ -65,11 +67,49 @@ const JobRequirementsScreen = ({ navigation, route }) => {
 
   const styles = getStyles(currentTheme);
 
-  useEffect(() => {
-    if (route.params?.freelancerType) {
-      setFrelancerType(route.params.freelancerType);
-    }
-  }, [route.params?.freelancerType]);
+  useFocusEffect(
+    useCallback(() => {
+      const loadServiceInfo = async () => {
+        try {
+          console.log("getting data");
+
+          const stored = await AsyncStorage.getItem("selectedService");
+
+          console.log({ stored });
+
+          if (stored) {
+            const { serviceId, serviceName, serviceType } = JSON.parse(stored);
+            console.log({ serviceId, serviceName, serviceType });
+
+            if (serviceId && serviceType) {
+              if (serviceType === "freelance") {
+                setIsOnSite(false);
+                setJobType("Remote");
+              } else {
+                setIsOnSite(true);
+                setJobType("On-site");
+              }
+
+              setFrelancerType(serviceName);
+              await AsyncStorage.removeItem("selectedService");
+            }
+          }
+        } catch (err) {
+          console.error("Failed to load service info:", err);
+        }
+      };
+
+      loadServiceInfo();
+    }, [])
+  );
+
+  console.log({ freelancerType, services });
+
+  // useEffect(() => {
+  //   if (route.params?.freelancerType) {
+  //     setFrelancerType(route.params.freelancerType);
+  //   }
+  // }, [route.params?.freelancerType]);
 
   // Fetch wallet data on component mount and screen focus
   useEffect(() => {
@@ -377,9 +417,13 @@ const JobRequirementsScreen = ({ navigation, route }) => {
 
   const uploadPortfolioImages = async () => {
     try {
-      let permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      let permissionResult =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permissionResult.granted) {
-        Alert.alert("Permission required", "Please allow access to your media library.");
+        Alert.alert(
+          "Permission required",
+          "Please allow access to your media library."
+        );
         return;
       }
 
@@ -396,42 +440,43 @@ const JobRequirementsScreen = ({ navigation, route }) => {
         const selectedImages = pickerResult.assets || [];
         let uploadedUrls = [];
 
-        for (const image of selectedImages) {
-          const localUri = image.uri;
-          const filename = localUri.split('/').pop();
-          const match = /\.([a-zA-Z0-9]+)$/.exec(filename);
-          const type = match ? `image/${match[1]}` : `image`;
+        // for (const image of selectedImages) {
+        //   const localUri = image.uri;
+        //   const filename = localUri.split('/').pop();
+        //   const match = /\.([a-zA-Z0-9]+)$/.exec(filename);
+        //   const type = match ? `image/${match[1]}` : `image`;
 
-          // Prepare form data
-          const formData = new FormData();
-          formData.append('file', {
-            uri: localUri,
-            name: filename,
-            type,
-          });
+        //   // Prepare form data
+        //   const formData = new FormData();
+        //   formData.append('file', {
+        //     uri: localUri,
+        //     name: filename,
+        //     type,
+        //   });
+        //   formData.append("category", "job_portfolios")
 
-          try {
-            const response = await fetch(`${apiService.baseURL}/uploads`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'multipart/form-data',
-                ...(apiService.getAuthHeaders ? apiService.getAuthHeaders() : {}),
-              },
-              body: formData,
-            });
-            const result = await response.json();
-            if (result.success && result.data && result.data.url) {
-              uploadedUrls.push(result.data.url);
-            } else {
-              Alert.alert('Upload Error', result.message || 'Failed to upload image.');
-            }
-          } catch (err) {
-            Alert.alert('Upload Error', err.message || 'Failed to upload image.');
-          }
-        }
+        //   try {
+        //     const response = await fetch(`${apiService.baseURL}/uploads`, {
+        //       method: 'POST',
+        //       headers: {
+        //         'Content-Type': 'multipart/form-data',
+        //         ...(apiService.getAuthHeaders ? apiService.getAuthHeaders() : {}),
+        //       },
+        //       body: formData,
+        //     });
+        //     const result = await response.json();
+        //     if (result.success && result.data && result.data.url) {
+        //       uploadedUrls.push(result.data.url);
+        //     } else {
+        //       Alert.alert('Upload Error', result.message || 'Failed to upload image.');
+        //     }
+        //   } catch (err) {
+        //     Alert.alert('Upload Error', err.message || 'Failed to upload image.');
+        //   }
+        // }
 
         // Update state with uploaded image URLs
-        setPortfolioImages([...portfolioImages, ...uploadedUrls]);
+        setPortfolioImages([...portfolioImages, ...selectedImages]);
       }
     } catch (error) {
       Alert.alert("Error", `Failed to pick images: ${error.message}`);
@@ -694,7 +739,7 @@ const JobRequirementsScreen = ({ navigation, route }) => {
           >
             <Picker.Item
               label="Select Freelancer Type"
-              value=""
+              value={freelancerType}
               style={styles.pickerItem}
             />
             {services.map((service, id) => (
@@ -880,7 +925,10 @@ const JobRequirementsScreen = ({ navigation, route }) => {
         <View style={styles.uploadedImages}>
           {portfolioImages.map((image, index) => (
             <View key={index} style={styles.imagePreviewContainer}>
-              <Image source={{ uri: apiService.loadImageURI(image) }} style={styles.uploadedImage} />
+              <Image
+                source={{ uri: apiService.loadImageURI(image.uri) }}
+                style={styles.uploadedImage}
+              />
               <TouchableOpacity
                 style={styles.removeButton}
                 onPress={() => removeImage(index)}

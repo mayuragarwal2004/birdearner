@@ -1,8 +1,19 @@
 // API service for communicating with the Bird Earner Node.js backend
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const API_BASE_URL = "https://brown-roses-active-rare.trycloudflare.com/api"; // Local development server
+const API_BASE_URL =
+  "https://regarding-pump-occupations-interfaces.trycloudflare.com/api"; // Local development server
 
+// upload image categories are mentioned over here, above uploadImage function and in backend at /upload route
+/** @type {const} */
+const CATEGORIES = [
+  "client_profile_photos",
+  "freelancer_profile_photos",
+  "client_cover_photos",
+  "freelancer_cover_photos",
+  "freelancer_portfolios",
+  "job_portfolios",
+];
 
 class ApiService {
   constructor() {
@@ -18,7 +29,9 @@ class ApiService {
         this.token = token;
         console.log("API Service initialized with token from storage");
       } else {
-        console.log("No token found in storage during API Service initialization");
+        console.log(
+          "No token found in storage during API Service initialization"
+        );
       }
       return this.token;
     } catch (error) {
@@ -61,33 +74,42 @@ class ApiService {
 
     try {
       console.log(`API Request: ${config.method || "GET"} ${url}`);
-      console.log(`Auth header present: ${config.headers["Authorization"] ? "Yes" : "No"}`);
-      
+      console.log(
+        `Auth header present: ${config.headers["Authorization"] ? "Yes" : "No"}`
+      );
+
       const response = await fetch(url, config);
       console.log(`API Response: ${response.status} ${url}`);
-      
+
       const responseText = await response.text();
       let data;
       try {
         data = JSON.parse(responseText);
       } catch (parseError) {
-        console.error('JSON Parse Error:', parseError);
-        console.error('Response was not valid JSON:', responseText);
+        console.error("JSON Parse Error:", parseError);
+        console.error("Response was not valid JSON:", responseText);
         throw new Error(`Invalid JSON response: ${responseText}`);
       }
-      
+
       if (!response.ok) {
         // Check for authentication errors specifically
         if (response.status === 401 || response.status === 403) {
-          console.error("Authentication error:", data.message || "Access denied");
-          throw new Error(`Authentication failed: ${data.message || "Access denied, please login again"}`);
+          console.error(
+            "Authentication error:",
+            data.message || "Access denied"
+          );
+          throw new Error(
+            `Authentication failed: ${
+              data.message || "Access denied, please login again"
+            }`
+          );
         }
-        
+
         throw new Error(
           data.message || `HTTP error! status: ${response.status}`
         );
       }
-      
+
       return data;
     } catch (error) {
       console.error(`API Error for ${endpoint}:`, error);
@@ -110,37 +132,37 @@ class ApiService {
       method: "POST",
       body: JSON.stringify(clientData),
     });
-    
+
     if (response.success && response.data && response.data.token) {
       // Set token in the API service instance
       await this.setAuthToken(response.data.token);
-      
+
       // Store user data without token to avoid duplication
       const { token, ...userData } = response.data;
       await AsyncStorage.setItem("userData", JSON.stringify(userData));
     }
-    
+
     return response;
   }
 
   // Signup freelancer
   async signupFreelancer(freelancerData) {
     console.log("Signing up freelancer with data:", freelancerData);
-    
+
     const response = await this.makeRequest("/signup/freelancer", {
       method: "POST",
       body: JSON.stringify(freelancerData),
     });
-    
+
     if (response.success && response.data && response.data.token) {
       // Set token in the API service instance
       await this.setAuthToken(response.data.token);
-      
+
       // Store user data without token to avoid duplication
       const { token, ...userData } = response.data;
       await AsyncStorage.setItem("userData", JSON.stringify(userData));
     }
-    
+
     return response;
   }
 
@@ -154,14 +176,14 @@ class ApiService {
     if (response.success && response.data) {
       // Store user data
       console.log("Login successful, storing user data and token");
-      
+
       // Set token in the API service instance
       await this.setAuthToken(response.data.token);
-      
+
       // Store user data without token to avoid duplication
       const { token, ...userData } = response.data;
       await AsyncStorage.setItem("userData", JSON.stringify(userData));
-      
+
       return response.data;
     }
 
@@ -221,7 +243,7 @@ class ApiService {
 
   async getFreelancerProfile(userId) {
     const response = await this.makeRequest(`/freelancers/user/${userId}`);
-    return response.data;
+    return { ...response.data, role: "FREELANCER" };
   }
 
   async updateFreelancerProfile(freelancerId, updateData) {
@@ -254,7 +276,7 @@ class ApiService {
 
   async getClientProfile(userId) {
     const response = await this.makeRequest(`/clients/user/${userId}`);
-    return response.data;
+    return { ...response.data, role: "CLIENT" };
   }
 
   async updateClientProfile(clientId, updateData) {
@@ -266,7 +288,7 @@ class ApiService {
   }
 
   // ==================== JOB MANAGEMENT ====================
-  
+
   // ==================== REVIEW MANAGEMENT ====================
 
   // Get reviews for a user
@@ -292,9 +314,9 @@ class ApiService {
   // Create a review
   async createReview(reviewData) {
     try {
-      const response = await this.makeRequest('/reviews', {
-        method: 'POST',
-        body: JSON.stringify(reviewData)
+      const response = await this.makeRequest("/reviews", {
+        method: "POST",
+        body: JSON.stringify(reviewData),
       });
       return response;
     } catch (error) {
@@ -306,8 +328,8 @@ class ApiService {
   async updateReview(reviewId, reviewData) {
     try {
       const response = await this.makeRequest(`/reviews/${reviewId}`, {
-        method: 'PUT',
-        body: JSON.stringify(reviewData)
+        method: "PUT",
+        body: JSON.stringify(reviewData),
       });
       return response;
     } catch (error) {
@@ -319,7 +341,7 @@ class ApiService {
   async deleteReview(reviewId) {
     try {
       const response = await this.makeRequest(`/reviews/${reviewId}`, {
-        method: 'DELETE'
+        method: "DELETE",
       });
       return response;
     } catch (error) {
@@ -344,7 +366,9 @@ class ApiService {
   async getAllJobs(filters = {}) {
     try {
       const queryParams = new URLSearchParams(filters).toString();
-      const response = await this.makeRequest(`/jobs${queryParams ? `?${queryParams}` : ""}`);
+      const response = await this.makeRequest(
+        `/jobs${queryParams ? `?${queryParams}` : ""}`
+      );
       return response.data;
     } catch (error) {
       throw new Error(`Failed to fetch jobs: ${error.message}`);
@@ -355,20 +379,25 @@ class ApiService {
   async getAllJobsCategorizedByPriority(filters = {}) {
     try {
       // Remove undefined/null values
-      const cleanFilters = Object.entries(filters).reduce((acc, [key, value]) => {
-        if (value !== undefined && value !== null && value !== '') {
-          acc[key] = value;
-        }
-        return acc;
-      }, {});
-      
+      const cleanFilters = Object.entries(filters).reduce(
+        (acc, [key, value]) => {
+          if (value !== undefined && value !== null && value !== "") {
+            acc[key] = value;
+          }
+          return acc;
+        },
+        {}
+      );
+
       const queryParams = new URLSearchParams(cleanFilters).toString();
-      const response = await this.makeRequest(`/jobs/categorized/priority${queryParams ? `?${queryParams}` : ""}`);
-      
-      console.log('Categorized jobs response:', response);
+      const response = await this.makeRequest(
+        `/jobs/categorized/priority${queryParams ? `?${queryParams}` : ""}`
+      );
+
+      console.log("Categorized jobs response:", response);
       return response.data;
     } catch (error) {
-      console.error('Error fetching categorized jobs:', error);
+      console.error("Error fetching categorized jobs:", error);
       throw new Error(`Failed to fetch categorized jobs: ${error.message}`);
     }
   }
@@ -389,10 +418,12 @@ class ApiService {
       const queryParams = new URLSearchParams({
         page: page.toString(),
         limit: limit.toString(),
-        ...(status && { status })
+        ...(status && { status }),
       }).toString();
-      
-      const response = await this.makeRequest(`/jobs/client/${clientId}?${queryParams}`);
+
+      const response = await this.makeRequest(
+        `/jobs/client/${clientId}?${queryParams}`
+      );
       return response.data;
     } catch (error) {
       throw new Error(`Failed to fetch client jobs: ${error.message}`);
@@ -402,7 +433,9 @@ class ApiService {
   // Get ongoing jobs by client ID (for ClientHome screen)
   async getOngoingJobsByClientId(clientId) {
     try {
-      const response = await this.makeRequest(`/jobs/client/${clientId}/ongoing`);
+      const response = await this.makeRequest(
+        `/jobs/client/${clientId}/ongoing`
+      );
       return response.data;
     } catch (error) {
       throw new Error(`Failed to fetch ongoing jobs: ${error.message}`);
@@ -410,15 +443,22 @@ class ApiService {
   }
 
   // Get jobs by freelancer ID
-  async getJobsByFreelancerId(freelancerId, page = 1, limit = 10, status = null) {
+  async getJobsByFreelancerId(
+    freelancerId,
+    page = 1,
+    limit = 10,
+    status = null
+  ) {
     try {
       const queryParams = new URLSearchParams({
         page: page.toString(),
         limit: limit.toString(),
-        ...(status && { status })
+        ...(status && { status }),
       }).toString();
-      
-      const response = await this.makeRequest(`/jobs/freelancer/${freelancerId}?${queryParams}`);
+
+      const response = await this.makeRequest(
+        `/jobs/freelancer/${freelancerId}?${queryParams}`
+      );
       return response.data;
     } catch (error) {
       throw new Error(`Failed to fetch freelancer jobs: ${error.message}`);
@@ -431,10 +471,12 @@ class ApiService {
       const queryParams = new URLSearchParams({
         page: page.toString(),
         limit: limit.toString(),
-        ...filters
+        ...filters,
       }).toString();
-      
-      const response = await this.makeRequest(`/jobs/status/${status}?${queryParams}`);
+
+      const response = await this.makeRequest(
+        `/jobs/status/${status}?${queryParams}`
+      );
       return response.data;
     } catch (error) {
       throw new Error(`Failed to fetch jobs by status: ${error.message}`);
@@ -555,10 +597,12 @@ class ApiService {
   // Returns services with structure: { id, name, category, description, imageUrl, isActive, createdAt, updatedAt }
   async getAllServices(category = null, isActive = true) {
     const queryParams = new URLSearchParams();
-    if (category) queryParams.append('category', category);
-    if (isActive !== undefined) queryParams.append('isActive', isActive);
-    
-    const response = await this.makeRequest(`/services?${queryParams.toString()}`);
+    if (category) queryParams.append("category", category);
+    if (isActive !== undefined) queryParams.append("isActive", isActive);
+
+    const response = await this.makeRequest(
+      `/services?${queryParams.toString()}`
+    );
     return response.data;
   }
 
@@ -603,7 +647,7 @@ class ApiService {
   }
 
   // ==================== USER PROFILE MANAGEMENT ====================
-  
+
   // Get user profile with updated data
   async getUserProfile(userId) {
     try {
@@ -652,21 +696,21 @@ class ApiService {
     try {
       const user = await this.getUserProfile(userId);
       let profileData = null;
-      
-      if (user.role === 'FREELANCER') {
+
+      if (user.role === "FREELANCER") {
         try {
           profileData = await this.getFreelancerProfile(userId);
         } catch (error) {
-          console.log('No freelancer profile found');
+          console.log("No freelancer profile found");
         }
-      } else if (user.role === 'CLIENT') {
+      } else if (user.role === "CLIENT") {
         try {
           profileData = await this.getClientProfile(userId);
         } catch (error) {
-          console.log('No client profile found');
+          console.log("No client profile found");
         }
       }
-      
+
       return {
         user,
         profile: profileData,
@@ -674,7 +718,7 @@ class ApiService {
         ...(profileData && { ...profileData }),
         fullName: user.fullName,
         email: user.email,
-        role: user.role
+        role: user.role,
       };
     } catch (error) {
       throw new Error(`Failed to fetch complete profile: ${error.message}`);
@@ -682,27 +726,25 @@ class ApiService {
   }
 
   // Update user availability status
-  async updateUserAvailability(userId, isAvailable) {
+  async updateUserAvailability(roleId, role, isAvailable) {
     try {
-      const profileData = await this.getUserProfile(userId);
-      
-      if (profileData.role === 'FREELANCER') {
-        const freelancerProfile = await this.getFreelancerProfile(userId);
+      if (role === "FREELANCER") {
+        const freelancerProfile = await this.getFreelancerProfile(roleId);
         if (freelancerProfile) {
           return await this.updateFreelancerProfile(freelancerProfile.id, {
-            currentlyAvailable: isAvailable
+            currentlyAvailable: isAvailable,
           });
         }
-      } else if (profileData.role === 'CLIENT') {
-        const clientProfile = await this.getClientProfile(userId);
+      } else if (role === "CLIENT") {
+        const clientProfile = await this.getClientProfile(roleId);
         if (clientProfile) {
           return await this.updateClientProfile(clientProfile.id, {
-            currentlyAvailable: isAvailable
+            currentlyAvailable: isAvailable,
           });
         }
       }
-      
-      throw new Error('No profile found to update');
+
+      throw new Error("No profile found to update");
     } catch (error) {
       throw new Error(`Failed to update availability: ${error.message}`);
     }
@@ -732,23 +774,23 @@ class ApiService {
   }
 
   // ==================== FILE UPLOAD ====================
-  
+
   // Upload file (image) to server
-  async uploadFile(fileUri, fileName, fileType = 'image') {
+  async uploadFile(fileUri, fileName, fileType = "image") {
     try {
       const formData = new FormData();
-      formData.append('file', {
+      formData.append("file", {
         uri: fileUri,
         name: fileName,
         type: `image/${fileType}`,
       });
 
       const response = await fetch(`${this.baseURL}/uploads`, {
-        method: 'POST',
+        method: "POST",
         body: formData,
         headers: {
-          'Content-Type': 'multipart/form-data',
-          ...(this.token && { 'Authorization': `Bearer ${this.token}` }),
+          "Content-Type": "multipart/form-data",
+          ...(this.token && { Authorization: `Bearer ${this.token}` }),
         },
       });
 
@@ -759,13 +801,13 @@ class ApiService {
       const data = await response.json();
       return data.data.url; // Return the uploaded file URL
     } catch (error) {
-      console.error('File upload error:', error);
+      console.error("File upload error:", error);
       throw new Error(`File upload failed: ${error.message}`);
     }
   }
 
   // ==================== WALLET MANAGEMENT ====================
-  
+
   // Get client wallet information
   async getClientWallet(userId) {
     try {
@@ -777,15 +819,18 @@ class ApiService {
   }
 
   // Update client wallet balance
-  async updateClientWallet(userId, amount, operation = 'add') {
+  async updateClientWallet(userId, amount, operation = "add") {
     try {
-      const response = await this.makeRequest(`/clients/user/${userId}/wallet`, {
-        method: 'PUT',
-        body: JSON.stringify({
-          amount: parseFloat(amount),
-          operation
-        }),
-      });
+      const response = await this.makeRequest(
+        `/clients/user/${userId}/wallet`,
+        {
+          method: "PUT",
+          body: JSON.stringify({
+            amount: parseFloat(amount),
+            operation,
+          }),
+        }
+      );
       return response.data;
     } catch (error) {
       throw new Error(`Failed to update wallet: ${error.message}`);
@@ -798,10 +843,12 @@ class ApiService {
       const queryParams = new URLSearchParams({
         page: page.toString(),
         limit: limit.toString(),
-        ...(status && { status })
+        ...(status && { status }),
       }).toString();
-      
-      const response = await this.makeRequest(`/clients/user/${userId}/payment-history?${queryParams}`);
+
+      const response = await this.makeRequest(
+        `/clients/user/${userId}/payment-history?${queryParams}`
+      );
       return response.data;
     } catch (error) {
       throw new Error(`Failed to fetch payment history: ${error.message}`);
@@ -811,8 +858,8 @@ class ApiService {
   // Create payment record
   async createPaymentRecord(paymentData) {
     try {
-      const response = await this.makeRequest('/payments', {
-        method: 'POST',
+      const response = await this.makeRequest("/payments", {
+        method: "POST",
         body: JSON.stringify(paymentData),
       });
       return response.data;
@@ -825,10 +872,10 @@ class ApiService {
   async updatePaymentStatus(paymentId, status, transactionId = null) {
     try {
       const response = await this.makeRequest(`/payments/${paymentId}/status`, {
-        method: 'PATCH',
+        method: "PATCH",
         body: JSON.stringify({
           status,
-          ...(transactionId && { transactionId })
+          ...(transactionId && { transactionId }),
         }),
       });
       return response.data;
@@ -838,11 +885,11 @@ class ApiService {
   }
 
   // ==================== ENHANCED WALLET API ====================
-  
+
   // Get current client wallet information (using auth token)
   async getClientWalletInfo() {
     try {
-      const response = await this.makeRequest('/wallet/client/info');
+      const response = await this.makeRequest("/wallet/client/info");
       return response;
     } catch (error) {
       console.error("Wallet info fetch error:", error);
@@ -853,18 +900,20 @@ class ApiService {
   // Get freelancer wallet information
   async getFreelancerWalletInfo() {
     try {
-      const response = await this.makeRequest('/wallet/freelancer/info');
+      const response = await this.makeRequest("/wallet/freelancer/info");
       return response;
     } catch (error) {
-      throw new Error(`Failed to fetch freelancer wallet info: ${error.message}`);
+      throw new Error(
+        `Failed to fetch freelancer wallet info: ${error.message}`
+      );
     }
   }
 
   // Add money to client wallet
-  async addMoneyToWallet(amount, paymentMethod = 'online') {
+  async addMoneyToWallet(amount, paymentMethod = "online") {
     try {
-      const response = await this.makeRequest('/wallet/client/deposit', {
-        method: 'POST',
+      const response = await this.makeRequest("/wallet/client/deposit", {
+        method: "POST",
         body: JSON.stringify({ amount, paymentMethod }),
       });
       return response;
@@ -876,8 +925,8 @@ class ApiService {
   // Request freelancer withdrawal
   async requestWithdrawal(amount, paymentDetails = {}) {
     try {
-      const response = await this.makeRequest('/wallet/freelancer/withdraw', {
-        method: 'POST',
+      const response = await this.makeRequest("/wallet/freelancer/withdraw", {
+        method: "POST",
         body: JSON.stringify({ amount, paymentDetails }),
       });
       return response;
@@ -889,27 +938,37 @@ class ApiService {
   // Get client transaction history
   async getClientTransactionHistory(page = 1, limit = 20) {
     try {
-      const response = await this.makeRequest(`/wallet/transactions?page=${page}&limit=${limit}&userType=CLIENT`);
+      const response = await this.makeRequest(
+        `/wallet/transactions?page=${page}&limit=${limit}&userType=CLIENT`
+      );
       return response;
     } catch (error) {
-      throw new Error(`Failed to fetch client transaction history: ${error.message}`);
+      throw new Error(
+        `Failed to fetch client transaction history: ${error.message}`
+      );
     }
   }
 
   // Get freelancer transaction history
   async getFreelancerTransactionHistory(page = 1, limit = 20) {
     try {
-      const response = await this.makeRequest(`/wallet/transactions?page=${page}&limit=${limit}&userType=FREELANCER`);
+      const response = await this.makeRequest(
+        `/wallet/transactions?page=${page}&limit=${limit}&userType=FREELANCER`
+      );
       return response;
     } catch (error) {
-      throw new Error(`Failed to fetch freelancer transaction history: ${error.message}`);
+      throw new Error(
+        `Failed to fetch freelancer transaction history: ${error.message}`
+      );
     }
   }
 
   // Get transaction by ID
   async getTransactionById(transactionId) {
     try {
-      const response = await this.makeRequest(`/wallet/transactions/${transactionId}`);
+      const response = await this.makeRequest(
+        `/wallet/transactions/${transactionId}`
+      );
       return response;
     } catch (error) {
       throw new Error(`Failed to fetch transaction: ${error.message}`);
@@ -919,7 +978,9 @@ class ApiService {
   // Get job payment status
   async getJobPaymentStatus(jobId) {
     try {
-      const response = await this.makeRequest(`/wallet/jobs/${jobId}/payment-status`);
+      const response = await this.makeRequest(
+        `/wallet/jobs/${jobId}/payment-status`
+      );
       return response;
     } catch (error) {
       throw new Error(`Failed to fetch job payment status: ${error.message}`);
@@ -929,9 +990,12 @@ class ApiService {
   // Process job payment (for freelancers when completing jobs)
   async processJobPayment(jobId) {
     try {
-      const response = await this.makeRequest(`/wallet/jobs/${jobId}/process-payment`, {
-        method: 'POST',
-      });
+      const response = await this.makeRequest(
+        `/wallet/jobs/${jobId}/process-payment`,
+        {
+          method: "POST",
+        }
+      );
       return response;
     } catch (error) {
       throw new Error(`Failed to process job payment: ${error.message}`);
@@ -939,13 +1003,16 @@ class ApiService {
   }
 
   // ==================== JOB BOOKMARKS ====================
-  
+
   // Toggle job bookmark
   async toggleJobBookmark(jobId) {
     try {
-      const response = await this.makeRequest(`/bookmarks/jobs/${jobId}/toggle`, {
-        method: "POST",
-      });
+      const response = await this.makeRequest(
+        `/bookmarks/jobs/${jobId}/toggle`,
+        {
+          method: "POST",
+        }
+      );
       return response.data;
     } catch (error) {
       throw new Error(`Failed to toggle job bookmark: ${error.message}`);
@@ -955,7 +1022,9 @@ class ApiService {
   // Check if job is bookmarked
   async isJobBookmarked(jobId) {
     try {
-      const response = await this.makeRequest(`/bookmarks/jobs/${jobId}/status`);
+      const response = await this.makeRequest(
+        `/bookmarks/jobs/${jobId}/status`
+      );
       return response.data.bookmarked;
     } catch (error) {
       throw new Error(`Failed to check bookmark status: ${error.message}`);
@@ -965,7 +1034,9 @@ class ApiService {
   // Get user's bookmarked jobs
   async getBookmarkedJobs(page = 1, limit = 10) {
     try {
-      const response = await this.makeRequest(`/bookmarks/jobs?page=${page}&limit=${limit}`);
+      const response = await this.makeRequest(
+        `/bookmarks/jobs?page=${page}&limit=${limit}`
+      );
       return response.data;
     } catch (error) {
       throw new Error(`Failed to get bookmarked jobs: ${error.message}`);
@@ -995,9 +1066,29 @@ class ApiService {
       throw new Error(`Failed to remove bookmark: ${error.message}`);
     }
   }
+
+  async getUserBankDetails() {
+    try {
+      const response = await this.makeRequest("/bank-details");
+      return response;
+    } catch (error) {
+      throw new Error(`Failed to get bank details: ${error.message}`);
+    }
+  }
+
+  async updateBankDetails(data) {
+    try {
+      const response = await this.makeRequest("/bank-details", {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(`Failed to update bank details: ${error.message}`);
+    }
+  }
+
   loadImageURI = (uri) => {
-    console.log({ uri });
-    
     if (!Boolean(uri)) {
       return null;
     } else if (uri.startsWith("http://") || uri.startsWith("https://")) {
@@ -1005,15 +1096,71 @@ class ApiService {
     } else if (uri.startsWith("/")) {
       return `${this.baseURL}${uri}`; // Convert relative path to absolute URL
     } else if (uri.startsWith("file://")) {
-      console.warn("File is being loaded from local storage, ensure this is intended.");
+      // console.warn(
+      //   "File is being loaded from local storage, ensure this is intended."
+      // );
       return uri; // Handle other cases (e.g., local paths)
     } else {
       console.error("Invalid URI format:", uri);
       return null; // Return null for invalid URIs
     }
   };
-}
 
+  /**
+   * Upload an image asset to the server
+   * @param {{ file: File | Blob, name: string, size: number }} asset
+   * @param {"client_profile_photos" | "freelancer_profile_photos" | "client_cover_photos" | "freelancer_cover_photos" | "freelancer_portfolios" | "job_portfolios"} category
+   * @returns {Promise<{ success: true, url: string, filename: string } | { success: false, error: string }>}
+   */
+  async uploadImage(asset, category) {
+    try {
+      console.log({ asset });
+
+      if (!asset?.uri) throw new Error("Invalid asset: no URI.");
+      if (!CATEGORIES.includes(category)) throw new Error("Invalid category.");
+
+      const formData = new FormData();
+      formData.append("file", {
+        uri: asset.uri,
+        type: asset.mimeType || "image/jpeg",
+        name: asset.fileName || "upload.jpg",
+      });
+
+      formData.append("category", category);
+
+      const response = await fetch(
+        `${this.baseURL}/upload?category=${category}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${this.token}`,
+            Accept: "application/json",
+            // ⚠️ DO NOT manually set 'Content-Type' for FormData — let fetch handle it
+          },
+          body: formData,
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data?.message || "Upload failed");
+      }
+
+      return {
+        success: true,
+        url: data.data?.url,
+        filename: data.data?.filename,
+      };
+    } catch (err) {
+      console.error("Upload Error:", err);
+      return {
+        success: false,
+        error: err.message,
+      };
+    }
+  }
+}
 
 // Create singleton instance
 const apiService = new ApiService();

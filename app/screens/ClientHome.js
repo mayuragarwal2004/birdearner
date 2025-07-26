@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   SafeAreaView,
   View,
@@ -20,35 +20,21 @@ import gifAnimation from "../assets/loading.gif";
 import { useTheme } from "../context/ThemeContext";
 import { useNavigation } from "@react-navigation/native";
 import apiService from "../lib/apiService";
-import {
-  getProfileStatus,
-  isProfileSetupNeeded,
-  isPhaseCompleteOrSkipped,
-} from "../lib/profileStatusStorage";
-// import { useAppwrite } from "../context/AppwriteContext";
+import ClientHomeServiceFinder from "../components/ClientHomeServiceFinder";
 
 const placeholderImageURL = "https://picsum.photos/seed/";
 
 const ClientHomeScreen = () => {
-  const [search, setSearch] = useState("");
   const [showGif, setShowGif] = useState(false);
   const [loadingJobs, setLoadingJobs] = useState(false);
-  const [showProfileSetup, setShowProfileSetup] = useState(false);
-  const [currentSetupStep, setCurrentSetupStep] = useState(null);
-  // const { appwriteConfig, databases } = useAppwrite();
 
-  const [filteredFreelanceServices, setFilteredFreelanceServices] = useState(
-    []
-  );
-  const [filteredHouseholdServices, setFilteredHouseholdServices] = useState(
-    []
-  );
+  const servicesRef = useRef(null)
+
   const [ongoingJobs, setOngoingJobs] = useState([]);
-  const [freelanceProfile, setFreelanceProfile] = useState([]);
   const [profilePercentage, setProfilePercentage] = useState(20);
   const [refreshing, setRefreshing] = useState(false);
   const [combinedData, setCombinedData] = useState([]);
-  const { userData, logout } = useAuth();
+  const { userData } = useAuth();
   const navigation = useNavigation();
 
   const { theme, themeStyles } = useTheme();
@@ -82,28 +68,6 @@ const ClientHomeScreen = () => {
     });
   };
 
-  const RenderServiceItem = React.memo(({ item, onPress, borderRadius }) => (
-    <TouchableOpacity onPress={() => onPress(item)}>
-      <View style={styles.serviceCard}>
-        <View style={styles.imageShadow}>
-          <Image
-            source={{ uri: item.image }}
-            style={[styles.serviceImage, { borderRadius }]}
-          />
-        </View>
-        <View style={styles.serviceTextlay}>
-          <Text
-            style={styles.serviceText}
-            numberOfLines={2}
-            ellipsizeMode="tail"
-          >
-            {item.title}
-          </Text>
-        </View>
-      </View>
-    </TouchableOpacity>
-  ));
-
   useEffect(() => {
     let percentage = 0;
 
@@ -122,6 +86,8 @@ const ClientHomeScreen = () => {
     navigation.navigate("Job Requirements", { title, freelancerType });
   };
 
+  console.log({ ongoingJobs });
+
   useEffect(() => {
     const fetchOngoingJobs = async () => {
       try {
@@ -129,7 +95,7 @@ const ClientHomeScreen = () => {
           setLoadingJobs(true); // Start loading
           // Fetch ongoing jobs from the new backend API
           const ongoingJobsData = await apiService.getOngoingJobsByClientId(
-            userData.id
+            userData.client.id
           );
 
           if (ongoingJobsData && ongoingJobsData.length > 0) {
@@ -188,37 +154,21 @@ const ClientHomeScreen = () => {
     }
   };
 
-  const openChat = (receiverId, full_name, profileImage, projectId) => {
+  const openChat = (receiverId, full_name, profileImage, jobId) => {
     console.log("Opening chat with:", {
       receiverId,
       full_name,
       profileImage,
-      projectId,
+      jobId,
     });
 
     navigation.navigate("ClientChatList", {
       receiverId,
       full_name,
       profileImage,
-      projectId,
+      jobId,
     });
   };
-
-  useEffect(() => {
-    const freelanceData = freelance_service.map((service) => ({
-      title: service,
-      image: `${placeholderImageURL}${encodeURIComponent(service)}/160/160`,
-      id: service,
-    }));
-    setFilteredFreelanceServices(freelanceData);
-
-    const householdData = household_service.map((service) => ({
-      title: service,
-      image: `${placeholderImageURL}${encodeURIComponent(service)}/160/160`,
-      id: service,
-    }));
-    setFilteredHouseholdServices(householdData);
-  }, [refreshing]);
 
   useEffect(() => {
     const refreshUserData = async () => {
@@ -242,49 +192,13 @@ const ClientHomeScreen = () => {
     refreshUserData();
   }, [refreshing, userData]);
 
-  const handleSearch = (text) => {
-    setSearch(text);
-    if (text === "") {
-      // Reset the services if search text is empty
-      setFilteredFreelanceServices(
-        freelance_service.map((service) => ({
-          title: service,
-          image: `${placeholderImageURL}${encodeURIComponent(service)}/160/160`,
-          id: service,
-        }))
-      );
-      setFilteredHouseholdServices(
-        household_service.map((service) => ({
-          title: service,
-          image: `${placeholderImageURL}${encodeURIComponent(service)}/160/160`,
-          id: service,
-        }))
-      );
-    } else {
-      // Filter services based on search text
-      const filteredFreelance = freelance_service
-        .filter((service) => service.toLowerCase().includes(text.toLowerCase()))
-        .map((service) => ({
-          title: service,
-          image: `${placeholderImageURL}${encodeURIComponent(service)}/160/160`,
-          id: service,
-        }));
-
-      const filteredHousehold = household_service
-        .filter((service) => service.toLowerCase().includes(text.toLowerCase()))
-        .map((service) => ({
-          title: service,
-          image: `${placeholderImageURL}${encodeURIComponent(service)}/160/160`,
-          id: service,
-        }));
-
-      setFilteredFreelanceServices(filteredFreelance);
-      setFilteredHouseholdServices(filteredHousehold);
-    }
-  };
-
   const onRefresh = () => {
     setRefreshing(true);
+    
+    // Call child function
+    if (servicesRef.current?.refreshCard) {
+      servicesRef.current.refreshCard();
+    }
     setTimeout(() => {
       setRefreshing(false);
     }, 1000);
@@ -299,29 +213,6 @@ const ClientHomeScreen = () => {
     }, 1000);
   };
 
-  const handleLogout = async () => {
-    try {
-      await logout();
-      Alert.alert("Success", "Logged out successfully!");
-    } catch (error) {
-      Alert.alert("Error", "Failed to logout: " + error.message);
-    }
-  };
-
-  const renderFreelanceService = useCallback(
-    ({ item }) => (
-      <RenderServiceItem item={item} onPress={sendTitle} borderRadius={45} />
-    ),
-    []
-  );
-
-  const renderHouseholdService = useCallback(
-    ({ item }) => (
-      <RenderServiceItem item={item} onPress={sendTitle} borderRadius={7} />
-    ),
-    []
-  );
-
   return (
     <SafeAreaView
       style={styles.safeContainer}
@@ -334,10 +225,6 @@ const ClientHomeScreen = () => {
           <Text style={styles.how}>How's the day!</Text>
         </View>
         <View style={styles.headerRight}>
-          {/* Logout Button */}
-          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-            <FontAwesome name="sign-out" size={20} color="#fff" />
-          </TouchableOpacity>
           {showGif ? (
             <Image source={gifAnimation} style={styles.gifStyle} />
           ) : (
@@ -391,20 +278,17 @@ const ClientHomeScreen = () => {
 
             {combinedData.length > 0
               ? combinedData.map((item, index) => {
+                  console.log({ item });
+
                   const { jobDetails, full_name, profile_photo, color } = item;
                   const receiverId = jobDetails?.assigned_freelancer || null;
-                  const projectId = jobDetails?.$id || null;
+                  const jobId = jobDetails?.$id || null;
 
                   return (
                     <TouchableOpacity
                       key={index}
                       onPress={() =>
-                        openChat(
-                          receiverId,
-                          full_name,
-                          profile_photo,
-                          projectId
-                        )
+                        openChat(receiverId, full_name, profile_photo, jobId)
                       }
                       disabled={!jobDetails}
                     >
@@ -414,7 +298,14 @@ const ClientHomeScreen = () => {
                           styles.onGoItem,
                           {
                             borderWidth: 4,
-                            borderColor: color,
+                            borderColor:
+                              jobDetails.jobStatus === "COMPLETED"
+                                ? "#4CAF50"
+                                : jobDetails.jobStatus === "IN_PROGRESS"
+                                ? "#2196F3"
+                                : jobDetails.jobStatus === "OPEN"
+                                ? "#FFCC00"
+                                : "#aba8a6",
                             borderRadius: 50,
                             opacity: jobDetails ? 1 : 0.5,
                           },
@@ -424,8 +315,9 @@ const ClientHomeScreen = () => {
                           <Image
                             source={{
                               uri:
-                                profile_photo ||
-                                `${placeholderImageURL}${index}/100/100`,
+                                apiService.loadImageURI(
+                                  jobDetails.attachedFiles[0]
+                                ) || `${placeholderImageURL}${index}/100/100`,
                             }}
                             style={styles.ongoingImage}
                             onError={(e) => {
@@ -465,69 +357,7 @@ const ClientHomeScreen = () => {
           </ScrollView>
         </View>
 
-        <View style={styles.searchContainer}>
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search"
-            value={search}
-            onChangeText={handleSearch}
-            autoFocus={false}
-          />
-          <FontAwesome
-            name="search"
-            size={20}
-            color={currentTheme.subText}
-            style={styles.searchIcon}
-          />
-        </View>
-
-        <View>
-          {/* Freelance Services */}
-          <FlatList
-            data={filteredFreelanceServices}
-            renderItem={renderFreelanceService}
-            keyExtractor={(item) => item.id.toString()}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.carousel}
-            initialNumToRender={10}
-            getItemLayout={(data, index) => ({
-              length: 200,
-              offset: 200 * index,
-              index,
-            })}
-            ListEmptyComponent={() => (
-              <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>
-                  No Freelance Services Found
-                </Text>
-              </View>
-            )}
-          />
-
-          {/* Household Services */}
-          <FlatList
-            data={filteredHouseholdServices}
-            renderItem={renderHouseholdService}
-            keyExtractor={(item) => item.id.toString()}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.carousel}
-            initialNumToRender={10}
-            getItemLayout={(data, index) => ({
-              length: 200,
-              offset: 200 * index,
-              index,
-            })}
-            ListEmptyComponent={() => (
-              <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>
-                  No Household Services Found
-                </Text>
-              </View>
-            )}
-          />
-        </View>
+        <ClientHomeServiceFinder ref={servicesRef} />
 
         {/* Job Notifications */}
         <View style={styles.sectionContainer}>

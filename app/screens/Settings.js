@@ -47,7 +47,7 @@ const SettingsScreen = ({ navigation }) => {
                 name: "Link your wallet/Bank account",
                 stack_name: "Bank Account details",
               },
-              { name: "Your Wallet & History 2", stack_name: "WalletClient" },
+              { name: "Your Wallet & History", stack_name: "WalletClient" },
             ],
     },
     {
