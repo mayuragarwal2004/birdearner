@@ -18,7 +18,6 @@ export default {
     },
     ios: {
       bundleIdentifier: "com.birdearner.birdearner",
-      buildNumber: "1.0.0",
       supportsTablet: true,
       googleServicesFile: "./GoogleService-Info.plist",
       infoPlist: {
