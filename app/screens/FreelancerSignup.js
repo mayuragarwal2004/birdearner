@@ -393,7 +393,7 @@ const FreelancerSignup = ({ navigation, route }) => {
     console.log("Cleaned form data:", cleanedForm);
 
     // upload profile photo
-    if (cleanedForm.profileImage) {
+    if (cleanedForm.profileImage && cleanedForm.profileImage.uri) {
       const result = await apiService.uploadImage(
         cleanedForm.profileImage,
         "freelancer_profile_photos"
@@ -409,7 +409,7 @@ const FreelancerSignup = ({ navigation, route }) => {
     }
 
     // upload cover photo
-    if (cleanedForm.coverImage) {
+    if (cleanedForm.coverImage && cleanedForm.coverImage.uri) {
       const result = await apiService.uploadImage(
         cleanedForm.coverImage,
         "freelancer_cover_photos"

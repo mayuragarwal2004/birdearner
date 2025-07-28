@@ -24,7 +24,7 @@ export default {
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
         NSLocationWhenInUseUsageDescription:
-          "This app needs access to your location to display maps.",
+          "This app needs access to your location to display maps so that it can show you nearby jobs.",
       },
     },
     android: {

@@ -275,7 +275,7 @@ const ClientSignup = ({ navigation, route }) => {
     console.log("Cleaned form data:", cleanedForm);
 
     // upload profile photo
-    if (cleanedForm.profileImage) {
+    if (cleanedForm.profileImage && cleanedForm.profileImage.uri) {
       const result = await apiService.uploadImage(
         cleanedForm.profileImage,
         "client_profile_photos"
@@ -291,7 +291,7 @@ const ClientSignup = ({ navigation, route }) => {
     }
 
     // upload cover photo
-    if (cleanedForm.coverImage) {
+    if (cleanedForm.coverImage && cleanedForm.coverImage.uri) {
       const result = await apiService.uploadImage(
         cleanedForm.coverImage,
         "client_cover_photos"
