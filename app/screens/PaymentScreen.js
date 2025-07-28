@@ -13,16 +13,18 @@ import { useAuth } from "../context/NewAuthContext";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../context/ThemeContext";
 import apiService from "../lib/apiService"; // Import the singleton instance
+import Toast from "react-native-toast-message";
 
 // Development mode flag - set to false for production
-const DEV_MODE = true;
+const DEV_MODE = false;
 
 const PaymentScreen = ({ navigation }) => {
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const { userData, userProfile } = useAuth();
   const pic =
-    userProfile?.profilePhoto || "https://example.com/default-profile-pic.png";
-  const name = userProfile?.fullName || "Guest User";
+    apiService.loadImageURI(userProfile?.profilePhoto) ||
+    "https://example.com/default-profile-pic.png";
+  const name = userData?.fullName || "Guest User";
   const email = userData?.email || "user@gmail.com";
   const [amount, setAmount] = useState("");
 
@@ -51,12 +53,12 @@ const PaymentScreen = ({ navigation }) => {
         // Simulate payment in development mode
         console.log("DEV MODE: Simulating Razorpay payment");
         alert("DEV MODE: Simulating payment success");
-        
+
         // Simulate payment data
         paymentData = {
           razorpay_payment_id: `dev_payment_${Date.now()}`,
           razorpay_order_id: `dev_order_${Date.now()}`,
-          razorpay_signature: "dev_signature_mock"
+          razorpay_signature: "dev_signature_mock",
         };
       } else {
         // Real Razorpay checkout for production
@@ -75,15 +77,38 @@ const PaymentScreen = ({ navigation }) => {
           theme: { color: "#4B0082" },
         };
 
-        paymentData = await RazorpayCheckout.open(options);
+        try {
+          paymentData = await RazorpayCheckout.open(options);
+        } catch (error) {
+          // Razorpay returns error object on cancellation or failure
+          if (
+            error &&
+            (error.code === 0 ||
+              error.description === "Payment Cancelled" ||
+              (error.error && error.error.description === "Payment Cancelled"))
+          ) {
+            Toast.show({
+              type: "info",
+              text: "Payment cancelled",
+            });
+            return;
+          } else {
+            // Real payment error
+            console.error("Payment error:", error);
+            console.log({ error });
+
+            alert("Payment failed. Please try again.");
+            return;
+          }
+        }
       }
 
       await updateWalletAmount(amount, paymentData.razorpay_payment_id);
       setPaymentSuccess(true);
     } catch (error) {
       console.error("Payment error:", error);
-      const errorMessage = DEV_MODE 
-        ? "DEV MODE: Simulated payment failed" 
+      const errorMessage = DEV_MODE
+        ? "DEV MODE: Simulated payment failed"
         : "Payment failed. Please try again.";
       alert(errorMessage);
     }
@@ -138,6 +163,7 @@ const PaymentScreen = ({ navigation }) => {
         <>
           <Text style={styles.label}>Enter the amount you want to add</Text>
           <TextInput
+            placeholderTextColor="#c4c4c4"
             style={styles.input}
             placeholder="Enter amount"
             value={amount}

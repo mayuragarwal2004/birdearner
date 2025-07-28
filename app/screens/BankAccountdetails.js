@@ -109,6 +109,7 @@ const BankAccountDetailsScreen = ({ navigation }) => {
 
         <Text style={styles.label}>Select your bank</Text>
         <TextInput
+          placeholderTextColor="#c4c4c4"
           style={styles.input}
           placeholder="Enter bank name"
           value={bankName}
@@ -117,6 +118,7 @@ const BankAccountDetailsScreen = ({ navigation }) => {
 
         <Text style={styles.label}>Account holder name</Text>
         <TextInput
+          placeholderTextColor="#c4c4c4"
           style={styles.input}
           placeholder="Enter account holder's name"
           value={accountHolderName}
@@ -125,6 +127,7 @@ const BankAccountDetailsScreen = ({ navigation }) => {
 
         <Text style={styles.label}>Enter your account number</Text>
         <TextInput
+          placeholderTextColor="#c4c4c4"
           style={styles.input}
           placeholder="Enter account number"
           value={
@@ -141,6 +144,7 @@ const BankAccountDetailsScreen = ({ navigation }) => {
 
         <Text style={styles.label}>Confirm your account number</Text>
         <TextInput
+          placeholderTextColor="#c4c4c4"
           style={styles.input}
           placeholder="Re-enter account number"
           value={confirmAccountNumber}
@@ -151,6 +155,7 @@ const BankAccountDetailsScreen = ({ navigation }) => {
 
         <Text style={styles.label}>Enter your bank IFSC code</Text>
         <TextInput
+          placeholderTextColor="#c4c4c4"
           style={styles.input}
           placeholder="Enter IFSC code"
           value={isEditingIfscCode ? ifscCode : maskValue(ifscCode)}

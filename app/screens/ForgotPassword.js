@@ -8,11 +8,13 @@ import {
 } from "react-native";
 import { useAuth } from "../context/NewAuthContext";
 import Toast from "react-native-toast-message";
+import apiService from "../lib/apiService";
 // import { useAppwrite } from "../context/AppwriteContext";
 
+
 const ForgetPasswordScreen = ({ navigation }) => {
-  // const { account } = useAppwrite();
   const [email, setEmail] = useState("");
+  const [showInstructions, setShowInstructions] = useState(false);
 
   const handleInputChange = (value) => {
     setEmail(value);
@@ -23,13 +25,11 @@ const ForgetPasswordScreen = ({ navigation }) => {
       showToast("info", "Warning", "Email is required.");
       return false;
     }
-
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       showToast("info", "Warning", "Please enter a valid email address.");
       return false;
     }
-
     return true;
   };
 
@@ -44,48 +44,70 @@ const ForgetPasswordScreen = ({ navigation }) => {
 
   const handleForgotPassword = async () => {
     if (!validateInputs()) return;
-
-    // TODO: Implement password reset with new backend
-    // const account = new Account(client);
-
     try {
-      // await account.createRecovery(
-      //   email,
-      //   "https://app.birdearner.com/reset-password"
-      // );
-      showToast(
-        "info",
-        "Feature Coming Soon",
-        "Password reset functionality will be available soon."
+      const response = await fetch(
+        `${apiService.baseURL}/auth/forgot-password`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        }
       );
-      navigation.goBack();
+      const data = await response.json();
+      if (data.success) {
+        setShowInstructions(true);
+      } else {
+        showToast(
+          "error",
+          "Failed",
+          data.message || "Failed to send reset link."
+        );
+      }
     } catch (error) {
-      showToast("error", "Failed", error.message);
+      console.error("Forgot Password Error:", error);
+      showToast("error", "Failed", "An error occurred while processing your request.");
     }
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Forgot Password</Text>
-
-      <Text style={styles.subtitle}>Enter Your Email</Text>
-
-      <TextInput
-        style={styles.input}
-        placeholder="yourname@gmail.com"
-        placeholderTextColor="#999"
-        keyboardType="email-address"
-        value={email}
-        onChangeText={handleInputChange}
-      />
-
-      <TouchableOpacity
-        style={styles.loginButton}
-        onPress={handleForgotPassword}
-      >
-        <Text style={styles.loginButtonText}>Send Reset Link</Text>
-      </TouchableOpacity>
-
+      {!showInstructions ? (
+        <>
+          <Text style={styles.title}>Forgot Password</Text>
+          <Text style={styles.subtitle}>Enter Your Email</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="yourname@gmail.com"
+            placeholderTextColor="#999"
+            keyboardType="email-address"
+            value={email}
+            onChangeText={handleInputChange}
+          />
+          <TouchableOpacity
+            style={styles.loginButton}
+            onPress={handleForgotPassword}
+          >
+            <Text style={styles.loginButtonText}>Send Reset Link</Text>
+          </TouchableOpacity>
+        </>
+      ) : (
+        <View style={{ alignItems: "center", width: "100%" }}>
+          <Text style={styles.title}>Check Your Email</Text>
+          <Text style={{ color: "white", fontSize: 16, marginVertical: 20, textAlign: "center" }}>
+            1. Open your email inbox.
+            {"\n"}
+            2. Click the password reset link we sent you.
+            {"\n"}
+            3. Follow the instructions to set a new password.
+          </Text>
+          <TouchableOpacity
+            style={styles.loginButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Text style={styles.loginButtonText}>Back to Login</Text>
+          </TouchableOpacity>
+        </View>
+      )}
       <Toast />
     </View>
   );
