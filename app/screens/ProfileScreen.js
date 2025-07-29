@@ -12,6 +12,7 @@ import {
   RefreshControl,
   Alert,
   SafeAreaView,
+  Platform,
 } from "react-native";
 import { FontAwesome } from "@expo/vector-icons";
 import { useAuth } from "../context/NewAuthContext";
@@ -368,7 +369,7 @@ const getStyles = (currentTheme) =>
   StyleSheet.create({
     container: {
       backgroundColor: currentTheme.background || "#fff",
-      paddingTop: 35,
+      paddingTop: Platform.OS === "ios" ? 0 : 35,
       paddingBottom: 80,
     },
     centered: {

@@ -7,6 +7,7 @@ import {
   TextInput,
   TouchableOpacity,
   SafeAreaView,
+  Platform,
 } from "react-native";
 import { useAuth } from "../context/NewAuthContext";
 import { useTheme } from "../context/ThemeContext";
@@ -143,11 +144,12 @@ const getStyles = (currentTheme) =>
   StyleSheet.create({
     main: {
       marginTop: 15,
-      marginBottom: 50,
+      marginBottom: 15,
       display: "flex",
       flexDirection: "row",
       gap: 120,
       alignItems: "center",
+      marginHorizontal: Platform.OS === "ios" ? 20 : 0,
     },
     header: {
       fontSize: 24,
@@ -181,6 +183,7 @@ const getStyles = (currentTheme) =>
     },
     scrollView: {
       flex: 1,
+      marginHorizontal: Platform.OS==="ios"? 20:0,
     },
     sectionContainer: {
       marginBottom: 20,

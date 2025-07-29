@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   Platform,
 } from "react-native";
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from "../context/NewAuthContext";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
@@ -53,7 +54,7 @@ const FreelancerChat = ({ route, navigation }) => {
   const [fileContent, setFileContent] = useState("");
   const [sending, setSending] = useState(false);
 
-  if (!userData?.freelancer){
+  if (!userData?.freelancer) {
     return <Text>Not a freelancer</Text>;
   }
 
@@ -377,203 +378,221 @@ const FreelancerChat = ({ route, navigation }) => {
   console.log({ fileInfo });
 
   return (
-    <View style={styles.container}>
-      <Modal
-        visible={reportModalVisible}
-        transparent={false}
-        animationType="fade"
-        onRequestClose={() => setReportModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Report</Text>
-            <Text style={styles.modalSubtitle}>
-              Why are you reporting this user?
-            </Text>
-            <Text style={styles.modalDescription}>
-              Your report is anonymous. If someone is in immediate danger, call
-              the local emergency services - don't wait.
-            </Text>
-            {reportOptions.map((option, index) => (
+    <SafeAreaView
+      style={{
+        flex: 1,
+        backgroundColor: currentTheme.background || "#fff",
+      }}
+    >
+      <View style={styles.container}>
+        <Modal
+          visible={reportModalVisible}
+          transparent={false}
+          animationType="fade"
+          onRequestClose={() => setReportModalVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Report</Text>
+              <Text style={styles.modalSubtitle}>
+                Why are you reporting this user?
+              </Text>
+              <Text style={styles.modalDescription}>
+                Your report is anonymous. If someone is in immediate danger,
+                call the local emergency services - don't wait.
+              </Text>
+              {reportOptions.map((option, index) => (
+                <TouchableOpacity
+                  key={index}
+                  onPress={() => setSelectedReportReason(option)}
+                  style={styles.optionButton}
+                >
+                  <Text style={styles.optionText}>{option}</Text>
+                </TouchableOpacity>
+              ))}
               <TouchableOpacity
-                key={index}
-                onPress={() => setSelectedReportReason(option)}
-                style={styles.optionButton}
+                onPress={handleReport}
+                style={[styles.modalButton, { marginTop: 20 }]}
+                disabled={!selectedReportReason}
               >
-                <Text style={styles.optionText}>{option}</Text>
+                <Text style={styles.modalButtonText}>Submit Report</Text>
               </TouchableOpacity>
-            ))}
-            <TouchableOpacity
-              onPress={handleReport}
-              style={[styles.modalButton, { marginTop: 20 }]}
-              disabled={!selectedReportReason}
-            >
-              <Text style={styles.modalButtonText}>Submit Report</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setReportModalVisible(false)}
-              style={styles.cancelButton}
-            >
-              <Text style={styles.cancelText}>Cancel</Text>
-            </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setReportModalVisible(false)}
+                style={styles.cancelButton}
+              >
+                <Text style={styles.cancelText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      </Modal>
+        </Modal>
 
-      <View style={styles.header}>
-        <View style={styles.headerData}>
-          <Text style={styles.profile}>Tap for contact details</Text>
-          <Text style={styles.username}>@{full_name}</Text>
-          <Text style={styles.profile}>Last online 3 hrs ago</Text>
-          <View
-            style={[
-              styles.statusContainer,
-              chatStatus === "ACCEPTED"
-                ? styles.statusAccepted
-                : chatStatus === "REJECTED"
-                ? styles.statusRejected
-                : chatStatus === "COMPLETED"
-                ? styles.statusCompleted
-                : styles.statusPending,
-            ]}
-          >
-            <Text style={styles.statusText}>{chatStatus}</Text>
-          </View>
-          {job?.assignedFreelancerId &&
-            job.assignedFreelancerId !== userData.freelancer.id && (
-              <View style={styles.assignedBanner}>
-                <Text style={styles.assignedText}>
-                  Job has been assigned to another freelancer
-                </Text>
+        <View style={styles.header}>
+                  <TouchableOpacity
+                    onPress={() => navigation.goBack()}
+                    style={styles.backButton}
+                  >
+                    <Ionicons
+                      name="arrow-back"
+                      size={24}
+                      color={currentTheme.text || "black"}
+                    />
+                  </TouchableOpacity>
+          <View style={styles.headerData}>
+            <Text style={styles.profile}>Tap for contact details</Text>
+            <Text style={styles.username}>@{full_name}</Text>
+            <Text style={styles.profile}>Last online 3 hrs ago</Text>
+            <View
+              style={[
+                styles.statusContainer,
+                chatStatus === "ACCEPTED"
+                  ? styles.statusAccepted
+                  : chatStatus === "REJECTED"
+                  ? styles.statusRejected
+                  : chatStatus === "COMPLETED"
+                  ? styles.statusCompleted
+                  : styles.statusPending,
+              ]}
+            >
+              <Text style={styles.statusText}>{chatStatus}</Text>
+            </View>
+            {job?.assignedFreelancerId &&
+              job.assignedFreelancerId !== userData.freelancer.id && (
+                <View style={styles.assignedBanner}>
+                  <Text style={styles.assignedText}>
+                    Job has been assigned to another freelancer
+                  </Text>
+                </View>
+              )}
+
+            {chatStatus === "ACCEPTED" && (
+              <View>
+                {chatStatus !== "COMPLETED" && (
+                  <Text style={styles.deadline}>
+                    {job?.deadlineDate &&
+                    new Date(job.deadlineDate) < new Date()
+                      ? "Deadline Over"
+                      : "Deadline Timer"}
+                  </Text>
+                )}
+                <View style={styles.deadlineTimerContainer}>
+                  <DeadlineTimer
+                    deadline={job?.deadlineDate}
+                    jobCompleted={job?.jobStatus === "COMPLETED"}
+                    style={{
+                      timeBox: styles.timeBox,
+                      timeText: styles.timeText,
+                      unitText: styles.unitText,
+                      completedText: styles.conColorc,
+                      timeContainer: styles.timeContainer,
+                    }}
+                  />
+                </View>
               </View>
             )}
+          </View>
 
-          {chatStatus === "ACCEPTED" && (
-            <View>
-              {chatStatus !== "COMPLETED" && (
-                <Text style={styles.deadline}>
-                  {job?.deadlineDate && new Date(job.deadlineDate) < new Date()
-                    ? "Deadline Over"
-                    : "Deadline Timer"}
-                </Text>
-              )}
-              <View style={styles.deadlineTimerContainer}>
-                <DeadlineTimer
-                  deadline={job?.deadlineDate}
-                  jobCompleted={job?.jobStatus === "COMPLETED"}
-                  style={{
-                    timeBox: styles.timeBox,
-                    timeText: styles.timeText,
-                    unitText: styles.unitText,
-                    completedText: styles.conColorc,
-                    timeContainer: styles.timeContainer,
-                  }}
-                />
-              </View>
+          <TouchableOpacity onPress={() => setShowMenu(!showMenu)}>
+            <Ionicons
+              name="ellipsis-horizontal"
+              size={24}
+              color={currentTheme.text || "black"}
+            />
+          </TouchableOpacity>
+          {showMenu && (
+            <View style={styles.menuContainer}>
+              {dotMapData.map((action) => (
+                <TouchableOpacity
+                  key={action}
+                  style={styles.menuItem}
+                  onPress={() => handleMenuAction(action)}
+                >
+                  <Text style={styles.menuItemText}>{action}</Text>
+                </TouchableOpacity>
+              ))}
             </View>
           )}
         </View>
 
-        <TouchableOpacity onPress={() => setShowMenu(!showMenu)}>
-          <Ionicons
-            name="ellipsis-horizontal"
-            size={24}
-            color={currentTheme.text || "black"}
-          />
-        </TouchableOpacity>
-        {showMenu && (
-          <View style={styles.menuContainer}>
-            {dotMapData.map((action) => (
-              <TouchableOpacity
-                key={action}
-                style={styles.menuItem}
-                onPress={() => handleMenuAction(action)}
-              >
-                <Text style={styles.menuItemText}>{action}</Text>
-              </TouchableOpacity>
-            ))}
+        <FlatList
+          data={messages}
+          ref={flatListRef}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <MessageItem
+              message={item.messageContent}
+              isCurrentUser={item.senderId === userData.id}
+              media={item.userMedia}
+              isUploading={item.isUploading}
+            />
+          )}
+          style={styles.chatList}
+          contentContainerStyle={styles.chatListContainer}
+        />
+        {chatStatus && chatStatus === "PENDING" && (
+          <View style={styles.limit}>
+            <Text style={styles.limitchar}>Character Limit</Text>
+            <Text style={styles.limitvar}>
+              {characterLimit} characters remaining
+            </Text>
           </View>
         )}
-      </View>
+        <View style={styles.inputContainer}>
+          {fileInfo && (
+            <View style={styles.selectedFileContainer}>
+              {fileInfo && fileInfo.name && (
+                <View style={styles.fileInfo}>
+                  <Text style={styles.fileName}>{fileInfo.name}</Text>
+                  <TouchableOpacity
+                    style={styles.removeFileButton}
+                    onPress={() => {
+                      setFileInfo(null);
+                      setFileContent("");
+                    }}
+                  >
+                    <MaterialIcons name="cancel" size={24} color="#4C0183" />
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          )}
+          <View style={styles.inputRow}>
+            <TextInput
+              style={styles.input}
+              value={input}
+              onChangeText={setInput}
+              placeholder="Type your message..."
+              maxLength={characterLimit || undefined}
+            />
+            {!fileContent && (
+              <TouchableOpacity
+                style={styles.attachButton}
+                onPress={handleFilePick}
+              >
+                <MaterialIcons name="attach-file" size={24} color="#4C0183" />
+              </TouchableOpacity>
+            )}
 
-      <FlatList
-        data={messages}
-        ref={flatListRef}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <MessageItem
-            message={item.messageContent}
-            isCurrentUser={item.senderId === userData.id}
-            media={item.userMedia}
-            isUploading={item.isUploading}
-          />
-        )}
-        style={styles.chatList}
-        contentContainerStyle={styles.chatListContainer}
-      />
-      {chatStatus && chatStatus === "PENDING" && (
-        <View style={styles.limit}>
-          <Text style={styles.limitchar}>Character Limit</Text>
-          <Text style={styles.limitvar}>
-            {characterLimit} characters remaining
-          </Text>
-        </View>
-      )}
-      <View style={styles.inputContainer}>
-        {fileInfo && (
-          <View style={styles.selectedFileContainer}>
-            {fileInfo && fileInfo.name && (
-              <View style={styles.fileInfo}>
-                <Text style={styles.fileName}>{fileInfo.name}</Text>
-                <TouchableOpacity
-                  style={styles.removeFileButton}
-                  onPress={() => {
-                    setFileInfo(null);
-                    setFileContent("");
-                  }}
-                >
-                  <MaterialIcons name="cancel" size={24} color="#4C0183" />
-                </TouchableOpacity>
-              </View>
+            {sending ? (
+              <ActivityIndicator size="small" color="#4C0183" />
+            ) : (
+              <TouchableOpacity style={styles.sendButton} onPress={sendMessage}>
+                <Text style={styles.sendButtonText}>Send</Text>
+              </TouchableOpacity>
             )}
           </View>
-        )}
-        <View style={styles.inputRow}>
-          <TextInput
-            style={styles.input}
-            value={input}
-            onChangeText={setInput}
-            placeholder="Type your message..."
-            maxLength={characterLimit || undefined}
-          />
-          {!fileContent && (
-            <TouchableOpacity
-              style={styles.attachButton}
-              onPress={handleFilePick}
-            >
-              <MaterialIcons name="attach-file" size={24} color="#4C0183" />
-            </TouchableOpacity>
-          )}
-
-          {sending ? (
+        </View>
+        {isUploading && (
+          <View style={styles.uploadProgress}>
+            <Text style={styles.uploadText}>
+              Uploading file... {Math.round(uploadProgress)}%
+            </Text>
             <ActivityIndicator size="small" color="#4C0183" />
-          ) : (
-            <TouchableOpacity style={styles.sendButton} onPress={sendMessage}>
-              <Text style={styles.sendButtonText}>Send</Text>
-            </TouchableOpacity>
-          )}
-        </View>
+          </View>
+        )}
+        <Toast />
       </View>
-      {isUploading && (
-        <View style={styles.uploadProgress}>
-          <Text style={styles.uploadText}>
-            Uploading file... {Math.round(uploadProgress)}%
-          </Text>
-          <ActivityIndicator size="small" color="#4C0183" />
-        </View>
-      )}
-      <Toast />
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -582,11 +601,11 @@ const getStyles = (currentTheme) =>
     container: {
       flex: 1,
       backgroundColor: currentTheme.background || "#fff",
-      paddingTop: 30,
+      // paddingTop: 30,
     },
     header: {
       padding: 15,
-      alignItems: "center",
+      alignItems: "flex-start",
       flex: 0,
       flexDirection: "row",
       justifyContent: "space-around",
