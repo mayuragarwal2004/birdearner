@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import Checkbox from "expo-checkbox";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import Toast from "react-native-toast-message";
 import * as ImagePicker from "expo-image-picker";
 import { z } from "zod";
@@ -117,6 +118,7 @@ const ClientSignup = ({ navigation, route }) => {
   const { register } = useAuth(); // Get register function from AuthContext
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const { email: initialEmail } = route.params || {};
   const [form, setForm] = useState({
     full_name: "",
@@ -275,7 +277,7 @@ const ClientSignup = ({ navigation, route }) => {
     console.log("Cleaned form data:", cleanedForm);
 
     // upload profile photo
-    if (cleanedForm.profileImage && cleanedForm.profileImage.uri) {
+    if (cleanedForm?.profileImage && cleanedForm?.profileImage?.uri) {
       const result = await apiService.uploadImage(
         cleanedForm.profileImage,
         "client_profile_photos"
@@ -291,7 +293,7 @@ const ClientSignup = ({ navigation, route }) => {
     }
 
     // upload cover photo
-    if (cleanedForm.coverImage && cleanedForm.coverImage.uri) {
+    if (cleanedForm?.coverImage && cleanedForm?.coverImage?.uri) {
       const result = await apiService.uploadImage(
         cleanedForm.coverImage,
         "client_cover_photos"
@@ -520,11 +522,30 @@ const ClientSignup = ({ navigation, route }) => {
               style={{ marginVertical: 0, marginBottom: 20 }}
             />
             <Text style={styles.label}>Date of Birth</Text>
-            <TextInput
+            <TouchableOpacity
               style={styles.input}
-              value={form.dob.toDateString()}
-              editable={false}
-            />
+              onPress={() => setShowDatePicker(true)}
+            >
+              <Text
+                style={{ color: form.dob ? "#000" : "#999", paddingTop: 12 }}
+              >
+                {form.dob ? form.dob.toDateString() : "Select Date of Birth"}
+              </Text>
+            </TouchableOpacity>
+            {showDatePicker && (
+              <DateTimePicker
+                value={form.dob || new Date()}
+                mode="date"
+                display="default"
+                onChange={(event, selectedDate) => {
+                  setShowDatePicker(false);
+                  if (selectedDate) {
+                    setForm({ ...form, dob: selectedDate });
+                  }
+                }}
+                maximumDate={new Date()}
+              />
+            )}
             <Text style={styles.label}>Your Social Media Links</Text>
             {form.socialLinks.map((link, i) => (
               <View key={i} style={styles.socialRow}>
