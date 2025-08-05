@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -14,12 +14,67 @@ import { useTheme } from "../context/ThemeContext";
 import { Ionicons } from "@expo/vector-icons";
 
 const SettingsScreen = ({ navigation }) => {
-  const { userData } = useAuth();
+  const { userData, userProfile, roleOptions } = useAuth();
   const role = userData?.role;
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
 
   const styles = getStyles(currentTheme);
+
+  // Create dynamic profile editing options based on user's profiles
+  const getProfileEditingOptions = () => {
+    const options = [];
+    
+    // Add current profile editing option
+    if (role === "CLIENT") {
+      options.push({ 
+        name: "Edit Client Profile", 
+        stack_name: "EditClientProfile",
+        params: {
+          mode: "update",
+          profileData: userProfile,
+          title: "Edit Client Profile"
+        }
+      });
+    } else if (role === "FREELANCER") {
+      options.push({ 
+        name: "Edit Freelancer Profile", 
+        stack_name: "EditFreelancerProfile",
+        params: {
+          mode: "update", 
+          profileData: userProfile,
+          title: "Edit Freelancer Profile"
+        }
+      });
+    }
+
+    // Add options to edit other profile types if they exist
+    if (roleOptions?.clientData && role !== "CLIENT") {
+      options.push({
+        name: "Edit Client Profile",
+        stack_name: "EditClientProfile", 
+        params: {
+          mode: "update",
+          profileData: roleOptions.clientData,
+          title: "Edit Client Profile"
+        }
+      });
+    }
+
+    if (roleOptions?.freelancerData && role !== "FREELANCER") {
+      options.push({
+        name: "Edit Freelancer Profile",
+        stack_name: "EditFreelancerProfile",
+        params: {
+          mode: "update",
+          profileData: roleOptions.freelancerData, 
+          title: "Edit Freelancer Profile"
+        }
+      });
+    }
+
+    return options;
+  };
 
   const settingsData = [
     {
@@ -27,6 +82,7 @@ const SettingsScreen = ({ navigation }) => {
       options: [
         { name: "Availability", stack_name: "Availability" },
         { name: "My profile", stack_name: "MyProfile" },
+        ...getProfileEditingOptions(), // Add dynamic profile editing options
         { name: "Password update", stack_name: "Password update" },
         { name: "Change your email", stack_name: "Email update" },
       ],
@@ -74,6 +130,19 @@ const SettingsScreen = ({ navigation }) => {
     },
   ];
 
+  const handleNavigation = (option) => {
+    if (option.stack_name === "EditClientProfile") {
+      // Navigate to ClientSignup with update mode and profile data
+      navigation.navigate("ClientSignup", option.params);
+    } else if (option.stack_name === "EditFreelancerProfile") {
+      // Navigate to FreelancerSignup with update mode and profile data
+      navigation.navigate("FreelancerSignup", option.params);
+    } else {
+      // Regular navigation for other options
+      navigation.navigate(option.stack_name);
+    }
+  };
+
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredData, setFilteredData] = useState(settingsData);
 
@@ -94,6 +163,15 @@ const SettingsScreen = ({ navigation }) => {
       setFilteredData(filtered);
     }
   };
+
+  // Update filtered data when settingsData changes (when profiles change)
+  React.useEffect(() => {
+    if (searchQuery.trim() === "") {
+      setFilteredData(settingsData);
+    } else {
+      handleSearch(searchQuery);
+    }
+  }, [settingsData, userData, userProfile, roleOptions]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -124,7 +202,7 @@ const SettingsScreen = ({ navigation }) => {
               <TouchableOpacity
                 key={idx}
                 style={styles.optionContainer}
-                onPress={() => navigation.navigate(option.stack_name)}
+                onPress={() => handleNavigation(option)}
               >
                 <Text style={styles.optionText}>{option.name}</Text>
                 <Text style={styles.arrowIcon}>›</Text>

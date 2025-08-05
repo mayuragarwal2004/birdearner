@@ -370,6 +370,11 @@ export function App() {
             component={TermsAndConditionsScreen}
           />
           <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
+          <Stack.Screen name="ClientSignup" component={ClientSignupScreen} />
+          <Stack.Screen
+            name="FreelancerSignup"
+            component={FreelancerSignupScreen}
+          />
         </>
       ) : (
         // Non-Authenticated Stack - Login/Signup flow

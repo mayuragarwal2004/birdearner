@@ -2,7 +2,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const API_BASE_URL =
-  "https://api.birdearner.com/api"; // Local development server
+  "https://ink-brutal-edinburgh-aruba.trycloudflare.com/api"; // Local development server
 
 // upload image categories are mentioned over here, above uploadImage function and in backend at /upload route
 /** @type {const} */
@@ -1211,6 +1211,94 @@ class ApiService {
         success: false,
         error: err.message,
       };
+    }
+  }
+
+  // Create additional client profile for existing user
+  async createClientProfile(profileData) {
+    try {
+      const response = await this.makeRequest("/profile/client", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(profileData),
+      });
+
+      if (response.success) {
+        return response.data;
+      } else {
+        throw new Error(response.message || "Failed to create client profile");
+      }
+    } catch (error) {
+      console.error("Create client profile error:", error);
+      throw error;
+    }
+  }
+
+  // Create additional freelancer profile for existing user
+  async createFreelancerProfile(profileData) {
+    try {
+      const response = await this.makeRequest("/profile/freelancer", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(profileData),
+      });
+
+      if (response.success) {
+        return response.data;
+      } else {
+        throw new Error(response.message || "Failed to create freelancer profile");
+      }
+    } catch (error) {
+      console.error("Create freelancer profile error:", error);
+      throw error;
+    }
+  }
+
+  // Update client profile
+  async updateClientProfile(clientId, profileData) {
+    try {
+      const response = await this.makeRequest(`/client/clients/${clientId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(profileData),
+      });
+
+      if (response.success) {
+        return response.data;
+      } else {
+        throw new Error(response.message || "Failed to update client profile");
+      }
+    } catch (error) {
+      console.error("Update client profile error:", error);
+      throw error;
+    }
+  }
+
+  // Update freelancer profile
+  async updateFreelancerProfile(freelancerId, profileData) {
+    try {
+      const response = await this.makeRequest(`/freelancer/freelancers/${freelancerId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(profileData),
+      });
+
+      if (response.success) {
+        return response.data;
+      } else {
+        throw new Error(response.message || "Failed to update freelancer profile");
+      }
+    } catch (error) {
+      console.error("Update freelancer profile error:", error);
+      throw error;
     }
   }
 }

@@ -549,10 +549,29 @@ export const AuthProvider = ({ children }) => {
 
           // Extract profile data from the response
           let profileData = null;
-          if (freshUserData.role === "FREELANCER" && freshUserData.freelancer) {
-            profileData = freshUserData.freelancer;
-          } else if (freshUserData.role === "CLIENT" && freshUserData.client) {
-            profileData = freshUserData.client;
+          let roleOptionsData = {
+            freelancerData: null,
+            clientData: null,
+          };
+          if (freshUserData.freelancer) {
+            roleOptionsData.freelancerData = {
+              ...freshUserData,
+              role: "FREELANCER",
+              profile: freshUserData.freelancer,
+            };
+            if (freshUserData.role === "FREELANCER") {
+              profileData = freshUserData.freelancer;
+            }
+          }
+          if (freshUserData.client) {
+            roleOptionsData.clientData = {
+              ...freshUserData,
+              role: "CLIENT",
+              profile: freshUserData.client,
+            };
+            if (freshUserData.role === "CLIENT") {
+              profileData = freshUserData.client;
+            }
           }
 
           if (profileData) {
@@ -562,6 +581,8 @@ export const AuthProvider = ({ children }) => {
               JSON.stringify(profileData)
             );
           }
+
+          setRoleOptions(roleOptionsData);
 
           // Update stored user data
           await AsyncStorage.setItem("userData", JSON.stringify(freshUserData));
@@ -580,6 +601,14 @@ export const AuthProvider = ({ children }) => {
         }
       }
     }
+  };
+
+  const handleRoleSelection = (roleData) => {
+    console.log("Handling role selection:", roleData);
+    
+    setUserData(roleData);
+    setUserProfile(roleData.profile);
+    setRoleSelectionVisible(false);
   };
 
   // Validate if current user still exists in database
@@ -627,6 +656,7 @@ export const AuthProvider = ({ children }) => {
     selectRole,
     roleOptions,
     roleSelectionVisible,
+    handleRoleSelection,
   };
 
   if (loading) {

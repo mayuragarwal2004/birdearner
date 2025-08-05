@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -10,6 +10,8 @@ import {
   SafeAreaView,
   Image,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import Checkbox from "expo-checkbox";
@@ -86,15 +88,9 @@ const indianStates = [
   { label: "Puducherry", value: "Puducherry" },
 ];
 
-const schema = z
-  .object({
-    full_name: z.string().min(1, "Full name is required"),
-    email: z.string().email("Valid email is required"),
-    password: z.string().min(8, "Password must be at least 8 characters"),
-    confirmPassword: z.string().min(8, "Confirm password is required"),
-    termsAccepted: z.boolean().refine((val) => val === true, {
-      message: "You must accept the Terms and Conditions.",
-    }),
+// Create conditional schema based on mode
+const createSchema = (mode) => {
+  const baseSchema = {
     // Make optional fields truly optional
     designation: z.string().optional(),
     heading: z.string().optional(),
@@ -108,38 +104,72 @@ const schema = z
     socialLinks: z.array(z.string()).optional(),
     profileImage: z.any().optional(),
     coverImage: z.any().optional(),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords don't match",
-    path: ["confirmPassword"],
-  });
+  };
+
+  if (mode === 'signup') {
+    return z
+      .object({
+        full_name: z.string().min(1, "Full name is required"),
+        email: z.string().email("Valid email is required"),
+        password: z.string().min(8, "Password must be at least 8 characters"),
+        confirmPassword: z.string().min(8, "Confirm password is required"),
+        termsAccepted: z.boolean().refine((val) => val === true, {
+          message: "You must accept the Terms and Conditions.",
+        }),
+        ...baseSchema,
+      })
+      .refine((data) => data.password === data.confirmPassword, {
+        message: "Passwords don't match",
+        path: ["confirmPassword"],
+      });
+  } else {
+    // For profile creation and update modes, we don't need password/email/terms
+    return z.object(baseSchema);
+  }
+};
 
 const ClientSignup = ({ navigation, route }) => {
-  const { register } = useAuth(); // Get register function from AuthContext
+  const { register, user, userProfile, fetchUserProfile } = useAuth(); // Get auth functions from AuthContext
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const { email: initialEmail } = route.params || {};
+  
+  // Extract route params to determine mode and data
+  const { 
+    email: initialEmail, 
+    mode = 'signup', // 'signup', 'create', 'update'
+    profileData,
+    title 
+  } = route.params || {};
+  
+  // Determine the schema and initial step based on mode
+  const schema = createSchema(mode);
+  const initialStep = mode === 'signup' ? 1 : 2; // Skip login step for profile creation/update
+  
+  useEffect(() => {
+    setStep(initialStep);
+  }, [initialStep]);
+
   const [form, setForm] = useState({
-    full_name: "",
+    full_name: profileData?.full_name || profileData?.fullName || "",
     email: initialEmail || "",
     password: "",
     confirmPassword: "",
     termsAccepted: false,
-    designation: "",
-    heading: "",
-    city: "",
-    state: "",
-    zipCode: "",
-    country: "India",
-    bio: "",
-    gender: "",
-    dob: new Date(),
-    socialLinks: [""],
-    profileImage: null,
-    coverImage: null,
+    designation: profileData?.designation || "",
+    heading: profileData?.heading || "",
+    city: profileData?.city || "",
+    state: profileData?.state || "",
+    zipCode: profileData?.zipCode || "",
+    country: profileData?.country || "India",
+    bio: profileData?.bio || "",
+    gender: profileData?.gender || "",
+    dob: profileData?.dob ? new Date(profileData.dob) : new Date(),
+    socialLinks: profileData?.socialLinks?.length ? profileData.socialLinks : [""],
+    profileImage: profileData?.profileImage ? { uri: profileData.profileImage } : null,
+    coverImage: profileData?.coverImage ? { uri: profileData.coverImage } : null,
   });
-  console.log({ form });
+  console.log({ form, mode, profileData });
 
   // Toast helper
   const showToast = (type, text1, text2) => {
@@ -177,9 +207,9 @@ const ClientSignup = ({ navigation, route }) => {
   const addSocialLink = () =>
     setForm({ ...form, socialLinks: [...form.socialLinks, ""] });
 
-  // Step navigation with email check
+  // Step navigation with email check (only for signup mode)
   const nextStep = async () => {
-    if (step === 1) {
+    if (step === 1 && mode === 'signup') {
       // Check email before proceeding
       if (!form.email) {
         showToast("error", "Email Required", "Please enter your email");
@@ -240,9 +270,9 @@ const ClientSignup = ({ navigation, route }) => {
   };
   const prevStep = () => setStep(step - 1);
 
-  // Final API call
+  // Final API call - handles signup, profile creation, and profile update
   const handleSubmit = async () => {
-    console.log("Triggered handleSubmit");
+    console.log("Triggered handleSubmit with mode:", mode);
 
     setIsLoading(true);
     console.log("Submitting form:", form);
@@ -277,7 +307,7 @@ const ClientSignup = ({ navigation, route }) => {
     console.log("Cleaned form data:", cleanedForm);
 
     // upload profile photo
-    if (cleanedForm?.profileImage && cleanedForm?.profileImage?.uri) {
+    if (cleanedForm?.profileImage && cleanedForm?.profileImage?.uri && !cleanedForm.profileImage.uri.startsWith('http')) {
       const result = await apiService.uploadImage(
         cleanedForm.profileImage,
         "client_profile_photos"
@@ -293,7 +323,7 @@ const ClientSignup = ({ navigation, route }) => {
     }
 
     // upload cover photo
-    if (cleanedForm?.coverImage && cleanedForm?.coverImage?.uri) {
+    if (cleanedForm?.coverImage && cleanedForm?.coverImage?.uri && !cleanedForm.coverImage.uri.startsWith('http')) {
       const result = await apiService.uploadImage(
         cleanedForm.coverImage,
         "client_cover_photos"
@@ -309,39 +339,68 @@ const ClientSignup = ({ navigation, route }) => {
     }
 
     try {
-      console.log("About to call register function from AuthContext");
-
-      // Use the register function from AuthContext which handles both signup and login
-      const userData = await register({
-        ...cleanedForm,
-        role: "CLIENT",
-      });
-
-      console.log("Registration successful:", userData);
-
-      if (userData) {
-        showToast("success", "Signup Complete", "Welcome to BirdEarner!");
-        // The AuthContext will automatically handle navigation by setting user state
-        // This will cause the app to re-render with the authenticated stack
-        navigation.replace("MainTabs");
-      } else {
-        showToast(
-          "error",
-          "Signup Failed",
-          "Registration failed. Please try again."
-        );
+      let result;
+      
+      if (mode === 'signup') {
+        console.log("About to call register function from AuthContext");
+        // Use the register function from AuthContext which handles both signup and login
+        result = await register({
+          ...cleanedForm,
+          role: "CLIENT",
+        });
+        
+        console.log("Registration successful:", result);
+        
+        if (result) {
+          showToast("success", "Signup Complete", "Welcome to BirdEarner!");
+          // The AuthContext will automatically handle navigation by setting user state
+          navigation.replace("MainTabs");
+        } else {
+          showToast("error", "Signup Failed", "Registration failed. Please try again.");
+        }
+      } else if (mode === 'create') {
+        // Create additional client profile for existing user
+        console.log("Creating client profile for existing user");
+        result = await apiService.createClientProfile(cleanedForm);
+        
+        console.log("Client profile created:", result);
+        
+        // Refresh user profile data
+        await fetchUserProfile(user.id, user.role);
+        
+        showToast("success", "Profile Created", "Client profile created successfully!");
+        navigation.goBack();
+      } else if (mode === 'update') {
+        // Update existing client profile
+        console.log("Updating client profile:", profileData.id);
+        result = await apiService.updateClientProfile(profileData.id, cleanedForm);
+        
+        console.log("Client profile updated:", result);
+        
+        // Refresh user profile data
+        await fetchUserProfile(user.id, user.role);
+        
+        showToast("success", "Profile Updated", "Client profile updated successfully!");
+        navigation.goBack();
       }
     } catch (error) {
-      console.log("Registration error caught:", error);
+      console.log("Operation error caught:", error);
       console.log("Error details:", {
         message: error.message,
         stack: error.stack,
         name: error.name,
       });
+      
+      const errorMessages = {
+        signup: "Registration failed",
+        create: "Profile creation failed", 
+        update: "Profile update failed"
+      };
+      
       showToast(
         "error",
-        "Signup Failed",
-        error.message || "Registration failed"
+        `${mode.charAt(0).toUpperCase() + mode.slice(1)} Failed`,
+        error.message || errorMessages[mode]
       );
     } finally {
       console.log("Setting loading to false");
@@ -349,14 +408,29 @@ const ClientSignup = ({ navigation, route }) => {
     }
   };
 
+  // Determine heading based on mode
+  const getHeading = () => {
+    switch(mode) {
+      case 'signup': return 'Client Signup';
+      case 'create': return title || 'Create Client Profile';
+      case 'update': return title || 'Update Client Profile';
+      default: return 'Client Profile';
+    }
+  };
+
   // UI for each step
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#4B0082" }}>
-      <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.heading}>Client Signup</Text>
-        {/* Step 1: Basic Signup Info with Email Check */}
-        {step === 1 && (
-          <View style={styles.card}>
+      <KeyboardAvoidingView 
+        style={{ flex: 1 }} 
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}
+      >
+        <ScrollView contentContainerStyle={styles.container}>
+          <Text style={styles.heading}>{getHeading()}</Text>
+          {/* Step 1: Basic Signup Info with Email Check (only for signup mode) */}
+          {step === 1 && mode === 'signup' && (
+            <View style={styles.card}>
             <Text style={styles.label}>Full Name</Text>
             <TextInput
               style={styles.input}
@@ -636,6 +710,7 @@ const ClientSignup = ({ navigation, route }) => {
         )}
         <Toast />
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };

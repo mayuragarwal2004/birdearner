@@ -61,6 +61,17 @@ export default function ProfileScreen({ navigation }) {
   const role = userData?.role;
   console.log(userData);
 
+  // Add focus listener to refresh data when returning from editing
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      // Refresh profile data when screen comes into focus
+      fetchProfileData();
+      refreshUserData();
+    });
+
+    return unsubscribe;
+  }, [navigation]);
+
   // Load user services and role info
   useEffect(() => {
     const loadUserInfo = async () => {
@@ -166,11 +177,19 @@ export default function ProfileScreen({ navigation }) {
 
   const handleSetupRole = async (roleType) => {
     try {
-      const fullName = userProfile?.fullName;
-      const email = userData?.email;
-      const role = roleType;
-
-      navigation.navigate("DescribeRoleCom", { fullName, email, role });
+      if (roleType === "client") {
+        // Navigate to ClientSignup in create mode for existing users
+        navigation.navigate("ClientSignup", {
+          mode: "create",
+          title: "Create Client Profile"
+        });
+      } else if (roleType === "freelancer") {
+        // Navigate to FreelancerSignup in create mode for existing users
+        navigation.navigate("FreelancerSignup", {
+          mode: "create", 
+          title: "Create Freelancer Profile"
+        });
+      }
     } catch (error) {
       Alert.alert("Error setting up role:", error.message);
     }
@@ -285,6 +304,11 @@ export default function ProfileScreen({ navigation }) {
       </SafeAreaView>
     );
   }
+
+  console.log({
+    roleOptions
+  });
+  
 
   return (
     <SafeAreaView>
@@ -502,7 +526,7 @@ export default function ProfileScreen({ navigation }) {
         <Text style={styles.locSubTitle}>{formattedDate}</Text>
 
         {/* TODO */}
-        {userData && false && (
+        {userData && (
           <>
             {roleOptions?.freelancerData && roleOptions?.clientData ? (
               <TouchableOpacity

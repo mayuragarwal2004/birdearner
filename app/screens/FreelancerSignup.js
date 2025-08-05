@@ -9,6 +9,8 @@ import {
   ScrollView,
   SafeAreaView,
   Image,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import Checkbox from "expo-checkbox";
 import Toast from "react-native-toast-message";
@@ -76,15 +78,9 @@ const indianStates = [
 
 const assetSchema = z.any();
 
-const schema = z
-  .object({
-    full_name: z.string().min(1, "Full name is required"),
-    email: z.string().email("Valid email is required"),
-    password: z.string().min(8, "Password must be at least 8 characters"),
-    confirmPassword: z.string().min(8, "Confirm password is required"),
-    termsAccepted: z.boolean().refine((val) => val === true, {
-      message: "You must accept the Terms and Conditions.",
-    }),
+// Create conditional schema based on mode
+const createSchema = (mode) => {
+  const baseSchema = {
     selectedServices: z
       .array(z.string())
       .min(1, "You must select at least one service"),
@@ -105,54 +101,89 @@ const schema = z
     coverImage: z.any().optional(),
     portfolioImages: z.array(assetSchema).optional(),
     agreePortfolioTerms: z.boolean().optional(),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords don't match",
-    path: ["confirmPassword"],
-  });
+  };
+
+  if (mode === 'signup') {
+    return z
+      .object({
+        full_name: z.string().min(1, "Full name is required"),
+        email: z.string().email("Valid email is required"),
+        password: z.string().min(8, "Password must be at least 8 characters"),
+        confirmPassword: z.string().min(8, "Confirm password is required"),
+        termsAccepted: z.boolean().refine((val) => val === true, {
+          message: "You must accept the Terms and Conditions.",
+        }),
+        ...baseSchema,
+      })
+      .refine((data) => data.password === data.confirmPassword, {
+        message: "Passwords don't match",
+        path: ["confirmPassword"],
+      });
+  } else {
+    // For profile creation and update modes, we don't need password/email/terms
+    return z.object(baseSchema);
+  }
+};
 
 const FreelancerSignup = ({ navigation, route }) => {
-  const { register } = useAuth(); // Get register function from AuthContext
+  const { register, user, userProfile, fetchUserProfile } = useAuth(); // Get auth functions from AuthContext
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [emailChecked, setEmailChecked] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const { email: initialEmail } = route.params || {};
+  
+  // Extract route params to determine mode and data
+  const { 
+    email: initialEmail, 
+    mode = 'signup', // 'signup', 'create', 'update'
+    profileData,
+    title 
+  } = route.params || {};
+  
+  // Determine the schema and initial step based on mode
+  const schema = createSchema(mode);
+  const initialStep = mode === 'signup' ? 1 : 2; // Skip login step for profile creation/update
+  
+  useEffect(() => {
+    setStep(initialStep);
+  }, [initialStep]);
 
   const [uploadingPortfolioImages, setUploadingPortfolioImages] =
     useState(false);
 
   // Services state
   const [availableServices, setAvailableServices] = useState([]);
-  const [selectedServices, setSelectedServices] = useState([]);
+  const [selectedServices, setSelectedServices] = useState(profileData?.selectedServices || []);
   const [servicesLoading, setServicesLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredServices, setFilteredServices] = useState([]);
 
   const [form, setForm] = useState({
-    full_name: "",
+    full_name: profileData?.full_name || profileData?.fullName || "",
     email: initialEmail || "",
     password: "",
     confirmPassword: "",
     termsAccepted: false,
-    qualification: "",
-    experience: "",
-    heading: "",
-    city: "",
-    state: "",
-    zipCode: "",
-    country: "India",
-    bio: "",
-    gender: "",
-    dob: new Date(),
-    certifications: [""],
-    socialLinks: [""],
-    profileImage: null,
-    coverImage: null,
-    portfolioImages: [],
-    agreePortfolioTerms: false,
-    selectedServices: [], // Add selectedServices to form state
+    qualification: profileData?.qualification || "",
+    experience: profileData?.experience || "",
+    heading: profileData?.heading || "",
+    city: profileData?.city || "",
+    state: profileData?.state || "",
+    zipCode: profileData?.zipCode || "",
+    country: profileData?.country || "India",
+    bio: profileData?.bio || "",
+    gender: profileData?.gender || "",
+    dob: profileData?.dob ? new Date(profileData.dob) : new Date(),
+    certifications: profileData?.certifications?.length ? profileData.certifications : [""],
+    socialLinks: profileData?.socialLinks?.length ? profileData.socialLinks : [""],
+    profileImage: profileData?.profileImage ? { uri: profileData.profileImage } : null,
+    coverImage: profileData?.coverImage ? { uri: profileData.coverImage } : null,
+    portfolioImages: profileData?.portfolioImages?.length ? profileData.portfolioImages.map(img => ({ uri: img })) : [],
+    agreePortfolioTerms: profileData?.agreePortfolioTerms || false,
+    selectedServices: profileData?.selectedServices || [], // Add selectedServices to form state
   });
+  
+  console.log({ form, mode, profileData });
 
   // Toast helper
   const showToast = (type, text1, text2) => {
@@ -292,8 +323,8 @@ const FreelancerSignup = ({ navigation, route }) => {
 
   // Step navigation
   const nextStep = async () => {
-    if (step === 1) {
-      // Check email before proceeding
+    if (step === 1 && mode === 'signup') {
+      // Check email before proceeding (only for signup mode)
       if (!form.email) {
         showToast("error", "Email Required", "Please enter your email");
         return;
@@ -364,9 +395,9 @@ const FreelancerSignup = ({ navigation, route }) => {
   };
   const prevStep = () => setStep(step - 1);
 
-  // Final API call
+  // Final API call - handles signup, profile creation, and profile update
   const handleSubmit = async () => {
-    console.log("Triggered handleSubmit");
+    console.log("Triggered handleSubmit with mode:", mode);
 
     setIsLoading(true);
     console.log("Submitting form:", form);
@@ -392,8 +423,8 @@ const FreelancerSignup = ({ navigation, route }) => {
 
     console.log("Cleaned form data:", cleanedForm);
 
-    // upload profile photo
-    if (cleanedForm.profileImage && cleanedForm.profileImage.uri) {
+    // upload profile photo (only if it's a new image, not an existing URL)
+    if (cleanedForm.profileImage && cleanedForm.profileImage.uri && !cleanedForm.profileImage.uri.startsWith('http')) {
       const result = await apiService.uploadImage(
         cleanedForm.profileImage,
         "freelancer_profile_photos"
@@ -408,8 +439,8 @@ const FreelancerSignup = ({ navigation, route }) => {
       }
     }
 
-    // upload cover photo
-    if (cleanedForm.coverImage && cleanedForm.coverImage.uri) {
+    // upload cover photo (only if it's a new image, not an existing URL)
+    if (cleanedForm.coverImage && cleanedForm.coverImage.uri && !cleanedForm.coverImage.uri.startsWith('http')) {
       const result = await apiService.uploadImage(
         cleanedForm.coverImage,
         "freelancer_cover_photos"
@@ -424,60 +455,96 @@ const FreelancerSignup = ({ navigation, route }) => {
       }
     }
 
-    // upload portfolio images
+    // upload portfolio images (only new images, not existing URLs)
     if (cleanedForm.portfolioImages && cleanedForm.portfolioImages.length > 0) {
       let uploadedImages = [];
       for (let i = 0; i < cleanedForm.portfolioImages.length; i++) {
-        const result = await apiService.uploadImage(
-          cleanedForm.portfolioImages[i],
-          "freelancer_portfolios"
-        );
-        console.log("Portfolio image uploaded:", result);
-        if (result.success) {
-          uploadedImages.push(result.url);
-        } else {
-          showToast("error", "Error Uploading Portfolio Image", result.message);
-          setIsLoading(false);
-          return;
+        const portfolioImage = cleanedForm.portfolioImages[i];
+        if (portfolioImage.uri && !portfolioImage.uri.startsWith('http')) {
+          // Only upload new images
+          const result = await apiService.uploadImage(
+            portfolioImage,
+            "freelancer_portfolios"
+          );
+          console.log("Portfolio image uploaded:", result);
+          if (result.success) {
+            uploadedImages.push(result.url);
+          } else {
+            showToast("error", "Error Uploading Portfolio Image", result.message);
+            setIsLoading(false);
+            return;
+          }
+        } else if (portfolioImage.uri && portfolioImage.uri.startsWith('http')) {
+          // Keep existing URLs
+          uploadedImages.push(portfolioImage.uri);
         }
       }
       cleanedForm.portfolioImages = uploadedImages;
     }
 
     try {
-      console.log("About to call register function from AuthContext");
-
-      // Use the register function from AuthContext which handles both signup and login
-      const userData = await register({
-        ...cleanedForm,
-        role: "FREELANCER",
-      });
-
-      console.log("Registration successful:", userData);
-
-      if (userData) {
-        showToast("success", "Signup Complete", "Welcome to BirdEarner!");
-        // The AuthContext will automatically handle navigation by setting user state
-        // This will cause the app to re-render with the authenticated stack
-        navigation.replace("MainTabs");
-      } else {
-        showToast(
-          "error",
-          "Signup Failed",
-          "Registration failed. Please try again."
-        );
+      let result;
+      
+      if (mode === 'signup') {
+        console.log("About to call register function from AuthContext");
+        // Use the register function from AuthContext which handles both signup and login
+        result = await register({
+          ...cleanedForm,
+          role: "FREELANCER",
+        });
+        
+        console.log("Registration successful:", result);
+        
+        if (result) {
+          showToast("success", "Signup Complete", "Welcome to BirdEarner!");
+          // The AuthContext will automatically handle navigation by setting user state
+          navigation.replace("MainTabs");
+        } else {
+          showToast("error", "Signup Failed", "Registration failed. Please try again.");
+        }
+      } else if (mode === 'create') {
+        // Create additional freelancer profile for existing user
+        console.log("Creating freelancer profile for existing user");
+        result = await apiService.createFreelancerProfile(cleanedForm);
+        
+        console.log("Freelancer profile created:", result);
+        
+        // Refresh user profile data
+        await fetchUserProfile(user.id, user.role);
+        
+        showToast("success", "Profile Created", "Freelancer profile created successfully!");
+        navigation.goBack();
+      } else if (mode === 'update') {
+        // Update existing freelancer profile
+        console.log("Updating freelancer profile:", profileData.id);
+        result = await apiService.updateFreelancerProfile(profileData.id, cleanedForm);
+        
+        console.log("Freelancer profile updated:", result);
+        
+        // Refresh user profile data
+        await fetchUserProfile(user.id, user.role);
+        
+        showToast("success", "Profile Updated", "Freelancer profile updated successfully!");
+        navigation.goBack();
       }
     } catch (error) {
-      console.log("Registration error caught:", error);
+      console.log("Operation error caught:", error);
       console.log("Error details:", {
         message: error.message,
         stack: error.stack,
         name: error.name,
       });
+      
+      const errorMessages = {
+        signup: "Registration failed",
+        create: "Profile creation failed", 
+        update: "Profile update failed"
+      };
+      
       showToast(
         "error",
-        "Signup Failed",
-        error.message || "Registration failed"
+        `${mode.charAt(0).toUpperCase() + mode.slice(1)} Failed`,
+        error.message || errorMessages[mode]
       );
     } finally {
       console.log("Setting loading to false");
@@ -485,13 +552,28 @@ const FreelancerSignup = ({ navigation, route }) => {
     }
   };
 
+  // Determine heading based on mode
+  const getHeading = () => {
+    switch(mode) {
+      case 'signup': return 'Freelancer Signup';
+      case 'create': return title || 'Create Freelancer Profile';
+      case 'update': return title || 'Update Freelancer Profile';
+      default: return 'Freelancer Profile';
+    }
+  };
+
   // UI for each step
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#4B0082" }}>
-      <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.heading}>Freelancer Signup</Text>
-        {/* Step 1: Basic Signup Info */}
-        {step === 1 && (
+      <KeyboardAvoidingView 
+        style={{ flex: 1 }} 
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}
+      >
+        <ScrollView contentContainerStyle={styles.container}>
+          <Text style={styles.heading}>{getHeading()}</Text>
+          {/* Step 1: Basic Signup Info (only for signup mode) */}
+          {step === 1 && mode === 'signup' && (
           <View style={styles.card}>
             <Text style={styles.label}>Full Name</Text>
             <TextInput
@@ -1035,6 +1117,7 @@ const FreelancerSignup = ({ navigation, route }) => {
         )}
       </ScrollView>
       <Toast />
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
