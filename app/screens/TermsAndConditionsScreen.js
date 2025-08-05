@@ -10,6 +10,7 @@ import {
 import { WebView } from "react-native-webview";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../context/ThemeContext";
+import apiService from "../lib/apiService";
 
 const TermsAndConditionsScreen = ({ navigation }) => {
   const [termsUrl, setTermsUrl] = useState(null);
@@ -20,8 +21,10 @@ const TermsAndConditionsScreen = ({ navigation }) => {
   useEffect(() => {
     const fetchTermsLink = async () => {
       try {
-        const response = await fetch("https://api.birdearner.com/terms");
+        const response = await fetch(`${apiService.baseURL}/terms`);
         const data = await response.json();
+        console.log({ data });
+
         setTermsUrl(data?.terms);
       } catch (err) {
         console.error("Failed to fetch terms link:", err);
