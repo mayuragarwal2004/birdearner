@@ -9,15 +9,15 @@ import {
   TextInput,
   Alert,
   Animated,
-  RefreshControl,
-  Modal,
   Platform,
+  Modal,
+  RefreshControl,
 } from "react-native";
+import CustomPicker from "../components/CustomPicker";
 import * as ImagePicker from "expo-image-picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Picker } from "@react-native-picker/picker";
 import * as Location from "expo-location";
 import MapView, { PROVIDER_GOOGLE, Marker } from "react-native-maps";
 import apiService from "../lib/apiService";
@@ -200,7 +200,7 @@ const JobRequirementsScreen = ({ navigation, route }) => {
     }
 
     Animated.timing(toggleAnim, {
-      toValue: isOnSite ? 0 : 1,
+      toValue: isOnSite ? 1 : 0,
       duration: 300,
       useNativeDriver: false,
     }).start();
@@ -730,29 +730,18 @@ const JobRequirementsScreen = ({ navigation, route }) => {
         )}
 
         <Text style={styles.label}>Freelancer Type</Text>
-        <View style={styles.dropdown}>
-          <Picker
-            selectedValue={freelancerType}
-            onValueChange={(itemValue) => setFrelancerType(itemValue)}
-            style={[styles.picker, { color: currentTheme.text }]}
-            dropdownIconColor={currentTheme.text}
-            mode="dropdown"
-          >
-            <Picker.Item
-              label="Select Freelancer Type"
-              value={freelancerType}
-              style={styles.pickerItem}
-            />
-            {services.map((service, id) => (
-              <Picker.Item
-                key={id}
-                label={service}
-                value={service}
-                style={styles.pickerItem}
-              />
-            ))}
-          </Picker>
-        </View>
+        <CustomPicker
+          items={services.map((service) => ({ label: service, value: service }))}
+          value={freelancerType}
+          onValueChange={(itemValue) => setFrelancerType(itemValue)}
+          placeholder="Select Freelancer Type"
+          style={styles.dropdownContainer}
+          innerStyle={[
+            styles.dropdown,
+            { backgroundColor: currentTheme.background3 },
+          ]}
+          textStyle={{ color: currentTheme.text }}
+        />
 
         <View style={styles.row}>
           <View>
@@ -1048,22 +1037,26 @@ const getStyles = (currentTheme) =>
       textAlign: "center",
       color: currentTheme.text,
     },
+    dropdownContainer: {
+      marginBottom: 20,
+    },
     dropdown: {
       backgroundColor: currentTheme.background3 || "#ededed",
       borderRadius: 12,
-      marginBottom: 20,
-      height: 53,
+      height: 50,
+      borderWidth: 1,
+      borderColor: currentTheme.border || '#ccc',
     },
-    // picker: {
-    //   // flex: 1,
-    //   // marginLeft: 10,
-    //   // marginRight: 40,
-    //   backgroundColor: currentTheme.background3,
-    //   // borderRadius: 12
-    // },
+    picker: {
+      backgroundColor: 'transparent',
+      marginLeft: Platform.OS === 'android' ? -10 : 0,
+      height: 50,
+      width: '100%'
+    },
     pickerItem: {
       color: currentTheme.text,
       backgroundColor: currentTheme.background3,
+      fontSize: 14
     },
     label: {
       color: currentTheme.text || "000",

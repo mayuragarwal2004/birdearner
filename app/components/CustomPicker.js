@@ -1,7 +1,7 @@
 // components/PickerModal.js
-import React, { useState } from 'react';
-import { Modal, View, Text, TouchableOpacity, FlatList, StyleSheet } from 'react-native';
-import { AntDesign } from '@expo/vector-icons';
+import React, { useState, useCallback } from 'react';
+import { Modal, View, Text, TouchableOpacity, FlatList, StyleSheet, TextInput } from 'react-native';
+import { AntDesign, Ionicons } from '@expo/vector-icons';
 
 export default function PickerModal({
   items,
@@ -14,6 +14,11 @@ export default function PickerModal({
   textStyle = {},
 }) {
   const [modalVisible, setModalVisible] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  const filteredItems = items.filter(item => 
+    item.label.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const selectedLabel = items.find((item) => item.value === value)?.label;
 
@@ -38,9 +43,29 @@ export default function PickerModal({
       >
         <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={() => setModalVisible(false)}>
           <View style={styles.modalContainer}>
+            <View style={styles.searchContainer}>
+              <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search..."
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholderTextColor="#999"
+              />
+              {searchQuery !== '' && (
+                <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButton}>
+                  <Ionicons name="close-circle" size={20} color="#666" />
+                </TouchableOpacity>
+              )}
+            </View>
             <FlatList
-              data={items}
+              data={filteredItems}
               keyExtractor={(item) => item.value.toString()}
+              ListEmptyComponent={() => (
+                <View style={styles.emptyContainer}>
+                  <Text style={styles.emptyText}>No matches found</Text>
+                </View>
+              )}
               renderItem={({ item }) => (
                 <TouchableOpacity
                   style={styles.option}
@@ -64,6 +89,35 @@ export default function PickerModal({
 const styles = StyleSheet.create({
   wrapper: {
     marginVertical: 10,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    backgroundColor: '#fff',
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    height: 40,
+    fontSize: 16,
+    color: '#333',
+  },
+  clearButton: {
+    padding: 4,
+  },
+  emptyContainer: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#666',
   },
   label: {
     fontSize: 14,
