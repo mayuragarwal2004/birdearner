@@ -2,7 +2,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const API_BASE_URL =
-  "https://memory-una-standing-define.trycloudflare.com/api"; // Local development server
+  "https://ink-brutal-edinburgh-aruba.trycloudflare.com/api"; // Local development server
 
 // upload image categories are mentioned over here, above uploadImage function and in backend at /upload route
 /** @type {const} */
@@ -206,6 +206,38 @@ class ApiService {
   async logout() {
     await this.setAuthToken(null);
     await AsyncStorage.multiRemove(["userData", "userProfile"]);
+  }
+
+  // Update password
+  async updatePassword(currentPassword, newPassword) {
+    const response = await this.makeRequest("/auth/update-password", {
+      method: "PUT",
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+
+    if (response.success) {
+      return response;
+    }
+
+    throw new Error(response.message || "Password update failed");
+  }
+
+  // Update email
+  async updateEmail(newEmail, password) {
+    const response = await this.makeRequest("/auth/update-email", {
+      method: "PUT",
+      body: JSON.stringify({ newEmail, password }),
+    });
+
+    if (response.success) {
+      // Update stored user data with new email
+      if (response.data) {
+        await AsyncStorage.setItem("userData", JSON.stringify(response.data));
+      }
+      return response;
+    }
+
+    throw new Error(response.message || "Email update failed");
   }
 
   // User endpoints
