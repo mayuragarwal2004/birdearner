@@ -161,7 +161,6 @@ const EmailUpdateScreen = ({ navigation }) => {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
-  const [focusedInput, setFocusedInput] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
 
@@ -280,14 +279,11 @@ const EmailUpdateScreen = ({ navigation }) => {
         <TextInput
           style={[
             styles.input,
-            focusedInput === fieldName && styles.inputFocused,
             error && showErrors && styles.inputError,
           ]}
           placeholder={placeholder}
           value={value}
           onChangeText={onChangeText}
-          onFocus={() => setFocusedInput(fieldName)}
-          onBlur={() => setFocusedInput(null)}
           keyboardType={secureTextEntry ? "default" : "email-address"}
           secureTextEntry={secureTextEntry && fieldName === "password" ? !showPassword : secureTextEntry}
           autoCorrect={false}
@@ -318,7 +314,7 @@ const EmailUpdateScreen = ({ navigation }) => {
       </View>
       {error && showErrors && <Text style={styles.errorText}>{error}</Text>}
     </View>
-  ), [styles, focusedInput, currentTheme, showPassword, showErrors]);
+  ), [styles, currentTheme, showPassword, showErrors]);
 
   const handleEmailUpdate = useCallback(async () => {
     const validationErrors = validateForm();
