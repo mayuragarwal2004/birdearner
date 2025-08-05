@@ -63,7 +63,7 @@ export default function ProfileScreen({ navigation }) {
 
   // Add focus listener to refresh data when returning from editing
   useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', () => {
+    const unsubscribe = navigation.addListener("focus", () => {
       // Refresh profile data when screen comes into focus
       fetchProfileData();
       refreshUserData();
@@ -181,13 +181,13 @@ export default function ProfileScreen({ navigation }) {
         // Navigate to ClientSignup in create mode for existing users
         navigation.navigate("ClientSignup", {
           mode: "create",
-          title: "Create Client Profile"
+          title: "Create Client Profile",
         });
       } else if (roleType === "freelancer") {
         // Navigate to FreelancerSignup in create mode for existing users
         navigation.navigate("FreelancerSignup", {
-          mode: "create", 
-          title: "Create Freelancer Profile"
+          mode: "create",
+          title: "Create Freelancer Profile",
         });
       }
     } catch (error) {
@@ -258,7 +258,7 @@ export default function ProfileScreen({ navigation }) {
   };
 
   const openImageModal = (imageUri) => {
-    setImages([{ url: imageUri }]);
+    setImages([{ url: apiService.loadImageURI(imageUri) }]);
     setModalVisible(true);
   };
 
@@ -306,9 +306,8 @@ export default function ProfileScreen({ navigation }) {
   }
 
   console.log({
-    roleOptions
+    roleOptions,
   });
-  
 
   return (
     <SafeAreaView>
@@ -370,7 +369,10 @@ export default function ProfileScreen({ navigation }) {
           }
           style={styles.backgroundImg}
         >
-          <TouchableOpacity onPress={() => openImageModal(data?.profilePhoto)}>
+          <TouchableOpacity
+            onPress={() => openImageModal(data?.profilePhoto)}
+            disabled={!data?.profilePhoto}
+          >
             <Image
               source={
                 data?.profilePhoto
@@ -816,7 +818,7 @@ const getStyles = (currentTheme) =>
       paddingVertical: 12,
       marginHorizontal: 20,
       borderRadius: 12,
-      marginBottom: 15,
+      // marginBottom: 15,
       marginTop: 40,
     },
     buttonText: {

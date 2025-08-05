@@ -1261,7 +1261,7 @@ class ApiService {
   // Update client profile
   async updateClientProfile(clientId, profileData) {
     try {
-      const response = await this.makeRequest(`/client/clients/${clientId}`, {
+      const response = await this.makeRequest(`/clients/${clientId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -1283,7 +1283,7 @@ class ApiService {
   // Update freelancer profile
   async updateFreelancerProfile(freelancerId, profileData) {
     try {
-      const response = await this.makeRequest(`/freelancer/freelancers/${freelancerId}`, {
+      const response = await this.makeRequest(`/freelancers/${freelancerId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

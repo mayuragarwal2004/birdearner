@@ -103,7 +103,7 @@ const createSchema = (mode) => {
     agreePortfolioTerms: z.boolean().optional(),
   };
 
-  if (mode === 'signup') {
+  if (mode === "signup") {
     return z
       .object({
         full_name: z.string().min(1, "Full name is required"),
@@ -131,59 +131,130 @@ const FreelancerSignup = ({ navigation, route }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [emailChecked, setEmailChecked] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
-  
+
   // Extract route params to determine mode and data
-  const { 
-    email: initialEmail, 
-    mode = 'signup', // 'signup', 'create', 'update'
+  const {
+    email: initialEmail,
+    mode = "signup", // 'signup', 'create', 'update'
     profileData,
-    title 
+    title,
   } = route.params || {};
-  
+
   // Determine the schema and initial step based on mode
   const schema = createSchema(mode);
-  const initialStep = mode === 'signup' ? 1 : 2; // Skip login step for profile creation/update
-  
+
   useEffect(() => {
+    const initialStep = mode === "signup" ? 1 : 2; // Skip login step for profile creation/update
     setStep(initialStep);
-  }, [initialStep]);
+  }, [mode]); // Use mode as dependency instead of initialStep
 
   const [uploadingPortfolioImages, setUploadingPortfolioImages] =
     useState(false);
 
   // Services state
   const [availableServices, setAvailableServices] = useState([]);
-  const [selectedServices, setSelectedServices] = useState(profileData?.selectedServices || []);
+  const [selectedServices, setSelectedServices] = useState(
+    user?.freelancer?.selectedServices || []
+  );
   const [servicesLoading, setServicesLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredServices, setFilteredServices] = useState([]);
 
   const [form, setForm] = useState({
-    full_name: profileData?.full_name || profileData?.fullName || "",
-    email: initialEmail || "",
+    full_name: user?.fullName || "",
+    email: initialEmail || user?.email || "",
     password: "",
     confirmPassword: "",
     termsAccepted: false,
-    qualification: profileData?.qualification || "",
-    experience: profileData?.experience || "",
-    heading: profileData?.heading || "",
-    city: profileData?.city || "",
-    state: profileData?.state || "",
-    zipCode: profileData?.zipCode || "",
-    country: profileData?.country || "India",
-    bio: profileData?.bio || "",
-    gender: profileData?.gender || "",
-    dob: profileData?.dob ? new Date(profileData.dob) : new Date(),
-    certifications: profileData?.certifications?.length ? profileData.certifications : [""],
-    socialLinks: profileData?.socialLinks?.length ? profileData.socialLinks : [""],
-    profileImage: profileData?.profileImage ? { uri: profileData.profileImage } : null,
-    coverImage: profileData?.coverImage ? { uri: profileData.coverImage } : null,
-    portfolioImages: profileData?.portfolioImages?.length ? profileData.portfolioImages.map(img => ({ uri: img })) : [],
-    agreePortfolioTerms: profileData?.agreePortfolioTerms || false,
-    selectedServices: profileData?.selectedServices || [], // Add selectedServices to form state
+    qualification: user?.freelancer?.highestQualification || "",
+    experience: user?.freelancer?.experience
+      ? user.freelancer.experience.toString()
+      : "",
+    heading: user?.freelancer?.profileHeading || "",
+    city: user?.freelancer?.city || "",
+    state: user?.freelancer?.state || "",
+    zipCode: user?.freelancer?.zipcode
+      ? user.freelancer.zipcode.toString()
+      : "",
+    country: user?.freelancer?.country || "India",
+    bio: user?.freelancer?.profileDescription || "",
+    gender: user?.freelancer?.gender || "",
+    dob: user?.freelancer?.dob ? new Date(user.freelancer.dob) : new Date(),
+    certifications: user?.freelancer?.certifications?.length
+      ? user.freelancer.certifications
+      : [""],
+    socialLinks: user?.freelancer?.socialMediaLinks?.length
+      ? user.freelancer.socialMediaLinks
+      : [""],
+    profileImage: user?.freelancer?.profilePhoto
+      ? { uri: user.freelancer.profilePhoto, isExisting: true }
+      : null,
+    coverImage: user?.freelancer?.coverPhoto
+      ? { uri: user.freelancer.coverPhoto, isExisting: true }
+      : null,
+    portfolioImages: user?.freelancer?.portfolioImages?.length
+      ? user.freelancer.portfolioImages.map((img) => ({
+          uri: img,
+          isExisting: true,
+        }))
+      : [],
+    agreePortfolioTerms: user?.freelancer?.termsAccepted || false,
+    selectedServices: user?.freelancer?.selectedServices || [], // Add selectedServices to form state
   });
-  
-  console.log({ form, mode, profileData });
+
+  // Track deleted images for update mode
+  const [deletedImages, setDeletedImages] = useState([]);
+
+  // Only update form data when user data actually changes and we're in update mode
+  useEffect(() => {
+    if (mode === "update" && user?.freelancer) {
+      setForm((prevForm) => ({
+        ...prevForm,
+        full_name: user?.fullName || prevForm.full_name,
+        qualification:
+          user?.freelancer?.highestQualification || prevForm.qualification,
+        experience: user?.freelancer?.experience
+          ? user.freelancer.experience.toString()
+          : prevForm.experience,
+        heading: user?.freelancer?.profileHeading || prevForm.heading,
+        city: user?.freelancer?.city || prevForm.city,
+        state: user?.freelancer?.state || prevForm.state,
+        zipCode: user?.freelancer?.zipcode
+          ? user.freelancer.zipcode.toString()
+          : prevForm.zipCode,
+        country: user?.freelancer?.country || prevForm.country,
+        bio: user?.freelancer?.profileDescription || prevForm.bio,
+        gender: user?.freelancer?.gender || prevForm.gender,
+        dob: user?.freelancer?.dob
+          ? new Date(user.freelancer.dob)
+          : prevForm.dob,
+        certifications: user?.freelancer?.certifications?.length
+          ? user.freelancer.certifications
+          : prevForm.certifications,
+        socialLinks: user?.freelancer?.socialMediaLinks?.length
+          ? user.freelancer.socialMediaLinks
+          : prevForm.socialLinks,
+        profileImage: user?.freelancer?.profilePhoto
+          ? { uri: user.freelancer.profilePhoto, isExisting: true }
+          : prevForm.profileImage,
+        coverImage: user?.freelancer?.coverPhoto
+          ? { uri: user.freelancer.coverPhoto, isExisting: true }
+          : prevForm.coverImage,
+        portfolioImages: user?.freelancer?.portfolioImages?.length
+          ? user.freelancer.portfolioImages.map((img) => ({
+              uri: img,
+              isExisting: true,
+            }))
+          : prevForm.portfolioImages,
+        agreePortfolioTerms:
+          user?.freelancer?.termsAccepted || prevForm.agreePortfolioTerms,
+        selectedServices:
+          user?.freelancer?.selectedServices || prevForm.selectedServices,
+      }));
+    }
+  }, [mode, user?.id]); // Only trigger when mode or user ID changes
+
+  console.log({ form, mode, user });
 
   // Toast helper
   const showToast = (type, text1, text2) => {
@@ -206,10 +277,20 @@ const FreelancerSignup = ({ navigation, route }) => {
         quality: 1,
       });
       if (!pickerResult.canceled) {
+        const fieldName = type === "profile" ? "profileImage" : "coverImage";
+        const existingImage = form[fieldName];
+
+        // If replacing an existing image in update mode, track it for deletion
+        if (existingImage && existingImage.isExisting && mode === "update") {
+          setDeletedImages([...deletedImages, existingImage.uri]);
+        }
+
         setForm({
           ...form,
-          [type === "profile" ? "profileImage" : "coverImage"]:
-            pickerResult.assets[0],
+          [fieldName]: {
+            ...pickerResult.assets[0],
+            isExisting: false, // Mark new image as not existing
+          },
         });
       }
     } catch (error) {
@@ -232,7 +313,10 @@ const FreelancerSignup = ({ navigation, route }) => {
         allowsMultipleSelection: true,
       });
       if (!pickerResult.canceled) {
-        const newImages = pickerResult.assets;
+        const newImages = pickerResult.assets.map((asset) => ({
+          ...asset,
+          isExisting: false, // Mark new images as not existing
+        }));
         setForm({
           ...form,
           portfolioImages: [...form.portfolioImages, ...newImages],
@@ -244,6 +328,13 @@ const FreelancerSignup = ({ navigation, route }) => {
   };
 
   const removePortfolioImage = (index) => {
+    const imageToRemove = form.portfolioImages[index];
+
+    // If it's an existing image (from server), track it for deletion
+    if (imageToRemove.isExisting && mode === "update") {
+      setDeletedImages([...deletedImages, imageToRemove.uri]);
+    }
+
     setForm({
       ...form,
       portfolioImages: form.portfolioImages.filter((_, i) => i !== index),
@@ -275,6 +366,13 @@ const FreelancerSignup = ({ navigation, route }) => {
 
     loadServices();
   }, []);
+
+  // Initialize selected services from user data in update mode
+  useEffect(() => {
+    if (mode === "update" && user?.freelancer?.selectedServices) {
+      setSelectedServices(user.freelancer.selectedServices);
+    }
+  }, [mode, user?.freelancer?.selectedServices]); // Use specific property instead of entire user object
 
   // Filter services based on search query
   useEffect(() => {
@@ -323,7 +421,7 @@ const FreelancerSignup = ({ navigation, route }) => {
 
   // Step navigation
   const nextStep = async () => {
-    if (step === 1 && mode === 'signup') {
+    if (step === 1 && mode === "signup") {
       // Check email before proceeding (only for signup mode)
       if (!form.email) {
         showToast("error", "Email Required", "Please enter your email");
@@ -424,44 +522,68 @@ const FreelancerSignup = ({ navigation, route }) => {
     console.log("Cleaned form data:", cleanedForm);
 
     // upload profile photo (only if it's a new image, not an existing URL)
-    if (cleanedForm.profileImage && cleanedForm.profileImage.uri && !cleanedForm.profileImage.uri.startsWith('http')) {
-      const result = await apiService.uploadImage(
-        cleanedForm.profileImage,
-        "freelancer_profile_photos"
-      );
-      console.log("Profile photo uploaded:", result);
-      if (result.success) {
-        cleanedForm.profileImage = result.url;
-      } else {
-        showToast("error", "Error Uploading Profile Photo", result.message);
-        setIsLoading(false);
-        return;
+    if (cleanedForm.profileImage && cleanedForm.profileImage.uri) {
+      if (cleanedForm.profileImage.isExisting) {
+        // Keep existing image URL as is
+        cleanedForm.profileImage = cleanedForm.profileImage.uri;
+      } else if (!cleanedForm.profileImage.uri.startsWith("http")) {
+        // Upload new image
+        const result = await apiService.uploadImage(
+          cleanedForm.profileImage,
+          "freelancer_profile_photos"
+        );
+        console.log("Profile photo uploaded:", result);
+        if (result.success) {
+          cleanedForm.profileImage = result.url;
+        } else {
+          showToast("error", "Error Uploading Profile Photo", result.message);
+          setIsLoading(false);
+          return;
+        }
       }
+    } else {
+      cleanedForm.profileImage = null;
     }
 
     // upload cover photo (only if it's a new image, not an existing URL)
-    if (cleanedForm.coverImage && cleanedForm.coverImage.uri && !cleanedForm.coverImage.uri.startsWith('http')) {
-      const result = await apiService.uploadImage(
-        cleanedForm.coverImage,
-        "freelancer_cover_photos"
-      );
-      console.log("Cover photo uploaded:", result);
-      if (result.success) {
-        cleanedForm.coverImage = result.url;
-      } else {
-        showToast("error", "Error Uploading Cover Photo", result.message);
-        setIsLoading(false);
-        return;
+    if (cleanedForm.coverImage && cleanedForm.coverImage.uri) {
+      if (cleanedForm.coverImage.isExisting) {
+        // Keep existing image URL as is
+        cleanedForm.coverImage = cleanedForm.coverImage.uri;
+      } else if (!cleanedForm.coverImage.uri.startsWith("http")) {
+        // Upload new image
+        const result = await apiService.uploadImage(
+          cleanedForm.coverImage,
+          "freelancer_cover_photos"
+        );
+        console.log("Cover photo uploaded:", result);
+        if (result.success) {
+          cleanedForm.coverImage = result.url;
+        } else {
+          showToast("error", "Error Uploading Cover Photo", result.message);
+          setIsLoading(false);
+          return;
+        }
       }
+    } else {
+      cleanedForm.coverImage = null;
     }
 
-    // upload portfolio images (only new images, not existing URLs)
+    // upload portfolio images (handle both new and existing images)
     if (cleanedForm.portfolioImages && cleanedForm.portfolioImages.length > 0) {
       let uploadedImages = [];
       for (let i = 0; i < cleanedForm.portfolioImages.length; i++) {
         const portfolioImage = cleanedForm.portfolioImages[i];
-        if (portfolioImage.uri && !portfolioImage.uri.startsWith('http')) {
-          // Only upload new images
+
+        if (portfolioImage.isExisting) {
+          // Keep existing images as is (whether they're full URLs or relative paths)
+          uploadedImages.push(portfolioImage.uri);
+        } else if (
+          portfolioImage.uri &&
+          !portfolioImage.uri.startsWith("http") &&
+          !portfolioImage.uri.startsWith("/uploads")
+        ) {
+          // Upload new images (exclude existing images with relative paths)
           const result = await apiService.uploadImage(
             portfolioImage,
             "freelancer_portfolios"
@@ -470,61 +592,157 @@ const FreelancerSignup = ({ navigation, route }) => {
           if (result.success) {
             uploadedImages.push(result.url);
           } else {
-            showToast("error", "Error Uploading Portfolio Image", result.message);
+            showToast(
+              "error",
+              "Error Uploading Portfolio Image",
+              result.message
+            );
             setIsLoading(false);
             return;
           }
-        } else if (portfolioImage.uri && portfolioImage.uri.startsWith('http')) {
-          // Keep existing URLs
-          uploadedImages.push(portfolioImage.uri);
         }
       }
       cleanedForm.portfolioImages = uploadedImages;
+    } else {
+      cleanedForm.portfolioImages = [];
     }
 
     try {
       let result;
-      
-      if (mode === 'signup') {
+
+      if (mode === "signup") {
         console.log("About to call register function from AuthContext");
         // Use the register function from AuthContext which handles both signup and login
         result = await register({
           ...cleanedForm,
           role: "FREELANCER",
         });
-        
+
         console.log("Registration successful:", result);
-        
+
         if (result) {
           showToast("success", "Signup Complete", "Welcome to BirdEarner!");
           // The AuthContext will automatically handle navigation by setting user state
           navigation.replace("MainTabs");
         } else {
-          showToast("error", "Signup Failed", "Registration failed. Please try again.");
+          showToast(
+            "error",
+            "Signup Failed",
+            "Registration failed. Please try again."
+          );
         }
-      } else if (mode === 'create') {
+      } else if (mode === "create") {
         // Create additional freelancer profile for existing user
         console.log("Creating freelancer profile for existing user");
-        result = await apiService.createFreelancerProfile(cleanedForm);
-        
+
+        // Filter and map form data to freelancer model fields only
+        const freelancerCreateData = {
+          // Map form fields to freelancer model fields
+          selectedServices: cleanedForm.selectedServices,
+          highestQualification: cleanedForm.qualification,
+          experience: cleanedForm.experience
+            ? parseInt(cleanedForm.experience)
+            : null,
+          profileHeading: cleanedForm.heading,
+          city: cleanedForm.city,
+          state: cleanedForm.state,
+          zipcode: cleanedForm.zipCode ? parseInt(cleanedForm.zipCode) : null,
+          country: cleanedForm.country,
+          gender: cleanedForm.gender,
+          dob: cleanedForm.dob,
+          certifications: cleanedForm.certifications,
+          socialMediaLinks: cleanedForm.socialLinks,
+          profileDescription: cleanedForm.bio,
+          profilePhoto: cleanedForm.profileImage,
+          coverPhoto: cleanedForm.coverImage,
+          portfolioImages: cleanedForm.portfolioImages,
+          termsAccepted: cleanedForm.agreePortfolioTerms,
+          // Handle fullName separately for user table update
+          fullName: cleanedForm.full_name,
+        };
+
+        // Remove null/undefined/empty values
+        Object.keys(freelancerCreateData).forEach((key) => {
+          if (
+            freelancerCreateData[key] === null ||
+            freelancerCreateData[key] === undefined ||
+            freelancerCreateData[key] === ""
+          ) {
+            delete freelancerCreateData[key];
+          }
+        });
+
+        result = await apiService.createFreelancerProfile(freelancerCreateData);
+
         console.log("Freelancer profile created:", result);
-        
+
         // Refresh user profile data
         await fetchUserProfile(user.id, user.role);
-        
-        showToast("success", "Profile Created", "Freelancer profile created successfully!");
+
+        showToast(
+          "success",
+          "Profile Created",
+          "Freelancer profile created successfully!"
+        );
         navigation.goBack();
-      } else if (mode === 'update') {
+      } else if (mode === "update") {
         // Update existing freelancer profile
-        console.log("Updating freelancer profile:", profileData.id);
-        result = await apiService.updateFreelancerProfile(profileData.id, cleanedForm);
-        
+        console.log("Updating freelancer profile:", user?.freelancer?.id);
+
+        // Filter and map form data to freelancer model fields only
+        const freelancerUpdateData = {
+          // Map form fields to freelancer model fields
+          selectedServices: cleanedForm.selectedServices,
+          highestQualification: cleanedForm.qualification,
+          experience: cleanedForm.experience
+            ? parseInt(cleanedForm.experience)
+            : null,
+          profileHeading: cleanedForm.heading,
+          city: cleanedForm.city,
+          state: cleanedForm.state,
+          zipcode: cleanedForm.zipCode ? parseInt(cleanedForm.zipCode) : null,
+          country: cleanedForm.country,
+          gender: cleanedForm.gender,
+          dob: cleanedForm.dob,
+          certifications: cleanedForm.certifications,
+          socialMediaLinks: cleanedForm.socialLinks,
+          profileDescription: cleanedForm.bio,
+          profilePhoto: cleanedForm.profileImage,
+          coverPhoto: cleanedForm.coverImage,
+          portfolioImages: cleanedForm.portfolioImages,
+          termsAccepted: cleanedForm.agreePortfolioTerms,
+          // Handle fullName separately for user table update
+          fullName: cleanedForm.full_name,
+          // Include deleted images information for backend processing
+          deletedImages: deletedImages, // Send list of deleted image URLs
+        };
+
+        // Remove null/undefined/empty values
+        Object.keys(freelancerUpdateData).forEach((key) => {
+          if (
+            freelancerUpdateData[key] === null ||
+            freelancerUpdateData[key] === undefined ||
+            freelancerUpdateData[key] === ""
+          ) {
+            delete freelancerUpdateData[key];
+          }
+        });
+
+        result = await apiService.updateFreelancerProfile(
+          user?.freelancer?.id,
+          freelancerUpdateData
+        );
+
         console.log("Freelancer profile updated:", result);
-        
+
         // Refresh user profile data
         await fetchUserProfile(user.id, user.role);
-        
-        showToast("success", "Profile Updated", "Freelancer profile updated successfully!");
+
+        showToast(
+          "success",
+          "Profile Updated",
+          "Freelancer profile updated successfully!"
+        );
         navigation.goBack();
       }
     } catch (error) {
@@ -534,13 +752,13 @@ const FreelancerSignup = ({ navigation, route }) => {
         stack: error.stack,
         name: error.name,
       });
-      
+
       const errorMessages = {
         signup: "Registration failed",
-        create: "Profile creation failed", 
-        update: "Profile update failed"
+        create: "Profile creation failed",
+        update: "Profile update failed",
       };
-      
+
       showToast(
         "error",
         `${mode.charAt(0).toUpperCase() + mode.slice(1)} Failed`,
@@ -554,569 +772,645 @@ const FreelancerSignup = ({ navigation, route }) => {
 
   // Determine heading based on mode
   const getHeading = () => {
-    switch(mode) {
-      case 'signup': return 'Freelancer Signup';
-      case 'create': return title || 'Create Freelancer Profile';
-      case 'update': return title || 'Update Freelancer Profile';
-      default: return 'Freelancer Profile';
+    switch (mode) {
+      case "signup":
+        return "Freelancer Signup";
+      case "create":
+        return title || "Create Freelancer Profile";
+      case "update":
+        return title || "Update Freelancer Profile";
+      default:
+        return "Freelancer Profile";
     }
   };
 
   // UI for each step
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#4B0082" }}>
-      <KeyboardAvoidingView 
-        style={{ flex: 1 }} 
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}
       >
         <ScrollView contentContainerStyle={styles.container}>
           <Text style={styles.heading}>{getHeading()}</Text>
           {/* Step 1: Basic Signup Info (only for signup mode) */}
-          {step === 1 && mode === 'signup' && (
-          <View style={styles.card}>
-            <Text style={styles.label}>Full Name</Text>
-            <TextInput
-              placeholderTextColor="#c4c4c4"
-              style={styles.input}
-              placeholder="Enter your full name"
-              value={form.full_name}
-              onChangeText={(v) => setForm({ ...form, full_name: v })}
-              autoCapitalize="words"
-            />
-            <Text style={styles.label}>Email</Text>
-            <TextInput
-              placeholderTextColor="#c4c4c4"
-              style={styles.input}
-              placeholder="Enter your email"
-              value={form.email}
-              onChangeText={(v) => setForm({ ...form, email: v })}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              editable={!initialEmail}
-            />
-            <Text style={styles.label}>Password</Text>
-            <TextInput
-              placeholderTextColor="#c4c4c4"
-              style={styles.input}
-              placeholder="Enter your password"
-              value={form.password}
-              onChangeText={(v) => setForm({ ...form, password: v })}
-              secureTextEntry
-            />
-            <Text style={styles.label}>Confirm Password</Text>
-            <TextInput
-              placeholderTextColor="#c4c4c4"
-              style={styles.input}
-              placeholder="Confirm your password"
-              value={form.confirmPassword}
-              onChangeText={(v) => setForm({ ...form, confirmPassword: v })}
-              secureTextEntry
-            />
-            <View style={styles.checkboxContainer}>
-              <Checkbox
-                value={form.termsAccepted}
-                onValueChange={(v) => setForm({ ...form, termsAccepted: v })}
-                color={form.termsAccepted ? "#6A0DAD" : undefined}
-              />
-              <Text style={styles.checkboxLabel}>
-                I agree to the{" "}
-                <Text style={styles.link}>Terms and Conditions</Text> and{" "}
-                <Text style={styles.link}>Privacy Policy</Text>
-              </Text>
-            </View>
-            <TouchableOpacity
-              style={styles.nextButton}
-              onPress={nextStep}
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <ActivityIndicator color="white" size="small" />
-              ) : (
-                <Text style={styles.nextButtonText}>Continue</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        )}
-        {/* Step 2: Service Selection */}
-        {step === 2 && (
-          <View style={styles.card}>
-            <Text style={styles.cardHeading}>Select Your Services</Text>
-            <Text style={styles.label}>
-              Choose up to 5 services you want to offer (minimum 1 required):
-            </Text>
-
-            {/* Search Input */}
-            <View style={styles.searchContainer}>
+          {step === 1 && mode === "signup" && (
+            <View style={styles.card}>
+              <Text style={styles.label}>Full Name</Text>
               <TextInput
                 placeholderTextColor="#c4c4c4"
-                style={styles.searchInput}
-                placeholder="Search for services (e.g., graphic design, web developer)..."
-                value={searchQuery}
-                onChangeText={setSearchQuery}
+                style={styles.input}
+                placeholder="Enter your full name"
+                value={form.full_name}
+                onChangeText={(v) => setForm({ ...form, full_name: v })}
+                autoCapitalize="words"
+              />
+              <Text style={styles.label}>Email</Text>
+              <TextInput
+                placeholderTextColor="#c4c4c4"
+                style={styles.input}
+                placeholder="Enter your email"
+                value={form.email}
+                onChangeText={(v) => setForm({ ...form, email: v })}
+                keyboardType="email-address"
                 autoCapitalize="none"
-                autoCorrect={false}
+                editable={!initialEmail}
               />
-            </View>
-
-            {/* Show selected services summary */}
-            {selectedServices.length > 0 && (
-              <View style={styles.selectedServicesInfo}>
-                <Text style={styles.selectedCount}>
-                  Selected: {selectedServices.length}/5
+              <Text style={styles.label}>Password</Text>
+              <TextInput
+                placeholderTextColor="#c4c4c4"
+                style={styles.input}
+                placeholder="Enter your password"
+                value={form.password}
+                onChangeText={(v) => setForm({ ...form, password: v })}
+                secureTextEntry
+              />
+              <Text style={styles.label}>Confirm Password</Text>
+              <TextInput
+                placeholderTextColor="#c4c4c4"
+                style={styles.input}
+                placeholder="Confirm your password"
+                value={form.confirmPassword}
+                onChangeText={(v) => setForm({ ...form, confirmPassword: v })}
+                secureTextEntry
+              />
+              <View style={styles.checkboxContainer}>
+                <Checkbox
+                  value={form.termsAccepted}
+                  onValueChange={(v) => setForm({ ...form, termsAccepted: v })}
+                  color={form.termsAccepted ? "#6A0DAD" : undefined}
+                />
+                <Text style={styles.checkboxLabel}>
+                  I agree to the{" "}
+                  <Text style={styles.link}>Terms and Conditions</Text> and{" "}
+                  <Text style={styles.link}>Privacy Policy</Text>
                 </Text>
-                <View style={styles.selectedServicesList}>
-                  {selectedServices.map((serviceId) => (
-                    <View key={serviceId} style={styles.selectedServiceTag}>
-                      <Text style={styles.selectedServiceText}>
-                        {getServiceNameById(serviceId)}
-                      </Text>
-                      <TouchableOpacity
-                        onPress={() => {
-                          const service = availableServices.find(
-                            (s) => s.id === serviceId
-                          );
-                          if (service) toggleServiceSelection(service);
-                        }}
-                        style={styles.removeServiceButton}
-                      >
-                        <Text style={styles.removeServiceText}>×</Text>
-                      </TouchableOpacity>
-                    </View>
-                  ))}
-                </View>
               </View>
-            )}
-
-            {servicesLoading ? (
-              <ActivityIndicator
-                size="large"
-                color="#6A0DAD"
-                style={{ marginVertical: 20 }}
-              />
-            ) : (
-              <ScrollView
-                style={styles.servicesContainer}
-                nestedScrollEnabled={true}
-                showsVerticalScrollIndicator={true}
-              >
-                {searchQuery.trim() === "" ? (
-                  <View style={styles.searchPrompt}>
-                    <Text style={styles.searchPromptText}>
-                      💡 Start typing to search for services you want to offer
-                    </Text>
-                    <Text style={styles.searchHintText}>
-                      Try: "graphic", "web", "writer", "designer", "marketing"
-                    </Text>
-                  </View>
-                ) : (
-                  <>
-                    {filteredServices.length === 0 ? (
-                      <View style={styles.noResultsContainer}>
-                        <Text style={styles.noResultsText}>
-                          No services found for "{searchQuery}"
-                        </Text>
-                        <Text style={styles.noResultsHint}>
-                          Try different keywords or check spelling
-                        </Text>
-                      </View>
-                    ) : (
-                      <>
-                        <Text style={styles.searchResultsHeader}>
-                          Found {filteredServices.length} service
-                          {filteredServices.length !== 1 ? "s" : ""}:
-                        </Text>
-                        {filteredServices.map((service) => (
-                          <TouchableOpacity
-                            key={service.id}
-                            style={[
-                              styles.serviceItem,
-                              selectedServices.includes(service.id) &&
-                                styles.serviceItemSelected,
-                            ]}
-                            onPress={() => toggleServiceSelection(service)}
-                            activeOpacity={0.7}
-                          >
-                            <View style={styles.serviceContent}>
-                              <Text
-                                style={[
-                                  styles.serviceName,
-                                  selectedServices.includes(service.id) &&
-                                    styles.serviceNameSelected,
-                                ]}
-                              >
-                                {service.name}
-                              </Text>
-                              {service.description && (
-                                <Text
-                                  style={[
-                                    styles.serviceDescription,
-                                    selectedServices.includes(service.id) &&
-                                      styles.serviceDescriptionSelected,
-                                  ]}
-                                >
-                                  {service.description}
-                                </Text>
-                              )}
-                            </View>
-                            <View
-                              style={[
-                                styles.serviceCheckbox,
-                                selectedServices.includes(service.id) &&
-                                  styles.serviceCheckboxSelected,
-                              ]}
-                            >
-                              {selectedServices.includes(service.id) && (
-                                <Text style={styles.checkmark}>✓</Text>
-                              )}
-                            </View>
-                          </TouchableOpacity>
-                        ))}
-                      </>
-                    )}
-                  </>
-                )}
-              </ScrollView>
-            )}
-
-            <View style={styles.buttonRow}>
-              <TouchableOpacity style={styles.backButton} onPress={prevStep}>
-                <Text style={styles.backButtonText}>Back</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.nextButton,
-                  selectedServices.length === 0 && styles.disabledButton,
-                ]}
-                onPress={nextStep}
-                disabled={selectedServices.length === 0}
-              >
-                <Text style={styles.nextButtonText}>Next</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-
-        {/* Step 3: Freelancer Details */}
-        {step === 3 && (
-          <View style={styles.card}>
-            <Text style={styles.label}>Highest Qualification</Text>
-            <TextInput
-              placeholderTextColor="#c4c4c4"
-              style={styles.input}
-              placeholder="E.g. Bachelor's Degree"
-              value={form.qualification}
-              onChangeText={(v) => setForm({ ...form, qualification: v })}
-            />
-            <Text style={styles.label}>Experience (In months)</Text>
-            <TextInput
-              placeholderTextColor="#c4c4c4"
-              style={styles.input}
-              keyboardType="numeric"
-              placeholder="E.g. 24"
-              value={form.experience}
-              onChangeText={(v) => setForm({ ...form, experience: v })}
-            />
-            <Text style={styles.label}>Heading on your profile</Text>
-            <TextInput
-              placeholderTextColor="#c4c4c4"
-              style={styles.input}
-              placeholder="E.g. I am a designer"
-              value={form.heading}
-              onChangeText={(v) => setForm({ ...form, heading: v })}
-            />
-            <View style={styles.row}>
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>City</Text>
-                <TextInput
-                  placeholderTextColor="#c4c4c4"
-                  placeholder="Pune"
-                  style={styles.input}
-                  value={form.city}
-                  onChangeText={(v) => setForm({ ...form, city: v })}
-                />
-              </View>
-              <View style={styles.dropdownContainer}>
-                <Text style={styles.label}>State</Text>
-                <PickerModal
-                  items={indianStates}
-                  value={form.state}
-                  onValueChange={(v) => setForm({ ...form, state: v })}
-                  placeholder="Select State"
-                  innerStyle={{ backgroundColor: "#f5f5f5" }}
-                  style={{ marginVertical: 0 }}
-                />
-              </View>
-            </View>
-            <View style={styles.row}>
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>Zip Code</Text>
-                <TextInput
-                  placeholderTextColor="#c4c4c4"
-                  placeholder="123456"
-                  style={styles.input}
-                  keyboardType="numeric"
-                  maxLength={6}
-                  value={form.zipCode}
-                  onChangeText={(v) => setForm({ ...form, zipCode: v })}
-                />
-              </View>
-              <View style={styles.dropdownContainer}>
-                <Text style={styles.label}>Country</Text>
-                <PickerModal
-                  items={COUNTRY_OPTIONS}
-                  value={form.country}
-                  onValueChange={(v) => setForm({ ...form, country: v })}
-                  placeholder="Select Country"
-                  innerStyle={{ backgroundColor: "#f5f5f5" }}
-                  style={{ marginVertical: 0 }}
-                />
-              </View>
-            </View>
-            <Text style={styles.label}>Describe yourself</Text>
-            <TextInput
-              placeholderTextColor="#c4c4c4"
-              style={styles.textArea}
-              placeholder="Describe yourself"
-              value={form.bio}
-              multiline
-              onChangeText={(v) =>
-                v.length <= 255 && setForm({ ...form, bio: v })
-              }
-            />
-            <Text style={styles.charCount}>{form.bio.length}/255</Text>
-            <View style={styles.buttonRow}>
-              <TouchableOpacity style={styles.backButton} onPress={prevStep}>
-                <Text style={styles.backButtonText}>Back</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.nextButton} onPress={nextStep}>
-                <Text style={styles.nextButtonText}>Next</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-        {/* Step 4: Personal Details */}
-        {step === 4 && (
-          <View style={styles.card}>
-            <Text style={styles.label}>Gender</Text>
-            <PickerModal
-              items={GENDER_OPTIONS}
-              value={form.gender}
-              onValueChange={(v) => setForm({ ...form, gender: v })}
-              placeholder="Select Gender"
-              innerStyle={{ backgroundColor: "#f5f5f5" }}
-              style={{ marginVertical: 0, marginBottom: 20 }}
-            />
-            <Text style={styles.label}>Date of Birth</Text>
-            <TouchableOpacity
-              style={styles.input}
-              onPress={() => setShowDatePicker(true)}
-            >
-              <Text
-                style={{ color: form.dob ? "#000" : "#999", paddingTop: 12 }}
-              >
-                {form.dob ? form.dob.toDateString() : "Select Date of Birth"}
-              </Text>
-            </TouchableOpacity>
-            {showDatePicker && (
-              <DateTimePicker
-                value={form.dob || new Date()}
-                mode="date"
-                display="default"
-                onChange={(event, selectedDate) => {
-                  setShowDatePicker(false);
-                  if (selectedDate) {
-                    setForm({ ...form, dob: selectedDate });
-                  }
-                }}
-                maximumDate={new Date()}
-              />
-            )}
-            <Text style={styles.label}>Certifications</Text>
-            {form.certifications.map((cert, i) => (
-              <View key={i} style={styles.socialRow}>
-                <TextInput
-                  placeholderTextColor="#c4c4c4"
-                  style={styles.input}
-                  placeholder="Certification"
-                  value={cert}
-                  onChangeText={(v) =>
-                    setForm({
-                      ...form,
-                      certifications: form.certifications.map((c, idx) =>
-                        idx === i ? v : c
-                      ),
-                    })
-                  }
-                />
-              </View>
-            ))}
-            <TouchableOpacity onPress={addCertification}>
-              <Text style={styles.addMore}>+ Add more certifications</Text>
-            </TouchableOpacity>
-            <Text style={styles.label}>Your Social Media Links</Text>
-            {form.socialLinks.map((link, i) => (
-              <View key={i} style={styles.socialRow}>
-                <TextInput
-                  placeholderTextColor="#c4c4c4"
-                  style={styles.input}
-                  placeholder="www.instagram.com/xyz"
-                  value={link}
-                  onChangeText={(v) =>
-                    setForm({
-                      ...form,
-                      socialLinks: form.socialLinks.map((l, idx) =>
-                        idx === i ? v : l
-                      ),
-                    })
-                  }
-                />
-              </View>
-            ))}
-            <TouchableOpacity onPress={addSocialLink}>
-              <Text style={styles.addMore}>+ Add more social media links</Text>
-            </TouchableOpacity>
-            <Text style={styles.label}>Add your profile picture</Text>
-            <View style={styles.profileUploadContainer}>
-              <TouchableOpacity
-                onPress={() => handleImageUpload("profile")}
-                style={styles.uploadButton}
-              >
-                <Text style={{ color: "#fff" }}>Click here to upload</Text>
-              </TouchableOpacity>
-              {form.profileImage && (
-                <Image
-                  source={{ uri: form.profileImage.uri }}
-                  style={styles.profileImage}
-                />
-              )}
-            </View>
-            <Text style={styles.label}>Add your cover picture</Text>
-            <View style={styles.profileUploadContainer}>
-              <TouchableOpacity
-                onPress={() => handleImageUpload("cover")}
-                style={styles.uploadButton}
-              >
-                <Text style={{ color: "#fff" }}>Click here to upload</Text>
-              </TouchableOpacity>
-              {form.coverImage && (
-                <Image
-                  source={{ uri: form.coverImage.uri }}
-                  style={styles.coverImage}
-                />
-              )}
-            </View>
-            <View style={styles.buttonRow}>
-              <TouchableOpacity style={styles.backButton} onPress={prevStep}>
-                <Text style={styles.backButtonText}>Back</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.nextButton} onPress={nextStep}>
-                <Text style={styles.nextButtonText}>Next</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-        {/* Step 5: Portfolio Upload */}
-        {step === 5 && (
-          <View style={styles.card}>
-            <Text style={styles.cardHeading}>Portfolio</Text>
-            <TouchableOpacity
-              style={styles.imageUploadButton}
-              onPress={uploadPortfolioImages}
-            >
-              <Text style={styles.imageUploadButtonText}>
-                Upload Portfolio Images
-              </Text>
-            </TouchableOpacity>
-            <View style={styles.uploadedImages}>
-              {form.portfolioImages.map((image, i) => (
-                <View key={i} style={styles.imagePreviewContainer}>
-                  <Image
-                    source={{ uri: apiService.loadImageURI(image.uri) }}
-                    style={styles.uploadedImage}
-                  />
-                  <TouchableOpacity
-                    style={styles.removeButton}
-                    onPress={() => removePortfolioImage(i)}
-                  >
-                    <Text style={styles.removeButtonText}>✕</Text>
-                  </TouchableOpacity>
-                </View>
-              ))}
-            </View>
-            <View style={styles.checkboxContainer}>
-              <Checkbox
-                value={form.agreePortfolioTerms}
-                onValueChange={(v) =>
-                  setForm({ ...form, agreePortfolioTerms: v })
-                }
-                color={form.agreePortfolioTerms ? "#ff9800" : undefined}
-              />
-              <Text style={styles.checkboxLabel}>
-                I accept that all the work uploaded on BirdEARNER by me is
-                authentic and belongs to me.
-              </Text>
-            </View>
-            <View style={styles.buttonRow}>
-              <TouchableOpacity
-                style={[
-                  styles.backButton,
-                  form.portfolioImages.length > 0 && !form.agreePortfolioTerms
-                    ? styles.disabledButton
-                    : styles.enabledButton,
-                ]}
-                onPress={prevStep}
-                disabled={
-                  form.portfolioImages.length > 0 && !form.agreePortfolioTerms
-                }
-              >
-                <Text style={styles.backButtonText}>Back</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.nextButton,
-                  form.portfolioImages.length > 0 && !form.agreePortfolioTerms
-                    ? styles.disabledButton
-                    : styles.enabledButton,
-                ]}
-                onPress={nextStep}
-                disabled={
-                  form.portfolioImages.length > 0 && !form.agreePortfolioTerms
-                }
-              >
-                <Text style={styles.nextButtonText}>Next</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-        {/* Step 6: Review & Submit */}
-        {step === 6 && (
-          <View style={styles.card}>
-            <Text style={styles.cardHeading}>Review & Submit</Text>
-            <Text style={styles.label}>
-              Please review your details before submitting.
-            </Text>
-            {/* Show summary here if desired */}
-            <View style={styles.buttonRow}>
-              <TouchableOpacity style={styles.backButton} onPress={prevStep}>
-                <Text style={styles.backButtonText}>Back</Text>
-              </TouchableOpacity>
               <TouchableOpacity
                 style={styles.nextButton}
-                onPress={handleSubmit}
+                onPress={nextStep}
                 disabled={isLoading}
               >
                 {isLoading ? (
                   <ActivityIndicator color="white" size="small" />
                 ) : (
-                  <Text style={styles.nextButtonText}>Submit</Text>
+                  <Text style={styles.nextButtonText}>Continue</Text>
                 )}
               </TouchableOpacity>
             </View>
-          </View>
-        )}
-      </ScrollView>
-      <Toast />
+          )}
+          {/* Step 2: Service Selection */}
+          {step === 2 && (
+            <View style={styles.card}>
+              <Text style={styles.cardHeading}>Select Your Services</Text>
+              <Text style={styles.label}>
+                Choose up to 5 services you want to offer (minimum 1 required):
+              </Text>
+
+              {/* Search Input */}
+              <View style={styles.searchContainer}>
+                <TextInput
+                  placeholderTextColor="#c4c4c4"
+                  style={styles.searchInput}
+                  placeholder="Search for services (e.g., graphic design, web developer)..."
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+              </View>
+
+              {/* Show selected services summary */}
+              {selectedServices.length > 0 && (
+                <View style={styles.selectedServicesInfo}>
+                  <Text style={styles.selectedCount}>
+                    Selected: {selectedServices.length}/5
+                  </Text>
+                  <View style={styles.selectedServicesList}>
+                    {selectedServices.map((serviceId) => (
+                      <View key={serviceId} style={styles.selectedServiceTag}>
+                        <Text style={styles.selectedServiceText}>
+                          {getServiceNameById(serviceId)}
+                        </Text>
+                        <TouchableOpacity
+                          onPress={() => {
+                            const service = availableServices.find(
+                              (s) => s.id === serviceId
+                            );
+                            if (service) toggleServiceSelection(service);
+                          }}
+                          style={styles.removeServiceButton}
+                        >
+                          <Text style={styles.removeServiceText}>×</Text>
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {servicesLoading ? (
+                <ActivityIndicator
+                  size="large"
+                  color="#6A0DAD"
+                  style={{ marginVertical: 20 }}
+                />
+              ) : (
+                <ScrollView
+                  style={styles.servicesContainer}
+                  nestedScrollEnabled={true}
+                  showsVerticalScrollIndicator={true}
+                >
+                  {searchQuery.trim() === "" ? (
+                    <View style={styles.searchPrompt}>
+                      <Text style={styles.searchPromptText}>
+                        💡 Start typing to search for services you want to offer
+                      </Text>
+                      <Text style={styles.searchHintText}>
+                        Try: "graphic", "web", "writer", "designer", "marketing"
+                      </Text>
+                    </View>
+                  ) : (
+                    <>
+                      {filteredServices.length === 0 ? (
+                        <View style={styles.noResultsContainer}>
+                          <Text style={styles.noResultsText}>
+                            No services found for "{searchQuery}"
+                          </Text>
+                          <Text style={styles.noResultsHint}>
+                            Try different keywords or check spelling
+                          </Text>
+                        </View>
+                      ) : (
+                        <>
+                          <Text style={styles.searchResultsHeader}>
+                            Found {filteredServices.length} service
+                            {filteredServices.length !== 1 ? "s" : ""}:
+                          </Text>
+                          {filteredServices.map((service) => (
+                            <TouchableOpacity
+                              key={service.id}
+                              style={[
+                                styles.serviceItem,
+                                selectedServices.includes(service.id) &&
+                                  styles.serviceItemSelected,
+                              ]}
+                              onPress={() => toggleServiceSelection(service)}
+                              activeOpacity={0.7}
+                            >
+                              <View style={styles.serviceContent}>
+                                <Text
+                                  style={[
+                                    styles.serviceName,
+                                    selectedServices.includes(service.id) &&
+                                      styles.serviceNameSelected,
+                                  ]}
+                                >
+                                  {service.name}
+                                </Text>
+                                {service.description && (
+                                  <Text
+                                    style={[
+                                      styles.serviceDescription,
+                                      selectedServices.includes(service.id) &&
+                                        styles.serviceDescriptionSelected,
+                                    ]}
+                                  >
+                                    {service.description}
+                                  </Text>
+                                )}
+                              </View>
+                              <View
+                                style={[
+                                  styles.serviceCheckbox,
+                                  selectedServices.includes(service.id) &&
+                                    styles.serviceCheckboxSelected,
+                                ]}
+                              >
+                                {selectedServices.includes(service.id) && (
+                                  <Text style={styles.checkmark}>✓</Text>
+                                )}
+                              </View>
+                            </TouchableOpacity>
+                          ))}
+                        </>
+                      )}
+                    </>
+                  )}
+                </ScrollView>
+              )}
+
+              <View style={styles.buttonRow}>
+                <TouchableOpacity
+                  style={styles.backButton}
+                  onPress={prevStep}
+                  disabled={mode !== "signup"}
+                >
+                  <Text
+                    style={[
+                      styles.backButtonText,
+                      mode !== "signup" && styles.disabledText,
+                    ]}
+                  >
+                    Back
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.nextButton,
+                    selectedServices.length === 0 && styles.disabledButton,
+                  ]}
+                  onPress={nextStep}
+                  disabled={selectedServices.length === 0}
+                >
+                  <Text style={styles.nextButtonText}>Next</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
+          {/* Step 3: Freelancer Details */}
+          {step === 3 && (
+            <View style={styles.card}>
+              <Text style={styles.label}>Highest Qualification</Text>
+              <TextInput
+                placeholderTextColor="#c4c4c4"
+                style={styles.input}
+                placeholder="E.g. Bachelor's Degree"
+                value={form.qualification}
+                onChangeText={(v) => setForm({ ...form, qualification: v })}
+              />
+              <Text style={styles.label}>Experience (In months)</Text>
+              <TextInput
+                placeholderTextColor="#c4c4c4"
+                style={styles.input}
+                keyboardType="numeric"
+                placeholder="E.g. 24"
+                value={form.experience}
+                onChangeText={(v) => setForm({ ...form, experience: v })}
+              />
+              <Text style={styles.label}>Heading on your profile</Text>
+              <TextInput
+                placeholderTextColor="#c4c4c4"
+                style={styles.input}
+                placeholder="E.g. I am a designer"
+                value={form.heading}
+                onChangeText={(v) => setForm({ ...form, heading: v })}
+              />
+              <View style={styles.row}>
+                <View style={styles.inputContainer}>
+                  <Text style={styles.label}>City</Text>
+                  <TextInput
+                    placeholderTextColor="#c4c4c4"
+                    placeholder="Pune"
+                    style={styles.input}
+                    value={form.city}
+                    onChangeText={(v) => setForm({ ...form, city: v })}
+                  />
+                </View>
+                <View style={styles.dropdownContainer}>
+                  <Text style={styles.label}>State</Text>
+                  <PickerModal
+                    items={indianStates}
+                    value={form.state}
+                    onValueChange={(v) => setForm({ ...form, state: v })}
+                    placeholder="Select State"
+                    innerStyle={{ backgroundColor: "#f5f5f5" }}
+                    style={{ marginVertical: 0 }}
+                  />
+                </View>
+              </View>
+              <View style={styles.row}>
+                <View style={styles.inputContainer}>
+                  <Text style={styles.label}>Zip Code</Text>
+                  <TextInput
+                    placeholderTextColor="#c4c4c4"
+                    placeholder="123456"
+                    style={styles.input}
+                    keyboardType="numeric"
+                    maxLength={6}
+                    value={form.zipCode}
+                    onChangeText={(v) => setForm({ ...form, zipCode: v })}
+                  />
+                </View>
+                <View style={styles.dropdownContainer}>
+                  <Text style={styles.label}>Country</Text>
+                  <PickerModal
+                    items={COUNTRY_OPTIONS}
+                    value={form.country}
+                    onValueChange={(v) => setForm({ ...form, country: v })}
+                    placeholder="Select Country"
+                    innerStyle={{ backgroundColor: "#f5f5f5" }}
+                    style={{ marginVertical: 0 }}
+                  />
+                </View>
+              </View>
+              <Text style={styles.label}>Describe yourself</Text>
+              <TextInput
+                placeholderTextColor="#c4c4c4"
+                style={styles.textArea}
+                placeholder="Describe yourself"
+                value={form.bio}
+                multiline
+                onChangeText={(v) =>
+                  v.length <= 255 && setForm({ ...form, bio: v })
+                }
+              />
+              <Text style={styles.charCount}>{form.bio.length}/255</Text>
+              <View style={styles.buttonRow}>
+                <TouchableOpacity style={styles.backButton} onPress={prevStep}>
+                  <Text style={styles.backButtonText}>Back</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.nextButton} onPress={nextStep}>
+                  <Text style={styles.nextButtonText}>Next</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+          {/* Step 4: Personal Details */}
+          {step === 4 && (
+            <View style={styles.card}>
+              <Text style={styles.label}>Gender</Text>
+              <PickerModal
+                items={GENDER_OPTIONS}
+                value={form.gender}
+                onValueChange={(v) => setForm({ ...form, gender: v })}
+                placeholder="Select Gender"
+                innerStyle={{ backgroundColor: "#f5f5f5" }}
+                style={{ marginVertical: 0, marginBottom: 20 }}
+              />
+              <Text style={styles.label}>Date of Birth</Text>
+              <TouchableOpacity
+                style={styles.input}
+                onPress={() => setShowDatePicker(true)}
+              >
+                <Text
+                  style={{ color: form.dob ? "#000" : "#999", paddingTop: 12 }}
+                >
+                  {form.dob ? form.dob.toDateString() : "Select Date of Birth"}
+                </Text>
+              </TouchableOpacity>
+              {showDatePicker && (
+                <DateTimePicker
+                  value={form.dob || new Date()}
+                  mode="date"
+                  display="default"
+                  onChange={(event, selectedDate) => {
+                    setShowDatePicker(false);
+                    if (selectedDate) {
+                      setForm({ ...form, dob: selectedDate });
+                    }
+                  }}
+                  maximumDate={new Date()}
+                />
+              )}
+              <Text style={styles.label}>Certifications</Text>
+              {form.certifications.map((cert, i) => (
+                <View key={i} style={styles.socialRow}>
+                  <TextInput
+                    placeholderTextColor="#c4c4c4"
+                    style={styles.input}
+                    placeholder="Certification"
+                    value={cert}
+                    onChangeText={(v) =>
+                      setForm({
+                        ...form,
+                        certifications: form.certifications.map((c, idx) =>
+                          idx === i ? v : c
+                        ),
+                      })
+                    }
+                  />
+                </View>
+              ))}
+              <TouchableOpacity onPress={addCertification}>
+                <Text style={styles.addMore}>+ Add more certifications</Text>
+              </TouchableOpacity>
+              <Text style={styles.label}>Your Social Media Links</Text>
+              {form.socialLinks.map((link, i) => (
+                <View key={i} style={styles.socialRow}>
+                  <TextInput
+                    placeholderTextColor="#c4c4c4"
+                    style={styles.input}
+                    placeholder="www.instagram.com/xyz"
+                    value={link}
+                    onChangeText={(v) =>
+                      setForm({
+                        ...form,
+                        socialLinks: form.socialLinks.map((l, idx) =>
+                          idx === i ? v : l
+                        ),
+                      })
+                    }
+                  />
+                </View>
+              ))}
+              <TouchableOpacity onPress={addSocialLink}>
+                <Text style={styles.addMore}>
+                  + Add more social media links
+                </Text>
+              </TouchableOpacity>
+              <Text style={styles.label}>Add your profile picture</Text>
+              <View style={styles.profileUploadContainer}>
+                <TouchableOpacity
+                  onPress={() => handleImageUpload("profile")}
+                  style={styles.uploadButton}
+                >
+                  <Text style={{ color: "#fff" }}>Click here to upload</Text>
+                </TouchableOpacity>
+                {form.profileImage && (
+                  <View style={styles.imagePreviewContainer}>
+                    <Image
+                      source={{ uri: form.profileImage.uri }}
+                      style={styles.profileImage}
+                    />
+                    {form.profileImage.isExisting && mode === "update" && (
+                      <View
+                        style={[styles.existingImageBadge, { top: 2, left: 2 }]}
+                      >
+                        <Text style={styles.existingImageText}>Existing</Text>
+                      </View>
+                    )}
+                    <TouchableOpacity
+                      style={[styles.removeButton, { top: 2, right: 2 }]}
+                      onPress={() => {
+                        if (form.profileImage.isExisting && mode === "update") {
+                          setDeletedImages([
+                            ...deletedImages,
+                            form.profileImage.uri,
+                          ]);
+                        }
+                        setForm({ ...form, profileImage: null });
+                      }}
+                    >
+                      <Text style={styles.removeButtonText}>✕</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+              <Text style={styles.label}>Add your cover picture</Text>
+              <View style={styles.profileUploadContainer}>
+                <TouchableOpacity
+                  onPress={() => handleImageUpload("cover")}
+                  style={styles.uploadButton}
+                >
+                  <Text style={{ color: "#fff" }}>Click here to upload</Text>
+                </TouchableOpacity>
+                {form.coverImage && (
+                  <View style={styles.imagePreviewContainer}>
+                    <Image
+                      source={{ uri: form.coverImage.uri }}
+                      style={styles.coverImage}
+                    />
+                    {form.coverImage.isExisting && mode === "update" && (
+                      <View
+                        style={[styles.existingImageBadge, { top: 2, left: 2 }]}
+                      >
+                        <Text style={styles.existingImageText}>Existing</Text>
+                      </View>
+                    )}
+                    <TouchableOpacity
+                      style={[styles.removeButton, { top: 2, right: 2 }]}
+                      onPress={() => {
+                        if (form.coverImage.isExisting && mode === "update") {
+                          setDeletedImages([
+                            ...deletedImages,
+                            form.coverImage.uri,
+                          ]);
+                        }
+                        setForm({ ...form, coverImage: null });
+                      }}
+                    >
+                      <Text style={styles.removeButtonText}>✕</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+              <View style={styles.buttonRow}>
+                <TouchableOpacity style={styles.backButton} onPress={prevStep}>
+                  <Text style={styles.backButtonText}>Back</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.nextButton} onPress={nextStep}>
+                  <Text style={styles.nextButtonText}>Next</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+          {/* Step 5: Portfolio Upload */}
+          {step === 5 && (
+            <View style={styles.card}>
+              <Text style={styles.cardHeading}>Portfolio</Text>
+              <TouchableOpacity
+                style={styles.imageUploadButton}
+                onPress={uploadPortfolioImages}
+              >
+                <Text style={styles.imageUploadButtonText}>
+                  Upload Portfolio Images
+                </Text>
+              </TouchableOpacity>
+              <View style={styles.uploadedImages}>
+                {form.portfolioImages.map((image, i) => (
+                  <View key={i} style={styles.imagePreviewContainer}>
+                    <Image
+                      source={{ uri: apiService.loadImageURI(image.uri) }}
+                      style={styles.uploadedImage}
+                    />
+                    {image.isExisting && mode === "update" && (
+                      <View style={styles.existingImageBadge}>
+                        <Text style={styles.existingImageText}>Existing</Text>
+                      </View>
+                    )}
+                    <TouchableOpacity
+                      style={styles.removeButton}
+                      onPress={() => removePortfolioImage(i)}
+                    >
+                      <Text style={styles.removeButtonText}>✕</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+              <View style={styles.checkboxContainer}>
+                <Checkbox
+                  value={form.agreePortfolioTerms}
+                  onValueChange={(v) =>
+                    setForm({ ...form, agreePortfolioTerms: v })
+                  }
+                  color={form.agreePortfolioTerms ? "#ff9800" : undefined}
+                />
+                <Text style={styles.checkboxLabel}>
+                  I accept that all the work uploaded on BirdEARNER by me is
+                  authentic and belongs to me.
+                </Text>
+              </View>
+              <View style={styles.buttonRow}>
+                <TouchableOpacity
+                  style={[
+                    styles.backButton,
+                    form.portfolioImages.length > 0 && !form.agreePortfolioTerms
+                      ? styles.disabledButton
+                      : styles.enabledButton,
+                  ]}
+                  onPress={prevStep}
+                  disabled={
+                    form.portfolioImages.length > 0 && !form.agreePortfolioTerms
+                  }
+                >
+                  <Text style={styles.backButtonText}>Back</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.nextButton,
+                    form.portfolioImages.length > 0 && !form.agreePortfolioTerms
+                      ? styles.disabledButton
+                      : styles.enabledButton,
+                  ]}
+                  onPress={nextStep}
+                  disabled={
+                    form.portfolioImages.length > 0 && !form.agreePortfolioTerms
+                  }
+                >
+                  <Text style={styles.nextButtonText}>Next</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+          {/* Step 6: Review & Submit */}
+          {step === 6 && (
+            <View style={styles.card}>
+              <Text style={styles.cardHeading}>Review & Submit</Text>
+              <Text style={styles.label}>
+                Please review your details before submitting.
+              </Text>
+              {/* Show summary here if desired */}
+              <View style={styles.buttonRow}>
+                <TouchableOpacity
+                  style={styles.backButton}
+                  disabled={isLoading}
+                  onPress={prevStep}
+                >
+                  {isLoading ? (
+                    <ActivityIndicator color="white" size="small" />
+                  ) : (
+                    <Text style={styles.backButtonText}>Back</Text>
+                  )}
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.nextButton}
+                  onPress={handleSubmit}
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <ActivityIndicator color="white" size="small" />
+                  ) : (
+                    <Text style={styles.nextButtonText}>Submit</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+        </ScrollView>
+        <Toast />
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -1329,6 +1623,20 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "600",
   },
+  existingImageBadge: {
+    position: "absolute",
+    top: 5,
+    left: 5,
+    backgroundColor: "#28a745",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  existingImageText: {
+    color: "#ffffff",
+    fontSize: 8,
+    fontWeight: "600",
+  },
   // Service selection styles
   searchContainer: {
     marginVertical: 15,
@@ -1502,6 +1810,9 @@ const styles = StyleSheet.create({
   coverImage: {
     width: 100,
     height: 67,
+  },
+  disabledText: {
+    color: "#888",
   },
 });
 

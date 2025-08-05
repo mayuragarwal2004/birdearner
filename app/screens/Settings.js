@@ -76,13 +76,25 @@ const SettingsScreen = ({ navigation }) => {
     return options;
   };
 
+  const handleNavigation = (option) => {
+    if (option.stack_name === "EditClientProfile") {
+      // Navigate to ClientSignup with update mode and profile data
+      navigation.navigate("ClientSignup", option.params);
+    } else if (option.stack_name === "EditFreelancerProfile") {
+      // Navigate to FreelancerSignup with update mode and profile data
+      navigation.navigate("FreelancerSignup", option.params);
+    } else {
+      // Regular navigation for other options
+      navigation.navigate(option.stack_name);
+    }
+  };
+
   const settingsData = [
     {
       title: "Account Settings",
       options: [
         { name: "Availability", stack_name: "Availability" },
-        { name: "My profile", stack_name: "MyProfile" },
-        ...getProfileEditingOptions(), // Add dynamic profile editing options
+        ...getProfileEditingOptions(),
         { name: "Password update", stack_name: "Password update" },
         { name: "Change your email", stack_name: "Email update" },
       ],
@@ -130,49 +142,6 @@ const SettingsScreen = ({ navigation }) => {
     },
   ];
 
-  const handleNavigation = (option) => {
-    if (option.stack_name === "EditClientProfile") {
-      // Navigate to ClientSignup with update mode and profile data
-      navigation.navigate("ClientSignup", option.params);
-    } else if (option.stack_name === "EditFreelancerProfile") {
-      // Navigate to FreelancerSignup with update mode and profile data
-      navigation.navigate("FreelancerSignup", option.params);
-    } else {
-      // Regular navigation for other options
-      navigation.navigate(option.stack_name);
-    }
-  };
-
-  const [searchQuery, setSearchQuery] = useState("");
-  const [filteredData, setFilteredData] = useState(settingsData);
-
-  const handleSearch = (query) => {
-    setSearchQuery(query);
-
-    if (query.trim() === "") {
-      setFilteredData(settingsData);
-    } else {
-      const filtered = settingsData
-        .map((section) => {
-          const options = section.options.filter((option) =>
-            option.name.toLowerCase().includes(query.toLowerCase())
-          );
-          return options.length > 0 ? { ...section, options } : null;
-        })
-        .filter(Boolean);
-      setFilteredData(filtered);
-    }
-  };
-
-  // Update filtered data when settingsData changes (when profiles change)
-  React.useEffect(() => {
-    if (searchQuery.trim() === "") {
-      setFilteredData(settingsData);
-    } else {
-      handleSearch(searchQuery);
-    }
-  }, [settingsData, userData, userProfile, roleOptions]);
-
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -195,7 +164,7 @@ const SettingsScreen = ({ navigation }) => {
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
       >
-        {filteredData.map((section, index) => (
+        {settingsData.map((section, index) => (
           <View key={index} style={styles.sectionContainer}>
             <Text style={styles.sectionTitle}>{section.title}</Text>
             {section.options.map((option, idx) => (
@@ -210,9 +179,6 @@ const SettingsScreen = ({ navigation }) => {
             ))}
           </View>
         ))}
-        {filteredData.length === 0 && (
-          <Text style={styles.noResults}>No results found</Text>
-        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -249,16 +215,6 @@ const getStyles = (currentTheme) =>
       marginBottom: 16,
       color: currentTheme.text || "white",
     },
-    searchContainer: {
-      marginBottom: 20,
-    },
-    searchInput: {
-      height: 45,
-      borderRadius: 8,
-      backgroundColor: currentTheme.background3 || "#f0f0f0",
-      paddingHorizontal: 16,
-      color: currentTheme.subText || "#333",
-    },
     scrollView: {
       flex: 1,
       marginHorizontal: Platform.OS==="ios"? 20:0,
@@ -288,12 +244,6 @@ const getStyles = (currentTheme) =>
     arrowIcon: {
       fontSize: 18,
       color: currentTheme.text || "#888",
-    },
-    noResults: {
-      textAlign: "center",
-      color: currentTheme.text || "#888",
-      fontSize: 16,
-      marginTop: 20,
     },
   });
 
