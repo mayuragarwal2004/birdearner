@@ -133,7 +133,7 @@ const SettingsScreen = ({ navigation }) => {
         { name: "Terms & Conditions", stack_name: "TermsAndConditions" },
         { name: "Feedback", stack_name: "Feedback" },
         { name: "Privacy Policy", stack_name: "PrivacyPolicy" },
-        { name: "Blogs & Forum", stack_name: "BlogsAndForum" },
+        // { name: "Blogs & Forum", stack_name: "BlogsAndForum" },
       ],
     },
     {

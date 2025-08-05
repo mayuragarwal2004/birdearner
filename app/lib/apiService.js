@@ -1393,6 +1393,31 @@ class ApiService {
       this.handleApiError(error);
     }
   }
+
+  // ==================== CONTACT/FEEDBACK MANAGEMENT ====================
+
+  // Submit contact/feedback form
+  async submitContactForm(contactData) {
+    try {
+      const response = await this.makeRequest("/contact", {
+        method: "POST",
+        body: JSON.stringify(contactData),
+      });
+      return response;
+    } catch (error) {
+      this.handleApiError(error);
+    }
+  }
+
+  // Get contact status by ticket ID
+  async getContactByTicketId(ticketId) {
+    try {
+      const response = await this.makeRequest(`/contact/ticket/${ticketId}`);
+      return response;
+    } catch (error) {
+      this.handleApiError(error);
+    }
+  }
 }
 
 // Create singleton instance
