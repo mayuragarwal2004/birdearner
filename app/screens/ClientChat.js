@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   Platform,
 } from "react-native";
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from "../context/NewAuthContext";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
@@ -534,288 +535,307 @@ const ClientChat = ({ route, navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
-      <WarningModal
-        visible={modalVisible}
-        onConfirm={handleConfirm}
-        onCancel={() => setModalVisible(false)}
-      />
-      <Modal
-        visible={reportModalVisible}
-        transparent={false}
-        animationType="fade"
-        onRequestClose={() => setReportModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Report</Text>
-            <Text style={styles.modalSubtitle}>
-              Why are you reporting this user?
-            </Text>
-            <Text style={styles.modalDescription}>
-              Your report is anonymous. If someone is in immediate danger, call
-              the local emergency services - don't wait.
-            </Text>
-            {reportOptions.map((option, index) => (
-              <TouchableOpacity
-                key={index}
-                onPress={() => setSelectedReportReason(option)}
-                style={styles.optionButton}
-              >
-                <Text style={styles.optionText}>{option}</Text>
-              </TouchableOpacity>
-            ))}
-            <TouchableOpacity
-              onPress={handleReport}
-              style={[styles.modalButton, { marginTop: 20 }]}
-              disabled={!selectedReportReason}
-            >
-              <Text style={styles.modalButtonText}>Submit Report</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setReportModalVisible(false)}
-              style={styles.cancelButton}
-            >
-              <Text style={styles.cancelText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      <Modal
-        visible={cancelModalVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setCancelModalVisible(false)}
-      >
-        <View style={styles.modalContainer1}>
-          <View style={styles.modalContent1}>
-            <Text style={styles.modalText1}>
-              Are you sure you want to cancel this job?
-            </Text>
-            <Text style={styles.timerText1}>{countdown} seconds remaining</Text>
-            <View style={styles.modalActions1}>
-              <TouchableOpacity
-                style={styles.confirmButton1}
-                onPress={handleCancelJob}
-              >
-                <Text style={styles.buttonText1}>Yes, Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.cancelButton1}
-                onPress={() => {
-                  setCancelModalVisible(false);
-                  setCountdown(30);
-                }}
-              >
-                <Text style={styles.buttonText1}>No, Go Back</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      <View style={styles.header}>
-        <View style={styles.headerData}>
-          <Text style={styles.profile}>Tap to view profile</Text>
-          <TouchableOpacity
-            onPress={() =>
-              navigation.navigate("ProfileScreen", {
-                receiverId: freelancer.user.id,
-              })
-            }
-          >
-            <Text style={styles.username}>@{full_name}</Text>
-          </TouchableOpacity>
-
-          {/* TODO */}
-          {/* <Text style={styles.profile}>Last online 3 hrs ago</Text> */}
-          <View
-            style={[
-              styles.statusContainer,
-              chatStatus === "ACCEPTED"
-                ? styles.statusAccepted
-                : chatStatus === "REJECTED"
-                ? styles.statusRejected
-                : chatStatus === "COMPLETED"
-                ? styles.statusCompleted
-                : styles.statusPending,
-            ]}
-          >
-            <Text style={styles.statusText}>{chatStatus}</Text>
-          </View>
-          {job?.assignedFreelancerId &&
-            job.assignedFreelancerId !== freelancer.id && (
-              <View style={styles.assignedBanner}>
-                <Text style={styles.assignedText}>
-                  You have assigned this job to another freelancer
-                </Text>
-              </View>
-            )}
-
-          {job?.assignedFreelancerId === null ? (
-            <View style={styles.actionButtons}>
-              <TouchableOpacity
-                style={styles.acceptButton}
-                onPress={handleAccept}
-              >
-                <Text style={styles.buttonText}>Accept</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.rejectButton}
-                onPress={handleReject}
-              >
-                <Text style={styles.buttonText}>Reject</Text>
-              </TouchableOpacity>
-            </View>
-          ) : job?.assignedFreelancerId === freelancer.id ? (
-            <View>
-              <View style={styles.deadlineTimerContainer}>
-                {job?.deadlineDate &&
-                new Date(job.deadlineDate) < new Date() ? (
-                  <View style={styles.timeBoxCon}>
-                    {chatStatus !== "COMPLETED" && (
-                      <Text style={styles.penaltyText}>
-                        Deadline has passed
-                      </Text>
-                    )}
-                    {chatStatus && chatStatus !== "COMPLETED" && (
-                      <TouchableOpacity
-                        style={styles.conColor}
-                        onPress={handleConfirmProjComp}
-                      >
-                        <Text style={styles.applyButtonText}>
-                          Confirm Project Completion
-                        </Text>
-                      </TouchableOpacity>
-                    )}
-                    {chatStatus === "COMPLETED" && (
-                      <Text style={styles.conColorc}>Project Completed</Text>
-                    )}
-                  </View>
-                ) : (
-                  <DeadlineTimer
-                    deadline={job?.deadlineDate}
-                    jobCompleted={job?.jobStatus === "COMPLETED"}
-                    style={{
-                      timeBox: styles.timeBox,
-                      timeText: styles.timeText,
-                      unitText: styles.unitText,
-                      completedText: styles.conColorc,
-                      timeContainer: styles.timeContainer,
-                    }}
-                  />
-                )}
-              </View>
-            </View>
-          ) : (
-            <></>
-          )}
-        </View>
-
-        <TouchableOpacity onPress={() => setShowMenu(!showMenu)}>
-          <Ionicons
-            name="ellipsis-horizontal"
-            size={24}
-            color={currentTheme.text || "black"}
-          />
-        </TouchableOpacity>
-        {showMenu && (
-          <View style={styles.menuContainer}>
-            {dotMapData.map((action) => (
-              <TouchableOpacity
-                key={action}
-                style={styles.menuItem}
-                onPress={() => handleMenuAction(action)}
-              >
-                <Text style={styles.menuItemText}>{action}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
-      </View>
-
-      <FlatList
-        data={messages}
-        ref={flatListRef}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <MessageItem
-            message={item.messageContent}
-            isCurrentUser={item.senderId === userData.id}
-            media={item.userMedia}
-            isUploading={item.isUploading}
-          />
-        )}
-        style={styles.chatList}
-        contentContainerStyle={styles.chatListContainer}
-        onContentSizeChange={() => {
-          flatListRef.current?.scrollToEnd({ animated: true });
-        }}
-      />
-      {chatStatus && chatStatus === "PENDING" && (
-        <View style={styles.limit}>
-          <Text style={styles.limitchar}>Character Limit</Text>
-          <Text style={styles.limitvar}>
-            {characterLimit} characters remaining
-          </Text>
-        </View>
-      )}
-      <View style={styles.inputContainer}>
-        {fileInfo && (
-          <View style={styles.selectedFileContainer}>
-            {fileInfo && fileInfo.name && (
-              <View style={styles.fileInfo}>
-                <Text style={styles.fileName}>{fileInfo.name}</Text>
+    <SafeAreaView
+      style={{
+        flex: 1,
+        backgroundColor: currentTheme.background || "#fff",
+      }}
+    >
+      <View style={styles.container}>
+        <WarningModal
+          visible={modalVisible}
+          onConfirm={handleConfirm}
+          onCancel={() => setModalVisible(false)}
+        />
+        <Modal
+          visible={reportModalVisible}
+          transparent={false}
+          animationType="fade"
+          onRequestClose={() => setReportModalVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Report</Text>
+              <Text style={styles.modalSubtitle}>
+                Why are you reporting this user?
+              </Text>
+              <Text style={styles.modalDescription}>
+                Your report is anonymous. If someone is in immediate danger,
+                call the local emergency services - don't wait.
+              </Text>
+              {reportOptions.map((option, index) => (
                 <TouchableOpacity
-                  style={styles.removeFileButton}
+                  key={index}
+                  onPress={() => setSelectedReportReason(option)}
+                  style={styles.optionButton}
+                >
+                  <Text style={styles.optionText}>{option}</Text>
+                </TouchableOpacity>
+              ))}
+              <TouchableOpacity
+                onPress={handleReport}
+                style={[styles.modalButton, { marginTop: 20 }]}
+                disabled={!selectedReportReason}
+              >
+                <Text style={styles.modalButtonText}>Submit Report</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setReportModalVisible(false)}
+                style={styles.cancelButton}
+              >
+                <Text style={styles.cancelText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
+        <Modal
+          visible={cancelModalVisible}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setCancelModalVisible(false)}
+        >
+          <View style={styles.modalContainer1}>
+            <View style={styles.modalContent1}>
+              <Text style={styles.modalText1}>
+                Are you sure you want to cancel this job?
+              </Text>
+              <Text style={styles.timerText1}>
+                {countdown} seconds remaining
+              </Text>
+              <View style={styles.modalActions1}>
+                <TouchableOpacity
+                  style={styles.confirmButton1}
+                  onPress={handleCancelJob}
+                >
+                  <Text style={styles.buttonText1}>Yes, Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.cancelButton1}
                   onPress={() => {
-                    setFileInfo(null);
-                    setFileContent("");
+                    setCancelModalVisible(false);
+                    setCountdown(30);
                   }}
                 >
-                  <MaterialIcons name="cancel" size={24} color="#4C0183" />
+                  <Text style={styles.buttonText1}>No, Go Back</Text>
                 </TouchableOpacity>
               </View>
+            </View>
+          </View>
+        </Modal>
+
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
+          >
+            <Ionicons
+              name="arrow-back"
+              size={24}
+              color={currentTheme.text || "black"}
+            />
+          </TouchableOpacity>
+          <View style={styles.headerData}>
+            <Text style={styles.profile}>Tap to view profile</Text>
+            <TouchableOpacity
+              onPress={() =>
+                navigation.navigate("ProfileScreen", {
+                  receiverId: freelancer.user.id,
+                })
+              }
+            >
+              <Text style={styles.username}>@{full_name}</Text>
+            </TouchableOpacity>
+
+            {/* TODO */}
+            {/* <Text style={styles.profile}>Last online 3 hrs ago</Text> */}
+            <View
+              style={[
+                styles.statusContainer,
+                chatStatus === "ACCEPTED"
+                  ? styles.statusAccepted
+                  : chatStatus === "REJECTED"
+                  ? styles.statusRejected
+                  : chatStatus === "COMPLETED"
+                  ? styles.statusCompleted
+                  : styles.statusPending,
+              ]}
+            >
+              <Text style={styles.statusText}>{chatStatus}</Text>
+            </View>
+            {job?.assignedFreelancerId &&
+              job.assignedFreelancerId !== freelancer.id && (
+                <View style={styles.assignedBanner}>
+                  <Text style={styles.assignedText}>
+                    You have assigned this job to another freelancer
+                  </Text>
+                </View>
+              )}
+
+            {job?.assignedFreelancerId === null ? (
+              <View style={styles.actionButtons}>
+                <TouchableOpacity
+                  style={styles.acceptButton}
+                  onPress={handleAccept}
+                >
+                  <Text style={styles.buttonText}>Accept</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.rejectButton}
+                  onPress={handleReject}
+                >
+                  <Text style={styles.buttonText}>Reject</Text>
+                </TouchableOpacity>
+              </View>
+            ) : job?.assignedFreelancerId === freelancer.id ? (
+              <View>
+                <View style={styles.deadlineTimerContainer}>
+                  {job?.deadlineDate &&
+                  new Date(job.deadlineDate) < new Date() ? (
+                    <View style={styles.timeBoxCon}>
+                      {chatStatus !== "COMPLETED" && (
+                        <Text style={styles.penaltyText}>
+                          Deadline has passed
+                        </Text>
+                      )}
+                      {chatStatus && chatStatus !== "COMPLETED" && (
+                        <TouchableOpacity
+                          style={styles.conColor}
+                          onPress={handleConfirmProjComp}
+                        >
+                          <Text style={styles.applyButtonText}>
+                            Confirm Project Completion
+                          </Text>
+                        </TouchableOpacity>
+                      )}
+                      {chatStatus === "COMPLETED" && (
+                        <Text style={styles.conColorc}>Project Completed</Text>
+                      )}
+                    </View>
+                  ) : (
+                    <DeadlineTimer
+                      deadline={job?.deadlineDate}
+                      jobCompleted={job?.jobStatus === "COMPLETED"}
+                      style={{
+                        timeBox: styles.timeBox,
+                        timeText: styles.timeText,
+                        unitText: styles.unitText,
+                        completedText: styles.conColorc,
+                        timeContainer: styles.timeContainer,
+                      }}
+                    />
+                  )}
+                </View>
+              </View>
+            ) : (
+              <></>
             )}
           </View>
-        )}
-        <View style={styles.inputRow}>
-          <TextInput
-            style={styles.input}
-            value={input}
-            onChangeText={setInput}
-            placeholder="Type your message..."
-            maxLength={characterLimit || undefined}
-          />
-          {!fileContent && (
-            <TouchableOpacity
-              style={styles.attachButton}
-              onPress={handleFilePick}
-            >
-              <MaterialIcons name="attach-file" size={24} color="#4C0183" />
-            </TouchableOpacity>
-          )}
 
-          {sending ? (
-            <ActivityIndicator size="small" color="#4C0183" />
-          ) : (
-            <TouchableOpacity style={styles.sendButton} onPress={sendMessage}>
-              <Text style={styles.sendButtonText}>Send</Text>
-            </TouchableOpacity>
+          <TouchableOpacity onPress={() => setShowMenu(!showMenu)}>
+            <Ionicons
+              name="ellipsis-horizontal"
+              size={24}
+              color={currentTheme.text || "black"}
+            />
+          </TouchableOpacity>
+          {showMenu && (
+            <View style={styles.menuContainer}>
+              {dotMapData.map((action) => (
+                <TouchableOpacity
+                  key={action}
+                  style={styles.menuItem}
+                  onPress={() => handleMenuAction(action)}
+                >
+                  <Text style={styles.menuItemText}>{action}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           )}
         </View>
-      </View>
-      {isUploading && (
-        <View style={styles.uploadProgress}>
-          <Text style={styles.uploadText}>
-            Uploading file... {Math.round(uploadProgress)}%
-          </Text>
-          <ActivityIndicator size="small" color="#4C0183" />
+
+        <FlatList
+          data={messages}
+          ref={flatListRef}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <MessageItem
+              message={item.messageContent}
+              isCurrentUser={item.senderId === userData.id}
+              media={item.userMedia}
+              isUploading={item.isUploading}
+            />
+          )}
+          style={styles.chatList}
+          contentContainerStyle={styles.chatListContainer}
+          onContentSizeChange={() => {
+            flatListRef.current?.scrollToEnd({ animated: true });
+          }}
+        />
+        {chatStatus && chatStatus === "PENDING" && (
+          <View style={styles.limit}>
+            <Text style={styles.limitchar}>Character Limit</Text>
+            <Text style={styles.limitvar}>
+              {characterLimit} characters remaining
+            </Text>
+          </View>
+        )}
+        <View style={styles.inputContainer}>
+          {fileInfo && (
+            <View style={styles.selectedFileContainer}>
+              {fileInfo && fileInfo.name && (
+                <View style={styles.fileInfo}>
+                  <Text style={styles.fileName}>{fileInfo.name}</Text>
+                  <TouchableOpacity
+                    style={styles.removeFileButton}
+                    onPress={() => {
+                      setFileInfo(null);
+                      setFileContent("");
+                    }}
+                  >
+                    <MaterialIcons name="cancel" size={24} color="#4C0183" />
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          )}
+          <View style={styles.inputRow}>
+            <TextInput
+              style={styles.input}
+              value={input}
+              onChangeText={setInput}
+              placeholder="Type your message..."
+              maxLength={characterLimit || undefined}
+            />
+            {!fileContent && (
+              <TouchableOpacity
+                style={styles.attachButton}
+                onPress={handleFilePick}
+              >
+                <MaterialIcons name="attach-file" size={24} color="#4C0183" />
+              </TouchableOpacity>
+            )}
+
+            {sending ? (
+              <ActivityIndicator size="small" color="#4C0183" />
+            ) : (
+              <TouchableOpacity style={styles.sendButton} onPress={sendMessage}>
+                <Text style={styles.sendButtonText}>Send</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
-      )}
-      <Toast />
-    </View>
+        {isUploading && (
+          <View style={styles.uploadProgress}>
+            <Text style={styles.uploadText}>
+              Uploading file... {Math.round(uploadProgress)}%
+            </Text>
+            <ActivityIndicator size="small" color="#4C0183" />
+          </View>
+        )}
+        <Toast />
+      </View>
+    </SafeAreaView>
   );
 };
 
@@ -824,11 +844,11 @@ const getStyles = (currentTheme) =>
     container: {
       flex: 1,
       backgroundColor: currentTheme.background || "#fff",
-      paddingTop: 30,
+      // paddingTop: 30,
     },
     header: {
       padding: 15,
-      alignItems: "center",
+      alignItems: "flex-start",
       flex: 0,
       flexDirection: "row",
       justifyContent: "space-around",

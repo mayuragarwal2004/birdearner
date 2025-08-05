@@ -3,7 +3,7 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createStackNavigator } from "@react-navigation/stack";
 import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { View, StyleSheet, Alert } from "react-native";
+import { View, StyleSheet, Alert, Platform } from "react-native";
 import { Briefcase, Bird as LucideBird } from "lucide-react-native";
 
 // Import custom SVG files as React components
@@ -120,7 +120,7 @@ function MainTabs() {
 // Role-based Dashboard Router - Routes to appropriate dashboard
 function RoleDashboardRouter() {
   const { userData } = useAuth();
-  
+
   if (!userData) {
     return null; // This shouldn't happen in authenticated state
   }
@@ -137,17 +137,17 @@ function RoleDashboardRouter() {
 // Function to render tab icons
 function renderTabIcon(route, focused) {
   const iconColor = focused ? "#FFF" : "#fff";
-  
+
   // Material Icons mapping
   const materialIcons = {
     "Job Requirements": "add",
   };
-  
+
   // Lucide icons mapping
   const lucideIcons = {
     "Job Posted": "briefcase",
   };
-  
+
   // Custom SVG icons mapping
   const customSvgIcons = {
     // Enable these custom SVGs - you can uncomment others as needed
@@ -212,7 +212,7 @@ function renderCustomSvgIcon(focused, SvgComponent, iconColor) {
 // Render Lucide icons
 function renderLucideIcon(focused, iconType, iconColor) {
   const IconComponent = iconType === "briefcase" ? Briefcase : LucideBird;
-  
+
   return (
     <View style={focused ? styles.activeTab : styles.inactiveTab}>
       {focused ? (
@@ -317,8 +317,16 @@ export function App() {
 
   console.log("App: Rendering navigation - user authenticated:", !!userData);
 
+  const options = {
+    headerShown: Platform.OS === "ios",
+    headerBackVisible: Platform.OS === "ios",
+    headerBackTitleVisible: false,
+    headerTitle: "",
+    headerBackTitle: "Back",
+  };
+
   return (
-    <Stack.Navigator 
+    <Stack.Navigator
       screenOptions={{ headerShown: false }}
       initialRouteName={userData ? "MainTabs" : "Login"}
     >
@@ -327,29 +335,40 @@ export function App() {
         <>
           {/* Main App Tabs - Available after profile setup */}
           <Stack.Screen name="MainTabs" component={MainTabs} />
-          
+
           {/* Role-based Dashboard Router - handles profile setup internally */}
           <Stack.Screen name="Dashboard" component={RoleDashboardRouter} />
-          
-          
+
           {/* Profile Setup Screens - Available for navigation */}
           <Stack.Screen name="Role" component={Role} />
           <Stack.Screen name="Portfolio" component={PortfolioScreen} />
-          
+
           {/* Additional authenticated screens available for navigation */}
           <Stack.Screen name="Chat" component={Chat} />
           <Stack.Screen name="Inbox" component={Inbox} />
           <Stack.Screen name="Chatlist" component={ChatList} />
-          <Stack.Screen name="JobDetailsChat" component={JobDetailsChatScreen} />
+          <Stack.Screen
+            name="JobDetailsChat"
+            component={JobDetailsChatScreen}
+          />
           <Stack.Screen name="PortfolioCom" component={PortfolioComScreen} />
-          <Stack.Screen name="ProfileScreen" component={ProfileScreen} />
-          <Stack.Screen name="Offers" component={OffersScreen} />
+          <Stack.Screen name="ProfileScreen" component={ProfileScreen} options={options} />
+          <Stack.Screen name="Offers" component={OffersScreen} options={options} />
           <Stack.Screen name="ReviewGive" component={ReviewGive} />
-          <Stack.Screen name="ReviewsScreen" component={ReviewsScreen} />
-          <Stack.Screen name="SubmitSolution" component={SubmitSolutionScreen} />
+          <Stack.Screen name="ReviewsScreen" component={ReviewsScreen} options={options} />
+          <Stack.Screen
+            name="SubmitSolution"
+            component={SubmitSolutionScreen}
+          />
           <Stack.Screen name="ViewSolutions" component={ViewSolutionsScreen} />
-          <Stack.Screen name="UpdateJobDetailsScreen" component={UpdateJobDetailsScreen} />
-          <Stack.Screen name="TermsAndConditions" component={TermsAndConditionsScreen} />
+          <Stack.Screen
+            name="UpdateJobDetailsScreen"
+            component={UpdateJobDetailsScreen}
+          />
+          <Stack.Screen
+            name="TermsAndConditions"
+            component={TermsAndConditionsScreen}
+          />
           <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
         </>
       ) : (
@@ -357,11 +376,20 @@ export function App() {
         <>
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Signup" component={Signup} />
-          <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+          <Stack.Screen
+            name="ForgotPassword"
+            component={ForgotPasswordScreen}
+          />
           <Stack.Screen name="Role" component={Role} />
           <Stack.Screen name="ClientSignup" component={ClientSignupScreen} />
-          <Stack.Screen name="FreelancerSignup" component={FreelancerSignupScreen} />
-          <Stack.Screen name="TermsAndConditions" component={TermsAndConditionsScreen} />
+          <Stack.Screen
+            name="FreelancerSignup"
+            component={FreelancerSignupScreen}
+          />
+          <Stack.Screen
+            name="TermsAndConditions"
+            component={TermsAndConditionsScreen}
+          />
           <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
         </>
       )}

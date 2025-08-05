@@ -11,6 +11,7 @@ import {
   RefreshControl,
   Alert,
   SafeAreaView,
+  Platform,
 } from "react-native";
 import { FontAwesome, MaterialIcons } from "@expo/vector-icons";
 import { TouchableOpacity } from "react-native";
@@ -336,7 +337,7 @@ const getStyles = (currentTheme) =>
     },
     container: {
       backgroundColor: currentTheme.background,
-      paddingTop: 35,
+      paddingTop: Platform.OS === "ios" ? 0 : 35,
     },
     centered: {
       flex: 1,
