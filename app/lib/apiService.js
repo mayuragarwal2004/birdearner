@@ -1301,6 +1301,98 @@ class ApiService {
       throw error;
     }
   }
+
+  // ==================== DELETE REQUEST MANAGEMENT ====================
+
+  // Create a delete request
+  async createDeleteRequest(reason = null) {
+    try {
+      const response = await this.makeRequest("/delete-requests", {
+        method: "POST",
+        body: JSON.stringify({ reason }),
+      });
+      return response;
+    } catch (error) {
+      this.handleApiError(error);
+    }
+  }
+
+  // Get user's delete request
+  async getMyDeleteRequest() {
+    try {
+      const response = await this.makeRequest("/delete-requests/my-request");
+      return response;
+    } catch (error) {
+      this.handleApiError(error);
+    }
+  }
+
+  // Check delete request status
+  async checkDeleteRequestStatus() {
+    try {
+      const response = await this.makeRequest("/delete-requests/check-status");
+      return response;
+    } catch (error) {
+      this.handleApiError(error);
+    }
+  }
+
+  // Update user's delete request
+  async updateDeleteRequest(requestId, data) {
+    try {
+      const response = await this.makeRequest(`/delete-requests/${requestId}`, {
+        method: "PUT",
+        body: JSON.stringify(data),
+      });
+      return response;
+    } catch (error) {
+      this.handleApiError(error);
+    }
+  }
+
+  // Cancel user's delete request
+  async cancelDeleteRequest(requestId) {
+    try {
+      const response = await this.makeRequest(`/delete-requests/${requestId}`, {
+        method: "DELETE",
+      });
+      return response;
+    } catch (error) {
+      this.handleApiError(error);
+    }
+  }
+
+  // Admin: Get all delete requests
+  async getAllDeleteRequests(page = 1, limit = 10, status = null) {
+    try {
+      const queryParams = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString(),
+      });
+      
+      if (status) {
+        queryParams.append('status', status);
+      }
+
+      const response = await this.makeRequest(`/admin/delete-requests?${queryParams}`);
+      return response;
+    } catch (error) {
+      this.handleApiError(error);
+    }
+  }
+
+  // Admin: Update delete request status
+  async updateDeleteRequestStatus(requestId, status) {
+    try {
+      const response = await this.makeRequest(`/admin/delete-requests/${requestId}/status`, {
+        method: "PUT",
+        body: JSON.stringify({ status }),
+      });
+      return response;
+    } catch (error) {
+      this.handleApiError(error);
+    }
+  }
 }
 
 // Create singleton instance
