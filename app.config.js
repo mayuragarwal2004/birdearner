@@ -24,6 +24,10 @@ export default {
         ITSAppUsesNonExemptEncryption: false,
         NSLocationWhenInUseUsageDescription:
           "This app needs access to your location to display maps so that it can show you nearby jobs.",
+        NSPhotoLibraryUsageDescription:
+          "This app needs access to your photo library to allow you to select and upload images for your profile, job submissions, and feedback attachments.",
+        NSCameraUsageDescription:
+          "This app needs access to your camera to allow you to take photos for your profile, job submissions, and feedback attachments.",
       },
     },
     android: {
