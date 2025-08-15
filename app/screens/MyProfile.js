@@ -42,9 +42,9 @@ export default function ProfileScreen({ navigation }) {
     loading,
     userData,
     logout,
-    setUserData,
     roleOptions,
     handleRoleSelection,
+    switchUserRole,
     refreshUserData,
     userProfile,
     setUserProfile,
@@ -150,19 +150,28 @@ export default function ProfileScreen({ navigation }) {
     day: "numeric",
   });
 
-  const handleRoleSwitch = (newRoleData) => {
-    setModalVisiblet(true);
-    Animated.timing(animationProgress.current, {
-      toValue: 1,
-      duration: 2500,
-      easing: Easing.linear,
-      useNativeDriver: false,
-    }).start(() => {
+  const handleRoleSwitch = async (newRoleData) => {
+    try {
+      setModalVisiblet(true);
+      Animated.timing(animationProgress.current, {
+        toValue: 1,
+        duration: 2500,
+        easing: Easing.linear,
+        useNativeDriver: false,
+      }).start(async () => {
+        setModalVisiblet(false);
+        animationProgress.current.setValue(0);
+        
+        // Use the more robust switchUserRole function
+        const newRole = newRoleData.role;
+        await switchUserRole(newRole);
+      });
+    } catch (error) {
+      console.error("Error switching role:", error);
       setModalVisiblet(false);
-      // animation.setValue(0); // Reset animation
       animationProgress.current.setValue(0);
-      handleRoleSelection(newRoleData); // Perform the role switch
-    });
+      Alert.alert("Error", "Failed to switch role. Please try again.");
+    }
   };
 
   const transitionText =

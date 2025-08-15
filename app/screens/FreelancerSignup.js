@@ -17,6 +17,7 @@ import Toast from "react-native-toast-message";
 import * as ImagePicker from "expo-image-picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { z } from "zod";
+import { X } from "lucide-react-native";
 import apiService from "../lib/apiService";
 import { useAuth } from "../context/NewAuthContext";
 import PickerModal from "../components/CustomPicker";
@@ -127,7 +128,7 @@ const createSchema = (mode) => {
 
 const FreelancerSignup = ({ navigation, route }) => {
   const { register, user, userProfile, fetchUserProfile } = useAuth(); // Get auth functions from AuthContext
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(2);
   const [isLoading, setIsLoading] = useState(false);
   const [emailChecked, setEmailChecked] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -1170,7 +1171,7 @@ const FreelancerSignup = ({ navigation, route }) => {
                 <View key={i} style={styles.socialRow}>
                   <TextInput
                     placeholderTextColor="#c4c4c4"
-                    style={styles.input}
+                    style={[styles.input, styles.socialRowInput]}
                     placeholder="Certification"
                     value={cert}
                     onChangeText={(v) =>
@@ -1182,6 +1183,21 @@ const FreelancerSignup = ({ navigation, route }) => {
                       })
                     }
                   />
+                  {form.certifications.length > 1 && (
+                    <TouchableOpacity
+                      style={styles.deleteButton}
+                      onPress={() => {
+                        setForm({
+                          ...form,
+                          certifications: form.certifications.filter(
+                            (_, idx) => idx !== i
+                          ),
+                        });
+                      }}
+                    >
+                      <X size={18} color="#fff" strokeWidth={2.5} />
+                    </TouchableOpacity>
+                  )}
                 </View>
               ))}
               <TouchableOpacity onPress={addCertification}>
@@ -1192,7 +1208,7 @@ const FreelancerSignup = ({ navigation, route }) => {
                 <View key={i} style={styles.socialRow}>
                   <TextInput
                     placeholderTextColor="#c4c4c4"
-                    style={styles.input}
+                    style={[styles.input, styles.socialRowInput]}
                     placeholder="www.instagram.com/xyz"
                     value={link}
                     onChangeText={(v) =>
@@ -1204,6 +1220,21 @@ const FreelancerSignup = ({ navigation, route }) => {
                       })
                     }
                   />
+                  {form.socialLinks.length > 1 && (
+                    <TouchableOpacity
+                      style={styles.deleteButton}
+                      onPress={() => {
+                        setForm({
+                          ...form,
+                          socialLinks: form.socialLinks.filter(
+                            (_, idx) => idx !== i
+                          ),
+                        });
+                      }}
+                    >
+                      <X size={18} color="#fff" strokeWidth={2.5} />
+                    </TouchableOpacity>
+                  )}
                 </View>
               ))}
               <TouchableOpacity onPress={addSocialLink}>
@@ -1555,6 +1586,14 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   socialRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 1,
+    marginBottom: 8,
+    paddingHorizontal: 4,
+  },
+  socialRowInput: {
+    flex: 1,
     marginBottom: 10,
   },
   profileUploadContainer: {
@@ -1813,6 +1852,31 @@ const styles = StyleSheet.create({
   },
   disabledText: {
     color: "#888",
+  },
+  deleteButton: {
+    marginLeft: 12,
+    backgroundColor: "#ff4757",
+    borderRadius: 20,
+    width: 32,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#ff4757",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: "#ff3742",
+  },
+  deleteButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 16,
+    lineHeight: 20,
   },
 });
 

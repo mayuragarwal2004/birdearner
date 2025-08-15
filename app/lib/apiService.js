@@ -2,7 +2,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const API_BASE_URL =
-  "https://api.birdearner.com/api"; // Local development server
+  "https://andrea-indicator-did-nv.trycloudflare.com/api"; // Local development server
 
 // upload image categories are mentioned over here, above uploadImage function and in backend at /upload route
 /** @type {const} */

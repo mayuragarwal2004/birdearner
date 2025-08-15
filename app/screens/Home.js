@@ -224,7 +224,7 @@ const HomeScreen = () => {
           <Text style={styles.welcomeText}>Welcome Back</Text>
           {/* Make sure to wrap dynamic content with Text component */}
           <Text style={styles.usernameText}>
-            {userData ? `${userData?.email || "User"}` : "User"}
+            {userData?.email || "User"}
           </Text>
         </View>
 
@@ -234,7 +234,7 @@ const HomeScreen = () => {
           <View style={styles.statsContainer}>
             <View style={styles.statsBox}>
               <View style={styles.statItem}>
-                <Text style={styles.statValue}>{successScore}%</Text>
+                <Text style={styles.statValue}>{String(successScore || 0)}%</Text>
                 <Text style={styles.statLabel}>Success Score</Text>
               </View>
               <View style={styles.statItem}>
@@ -243,7 +243,7 @@ const HomeScreen = () => {
               </View>
             </View>
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>{flagsCount || "NA"}</Text>
+              <Text style={styles.statValue}>{String(flagsCount || "NA")}</Text>
               <Text style={styles.statLabel}>Flags</Text>
             </View>
             <View style={styles.statsBox}>
@@ -303,26 +303,26 @@ const HomeScreen = () => {
           <Text style={styles.sectionTitle}>Your Orders</Text>
           <View style={styles.ordersContainer}>
             <View style={styles.orderItem}>
-              <Text style={styles.orderValue}>{CompletedOrders || 0}</Text>
+              <Text style={styles.orderValue}>{String(CompletedOrders || 0)}</Text>
               <Text style={styles.orderLabel}>Orders Completed</Text>
             </View>
             <View style={styles.orderItem}>
-              <Text style={styles.orderValue}>{activeOrders || 0}</Text>
+              <Text style={styles.orderValue}>{String(activeOrders || 0)}</Text>
               <Text style={styles.orderLabel}>Active Orders</Text>
             </View>
             <View style={styles.orderItem}>
-              <Text style={styles.orderValue}>{cancelledOrders || 0}</Text>
+              <Text style={styles.orderValue}>{String(cancelledOrders || 0)}</Text>
               <Text style={styles.orderLabel}>Cancelled Orders</Text>
             </View>
           </View>
         </View>
 
-        {!userData?.terms_accepted && profilePercentage !== 100 && (
+        {!userData?.terms_accepted && profilePercentage !== 100 ? (
           <View style={styles.sectionContainer}>
             <View style={styles.profileContainers}>
               <Text style={styles.profileText}>Complete Your Profile</Text>
               <Text style={styles.whatsNewText}>
-                Your profile is {profilePercentage}% complete
+                Your profile is {String(profilePercentage || 0)}% complete
               </Text>
               <View style={styles.boxColor}>
                 <View
@@ -367,13 +367,12 @@ const HomeScreen = () => {
               <TouchableOpacity
                 style={styles.loginButton}
                 onPress={handleCompleteProfile}
-                F
               >
                 <Text style={styles.loginButtonText}>Complete Now</Text>
               </TouchableOpacity>
             </View>
           </View>
-        )}
+        ) : null}
 
         <View style={styles.sectionContainer}>
           <Text style={styles.sectionTitle}>What's New</Text>
@@ -386,7 +385,7 @@ const HomeScreen = () => {
       <View style={styles.stickyButton}>
         <TouchableOpacity
           style={styles.chatIcon}
-          onPress={() => navigation.navigate(userData.role === 'FREELANCER' ? 'FreelancerChatList' : 'ClientChatList')}
+          onPress={() => navigation.navigate(userData?.role === 'FREELANCER' ? 'FreelancerChatList' : 'ClientChatList')}
         >
           <FontAwesome name="comments" size={28} color="#fff" />
         </TouchableOpacity>
