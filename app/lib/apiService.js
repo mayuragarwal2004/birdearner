@@ -2,7 +2,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const API_BASE_URL =
-  "https://andrea-indicator-did-nv.trycloudflare.com/api"; // Local development server
+  "https://varieties-customize-ferrari-amp.trycloudflare.com/api"; // Local development server
 
 // upload image categories are mentioned over here, above uploadImage function and in backend at /upload route
 /** @type {const} */
@@ -964,6 +964,43 @@ class ApiService {
       return response;
     } catch (error) {
       throw new Error(`Failed to request withdrawal: ${error.message}`);
+    }
+  }
+
+  // ==================== WITHDRAWAL REQUESTS ====================
+
+  // Create a new withdrawal request
+  async createWithdrawalRequest(amount, bankDetails = null) {
+    try {
+      const response = await this.makeRequest("/withdrawal-requests", {
+        method: "POST",
+        body: JSON.stringify({ amount, bankDetails }),
+      });
+      return response;
+    } catch (error) {
+      throw new Error(`Failed to create withdrawal request: ${error.message}`);
+    }
+  }
+
+  // Get withdrawal requests for the authenticated freelancer
+  async getMyWithdrawalRequests(page = 1, limit = 10) {
+    try {
+      const response = await this.makeRequest(
+        `/withdrawal-requests?page=${page}&limit=${limit}`
+      );
+      return response;
+    } catch (error) {
+      throw new Error(`Failed to fetch withdrawal requests: ${error.message}`);
+    }
+  }
+
+  // Get specific withdrawal request by ID
+  async getWithdrawalRequestById(requestId) {
+    try {
+      const response = await this.makeRequest(`/withdrawal-requests/${requestId}`);
+      return response;
+    } catch (error) {
+      throw new Error(`Failed to fetch withdrawal request: ${error.message}`);
     }
   }
 

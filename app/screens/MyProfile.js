@@ -50,7 +50,7 @@ export default function ProfileScreen({ navigation }) {
     setUserProfile,
   } = useAuth();
   const [data, setData] = useState(null);
-  const [loadingProfile, setLoadingProfile] = useState(true);
+  const [loadingProfile, setLoadingProfile] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [images, setImages] = useState([]);
@@ -65,7 +65,6 @@ export default function ProfileScreen({ navigation }) {
   useEffect(() => {
     const unsubscribe = navigation.addListener("focus", () => {
       // Refresh profile data when screen comes into focus
-      fetchProfileData();
       refreshUserData();
     });
 
@@ -204,50 +203,6 @@ export default function ProfileScreen({ navigation }) {
     }
   };
 
-  // Fetch profile data from backend
-  const fetchProfileData = async () => {
-    try {
-      setLoadingProfile(true);
-
-      if (!userData || !userData.id) {
-        console.log("No user data available");
-        setData(null);
-        return;
-      }
-
-      // Use userProfile data if available, otherwise fetch from API
-      if (userProfile) {
-        setData(userProfile);
-      } else {
-        // Fetch complete profile data from API
-        try {
-          const completeProfile = await apiService.getCompleteProfile(
-            userData.id
-          );
-          setData(completeProfile);
-
-          // Update the userProfile in context if we got data
-          if (completeProfile.profile) {
-            setUserProfile(completeProfile.profile);
-          }
-        } catch (error) {
-          console.log("Error fetching complete profile:", error);
-          // Fallback to basic user data
-          setData(userData);
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching profile data:", error);
-      showToast("error", "Error", "Failed to fetch profile data");
-    } finally {
-      setLoadingProfile(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchProfileData();
-  }, [userData, userProfile]);
-
   // Remove the old Appwrite flagsData effect
   const onRefresh = async () => {
     console.log("Refreshing...");
@@ -256,8 +211,6 @@ export default function ProfileScreen({ navigation }) {
     try {
       // Refresh user data through auth context
       await refreshUserData();
-      // Fetch fresh profile data
-      await fetchProfileData();
     } catch (error) {
       console.error("Error refreshing data:", error);
       showToast("error", "Error", "Failed to refresh data");
