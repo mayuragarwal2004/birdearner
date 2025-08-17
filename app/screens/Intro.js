@@ -1,65 +1,183 @@
 import React, { useEffect } from 'react';
-import { View, Text, Image, StyleSheet } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useAuth } from '../context/NewAuthContext'; 
+import { 
+  View, 
+  Text, 
+  Image, 
+  StyleSheet, 
+  SafeAreaView,
+  TouchableOpacity,
+  ActivityIndicator 
+} from 'react-native';
+import { useAuth } from '../context/NewAuthContext';
+import { InstagramLogoIcon, XLogoIcon } from "phosphor-react-native";
+import { Linking, Alert } from "react-native"; 
 
-const Intro = () => {
-  const router = useRouter();
+const Intro = ({ navigation }) => {
   const { user, loading } = useAuth();
+
+  const navigateToNextScreen = () => {
+    if (user) {
+      // User is authenticated, go to main tabs
+      navigation.replace('MainTabs');
+    } else {
+      // User is not authenticated, go to login
+      navigation.replace('Login');
+    }
+  };
+
+  const handleSocialMediaPress = async (platform) => {
+    let url = "";
+    
+    switch (platform) {
+      case "instagram":
+        url = "https://www.instagram.com/thebirdearner/";
+        break;
+      case "x":
+        url = "https://x.com/birdearner";
+        break;
+      default:
+        return;
+    }
+
+    try {
+      const supported = await Linking.canOpenURL(url);
+      if (supported) {
+        await Linking.openURL(url);
+      } else {
+        Alert.alert(
+          "Unable to open link",
+          `Cannot open ${platform} at this time. Please try again later.`
+        );
+      }
+    } catch (error) {
+      console.error("Error opening social media link:", error);
+      Alert.alert(
+        "Error",
+        `Failed to open ${platform}. Please try again later.`
+      );
+    }
+  };
 
   useEffect(() => {
     if (loading) {
       return;
     }
 
-    if (user) {
-      router.push('/screens/Home'); 
-    } else {
-      router.push('/screens/Login');
-    }
-  }, [loading, user, router]);
+    const timer = setTimeout(() => {
+      navigateToNextScreen();
+    }, 8000); // Show splash for 8 seconds (increased for development)
+
+    return () => clearTimeout(timer);
+  }, [loading, user]);
 
   return (
-    <View style={styles.container}>
-      {/* Logo Image */}
-      <Image
-        source={require('../assets/logo11.png')}
-        style={styles.logo}
-        resizeMode="contain"
-      />
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: "#4B0082" }]}>
+      <View style={[styles.container, { backgroundColor: "#4B0082" }]}>
+        {/* Development Skip Button */}
+        {__DEV__ && (
+          <TouchableOpacity 
+            style={styles.skipButton}
+            onPress={navigateToNextScreen}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.skipButtonText}>Skip (Dev)</Text>
+          </TouchableOpacity>
+        )}
 
-      {/* Heading */}
-      <Text style={styles.heading}>BirdEarner</Text>
+        {/* Logo */}
+        <Image 
+          source={require('../assets/logo11.png')} 
+          style={styles.logo} 
+          resizeMode="contain"
+        />
 
-      {/* Description */}
-      <Text style={styles.description}>Be BirdEarner, Become Bread Earner!</Text>
-    </View>
+        {/* App Name */}
+        <Text style={[styles.title, { color: "white" }]}>BirdEARNER</Text>
+        <Text style={[styles.subtitle, { color: "white" }]}>
+          Be BirdEARNER, Become Bread Earner!
+        </Text>
+
+        {/* Loading Indicator */}
+        {loading && (
+          <ActivityIndicator 
+            color="white" 
+            size="large" 
+            style={styles.loadingIndicator}
+          />
+        )}
+
+        {/* Social Icons */}
+        <View style={styles.socialContainer}>
+          <TouchableOpacity 
+            style={styles.socialIcon}
+            onPress={() => handleSocialMediaPress("instagram")}
+            activeOpacity={0.7}
+          >
+            <InstagramLogoIcon size={24} color="white" />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.socialIcon}
+            onPress={() => handleSocialMediaPress("x")}
+            activeOpacity={0.7}
+          >
+            <XLogoIcon size={24} color="white" />
+          </TouchableOpacity>
+        </View>
+      </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+  },
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#4B0082', // Background color
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 20,
+  },
+  skipButton: {
+    position: 'absolute',
+    top: 60,
+    right: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  skipButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
   },
   logo: {
-    width: 140,
-    height: 140,
+    width: 100,
+    height: 100,
     marginBottom: 20,
   },
-  heading: {
-    fontSize: 52,
-    fontWeight: 'bold',
-    color: '#fff', // Heading color
+  title: {
+    fontSize: 32,
+    fontWeight: "bold",
   },
-  description: {
-    fontSize: 13,
-    color: '#f0f0f0', // Description color
-    marginTop: 0,
+  subtitle: {
+    fontSize: 16,
+    marginBottom: 40,
     textAlign: 'center',
-    paddingHorizontal: 20,
+  },
+  loadingIndicator: {
+    marginTop: 20,
+    marginBottom: 20,
+  },
+  socialContainer: {
+    flexDirection: "row",
+    marginTop: 40,
+  },
+  socialIcon: {
+    marginHorizontal: 10,
   },
 });
 

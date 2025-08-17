@@ -12,9 +12,9 @@ export default {
     icon: "./assets/logo.png",
     userInterfaceStyle: "light",
     splash: {
-      image: "./assets/splash.png",
+      image: "./assets/logo.png",
       resizeMode: "contain",
-      backgroundColor: "#ffffff",
+      backgroundColor: "#4B0082",
     },
     ios: {
       bundleIdentifier: "com.birdearner.birdearner",

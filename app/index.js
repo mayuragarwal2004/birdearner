@@ -310,10 +310,8 @@ export function App() {
     }
   }, []);
 
-  if (loading) {
-    console.log("App: Loading state, showing intro screen");
-    return <IntroScreen />;
-  }
+  // Always show intro screen first, let it handle navigation
+  // No need for loading check here since Intro will handle it
 
   console.log("App: Rendering navigation - user authenticated:", !!userData);
 
@@ -328,8 +326,11 @@ export function App() {
   return (
     <Stack.Navigator
       screenOptions={{ headerShown: false }}
-      initialRouteName={userData ? "MainTabs" : "Login"}
+      initialRouteName="Intro"
     >
+      {/* Intro/Splash Screen - Always shown first */}
+      <Stack.Screen name="Intro" component={IntroScreen} />
+      
       {userData ? (
         // Authenticated Stack - Route directly to role dashboard
         <>

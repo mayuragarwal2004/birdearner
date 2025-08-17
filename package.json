@@ -41,6 +41,7 @@
     "lucide-react-native": "^0.525.0",
     "metro-react-native-babel-preset": "^0.77.0",
     "nativewind": "^4.1.23",
+    "phosphor-react-native": "^3.0.0",
     "postcss": "^8.5.3",
     "react": "19.0.0",
     "react-native": "0.79.2",
