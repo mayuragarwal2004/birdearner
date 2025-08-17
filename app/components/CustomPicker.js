@@ -12,6 +12,7 @@ export default function PickerModal({
   style = {},
   innerStyle = {},
   textStyle = {},
+  disabled = false,
 }) {
   const [modalVisible, setModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -26,13 +27,23 @@ export default function PickerModal({
     <View style={[styles.wrapper, style]}>
       {label ? <Text style={styles.label}>{label}</Text> : null}
       <TouchableOpacity
-        style={[styles.inputBox, innerStyle]}
-        onPress={() => setModalVisible(true)}
+        style={[styles.inputBox, disabled && styles.disabledBox, innerStyle]}
+        onPress={() => !disabled && setModalVisible(true)}
+        disabled={disabled}
       >
-        <Text style={[styles.selectedText, !value && styles.placeholderText, textStyle]}>
+        <Text style={[
+          styles.selectedText, 
+          !value && styles.placeholderText, 
+          disabled && styles.disabledText,
+          textStyle
+        ]}>
           {selectedLabel || placeholder}
         </Text>
-        <AntDesign name="down" size={16} color="#555" />
+        <AntDesign 
+          name="down" 
+          size={16} 
+          color={disabled ? "#ccc" : "#555"} 
+        />
       </TouchableOpacity>
 
       <Modal
@@ -134,9 +145,17 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  disabledBox: {
+    backgroundColor: '#f5f5f5',
+    borderColor: '#e0e0e0',
+    opacity: 0.6,
+  },
   selectedText: {
     fontSize: 16,
     color: '#000',
+  },
+  disabledText: {
+    color: '#999',
   },
   placeholderText: {
     color: '#888',

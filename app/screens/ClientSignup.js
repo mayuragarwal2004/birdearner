@@ -699,6 +699,7 @@ const ClientSignup = ({ navigation, route }) => {
                     placeholder="Select Country"
                     innerStyle={{ backgroundColor: "#f5f5f5" }}
                     style={{ marginVertical: 0 }}
+                    disabled={true}
                   />
                 </View>
               </View>
