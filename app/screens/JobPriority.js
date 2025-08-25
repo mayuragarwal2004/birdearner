@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { PanResponder, Animated } from "react-native";
+import { Audio } from 'expo-av';
 import { useTheme } from "../context/ThemeContext";
 import { useAuth } from "../context/NewAuthContext";
 import apiService from "../lib/apiService";
@@ -23,6 +24,7 @@ const colors = {
 };
 
 const priorities = ["Immediate", "High", "Standard"];
+
 
 const JobPriority = ({ navigation, route }) => {
   const { userData } = useAuth();
@@ -37,8 +39,35 @@ const JobPriority = ({ navigation, route }) => {
   const [clientName, setClientName] = useState({});
   const [loading, setLoading] = useState(false);
 
-  // Use the priority value from route.params
-  const currentPriority = priority;
+  // Add currentIndex state for priority navigation
+  const initialIndex = priorities.indexOf(priority) !== -1 ? priorities.indexOf(priority) : 0;
+  const [currentIndex, setCurrentIndex] = useState(initialIndex);
+  const [sound, setSound] = useState();
+
+  // Load sound effect
+  async function playWheelSound() {
+    try {
+      const { sound } = await Audio.Sound.createAsync(
+        require("../../assets/wheel-turn.mp3")
+      );
+      setSound(sound);
+      await sound.replayAsync();
+    } catch (e) {
+      // Ignore sound errors
+    }
+  }
+
+  // Unload sound on unmount
+  useEffect(() => {
+    return sound
+      ? () => {
+          sound.unloadAsync();
+        }
+      : undefined;
+  }, [sound]);
+
+  // Use the priority value from route.params or currentIndex
+  const currentPriority = priorities[currentIndex] || priority;
   const currentColors = colors[currentPriority] || ["#000", "#333"];
 
   const { theme, themeStyles } = useTheme();
@@ -62,7 +91,7 @@ const JobPriority = ({ navigation, route }) => {
       const selectedJobs = jobs.Standard || [];
       setPriorityJob(selectedJobs);
     }
-  }, [currentPriority]);
+  }, [currentPriority, jobs]);
 
   const formatDeadline = (deadline) => {
     try {
@@ -183,13 +212,14 @@ const JobPriority = ({ navigation, route }) => {
   };
 
   const handleRotation = (direction) => {
-    const newIndex =
-      direction === "left"
-        ? (currentIndex + 1) % priorities.length
-        : (currentIndex - 1 + priorities.length) % priorities.length;
-
+    let newIndex;
+    if (direction === "left") {
+      newIndex = (currentIndex + 1) % priorities.length;
+    } else {
+      newIndex = (currentIndex - 1 + priorities.length) % priorities.length;
+    }
     setCurrentIndex(newIndex);
-
+    playWheelSound();
     Animated.timing(rotation, {
       toValue: direction === "left" ? -180 : 180,
       duration: 300,
@@ -274,8 +304,12 @@ const JobPriority = ({ navigation, route }) => {
           <TouchableOpacity
             style={styles.allJobsContent}
             onPress={() => navigation.goBack()}
+            activeOpacity={0.7}
           >
             <Text style={styles.allJobsText}>{currentPriority}</Text>
+            <Text style={{ color: '#fff', fontSize: 12, marginTop: 5 }}>
+              (Swipe left/right to switch)
+            </Text>
           </TouchableOpacity>
         </LinearGradient>
       </Animated.View>

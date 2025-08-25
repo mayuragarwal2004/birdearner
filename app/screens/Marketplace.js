@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   SafeAreaView,
   View,
@@ -11,6 +11,7 @@ import {
   Animated,
   Platform,
   RefreshControl,
+  PanResponder,
 } from "react-native";
 import Entypo from "@expo/vector-icons/Entypo";
 import MapView, { PROVIDER_GOOGLE, Marker, Circle } from "react-native-maps";
@@ -20,12 +21,15 @@ import { useAuth } from "../context/NewAuthContext";
 import { useTheme } from "../context/ThemeContext";
 import apiService from "../lib/apiService";
 import Toast from "react-native-toast-message";
+import { Audio } from 'expo-av';
 
 const colors = {
-  Immediate: ["#E22323", "#7C1313"],
+  Immediate: ["#7C1313", "#E22323"],
   High: ["#896D08", "#EFBE0E"],
   Standard: ["#34660C", "#77CB35"],
 };
+
+const priorities = ["Immediate", "High", "Standard"];
 
 const maxDist = 20;
 
@@ -34,10 +38,12 @@ const MarketplaceScreen = ({ navigation }) => {
   const mapRef = useRef(null);
   const [distance, setDistance] = useState(20);
   const [sliderWidth, setSliderWidth] = useState(0);
+  const sliderRef = useRef(null);
   const [location, setLocation] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
   const step = 0.5;
   const animatedValue = useRef(new Animated.Value(0)).current;
+  const [isSliding, setIsSliding] = useState(false);
   const [jobs, setJobs] = useState({
     Immediate: [],
     High: [],
@@ -49,6 +55,11 @@ const MarketplaceScreen = ({ navigation }) => {
   const [currentUserRole, setCurrentUserRole] = useState(userData?.role || 'FREELANCER');
   const [userServices, setUserServices] = useState([]);
 
+  // Priority wheel state
+  const [priorityIndex, setPriorityIndex] = useState(0);
+  const [rotation] = useState(new Animated.Value(0));
+  const [sound, setSound] = useState();
+
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
 
@@ -58,6 +69,64 @@ const MarketplaceScreen = ({ navigation }) => {
   const showToast = (type, text1, text2) => {
     Toast.show({ type, text1, text2, position: "top" });
   };
+
+  // Play wheel sound
+  async function playWheelSound() {
+    try {
+      const { sound } = await Audio.Sound.createAsync(
+        require("../../assets/wheel-turn.mp3")
+      );
+      setSound(sound);
+      await sound.replayAsync();
+    } catch (e) {
+      // Ignore sound errors
+    }
+  }
+
+  // Unload sound on unmount
+  useEffect(() => {
+    return sound
+      ? () => {
+          sound.unloadAsync();
+        }
+      : undefined;
+  }, [sound]);
+
+  // Handle wheel rotation and navigation
+  const handlePriorityWheel = (direction) => {
+    let newIndex;
+    if (direction === "left") {
+      newIndex = (priorityIndex + 1) % priorities.length;
+    } else {
+      newIndex = (priorityIndex - 1 + priorities.length) % priorities.length;
+    }
+    setPriorityIndex(newIndex);
+    playWheelSound();
+    
+    Animated.timing(rotation, {
+      toValue: direction === "left" ? -180 : 180,
+      duration: 300,
+      useNativeDriver: true,
+    }).start(() => rotation.setValue(0));
+    
+    // Navigate to JobPriority for the new priority
+    setTimeout(() => {
+      handlePriorityPress(priorities[newIndex]);
+    }, 150); // Small delay to let animation start
+  };
+
+  // PanResponder for wheel
+  const wheelPanResponder = PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
+    onMoveShouldSetPanResponder: () => true,
+    onPanResponderRelease: (_, gestureState) => {
+      if (gestureState.dx > 50) {
+        handlePriorityWheel("right"); // Swipe right
+      } else if (gestureState.dx < -50) {
+        handlePriorityWheel("left"); // Swipe left
+      }
+    },
+  });
 
   // Load user services and role info
   useEffect(() => {
@@ -111,26 +180,69 @@ const MarketplaceScreen = ({ navigation }) => {
     }
   }, [userData, userProfile]);
 
-  const updateDistance = (newDistance) => {
+  // Debounce job fetching for slider
+  const debounce = (func, delay) => {
+    let timer;
+    return (...args) => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => func(...args), delay);
+    };
+  };
+
+  // Fetch jobs when distance changes (debounced)
+  const debouncedFetchJobs = useCallback(
+    debounce((dist) => {
+      fetchJobs(location ? true : false);
+    }, 250),
+    [location, currentUserRole, userServices]
+  );
+
+  const updateDistance = (newDistance, triggerFetch = true) => {
     const boundedDistance = Math.min(maxDist, Math.max(0, newDistance));
     const snappedDistance = Math.round(boundedDistance / step) * step; // Snap to nearest step
     setDistance(snappedDistance);
 
     Animated.timing(animatedValue, {
       toValue: (snappedDistance / maxDist) * 100, // Convert distance to percentage
-      duration: 300, // Animation duration
+      duration: 100, // Faster animation for smoothness
       useNativeDriver: false,
     }).start();
+
+    if (triggerFetch) {
+      debouncedFetchJobs(snappedDistance);
+    }
   };
 
-  const handleSlide = (locationX) => {
-    console.log("Slider Location X:", locationX);
-
-    if (sliderWidth === 0) return;
-    const percentage = (locationX / sliderWidth) * 100;
-    const newDistance = (percentage / 100) * maxDist;
-    updateDistance(newDistance);
-  };
+  // PanResponder for smooth slider
+  const panResponder = PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
+    onMoveShouldSetPanResponder: () => true,
+    onPanResponderGrant: () => setIsSliding(true),
+    onPanResponderMove: (evt, gestureState) => {
+      if (sliderWidth === 0) return;
+      let x = gestureState.moveX;
+      // Get slider's left offset
+      sliderRef.current?.measure((fx, fy, width, height, px, py) => {
+        let localX = x - px;
+        localX = Math.max(0, Math.min(localX, sliderWidth));
+        const percentage = (localX / sliderWidth) * 100;
+        const newDistance = (percentage / 100) * maxDist;
+        updateDistance(newDistance, false); // Don't trigger fetch on every move
+      });
+    },
+    onPanResponderRelease: (evt, gestureState) => {
+      setIsSliding(false);
+      if (sliderWidth === 0) return;
+      let x = gestureState.moveX;
+      sliderRef.current?.measure((fx, fy, width, height, px, py) => {
+        let localX = x - px;
+        localX = Math.max(0, Math.min(localX, sliderWidth));
+        const percentage = (localX / sliderWidth) * 100;
+        const newDistance = (percentage / 100) * maxDist;
+        updateDistance(newDistance, true); // Trigger fetch on release
+      });
+    },
+  });
 
   const calculateDistance = (lat1, lon1, lat2, lon2) => {
     if (!lat1 || !lon1 || !lat2 || !lon2) return Infinity;
@@ -271,10 +383,11 @@ const MarketplaceScreen = ({ navigation }) => {
   }, []);
 
   useEffect(() => {
-    if (location && userData) {
+    if (location && userData && !isSliding) {
       fetchJobs(true);
     }
-  }, [distance, location, currentUserRole, userServices]);
+    // eslint-disable-next-line
+  }, [location, currentUserRole, userServices]);
 
   const handlePriorityPress = (priority) => {
     // Pass the jobs data with the new backend format
@@ -390,6 +503,8 @@ const MarketplaceScreen = ({ navigation }) => {
             <View
               style={styles.customSliderWrapper}
               onLayout={(e) => setSliderWidth(e.nativeEvent.layout.width)}
+              ref={sliderRef}
+              {...panResponder.panHandlers}
             >
               {/* Gradient background and lines */}
               <LinearGradient
@@ -397,10 +512,9 @@ const MarketplaceScreen = ({ navigation }) => {
                 start={{ x: 0, y: 1 }}
                 end={{ x: 1, y: 0 }}
                 style={styles.sliderBackground}
-                pointerEvents="none" // Let touches pass through
+                pointerEvents="none"
               >
                 <View style={styles.linesContainer}>{renderLines()}</View>
-
                 <View
                   style={[
                     styles.sliderIndicator,
@@ -410,21 +524,6 @@ const MarketplaceScreen = ({ navigation }) => {
                   <Text style={styles.sliderIndicatorText}>▼</Text>
                 </View>
               </LinearGradient>
-
-              {/* Invisible overlay for click handling */}
-              <View
-                style={StyleSheet.absoluteFill}
-                onStartShouldSetResponder={(e) => {
-                  const { locationX } = e.nativeEvent;
-                  handleSlide(locationX);
-                  return true;
-                }}
-                onMoveShouldSetResponder={() => true}
-                onResponderMove={(e) => {
-                  const { locationX } = e.nativeEvent;
-                  handleSlide(locationX);
-                }}
-              />
             </View>
 
             {/* + Button */}
@@ -537,12 +636,11 @@ const MarketplaceScreen = ({ navigation }) => {
           >
             <LinearGradient
               colors={colors.Immediate}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
               style={styles.priorityButton}
             >
-              <Text style={styles.priorityText}>Immediate Attention</Text>
-              <Text style={styles.prioritySubText}>
-                {jobs.Immediate.length}+ Jobs
-              </Text>
+              <Text style={styles.priorityText}>Immediate Attention • {jobs.Immediate.length}+ Jobs</Text>
             </LinearGradient>
           </TouchableOpacity>
 
@@ -550,11 +648,13 @@ const MarketplaceScreen = ({ navigation }) => {
             style={styles.priorityBox}
             onPress={() => handlePriorityPress("High")}
           >
-            <LinearGradient colors={colors.High} style={styles.priorityButton}>
-              <Text style={styles.priorityText}>High Priority</Text>
-              <Text style={styles.prioritySubText}>
-                {jobs.High.length}+ Jobs
-              </Text>
+            <LinearGradient 
+              colors={colors.High} 
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.priorityButton}
+            >
+              <Text style={styles.priorityText}>High Priority • {jobs.High.length}+ Jobs</Text>
             </LinearGradient>
           </TouchableOpacity>
 
@@ -564,12 +664,11 @@ const MarketplaceScreen = ({ navigation }) => {
           >
             <LinearGradient
               colors={colors.Standard}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
               style={styles.priorityButton}
             >
-              <Text style={styles.priorityText}>Standard Priority</Text>
-              <Text style={styles.prioritySubText}>
-                {jobs.Standard.length}+ Jobs
-              </Text>
+              <Text style={styles.priorityText}>Standard Priority • {jobs.Standard.length}+ Jobs</Text>
             </LinearGradient>
           </TouchableOpacity>
         </View>
@@ -582,7 +681,7 @@ const MarketplaceScreen = ({ navigation }) => {
         style={styles.allJobsContainer}
       >
         <TouchableOpacity style={styles.allJobsButton} onPress={handleAllJobsPress}>
-          <Text style={styles.allJobsText}>All Jobs</Text>
+          <Text style={styles.allJobsText}>View Jobs</Text>
         </TouchableOpacity>
       </LinearGradient>
 
@@ -755,30 +854,49 @@ const getStyles = (currentTheme) =>
     },
     priorityContainer: {
       alignItems: "center",
-      marginBottom: 20,
+      marginBottom: 50,
+    },
+    priorityWheel: {
+      width: 355,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 10,
     },
     priorityBox: {
       width: "100%",
     },
     priorityButton: {
       width: "100%",
-      padding: 10,
+      padding: 15,
       paddingHorizontal: 20,
       borderRadius: 12,
       marginBottom: 12,
-      alignItems: "baseline",
-      flexDirection: "row",
-      justifyContent: "flex-start",
-      gap: 7,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    priorityTouchable: {
+      width: '100%',
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     priorityText: {
       color: "#fff",
-      fontWeight: "semibold",
-      fontSize: 20,
+      fontWeight: "600",
+      fontSize: 18,
+      textAlign: 'center',
     },
     prioritySubText: {
       color: "#fff",
       fontSize: 14,
+      textAlign: 'center',
+      marginTop: 5,
+    },
+    swipeHint: {
+      color: '#fff',
+      fontSize: 12,
+      marginTop: 8,
+      textAlign: 'center',
+      opacity: 0.8,
     },
     allJobsContainer: {
       alignItems: "center",
