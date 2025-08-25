@@ -54,6 +54,20 @@ const NotificationsSettingScreen = ({ navigation }) => {
         </TouchableOpacity>
         <Text style={styles.radioText}>Disable</Text>
       </View>
+
+      {selectedStatus === "Disable" && (
+        <View style={styles.warningBox}>
+          <Ionicons name="warning" size={24} color="#FF6B6B" style={styles.warningIcon} />
+          <View style={styles.warningContent}>
+            <Text style={styles.warningTitle}>Important Notice</Text>
+            <Text style={styles.warningText}>
+              By disabling notifications, you will miss important alerts about new job opportunities, 
+              status updates, and earnings notifications. This may affect your ability to respond 
+              quickly to time-sensitive job postings.
+            </Text>
+          </View>
+        </View>
+      )}
     </View>
   );
 };
@@ -121,6 +135,49 @@ const getStyles = (currentTheme) =>
       marginTop: 20,
       fontStyle: "italic",
       paddingHorizontal: 20,
+    },
+    warningBox: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      backgroundColor: "#FFF5F5",
+      borderColor: "#FF6B6B",
+      borderWidth: 1,
+      borderRadius: 12,
+      padding: 16,
+      marginHorizontal: 20,
+      marginTop: 20,
+      shadowColor: "#FF6B6B",
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 3,
+      width: "auto",
+      maxWidth: "100%",
+    },
+    warningIcon: {
+      marginRight: 12,
+      marginTop: 2,
+    },
+    warningContent: {
+      flex: 1,
+      flexShrink: 1,
+    },
+    warningTitle: {
+      fontSize: 16,
+      fontWeight: "bold",
+      color: "#E53E3E",
+      marginBottom: 6,
+    },
+    warningText: {
+      fontSize: 14,
+      color: "#C53030",
+      lineHeight: 20,
+      fontWeight: "400",
+      flexWrap: "wrap",
+      textAlign: "left",
     },
   });
 

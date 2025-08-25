@@ -10,8 +10,10 @@ import {
   RefreshControl,
   SafeAreaView,
   ActivityIndicator,
+  Linking,
+  Alert,
 } from "react-native";
-import { FontAwesome } from "@expo/vector-icons";
+import { EyeIcon, EyeSlashIcon, InstagramLogoIcon, XLogoIcon } from "phosphor-react-native";
 import { useAuth } from "../context/NewAuthContext";
 import Toast from "react-native-toast-message";
 import { useTheme } from "../context/ThemeContext";
@@ -54,6 +56,39 @@ const Login = ({ navigation }) => {
       text2: message,
       position: "top",
     });
+  };
+
+  const handleSocialMediaPress = async (platform) => {
+    let url = "";
+    
+    switch (platform) {
+      case "instagram":
+        url = "https://www.instagram.com/thebirdearner/";
+        break;
+      case "x":
+        url = "https://x.com/birdearner";
+        break;
+      default:
+        return;
+    }
+
+    try {
+      const supported = await Linking.canOpenURL(url);
+      if (supported) {
+        await Linking.openURL(url);
+      } else {
+        Alert.alert(
+          "Unable to open link",
+          `Cannot open ${platform} at this time. Please try again later.`
+        );
+      }
+    } catch (error) {
+      console.error("Error opening social media link:", error);
+      Alert.alert(
+        "Error",
+        `Failed to open ${platform}. Please try again later.`
+      );
+    }
   };
 
   const handleLogin = async () => {
@@ -121,7 +156,7 @@ const Login = ({ navigation }) => {
               color: "#000",
               borderColor: "transparent"
             }]}
-            placeholder="yourname@gmail.com"
+            placeholder="youremail@gmail.com"
             placeholderTextColor="#999"
             keyboardType="email-address"
             autoCapitalize="none"
@@ -147,11 +182,11 @@ const Login = ({ navigation }) => {
               style={styles.eyeIcon}
               onPress={() => setShowPassword(!showPassword)}
             >
-              <FontAwesome
-                name={showPassword ? "eye" : "eye-slash"}
-                size={20}
-                color="#999"
-              />
+              {showPassword ? (
+                <EyeIcon size={20} color="#999" />
+              ) : (
+                <EyeSlashIcon size={20} color="#999" />
+              )}
             </TouchableOpacity>
           </View>
 
@@ -188,15 +223,20 @@ const Login = ({ navigation }) => {
 
           {/* Social Icons */}
           <View style={styles.socialContainer}>
-            {["instagram", "facebook"].map((icon, index) => (
-              <FontAwesome
-                key={index}
-                name={icon}
-                size={24}
-                color="white"
-                style={styles.socialIcon}
-              />
-            ))}
+            <TouchableOpacity 
+              style={styles.socialIcon}
+              onPress={() => handleSocialMediaPress("instagram")}
+              activeOpacity={0.7}
+            >
+              <InstagramLogoIcon size={24} color="white" />
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.socialIcon}
+              onPress={() => handleSocialMediaPress("x")}
+              activeOpacity={0.7}
+            >
+              <XLogoIcon size={24} color="white" />
+            </TouchableOpacity>
           </View>
 
           {/* Toast container */}

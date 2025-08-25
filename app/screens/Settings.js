@@ -48,31 +48,6 @@ const SettingsScreen = ({ navigation }) => {
       });
     }
 
-    // Add options to edit other profile types if they exist
-    if (roleOptions?.clientData && role !== "CLIENT") {
-      options.push({
-        name: "Edit Client Profile",
-        stack_name: "EditClientProfile", 
-        params: {
-          mode: "update",
-          profileData: roleOptions.clientData,
-          title: "Edit Client Profile"
-        }
-      });
-    }
-
-    if (roleOptions?.freelancerData && role !== "FREELANCER") {
-      options.push({
-        name: "Edit Freelancer Profile",
-        stack_name: "EditFreelancerProfile",
-        params: {
-          mode: "update",
-          profileData: roleOptions.freelancerData, 
-          title: "Edit Freelancer Profile"
-        }
-      });
-    }
-
     return options;
   };
 
