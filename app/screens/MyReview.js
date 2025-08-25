@@ -10,8 +10,8 @@ import {
   Share,
   RefreshControl,
   Alert,
-  SafeAreaView,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { FontAwesome, MaterialIcons } from "@expo/vector-icons";
 import { TouchableOpacity } from "react-native";
 import ReviewCard from "../components/ReviewCard";
@@ -195,18 +195,8 @@ export default function MyReview({ navigation }) {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView
-        style={styles.container}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={["#4C0183"]}
-            progressBackgroundColor={currentTheme.cardBackground}
-          />
-        }
-      >
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+      <View style={styles.tabContainer}>
         <View style={styles.tab}>
           <TouchableOpacity
             style={styles.tabButtonL}
@@ -218,6 +208,21 @@ export default function MyReview({ navigation }) {
             <Text style={styles.tabTextR}>My Reviews</Text>
           </TouchableOpacity>
         </View>
+      </View>
+      
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={["#4C0183"]}
+            progressBackgroundColor={currentTheme.cardBackground}
+          />
+        }
+        showsVerticalScrollIndicator={false}
+      >
 
         <ImageBackground
           source={
@@ -333,9 +338,18 @@ const getStyles = (currentTheme) =>
       flex: 1,
       backgroundColor: currentTheme.background,
     },
-    container: {
+    tabContainer: {
       backgroundColor: currentTheme.background,
-      paddingTop: 35,
+      paddingVertical: 10,
+      paddingTop: 20,
+      paddingHorizontal: 20,
+    },
+    container: {
+      flex: 1,
+      backgroundColor: currentTheme.background,
+    },
+    scrollContent: {
+      paddingBottom: 100, // Extra padding for bottom content
     },
     centered: {
       flex: 1,
@@ -346,33 +360,52 @@ const getStyles = (currentTheme) =>
     tab: {
       flexDirection: "row",
       justifyContent: "center",
-      gap: 2,
+      backgroundColor: currentTheme.background2 || "#F8F9FA",
+      marginHorizontal: 20,
+      borderRadius: 12,
+      padding: 4,
+      shadowColor: "#000",
+      shadowOffset: {
+        width: 0,
+        height: 1,
+      },
+      shadowOpacity: 0.05,
+      shadowRadius: 2,
+      elevation: 1,
     },
     tabButtonL: {
-      backgroundColor: currentTheme.background3,
-      width: "50%",
-      height: 40,
+      backgroundColor: "transparent",
+      width: "48%",
+      height: 36,
       justifyContent: "center",
       alignItems: "center",
-      borderTopRightRadius: 80,
+      borderRadius: 8,
     },
     tabButtonR: {
       backgroundColor: "#4C0183",
-      width: "50%",
-      height: 40,
+      width: "48%",
+      height: 36,
       justifyContent: "center",
       alignItems: "center",
-      borderTopLeftRadius: 80,
+      borderRadius: 8,
+      shadowColor: "#4C0183",
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.15,
+      shadowRadius: 3,
+      elevation: 2,
     },
     tabTextL: {
-      color: currentTheme.text,
-      fontSize: 20,
-      fontWeight: "bold",
+      color: currentTheme.text || "#64748B",
+      fontSize: 16,
+      fontWeight: "500",
     },
     tabTextR: {
       color: "#fff",
-      fontSize: 20,
-      fontWeight: "bold",
+      fontSize: 16,
+      fontWeight: "600",
     },
     backgroundImg: {
       width: "100%",

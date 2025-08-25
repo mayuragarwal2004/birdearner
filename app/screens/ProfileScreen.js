@@ -11,9 +11,9 @@ import {
   Modal,
   RefreshControl,
   Alert,
-  SafeAreaView,
   Platform,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { FontAwesome } from "@expo/vector-icons";
 import { useAuth } from "../context/NewAuthContext";
 import ImageViewer from "react-native-image-zoom-viewer";
@@ -21,7 +21,10 @@ import { useTheme } from "../context/ThemeContext";
 import apiService from "../lib/apiService";
 
 export default function ProfileScreen({ route, navigation }) {
-  const { receiverId } = route.params;
+  // Handle both deep link userId and regular receiverId parameters
+  const { receiverId, userId } = route.params || {};
+  const profileUserId = userId || receiverId;
+  
   const { user, userData } = useAuth();
   const [profileData, setProfileData] = useState(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
@@ -47,25 +50,52 @@ export default function ProfileScreen({ route, navigation }) {
 
   console.log({ profileData });
 
-  // Fetch profile data on component mount or when receiverId changes
+  // Fetch profile data on component mount or when profileUserId changes
   const fetchProfile = useCallback(async () => {
+    if (!profileUserId) {
+      Alert.alert("Error", "No user ID provided");
+      navigation.goBack();
+      return;
+    }
+
+    // Check if user is logged in for viewing profiles
+    if (!userData) {
+      Alert.alert(
+        "Login Required", 
+        "Please log in to view user profiles",
+        [
+          { text: "Cancel", onPress: () => navigation.goBack() },
+          { text: "Login", onPress: () => navigation.navigate("Login") }
+        ]
+      );
+      return;
+    }
+    
     setLoadingProfile(true);
     try {
       let response;
       if (userData?.role === "CLIENT") {
-        response = await apiService.getFreelancerProfile(receiverId);
+        response = await apiService.getFreelancerProfile(profileUserId);
         response.role = "FREELANCER";
       } else {
-        response = await apiService.getClientProfile(receiverId);
+        response = await apiService.getClientProfile(profileUserId);
         response.role = "CLIENT";
       }
       setProfileData(response);
     } catch (error) {
-      Alert.alert("Error fetching profile data");
+      console.error("Error fetching profile:", error);
+      Alert.alert(
+        "Error", 
+        "Failed to load profile data. Please check your connection and try again.",
+        [
+          { text: "Retry", onPress: () => fetchProfile() },
+          { text: "Go Back", onPress: () => navigation.goBack() }
+        ]
+      );
     } finally {
       setLoadingProfile(false);
     }
-  }, [receiverId, userData]);
+  }, [profileUserId, userData, navigation]);
 
   useEffect(() => {
     fetchProfile();
@@ -161,7 +191,7 @@ export default function ProfileScreen({ route, navigation }) {
   }
 
   return (
-    <SafeAreaView>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       {/* Image Modal */}
       <Modal
         visible={modalVisible}
@@ -184,9 +214,26 @@ export default function ProfileScreen({ route, navigation }) {
         />
       </Modal>
 
+      <View style={styles.tabContainer}>
+        <View style={styles.tab}>
+          <TouchableOpacity style={styles.tabButtonL}>
+            <Text style={styles.tabTextL}>Profile</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.tabButtonR}
+            onPress={() => {
+              navigation.navigate("ReviewsScreen", { receiverId: profileUserId, profileData });
+            }}
+          >
+            <Text style={styles.tabTextR}>Reviews</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
       {/* Profile Information */}
       <ScrollView
         style={styles.container}
+        contentContainerStyle={styles.scrollContent}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -195,20 +242,8 @@ export default function ProfileScreen({ route, navigation }) {
             progressBackgroundColor={currentTheme.cardBackground || "#fff"}
           />
         }
+        showsVerticalScrollIndicator={false}
       >
-        <View style={styles.tab}>
-          <TouchableOpacity style={styles.tabButtonL}>
-            <Text style={styles.tabTextL}>Profile</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.tabButtonR}
-            onPress={() => {
-              navigation.navigate("ReviewsScreen", { receiverId, profileData });
-            }}
-          >
-            <Text style={styles.tabTextR}>Reviews</Text>
-          </TouchableOpacity>
-        </View>
         <ImageBackground
           source={
             profileData?.coverPhoto
@@ -367,10 +402,22 @@ export default function ProfileScreen({ route, navigation }) {
 
 const getStyles = (currentTheme) =>
   StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: currentTheme.background || "#f2f3f5",
+    },
+    tabContainer: {
+      backgroundColor: currentTheme.background || "#f2f3f5",
+      paddingHorizontal: 20,
+      paddingTop: 20,
+      paddingBottom: 10,
+    },
     container: {
+      flex: 1,
       backgroundColor: currentTheme.background || "#fff",
-      paddingTop: Platform.OS === "ios" ? 0 : 35,
-      paddingBottom: 80,
+    },
+    scrollContent: {
+      paddingBottom: 20,
     },
     centered: {
       flex: 1,
@@ -382,35 +429,54 @@ const getStyles = (currentTheme) =>
       display: "flex",
       flexDirection: "row",
       justifyContent: "center",
-      gap: 2,
+      backgroundColor: currentTheme.background2 || "#F8F9FA",
+      marginHorizontal: 20,
+      borderRadius: 12,
+      padding: 4,
+      shadowColor: "#000",
+      shadowOffset: {
+        width: 0,
+        height: 1,
+      },
+      shadowOpacity: 0.05,
+      shadowRadius: 2,
+      elevation: 1,
     },
     tabButtonL: {
       backgroundColor: "#4C0183",
-      width: "50%",
-      height: 40,
+      width: "48%",
+      height: 36,
       display: "flex",
       justifyContent: "center",
       alignItems: "center",
-      borderTopRightRadius: 80,
+      borderRadius: 8,
+      shadowColor: "#4C0183",
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.15,
+      shadowRadius: 3,
+      elevation: 2,
     },
     tabButtonR: {
-      backgroundColor: currentTheme.background3 || "#DADADA",
-      width: "50%",
-      height: 40,
+      backgroundColor: "transparent",
+      width: "48%",
+      height: 36,
       display: "flex",
       justifyContent: "center",
       alignItems: "center",
-      borderTopLeftRadius: 80,
+      borderRadius: 8,
     },
     tabTextL: {
       color: "#fff",
-      fontSize: 20,
-      fontWeight: "bold",
+      fontSize: 16,
+      fontWeight: "600",
     },
     tabTextR: {
-      color: currentTheme.text || "#000",
-      fontSize: 20,
-      fontWeight: "bold",
+      color: currentTheme.text || "#64748B",
+      fontSize: 16,
+      fontWeight: "500",
     },
 
     backgroundImg: {

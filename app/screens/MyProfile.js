@@ -12,10 +12,10 @@ import {
   Modal,
   RefreshControl,
   Alert,
-  SafeAreaView,
   Animated,
   Easing,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { FontAwesome, MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "../context/NewAuthContext";
 import ImageViewer from "react-native-image-zoom-viewer";
@@ -236,26 +236,43 @@ export default function ProfileScreen({ navigation }) {
 
   const onShare = async () => {
     try {
-      const profileLink = `https://birdearner.com/profile/${userData?.id}`;
+      // Ensure we have a user ID to share
+      const userIdToShare = userData?.id;
+      if (!userIdToShare) {
+        Alert.alert("Error", "Unable to share profile - user ID not found");
+        return;
+      }
+
+      // Create deep link that opens the profile within the app
+      const deepLink = `birdearner://profile/${userIdToShare}`;
+      // Also include a fallback web link for users who don't have the app
+      const webLink = `https://birdearner.com/profile/${userIdToShare}`;
+      const userName = data?.fullName || userData?.fullName || "User";
 
       const result = await Share.share({
-        message: `Check out my profile on our app! Name: ${
-          data?.fullName || userData?.fullName || "User"
-        }\n\nProfile Link: ${profileLink}`,
+        message: `Check out my profile on Bird Earner! 
+
+👤 ${userName}
+
+🌐 Click here: ${webLink}
+
+Download Bird Earner to connect with amazing freelancers and clients!`,
+        url: deepLink, // This will be used on iOS to open the app directly
+        title: `${userName}'s Bird Earner Profile`,
       });
+      
       if (result.action === Share.sharedAction) {
         if (result.activityType) {
-          // shared with specific activity
           console.log("Shared with activity:", result.activityType);
         } else {
-          // shared without specific activity
           console.log("Profile shared successfully.");
         }
       } else if (result.action === Share.dismissedAction) {
         console.log("Share dismissed.");
       }
     } catch (error) {
-      Alert.alert("Error", "Failed to share the profile.");
+      console.error("Share error:", error);
+      Alert.alert("Error", "Failed to share the profile. Please try again.");
     }
   };
 
@@ -272,7 +289,7 @@ export default function ProfileScreen({ navigation }) {
   });
 
   return (
-    <SafeAreaView>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       <Modal
         visible={modalVisible}
         transparent={true}
@@ -298,17 +315,7 @@ export default function ProfileScreen({ navigation }) {
         />
       </Modal>
 
-      <ScrollView
-        style={styles.container}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={["#3b006b"]}
-            progressBackgroundColor={currentTheme.cardBackground || "#fff"}
-          />
-        }
-      >
+      <View style={styles.tabContainer}>
         <View style={styles.tab}>
           <TouchableOpacity style={styles.tabButtonL}>
             <Text style={styles.tabTextL}>My Profile</Text>
@@ -322,6 +329,21 @@ export default function ProfileScreen({ navigation }) {
             <Text style={styles.tabTextR}>My Reviews</Text>
           </TouchableOpacity>
         </View>
+      </View>
+
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={["#3b006b"]}
+            progressBackgroundColor={currentTheme.cardBackground || "#fff"}
+          />
+        }
+        showsVerticalScrollIndicator={false}
+      >
 
         <ImageBackground
           source={
@@ -602,10 +624,22 @@ export default function ProfileScreen({ navigation }) {
 
 const getStyles = (currentTheme) =>
   StyleSheet.create({
-    container: {
+    safeArea: {
+      flex: 1,
       backgroundColor: currentTheme.background || "#fff",
-      paddingTop: 35,
-      paddingBottom: 80,
+    },
+    container: {
+      flex: 1,
+      backgroundColor: currentTheme.background || "#fff",
+    },
+    scrollContent: {
+      paddingBottom: 100, // Extra padding for bottom content
+    },
+    tabContainer: {
+      backgroundColor: currentTheme.background || "#fff",
+      paddingVertical: 10,
+      paddingTop: 20,
+      paddingHorizontal: 20,
     },
     centered: {
       flex: 1,
@@ -646,35 +680,54 @@ const getStyles = (currentTheme) =>
       display: "flex",
       flexDirection: "row",
       justifyContent: "center",
-      gap: 2,
+      backgroundColor: currentTheme.background2 || "#F8F9FA",
+      marginHorizontal: 20,
+      borderRadius: 12,
+      padding: 4,
+      shadowColor: "#000",
+      shadowOffset: {
+        width: 0,
+        height: 1,
+      },
+      shadowOpacity: 0.05,
+      shadowRadius: 2,
+      elevation: 1,
     },
     tabButtonL: {
       backgroundColor: "#4C0183",
-      width: "50%",
-      height: 40,
+      width: "48%",
+      height: 36,
       display: "flex",
       justifyContent: "center",
       alignItems: "center",
-      borderTopRightRadius: 80,
+      borderRadius: 8,
+      shadowColor: "#4C0183",
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.15,
+      shadowRadius: 3,
+      elevation: 2,
     },
     tabButtonR: {
-      backgroundColor: currentTheme.background3 || "#DADADA",
-      width: "50%",
-      height: 40,
+      backgroundColor: "transparent",
+      width: "48%",
+      height: 36,
       display: "flex",
       justifyContent: "center",
       alignItems: "center",
-      borderTopLeftRadius: 80,
+      borderRadius: 8,
     },
     tabTextL: {
       color: "#fff",
-      fontSize: 20,
-      fontWeight: "bold",
+      fontSize: 16,
+      fontWeight: "600",
     },
     tabTextR: {
-      color: currentTheme.text || "#000",
-      fontSize: 20,
-      fontWeight: "bold",
+      color: currentTheme.text || "#64748B",
+      fontSize: 16,
+      fontWeight: "500",
     },
     modalHeader: {
       paddingTop: 10,
@@ -704,6 +757,8 @@ const getStyles = (currentTheme) =>
       width: 40,
       height: 40,
       borderRadius: 20,
+      borderWidth: 1.5,
+      borderColor: currentTheme.text || "black",
       display: "flex",
       justifyContent: "center",
       alignItems: "center",
@@ -716,6 +771,8 @@ const getStyles = (currentTheme) =>
       width: 40,
       height: 40,
       borderRadius: 20,
+      borderWidth: 1.5,
+      borderColor: currentTheme.text || "black",
       display: "flex",
       justifyContent: "center",
       alignItems: "center",

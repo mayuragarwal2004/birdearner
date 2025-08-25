@@ -57,12 +57,69 @@ import { AuthProvider } from "./context/NewAuthContext";
 import { StatusBar } from "expo-status-bar";
 import { ThemeProvider } from "./context/ThemeContext";
 import { NavigationContainer } from "@react-navigation/native";
+import * as Linking from "expo-linking";
+
+const linking = {
+  prefixes: ['birdearner://', 'https://birdearner.com'],
+  config: {
+    screens: {
+      MainTabs: {
+        screens: {
+          Profile: {
+            screens: {
+              ProfileScreen: {
+                path: '/profile/:userId',
+                parse: {
+                  userId: (userId) => userId,
+                },
+              },
+            },
+          },
+        },
+      },
+      // Direct access to ProfileScreen when not in tabs
+      ProfileScreen: {
+        path: '/profile/:userId',
+        parse: {
+          userId: (userId) => userId,
+        },
+      },
+    },
+  },
+};
 
 export default function MainApp() {
   console.log("hi");
 
+  // Add debugging for deep links
+  React.useEffect(() => {
+    const handleDeepLink = (url) => {
+      console.log('Deep link received:', url);
+    };
+
+    // Handle initial URL if app was opened via deep link
+    Linking.getInitialURL().then((url) => {
+      if (url) {
+        console.log('Initial URL:', url);
+        handleDeepLink(url);
+      }
+    });
+
+    // Handle deep links while app is running
+    const subscription = Linking.addEventListener('url', ({ url }) => {
+      handleDeepLink(url);
+    });
+
+    return () => subscription?.remove();
+  }, []);
+
   return (
-    <NavigationContainer>
+    <NavigationContainer 
+      linking={linking}
+      onStateChange={(state) => {
+        console.log('Navigation state changed:', state);
+      }}
+    >
       <ThemeProvider>
         <AuthProvider>
           <App />
