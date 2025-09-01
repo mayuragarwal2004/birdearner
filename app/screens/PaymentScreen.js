@@ -1,32 +1,47 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
-  Button,
   Text,
-  Image,
   StyleSheet,
   TouchableOpacity,
   TextInput,
+  Animated,
+  ActivityIndicator,
 } from "react-native";
+import LottieView from "lottie-react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import RazorpayCheckout from "react-native-razorpay";
 import { useAuth } from "../context/NewAuthContext";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, FontAwesome5 } from "@expo/vector-icons";
 import { useTheme } from "../context/ThemeContext";
-import apiService from "../lib/apiService"; // Import the singleton instance
+import apiService from "../lib/apiService";
 import Toast from "react-native-toast-message";
 
-// Development mode flag - set to false for production
-const DEV_MODE = false;
+import { RAZORPAY_TEST_KEY, RAZORPAY_LIVE_KEY } from '@env';
+
+// Enable this for development environment to bypass Razorpay
+const DEV_MODE = __DEV__;
 
 const PaymentScreen = ({ navigation }) => {
   const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [amount, setAmount] = useState("");
+  const [amountAnimation] = useState(new Animated.Value(0));
+  const [isLoading, setIsLoading] = useState(false);
   const { userData, userProfile } = useAuth();
   const pic =
     apiService.loadImageURI(userProfile?.profilePhoto) ||
     "https://example.com/default-profile-pic.png";
   const name = userData?.fullName || "Guest User";
   const email = userData?.email || "user@gmail.com";
-  const [amount, setAmount] = useState("");
+
+  useEffect(() => {
+    Animated.spring(amountAnimation, {
+      toValue: 1,
+      friction: 8,
+      tension: 40,
+      useNativeDriver: true,
+    }).start();
+  }, []);
 
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
@@ -34,14 +49,22 @@ const PaymentScreen = ({ navigation }) => {
   const styles = getStyles(currentTheme);
 
   const handleAmountChange = (value) => {
-    setAmount(value);
+    // Only allow numbers and decimal point
+    const numericValue = value.replace(/[^0-9.]/g, "");
+    setAmount(numericValue);
   };
 
   const handlePayment = async () => {
     try {
+      setIsLoading(true);
+
       // Validate amount
       if (!amount || parseFloat(amount) <= 0) {
-        alert("Please enter a valid amount greater than 0");
+        Toast.show({
+          type: "error",
+          text1: "Invalid Amount",
+          text2: "Please enter a valid amount greater than 0",
+        });
         return;
       }
 
@@ -52,7 +75,11 @@ const PaymentScreen = ({ navigation }) => {
       if (DEV_MODE) {
         // Simulate payment in development mode
         console.log("DEV MODE: Simulating Razorpay payment");
-        alert("DEV MODE: Simulating payment success");
+        Toast.show({
+          type: "info",
+          text1: "Dev Mode",
+          text2: "Simulating payment success",
+        });
 
         // Simulate payment data
         paymentData = {
@@ -61,17 +88,20 @@ const PaymentScreen = ({ navigation }) => {
           razorpay_signature: "dev_signature_mock",
         };
       } else {
-        // Real Razorpay checkout for production
+        // Use appropriate Razorpay key based on user's test status
+        const razorpayKey = userData?.isTestAccount
+          ? RAZORPAY_TEST_KEY
+          : RAZORPAY_LIVE_KEY;
         const options = {
-          description: `Add ₹${amount} to wallet`,
+          description: "Add ₹" + amount + " to wallet",
           image: pic,
           currency: "INR",
-          key: "rzp_test_Jl7LJ6dEC1YfnX",
+          key: razorpayKey,
           amount: amount * 100,
           name: name,
           prefill: {
             email: email,
-            phone: "4141414141",
+            phone: userProfile?.mobileNumber || "",
             name: name,
           },
           theme: { color: "#4B0082" },
@@ -80,26 +110,19 @@ const PaymentScreen = ({ navigation }) => {
         try {
           paymentData = await RazorpayCheckout.open(options);
         } catch (error) {
-          // Razorpay returns error object on cancellation or failure
           if (
-            error &&
-            (error.code === 0 ||
-              error.description === "Payment Cancelled" ||
-              (error.error && error.error.description === "Payment Cancelled"))
+            error?.code === 0 ||
+            error?.description === "Payment Cancelled" ||
+            error?.error?.description === "Payment Cancelled"
           ) {
             Toast.show({
               type: "info",
-              text: "Payment cancelled",
+              text1: "Payment Cancelled",
+              text2: "You cancelled the payment",
             });
             return;
-          } else {
-            // Real payment error
-            console.error("Payment error:", error);
-            console.log({ error });
-
-            alert("Payment failed. Please try again.");
-            return;
           }
+          throw error;
         }
       }
 
@@ -107,10 +130,15 @@ const PaymentScreen = ({ navigation }) => {
       setPaymentSuccess(true);
     } catch (error) {
       console.error("Payment error:", error);
-      const errorMessage = DEV_MODE
-        ? "DEV MODE: Simulated payment failed"
-        : "Payment failed. Please try again.";
-      alert(errorMessage);
+      Toast.show({
+        type: "error",
+        text1: "Payment Failed",
+        text2: DEV_MODE
+          ? "DEV MODE: Simulated payment failed"
+          : "Please try again",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -120,83 +148,113 @@ const PaymentScreen = ({ navigation }) => {
         throw new Error("User not authenticated");
       }
 
-      // Add money to wallet using Node.js API
       const result = await apiService.addMoneyToWallet(
         parseFloat(addedAmount),
-        `Razorpay deposit - Payment ID: ${paymentId}`,
+        "Razorpay deposit - Payment ID: " + paymentId,
         paymentId
       );
 
       if (result.success) {
-        alert(
-          `₹${addedAmount} added successfully! Your new wallet balance is ₹${result.data.newBalance}.`
-        );
+        Toast.show({
+          type: "success",
+          text1: "Payment Successful",
+          text2: "₹" + addedAmount + " added to your wallet!",
+        });
       } else {
         throw new Error(result.message || "Failed to update wallet");
       }
     } catch (error) {
       console.error("Wallet update error:", error);
-      alert("Failed to update wallet. Please contact support.");
-      throw error; // Re-throw to prevent setting payment success
+      Toast.show({
+        type: "error",
+        text1: "Wallet Update Failed",
+        text2: "Please contact support",
+      });
+      throw error;
     }
   };
 
+  console.log({ mayur: userData?.isTestAccount });
+
   return (
     <View style={styles.container}>
-      {!paymentSuccess && (
-        <View style={styles.main}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={styles.backButton}
+      <View style={styles.content}>
+        {!paymentSuccess && (
+          <View style={styles.main}>
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={styles.backButton}
+            >
+              <Ionicons name="arrow-back" size={24} color={currentTheme.text} />
+            </TouchableOpacity>
+            <Text style={[styles.header, { color: currentTheme.text }]}>
+              Add Money to Wallet
+            </Text>
+          </View>
+        )}
+        {!paymentSuccess ? (
+          <Animated.View
+            style={[
+              styles.inputContainer,
+              {
+                transform: [
+                  {
+                    scale: amountAnimation,
+                  },
+                ],
+              },
+            ]}
           >
-            <Ionicons
-              name="arrow-back"
-              size={24}
-              color={currentTheme.text || "#000"}
+            <Text style={styles.label}>Enter Amount (₹)</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="0.00"
+              placeholderTextColor="#c4c4c4"
+              value={amount}
+              onChangeText={handleAmountChange}
+              keyboardType="numeric"
+              maxLength={10}
             />
-          </TouchableOpacity>
-          <Text style={styles.header}>Add Amount to Wallet</Text>
-        </View>
-      )}
-
-      {!paymentSuccess && (
-        <>
-          <Text style={styles.label}>Enter the amount you want to add</Text>
-          <TextInput
-            placeholderTextColor="#c4c4c4"
-            style={styles.input}
-            placeholder="Enter amount"
-            value={amount}
-            onChangeText={handleAmountChange}
-            keyboardType="numeric"
-          />
-        </>
-      )}
-
-      {paymentSuccess ? (
-        <View style={styles.paymentContainer}>
-          <Image source={{ uri: pic }} style={styles.image} />
-          <Text style={styles.description}>Thank you, {name}!</Text>
-          <Text style={styles.amount}>Added Amount: ₹{amount}</Text>
-          <TouchableOpacity
-            style={styles.goBackk}
-            onPress={() => navigation.goBack()}
-          >
-            <Ionicons
-              name="arrow-back"
-              size={20}
-              color={currentTheme.subText || "#000"}
+            <TouchableOpacity
+              style={[styles.addButton, isLoading && styles.disabledButton]}
+              onPress={handlePayment}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <>
+                  <FontAwesome5 name="wallet" size={20} color="#fff" />
+                  <Text style={styles.addButtonText}>
+                    {DEV_MODE ? "Add Now (DEV)" : "Add Now"}
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </Animated.View>
+        ) : (
+          <View style={styles.successContainer}>
+            <LottieView
+              source={require("../assets/check-animation.json")}
+              autoPlay
+              loop={false}
+              style={styles.successImage}
             />
-            <Text style={{ color: currentTheme.subText }}>Go Back</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <TouchableOpacity style={styles.signupButton} onPress={handlePayment}>
-          <Text style={styles.signupButtonText}>
-            {DEV_MODE ? "Add Now (DEV)" : "Add Now"}
-          </Text>
-        </TouchableOpacity>
-      )}
+            <Text style={styles.successText}>Payment Successful!</Text>
+            <Text style={styles.amountText}>
+              <Text>₹</Text>
+              {amount}
+              <Text> added to your wallet</Text>
+            </Text>
+            <TouchableOpacity
+              style={styles.doneButton}
+              onPress={() => navigation.goBack()}
+            >
+              <Text style={styles.doneButtonText}>Done</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
     </View>
   );
 };
@@ -205,97 +263,109 @@ const getStyles = (currentTheme) =>
   StyleSheet.create({
     container: {
       flex: 1,
+      backgroundColor: currentTheme.background,
+    },
+    content: {
+      flex: 1,
       padding: 20,
-      backgroundColor: currentTheme.background || "#FFF",
-      paddingHorizontal: 40,
-      // justifyContent: "center",
-      alignContent: "center",
-      alignItems: "center",
     },
     main: {
-      marginTop: 45,
-      marginBottom: 50,
-      display: "flex",
       flexDirection: "row",
-      gap: 50,
       alignItems: "center",
+      marginTop: 40,
+      marginBottom: 30,
+    },
+    backButton: {
+      padding: 10,
     },
     header: {
       fontSize: 24,
       fontWeight: "bold",
-      textAlign: "center",
-      color: currentTheme.text,
-      marginRight: 50,
+      marginLeft: 20,
+    },
+    inputContainer: {
+      alignItems: "center",
+      marginTop: 40,
     },
     label: {
       fontSize: 18,
-      color: currentTheme.text || "#000000",
-      marginBottom: 8,
-      fontWeight: "400",
-      textAlign: "center",
+      color: currentTheme.text,
+      marginBottom: 15,
     },
     input: {
       width: "80%",
-      height: 44,
-      backgroundColor: currentTheme.background3 || "#fff",
-      borderRadius: 12,
+      height: 60,
+      backgroundColor:
+        currentTheme.cardBackground || currentTheme.surface || "#FFF",
+      borderRadius: 15,
       paddingHorizontal: 20,
-      marginBottom: 40,
-      fontSize: 16,
-      borderColor: "#4B0082",
-      borderWidth: 2,
-      marginVertical: 10,
-      color: currentTheme.subText || "#000000",
-    },
-    paymentContainer: {
-      alignItems: "center",
-      backgroundColor: currentTheme.cardBackground || "#fff",
-      padding: 20,
-      borderRadius: 10,
-      shadowColor: currentTheme.shadow || "#000",
+      fontSize: 24,
+      fontWeight: "bold",
+      color: currentTheme.text,
+      textAlign: "center",
+      shadowColor: currentTheme.shadowColor || "#000",
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.25,
       shadowRadius: 3.84,
       elevation: 5,
-      alignContent: "center",
-      justifyContent: "center",
-      marginVertical: 160,
+      borderColor: currentTheme.border,
+      borderWidth: 1,
     },
-    image: {
-      width: 150,
-      height: 100,
-      resizeMode: "cover",
-      borderRadius: 10,
-      marginBottom: 10,
-    },
-    description: {
-      fontSize: 18,
-      marginBottom: 10,
-      color: currentTheme.text,
-    },
-    amount: {
-      fontSize: 16,
-      marginBottom: 20,
-      color: currentTheme.text,
-    },
-    signupButton: {
-      width: "50%",
-      height: 50,
-      backgroundColor: "#4B0082",
-      borderRadius: 12,
+    addButton: {
+      flexDirection: "row",
       alignItems: "center",
       justifyContent: "center",
-      marginTop: 50,
+      width: "60%",
+      height: 50,
+      backgroundColor: currentTheme.primary || "#4B0082",
+      borderRadius: 25,
+      marginTop: 30,
+      shadowColor: currentTheme.shadowColor || "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.25,
+      shadowRadius: 3.84,
+      elevation: 5,
     },
-    signupButtonText: {
-      color: "white",
+    disabledButton: {
+      opacity: 0.7,
+    },
+    addButtonText: {
+      color: currentTheme.buttonText || "#fff",
+      fontSize: 18,
+      fontWeight: "bold",
+      marginLeft: 10,
+    },
+    successContainer: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    successImage: {
+      width: 150,
+      height: 150,
+      marginBottom: 20,
+    },
+    successText: {
       fontSize: 24,
-      fontWeight: "700",
+      fontWeight: "bold",
+      color: currentTheme.text,
+      marginBottom: 10,
     },
-    goBackk: {
-      display: "flex",
-      flexDirection: "row",
-      gap: 8,
+    amountText: {
+      fontSize: 20,
+      color: currentTheme.text,
+      marginBottom: 30,
+    },
+    doneButton: {
+      paddingHorizontal: 40,
+      paddingVertical: 15,
+      backgroundColor: currentTheme.primary || "#4B0082",
+      borderRadius: 25,
+    },
+    doneButtonText: {
+      color: currentTheme.buttonText || "#fff",
+      fontSize: 18,
+      fontWeight: "bold",
     },
   });
 
