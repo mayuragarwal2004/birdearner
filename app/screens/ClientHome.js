@@ -28,7 +28,7 @@ const ClientHomeScreen = () => {
   const [showGif, setShowGif] = useState(false);
   const [loadingJobs, setLoadingJobs] = useState(false);
 
-  const servicesRef = useRef(null)
+  const servicesRef = useRef(null);
 
   const [ongoingJobs, setOngoingJobs] = useState([]);
   const [profilePercentage, setProfilePercentage] = useState(20);
@@ -93,14 +93,13 @@ const ClientHomeScreen = () => {
       try {
         if (userData?.role === "CLIENT" && userData?.id) {
           setLoadingJobs(true); // Start loading
-          
+
           // Fetch ongoing jobs from the new backend API
           const ongoingJobsData = await apiService.getOngoingJobsByClientId(
             userData.client.id
           );
 
-          console.log({ongoingJobsData});
-          
+          console.log({ ongoingJobsData });
 
           if (ongoingJobsData && ongoingJobsData.length > 0) {
             setOngoingJobs(ongoingJobsData);
@@ -198,7 +197,7 @@ const ClientHomeScreen = () => {
 
   const onRefresh = () => {
     setRefreshing(true);
-    
+
     // Call child function
     if (servicesRef.current?.refreshCard) {
       servicesRef.current.refreshCard();
@@ -323,7 +322,11 @@ const ClientHomeScreen = () => {
                         {jobDetails ? (
                           jobService && jobService.imageUrl ? (
                             <Image
-                              source={{ uri: apiService.loadImageURI(jobService.imageUrl) }}
+                              source={{
+                                uri: apiService.loadImageURI(
+                                  jobService.imageUrl
+                                ),
+                              }}
                               style={styles.ongoingImage}
                               onError={(e) => {
                                 console.log(

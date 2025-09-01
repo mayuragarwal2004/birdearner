@@ -32,7 +32,6 @@ const HomeScreen = () => {
 
   const styles = getStyles(currentTheme);
 
-
   // Handle profile setup navigation
   const handleProfileSetupNavigation = () => {
     if (currentSetupStep) {
@@ -42,7 +41,7 @@ const HomeScreen = () => {
 
   // Handle skip profile setup (go to main tabs)
   const handleSkipProfileSetup = () => {
-    navigation.replace('MainTabs');
+    navigation.replace("MainTabs");
   };
 
   const fetchOrderRecords = async () => {
@@ -53,7 +52,7 @@ const HomeScreen = () => {
       setActiveOrders(0);
       setCompletedOrders(0);
       setSuccessScore(0);
-      
+
       /* Original Appwrite code - commented out for migration
       const cancelledOrders = userData?.cancelled_jobs.length;
       const assignedJobs = userData?.assigned_jobs;
@@ -104,10 +103,10 @@ const HomeScreen = () => {
 
   useEffect(() => {
     let percentage = 20; // Start with basic profile
-    
+
     // Update profile percentage based on available user data
     console.log({ userData });
-    
+
     if (userData?.email) percentage = 40;
     if (userData?.role) percentage = 60;
     if (userData?.id) percentage = 80;
@@ -125,7 +124,7 @@ const HomeScreen = () => {
     // For now, navigate to a simple profile completion flow
     // TODO: Implement proper profile completion with new backend
     console.log("Complete profile clicked - TODO: implement with new backend");
-    
+
     /* Original logic - commented out for migration
     if (profilePercentage < 20) {
       navigation.navigate("DescribeRoleCom", {
@@ -220,12 +219,10 @@ const HomeScreen = () => {
           >
             <MaterialIcons name="notifications" size={24} color="#fff" />
           </TouchableOpacity>
-          
+
           <Text style={styles.welcomeText}>Welcome Back</Text>
           {/* Make sure to wrap dynamic content with Text component */}
-          <Text style={styles.usernameText}>
-            {userData?.fullName}
-          </Text>
+          <Text style={styles.usernameText}>{userData?.fullName}</Text>
         </View>
 
         {/* Your Statistics Section */}
@@ -234,7 +231,9 @@ const HomeScreen = () => {
           <View style={styles.statsContainer}>
             <View style={styles.statsBox}>
               <View style={styles.statItem}>
-                <Text style={styles.statValue}>{String(successScore || 0)}%</Text>
+                <Text style={styles.statValue}>
+                  {String(successScore || 0)}%
+                </Text>
                 <Text style={styles.statLabel}>Success Score</Text>
               </View>
               <View style={styles.statItem}>
@@ -248,11 +247,13 @@ const HomeScreen = () => {
             </View>
             <View style={styles.statsBox}>
               <View style={styles.statItem}>
-                <Text style={styles.statValue}>0</Text> {/* TODO: Implement rating with new backend */}
+                <Text style={styles.statValue}>0</Text>
+                {/* TODO: Implement rating with new backend */}
                 <Text style={styles.statLabel}>Rating</Text>
               </View>
               <View style={styles.statItem}>
-                <Text style={styles.statValue}>1</Text> {/* TODO: Implement level with new backend */}
+                <Text style={styles.statValue}>1</Text>
+                {/* TODO: Implement level with new backend */}
                 <Text style={styles.statLabel}>Your Level</Text>
               </View>
             </View>
@@ -265,19 +266,22 @@ const HomeScreen = () => {
           <View style={styles.earningsContainer}>
             <View style={styles.earningItem}>
               <Text style={styles.earningValue}>
-                Rs. {formatAmount(0)} {/* TODO: Implement totalEarnings with new backend */}
+                Rs. {formatAmount(0)}
+                {/* TODO: Implement totalEarnings with new backend */}
               </Text>
               <Text style={styles.earningLabel}>Total Earnings</Text>
             </View>
             <View style={styles.earningItem}>
               <Text style={styles.earningValue}>
-                Rs. {formatAmount(0)} {/* TODO: Implement monthlyEarnings with new backend */}
+                Rs. {formatAmount(0)}
+                {/* TODO: Implement monthlyEarnings with new backend */}
               </Text>
               <Text style={styles.earningLabel}>Monthly</Text>
             </View>
             <View style={styles.earningItem}>
               <Text style={styles.earningValue}>
-                {formatAmount(0)} {/* TODO: Implement outstandingAmount with new backend */}
+                {formatAmount(0)}
+                {/* TODO: Implement outstandingAmount with new backend */}
               </Text>
               <Text style={styles.earningLabel}>Outstanding Amount</Text>
             </View>
@@ -290,7 +294,8 @@ const HomeScreen = () => {
                 }
               >
                 <Text style={styles.earningValue}>
-                  Rs. {formatAmount(0)} {/* TODO: Implement withdrawableAmount with new backend */}
+                  Rs. {formatAmount(0)}
+                  {/* TODO: Implement withdrawableAmount with new backend */}
                 </Text>
               </TouchableOpacity>
               <Text style={styles.earningLabel}>Withdrawal</Text>
@@ -303,7 +308,9 @@ const HomeScreen = () => {
           <Text style={styles.sectionTitle}>Your Orders</Text>
           <View style={styles.ordersContainer}>
             <View style={styles.orderItem}>
-              <Text style={styles.orderValue}>{String(CompletedOrders || 0)}</Text>
+              <Text style={styles.orderValue}>
+                {String(CompletedOrders || 0)}
+              </Text>
               <Text style={styles.orderLabel}>Orders Completed</Text>
             </View>
             <View style={styles.orderItem}>
@@ -311,7 +318,9 @@ const HomeScreen = () => {
               <Text style={styles.orderLabel}>Active Orders</Text>
             </View>
             <View style={styles.orderItem}>
-              <Text style={styles.orderValue}>{String(cancelledOrders || 0)}</Text>
+              <Text style={styles.orderValue}>
+                {String(cancelledOrders || 0)}
+              </Text>
               <Text style={styles.orderLabel}>Cancelled Orders</Text>
             </View>
           </View>
@@ -385,7 +394,13 @@ const HomeScreen = () => {
       <View style={styles.stickyButton}>
         <TouchableOpacity
           style={styles.chatIcon}
-          onPress={() => navigation.navigate(userData?.role === 'FREELANCER' ? 'FreelancerChatList' : 'ClientChatList')}
+          onPress={() =>
+            navigation.navigate(
+              userData?.role === "FREELANCER"
+                ? "FreelancerChatList"
+                : "ClientChatList"
+            )
+          }
         >
           <FontAwesome name="comments" size={28} color="#fff" />
         </TouchableOpacity>
@@ -682,23 +697,23 @@ const getStyles = (currentTheme) =>
     },
     // Profile Setup Overlay Styles
     profileSetupOverlay: {
-      position: 'absolute',
+      position: "absolute",
       top: 0,
       left: 0,
       right: 0,
       bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.8)',
+      backgroundColor: "rgba(0, 0, 0, 0.8)",
       zIndex: 1000,
-      justifyContent: 'center',
-      alignItems: 'center',
+      justifyContent: "center",
+      alignItems: "center",
     },
     profileSetupContainer: {
-      backgroundColor: 'white',
+      backgroundColor: "white",
       borderRadius: 16,
       padding: 24,
       margin: 20,
-      alignItems: 'center',
-      shadowColor: '#000',
+      alignItems: "center",
+      shadowColor: "#000",
       shadowOffset: {
         width: 0,
         height: 2,
@@ -709,20 +724,20 @@ const getStyles = (currentTheme) =>
     },
     profileSetupTitle: {
       fontSize: 24,
-      fontWeight: 'bold',
+      fontWeight: "bold",
       marginBottom: 12,
-      color: '#333',
-      textAlign: 'center',
+      color: "#333",
+      textAlign: "center",
     },
     profileSetupMessage: {
       fontSize: 16,
-      textAlign: 'center',
+      textAlign: "center",
       marginBottom: 24,
-      color: '#666',
+      color: "#666",
       lineHeight: 22,
     },
     profileSetupButton: {
-      backgroundColor: currentTheme.primary || '#3b006b',
+      backgroundColor: currentTheme.primary || "#3b006b",
       paddingVertical: 12,
       paddingHorizontal: 24,
       borderRadius: 8,
@@ -730,26 +745,26 @@ const getStyles = (currentTheme) =>
       minWidth: 200,
     },
     profileSetupButtonText: {
-      color: 'white',
+      color: "white",
       fontSize: 16,
-      fontWeight: '600',
-      textAlign: 'center',
+      fontWeight: "600",
+      textAlign: "center",
     },
     profileSetupSkipButton: {
-      backgroundColor: 'transparent',
+      backgroundColor: "transparent",
       paddingVertical: 12,
       paddingHorizontal: 24,
       borderRadius: 8,
       marginVertical: 8,
       minWidth: 200,
       borderWidth: 1,
-      borderColor: currentTheme.primary || '#3b006b',
+      borderColor: currentTheme.primary || "#3b006b",
     },
     profileSetupSkipButtonText: {
-      color: currentTheme.primary || '#3b006b',
+      color: currentTheme.primary || "#3b006b",
       fontSize: 16,
-      fontWeight: '600',
-      textAlign: 'center',
+      fontWeight: "600",
+      textAlign: "center",
     },
   });
 

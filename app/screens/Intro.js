@@ -65,7 +65,7 @@ const Intro = ({ navigation }) => {
 
     const timer = setTimeout(() => {
       navigateToNextScreen();
-    }, 8000); // Show splash for 8 seconds (increased for development)
+    }, 1500); // Show splash for 2 seconds (increased for development)
 
     return () => clearTimeout(timer);
   }, [loading, user]);
