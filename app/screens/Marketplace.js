@@ -680,7 +680,7 @@ const MarketplaceScreen = ({ navigation }) => {
         end={{ x: 1, y: 0 }}
         style={styles.allJobsContainer}
       >
-        <TouchableOpacity style={styles.allJobsButton} onPress={handleAllJobsPress}>
+        <TouchableOpacity style={styles.allJobsButton} onPress={() => handlePriorityPress("All")}>
           <Text style={styles.allJobsText}>View Jobs</Text>
         </TouchableOpacity>
       </LinearGradient>
