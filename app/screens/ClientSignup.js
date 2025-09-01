@@ -46,18 +46,26 @@ const COUNTRY_OPTIONS = [
 ];
 
 const indianStates = [
+  { label: "Select State", value: "" },
+  { label: "Andaman & Nicobar", value: "Andaman & Nicobar" },
   { label: "Andhra Pradesh", value: "Andhra Pradesh" },
   { label: "Arunachal Pradesh", value: "Arunachal Pradesh" },
   { label: "Assam", value: "Assam" },
   { label: "Bihar", value: "Bihar" },
-  { label: "Chhattisgarh", value: "Chhattisgarh" },
+  { label: "Chandigarh", value: "Chandigarh" },
+  { label: "Chattisgarh", value: "Chattisgarh" },
+  { label: "Dadra & Nagar Haveli", value: "Dadra & Nagar Haveli" },
+  { label: "Daman & Diu", value: "Daman & Diu" },
+  { label: "Delhi", value: "Delhi" },
   { label: "Goa", value: "Goa" },
   { label: "Gujarat", value: "Gujarat" },
   { label: "Haryana", value: "Haryana" },
   { label: "Himachal Pradesh", value: "Himachal Pradesh" },
+  { label: "Jammu & Kashmir", value: "Jammu & Kashmir" },
   { label: "Jharkhand", value: "Jharkhand" },
   { label: "Karnataka", value: "Karnataka" },
   { label: "Kerala", value: "Kerala" },
+  { label: "Lakshadweep", value: "Lakshadweep" },
   { label: "Madhya Pradesh", value: "Madhya Pradesh" },
   { label: "Maharashtra", value: "Maharashtra" },
   { label: "Manipur", value: "Manipur" },
@@ -65,6 +73,7 @@ const indianStates = [
   { label: "Mizoram", value: "Mizoram" },
   { label: "Nagaland", value: "Nagaland" },
   { label: "Odisha", value: "Odisha" },
+  { label: "Pondicherry", value: "Pondicherry" },
   { label: "Punjab", value: "Punjab" },
   { label: "Rajasthan", value: "Rajasthan" },
   { label: "Sikkim", value: "Sikkim" },
@@ -74,19 +83,8 @@ const indianStates = [
   { label: "Uttar Pradesh", value: "Uttar Pradesh" },
   { label: "Uttarakhand", value: "Uttarakhand" },
   { label: "West Bengal", value: "West Bengal" },
-  {
-    label: "Andaman and Nicobar Islands",
-    value: "Andaman and Nicobar Islands",
-  },
-  { label: "Chandigarh", value: "Chandigarh" },
-  {
-    label: "Dadra and Nagar Haveli and Daman and Diu",
-    value: "Dadra and Nagar Haveli and Daman and Diu",
-  },
-  { label: "Delhi", value: "Delhi" },
-  { label: "Lakshadweep", value: "Lakshadweep" },
-  { label: "Puducherry", value: "Puducherry" },
 ];
+
 
 // Create conditional schema based on mode
 const createSchema = (mode) => {
@@ -133,6 +131,61 @@ const ClientSignup = ({ navigation, route }) => {
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [fetchingLocation, setFetchingLocation] = useState(false);
+
+  // Function to validate Indian pincode
+  const isValidIndianPincode = (pincode) => {
+    // Indian pincodes are 6 digits and start with numbers 1-9
+    const indianPincodeRegex = /^[1-9][0-9]{5}$/;
+    return indianPincodeRegex.test(pincode);
+  };
+
+  // Function to fetch location details from pincode
+  const fetchLocationFromPincode = async (pincode) => {
+    if (!pincode || pincode.length !== 6) return;
+
+    if (!isValidIndianPincode(pincode)) {
+      showToast("error", "Invalid Pincode", "Please enter a valid Indian pincode");
+      setForm(prev => ({
+        ...prev,
+        zipCode: "",
+        city: "",
+        state: "",
+        autoFilledLocation: false
+      }));
+      return;
+    }
+
+    try {
+      setFetchingLocation(true);
+      const response = await fetch(`https://api.postalpincode.in/pincode/${pincode}`);
+      const data = await response.json();
+
+      if (data[0].Status === "Success" && data[0].PostOffice && data[0].PostOffice.length > 0) {
+        const location = data[0].PostOffice[0];
+        setForm(prev => ({
+          ...prev,
+          city: location.District,
+          state: location.State,
+          autoFilledLocation: true
+        }));
+      } else {
+        showToast("error", "Invalid Pincode", "This pincode is not valid for India");
+        setForm(prev => ({
+          ...prev,
+          zipCode: "",
+          city: "",
+          state: "",
+          autoFilledLocation: false
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching location:', error);
+      showToast("error", "Error", "Could not fetch location details");
+    } finally {
+      setFetchingLocation(false);
+    }
+  };
 
   // Extract route params to determine mode and data
   const {
@@ -158,11 +211,12 @@ const ClientSignup = ({ navigation, route }) => {
     termsAccepted: false,
     designation: user?.client?.organizationType || "",
     heading: user?.client?.companyName || "",
+    zipCode: user?.client?.zipcode ? user.client.zipcode.toString() : "",
     city: user?.client?.city || "",
     state: user?.client?.state || "",
-    zipCode: user?.client?.zipcode ? user.client.zipcode.toString() : "",
     country: user?.client?.country || "India",
     bio: user?.client?.profileDescription || "",
+    autoFilledLocation: false,
     gender: "", // Not available in client object
     dob: new Date(), // Not available in client object
     socialLinks: user?.client?.socialMediaLinks?.length
@@ -656,37 +710,19 @@ const ClientSignup = ({ navigation, route }) => {
               />
               <View style={styles.row}>
                 <View style={styles.inputContainer}>
-                  <Text style={styles.label}>City</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={form.city}
-                    onChangeText={(v) => setForm({ ...form, city: v })}
-                    placeholder="Pune"
-                    placeholderTextColor="#c4c4c4"
-                  />
-                </View>
-                <View style={styles.dropdownContainer}>
-                  <Text style={styles.label}>State</Text>
-                  <PickerModal
-                    items={indianStates}
-                    value={form.state}
-                    onValueChange={(v) => setForm({ ...form, state: v })}
-                    placeholder="Select State"
-                    innerStyle={{ backgroundColor: "#f5f5f5" }}
-                    style={{ marginVertical: 0 }}
-                  />
-                </View>
-              </View>
-              <View style={styles.row}>
-                <View style={styles.inputContainer}>
                   <Text style={styles.label}>Zip Code</Text>
                   <TextInput
                     style={styles.input}
                     keyboardType="numeric"
                     maxLength={6}
                     value={form.zipCode}
-                    onChangeText={(v) => setForm({ ...form, zipCode: v })}
-                    placeholder="123456"
+                    onChangeText={(text) => {
+                      setForm({ ...form, zipCode: text });
+                      if (text.length === 6) {
+                        fetchLocationFromPincode(text);
+                      }
+                    }}
+                    placeholder="Enter 6-digit Indian pincode"
                     placeholderTextColor="#c4c4c4"
                   />
                 </View>
@@ -700,6 +736,31 @@ const ClientSignup = ({ navigation, route }) => {
                     innerStyle={{ backgroundColor: "#f5f5f5" }}
                     style={{ marginVertical: 0 }}
                     disabled={true}
+                  />
+                </View>
+              </View>
+              <View style={styles.row}>
+                <View style={styles.inputContainer}>
+                  <Text style={styles.label}>City</Text>
+                  <TextInput
+                    style={[styles.input, fetchingLocation && { backgroundColor: '#f0f0f0' }]}
+                    value={form.city}
+                    onChangeText={(text) => setForm({ ...form, city: text, autoFilledLocation: false })}
+                    placeholder={fetchingLocation ? "Fetching city..." : "Enter city"}
+                    placeholderTextColor="#c4c4c4"
+                    editable={!fetchingLocation}
+                  />
+                </View>
+                <View style={styles.dropdownContainer}>
+                  <Text style={styles.label}>State</Text>
+                  <PickerModal
+                    items={indianStates}
+                    value={form.state}
+                    onValueChange={(value) => setForm({ ...form, state: value, autoFilledLocation: false })}
+                    placeholder={fetchingLocation ? "Fetching state..." : "Select State"}
+                    innerStyle={{ backgroundColor: "#f5f5f5" }}
+                    style={{ marginVertical: 0 }}
+                    disabled={fetchingLocation}
                   />
                 </View>
               </View>
