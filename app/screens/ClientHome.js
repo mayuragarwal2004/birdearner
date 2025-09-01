@@ -93,10 +93,14 @@ const ClientHomeScreen = () => {
       try {
         if (userData?.role === "CLIENT" && userData?.id) {
           setLoadingJobs(true); // Start loading
+          
           // Fetch ongoing jobs from the new backend API
           const ongoingJobsData = await apiService.getOngoingJobsByClientId(
             userData.client.id
           );
+
+          console.log({ongoingJobsData});
+          
 
           if (ongoingJobsData && ongoingJobsData.length > 0) {
             setOngoingJobs(ongoingJobsData);
@@ -284,6 +288,11 @@ const ClientHomeScreen = () => {
                   const receiverId = jobDetails?.assigned_freelancer || null;
                   const jobId = jobDetails?.$id || null;
 
+                  // Get the service for this job
+                  const jobService = jobDetails.service;
+
+                  console.log({ jobService });
+
                   return (
                     <TouchableOpacity
                       key={index}
@@ -312,21 +321,35 @@ const ClientHomeScreen = () => {
                         ]}
                       >
                         {jobDetails ? (
-                          <Image
-                            source={{
-                              uri:
-                                apiService.loadImageURI(
-                                  jobDetails.attachedFiles[0]
-                                ) || `${placeholderImageURL}${index}/100/100`,
-                            }}
-                            style={styles.ongoingImage}
-                            onError={(e) => {
-                              console.log(
-                                "Image load error:",
-                                e.nativeEvent.error
-                              );
-                            }}
-                          />
+                          jobService && jobService.imageUrl ? (
+                            <Image
+                              source={{ uri: apiService.loadImageURI(jobService.imageUrl) }}
+                              style={styles.ongoingImage}
+                              onError={(e) => {
+                                console.log(
+                                  "Service image load error:",
+                                  e.nativeEvent.error
+                                );
+                              }}
+                            />
+                          ) : (
+                            // Fallback to attached files if no service image
+                            <Image
+                              source={{
+                                uri:
+                                  apiService.loadImageURI(
+                                    jobDetails.attachedFiles?.[0]
+                                  ) || `${placeholderImageURL}${index}/100/100`,
+                              }}
+                              style={styles.ongoingImage}
+                              onError={(e) => {
+                                console.log(
+                                  "Fallback image load error:",
+                                  e.nativeEvent.error
+                                );
+                              }}
+                            />
+                          )
                         ) : (
                           <Text style={styles.placeholderText}>?</Text>
                         )}

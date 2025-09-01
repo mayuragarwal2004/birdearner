@@ -14,7 +14,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { Briefcase } from "lucide-react-native";
 import { useAuth } from "../context/NewAuthContext";
-import { differenceInDays } from "date-fns";
+import { differenceInDays, format } from "date-fns";
 import { useTheme } from "../context/ThemeContext";
 import apiService from "../lib/apiService";
 
@@ -59,7 +59,6 @@ const JobsPostedScreen = ({ navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false); // State for modal visibility
   const [selectedJob, setSelectedJob] = useState(null);
-
   const cachedJobs = useRef([]);
 
   const { theme, themeStyles } = useTheme();
@@ -156,12 +155,17 @@ const JobsPostedScreen = ({ navigation }) => {
     const color = item.color;
     const jobId = item.id;
 
-    // Check if there are portfolio images attached to this job
-    const hasPortfolioImages =
-      item.attachedFiles && item.attachedFiles.length > 0;
-    const firstPortfolioImage = hasPortfolioImages
-      ? item.attachedFiles[0]
-      : null;
+    // Use the service object from backend
+    const jobService = item.service;
+
+    // Format the job posting date and time
+    const jobPostedDate = item.createdAt ? new Date(item.createdAt) : null;
+    const formattedDate = jobPostedDate
+      ? format(jobPostedDate, "MMM dd, yyyy")
+      : "";
+    const formattedTime = jobPostedDate ? format(jobPostedDate, "hh:mm a") : "";
+
+    console.log({ jobService });
 
     return (
       <TouchableOpacity
@@ -177,10 +181,10 @@ const JobsPostedScreen = ({ navigation }) => {
           });
         }}
       >
-        {hasPortfolioImages ? (
+        {jobService && jobService.imageUrl ? (
           <Image
-            source={{ uri: apiService.loadImageURI(firstPortfolioImage) }}
-            style={styles.avatar}
+            source={{ uri: apiService.loadImageURI(jobService.imageUrl) }}
+            style={[styles.avatar, styles.iconContainer]}
           />
         ) : (
           <View style={[styles.avatar, styles.iconContainer]}>
@@ -192,6 +196,16 @@ const JobsPostedScreen = ({ navigation }) => {
             {item.jobTitle}
           </Text>
           <Text style={styles.jobStatus}>Status: {item.priority}</Text>
+          {formattedDate && (
+            <Text style={styles.jobDate}>
+              Posted: {formattedDate} at {formattedTime}
+            </Text>
+          )}
+          {jobService && (
+            <Text style={styles.jobService} numberOfLines={1}>
+              Service: {jobService.name}
+            </Text>
+          )}
         </View>
         <TouchableOpacity
           style={styles.threedots}
@@ -367,7 +381,11 @@ const getStyles = (currentTheme) =>
       shadowOffset: { width: 0, height: 2 },
       shadowRadius: 5,
       elevation: 2,
-      height: 70,
+      minHeight: 90, // Increased height to accommodate more content
+      paddingVertical: 8,
+      paddingLeft: 8,
+      marginLeft: 3,
+      position: "relative",
     },
     avatar: {
       width: 80,
@@ -395,13 +413,26 @@ const getStyles = (currentTheme) =>
       fontSize: 14,
       color: currentTheme.text2 || "#6D6D6D",
     },
+    jobDate: {
+      fontSize: 12,
+      color: currentTheme.subText || "#8D8D8D",
+      marginTop: 2,
+    },
+    jobService: {
+      fontSize: 12,
+      color: "#6A0DAD",
+      marginTop: 2,
+      fontWeight: "500",
+    },
     statusIndicator: {
+      position: "absolute",
+      top: 0,
+      right: 0,
+      bottom: 0,
       width: 10,
-      height: "100%",
       borderTopRightRadius: 10,
       borderBottomRightRadius: 10,
       backgroundColor: currentTheme.accent || "#FF4500",
-      position: "relative",
     },
     threedots: {
       padding: 10,

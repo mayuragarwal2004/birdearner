@@ -113,7 +113,7 @@ const Bird = () => {
 
   const EmptyChat = () => (
     <View style={styles.emptyContainer}>
-      <Text style={styles.welcomeTitle}>Welcome to BirdBot! 🦜</Text>
+      <Text style={styles.welcomeTitle}>Welcome to BirdBot!</Text>
       <Text style={styles.welcomeSubtitle}>Your AI Assistant</Text>
       <Text style={styles.welcomeText}>I can help you with:</Text>
       <View style={styles.suggestionContainer}>

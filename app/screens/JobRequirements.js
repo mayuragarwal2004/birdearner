@@ -41,10 +41,11 @@ const JobRequirementsScreen = ({ navigation, route }) => {
   const [portfolioImages, setPortfolioImages] = useState([]);
   const [jobTitle, setJobTitle] = useState("");
   const [freelancerType, setFrelancerType] = useState("");
+  const [serviceId, setServiceId] = useState("");
   const [jobType, setJobType] = useState("Remote");
   const [latitude, setLatitude] = useState(null);
   const [longitude, setLongitude] = useState(null);
-  const [services, setServices] = useState([]);
+  const [services, setServices] = useState([]); // Store array of service objects
   const [isOnSite, setIsOnSite] = useState(false); // Default to Remote (false = Remote, true = On-site)
   const [refreshing, setRefreshing] = useState(false);
   const [locationLoading, setLocationLoading] = useState(false);
@@ -218,7 +219,10 @@ const JobRequirementsScreen = ({ navigation, route }) => {
     jobType,
     latitude,
     longitude,
+    serviceId,
   };
+
+  console.log({formData});
 
   const requestPermission = async () => {
     const { status } = await Location.requestForegroundPermissionsAsync();
@@ -241,11 +245,7 @@ const JobRequirementsScreen = ({ navigation, route }) => {
         console.log("Fetching services for category:", category);
         // console.log({services});
 
-        // Extract service names/roles from the response
-        const serviceNames = services.map(
-          (service) => service.name || service.role || service.title
-        );
-        setServices(serviceNames);
+  setServices(services); // Store the full service objects
       } catch (error) {
         console.error("Error fetching services:", error);
         Alert.alert("Error", "Failed to fetch services. Please try again.");
@@ -731,9 +731,13 @@ const JobRequirementsScreen = ({ navigation, route }) => {
 
         <Text style={styles.label}>Freelancer Type</Text>
         <CustomPicker
-          items={services.map((service) => ({ label: service, value: service }))}
-          value={freelancerType}
-          onValueChange={(itemValue) => setFrelancerType(itemValue)}
+          items={services.map((service) => ({ label: service.name || service.role || service.title, value: service.id }))}
+          value={serviceId}
+          onValueChange={(itemValue) => {
+            setServiceId(itemValue);
+            const selected = services.find(s => s.id === itemValue);
+            setFrelancerType(selected ? (selected.name || selected.role || selected.title) : "");
+          }}
           placeholder="Select Freelancer Type"
           style={styles.dropdownContainer}
           innerStyle={[

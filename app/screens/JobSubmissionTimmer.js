@@ -72,6 +72,7 @@ const JobSubmissionTimmerScreen = ({ route, navigation }) => {
         deadlineDate: new Date(formData.deadline),
         attachedFiles: uploadedUrls, // Send image URIs as is - backend will handle file upload
         location: formData.jobLocation,
+        serviceId: formData.serviceId,
       };
 
       console.log("Debug - Using clientId:", userProfile.id);
