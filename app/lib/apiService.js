@@ -1,8 +1,11 @@
 // API service for communicating with the Bird Earner Node.js backend
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const API_BASE_URL =
-  "https://tomorrow-do-unlike-jaguar.trycloudflare.com/api"; // Local development server
+const DEV_API_BASE_URL = "https://true-nutrition-parental-denmark.trycloudflare.com/api";
+
+const PROD_API_BASE_URL = "https://api.birdearner.com/api";
+
+const API_BASE_URL = __DEV__ ? DEV_API_BASE_URL : PROD_API_BASE_URL;
 
 // upload image categories are mentioned over here, above uploadImage function and in backend at /upload route
 /** @type {const} */

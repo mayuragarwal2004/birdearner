@@ -16,11 +16,15 @@ import { Ionicons, FontAwesome5 } from "@expo/vector-icons";
 import { useTheme } from "../context/ThemeContext";
 import apiService from "../lib/apiService";
 import Toast from "react-native-toast-message";
+import Constants from 'expo-constants';
 
-import { RAZORPAY_TEST_KEY, RAZORPAY_LIVE_KEY } from '@env';
+const expoConfig = Constants.expoConfig;
+const extra = expoConfig.extra;
+RAZORPAY_TEST_KEY = extra.RAZORPAY_TEST_KEY
+RAZORPAY_LIVE_KEY = extra.RAZORPAY_LIVE_KEY
 
 // Enable this for development environment to bypass Razorpay
-const DEV_MODE = __DEV__;
+const DEV_MODE = false;
 
 const PaymentScreen = ({ navigation }) => {
   const [paymentSuccess, setPaymentSuccess] = useState(false);
@@ -206,6 +210,7 @@ const PaymentScreen = ({ navigation }) => {
             ]}
           >
             <Text style={styles.label}>Enter Amount (₹)</Text>
+            <Text style={styles.label}>{userData?.isTestAccount ? "Test Account" : "Real Account"}</Text>
             <TextInput
               style={styles.input}
               placeholder="0.00"
