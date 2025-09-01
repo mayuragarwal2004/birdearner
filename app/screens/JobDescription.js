@@ -23,6 +23,7 @@ import apiService from "../lib/apiService";
 const JobDescriptionScreen = ({ route, navigation }) => {
   // Handler for Apply button
   const { job } = route.params || {};
+  const { userData } = useAuth();
   const handleApply = () => {
     // Extract required params
     const jobId = job.id || job.jobId;
@@ -31,7 +32,12 @@ const JobDescriptionScreen = ({ route, navigation }) => {
     navigation.navigate("FreelancerChat", { jobId, full_name, client });
   };
   console.log("Job data received:", job);
+
+  const canApply = job.client.user?.id !== userData?.id;
+
+  console.log({job});
   
+
   // Defensive fallback for missing job
   if (!job) {
     return (
@@ -356,8 +362,9 @@ const JobDescriptionScreen = ({ route, navigation }) => {
         {/* Action Buttons */}
         <View style={styles.actionContainer}>
           <TouchableOpacity
-            style={styles.applyActionButton}
+            style={[styles.applyActionButton, { opacity: canApply ? 1 : 0.6 }]}
             onPress={handleApply}
+            disabled={!canApply}
           >
             <Text style={styles.actionButtonText}>Apply for Job</Text>
           </TouchableOpacity>
@@ -444,7 +451,6 @@ const getStyles = (currentTheme) =>
       fontWeight: "bold",
       color: currentTheme.text || "#000",
       marginBottom: 8,
-      marginTop: 20,
     },
     jobDescription: {
       backgroundColor: currentTheme.cardBackground || "#f9f9f9",
