@@ -17,6 +17,7 @@ export default {
       backgroundColor: "#4B0082",
     },
     ios: {
+      buildNumber: "29",
       bundleIdentifier: "com.birdearner.birdearner",
       supportsTablet: false,
       googleServicesFile: "./GoogleService-Info.plist",

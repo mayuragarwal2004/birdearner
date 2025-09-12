@@ -288,7 +288,7 @@ const ClientHomeScreen = () => {
                   const jobId = jobDetails?.$id || null;
 
                   // Get the service for this job
-                  const jobService = jobDetails.service;
+                  const jobService = jobDetails?.service;
 
                   console.log({ jobService });
 
