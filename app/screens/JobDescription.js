@@ -235,11 +235,6 @@ const JobDescriptionScreen = ({ route, navigation }) => {
                   📍 {job.client.companyName}
                 </Text>
               )}
-              {job.client.user?.email && (
-                <Text style={styles.clientLocation}>
-                  Email: {job.client.user?.email}
-                </Text>
-              )}
             </View>
           </View>
         )}
@@ -264,6 +259,24 @@ const JobDescriptionScreen = ({ route, navigation }) => {
             </Text>
           </>
         ) : null}
+
+        {/* Payment Type Indicator */}
+        <View style={styles.paymentTypeContainer}>
+          <View style={[
+            styles.paymentTypeBadge,
+            job.paymentMethod === 'PLATFORM' ? styles.platformPayment : styles.cashPayment
+          ]}>
+            <FontAwesome
+              name={job.paymentMethod === 'PLATFORM' ? 'credit-card' : 'money'}
+              size={18}
+              color="#FFF"
+              style={styles.paymentIcon}
+            />
+            <Text style={styles.paymentTypeText}>
+              {job.paymentMethod === 'PLATFORM' ? 'Platform Payment' : 'Cash Payment'}
+            </Text>
+          </View>
+        </View>
 
         {/* Job Details Grid */}
         <View style={styles.detailsGrid}>
@@ -313,19 +326,6 @@ const JobDescriptionScreen = ({ route, navigation }) => {
           )}
         </View>
 
-        {/* Additional Details */}
-        {job.experienceLevel && (
-          <Text style={styles.detailText}>
-            <Text style={styles.boldText}>Experience Level: </Text>
-            {job.experienceLevel}
-          </Text>
-        )}
-        {job.projectDuration && (
-          <Text style={styles.detailText}>
-            <Text style={styles.boldText}>Project Duration: </Text>
-            {job.projectDuration}
-          </Text>
-        )}
         {job.budgetType && (
           <Text style={styles.detailText}>
             <Text style={styles.boldText}>Payment Type: </Text>
@@ -474,7 +474,7 @@ const getStyles = (currentTheme) =>
       flexDirection: "row",
       flexWrap: "wrap",
       justifyContent: "space-between",
-      marginVertical: 15,
+      marginTop: 15,
     },
     detailItem: {
       width: "48%",
@@ -511,7 +511,7 @@ const getStyles = (currentTheme) =>
       backgroundColor: currentTheme.cardBackground || "#f9f9f9",
       padding: 15,
       borderRadius: 12,
-      marginVertical: 15,
+      marginBottom: 15,
     },
     statusItem: {
       flex: 1,
@@ -576,6 +576,42 @@ const getStyles = (currentTheme) =>
       color: "#fff",
       fontSize: 16,
       fontWeight: "600",
+    },
+    paymentTypeContainer: {
+      marginBottom: 15,
+      marginTop: 5,
+      paddingHorizontal: 2,
+    },
+    paymentTypeBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 15,
+      paddingVertical: 10,
+      borderRadius: 25,
+      alignSelf: 'flex-start',
+      elevation: 2,
+      shadowColor: '#000',
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.15,
+      shadowRadius: 3,
+    },
+    platformPayment: {
+      backgroundColor: '#4CAF50', // Green for platform payment
+    },
+    cashPayment: {
+      backgroundColor: '#FF9800', // Orange for cash payment
+    },
+    paymentTypeText: {
+      color: '#FFF',
+      fontSize: 15,
+      fontWeight: '600',
+      marginLeft: 8,
+    },
+    paymentIcon: {
+      marginRight: 4,
     },
   });
 

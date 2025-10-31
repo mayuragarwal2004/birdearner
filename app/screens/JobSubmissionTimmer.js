@@ -64,15 +64,16 @@ const JobSubmissionTimmerScreen = ({ route, navigation }) => {
         jobCategory: formData.freelancerType,
         jobSubCategory: formData.freelancerType, // Using the same value for now
         skillsRequired: formData.skills,
-        experienceLevel: "Intermediate", // Default value
         projectType: formData.jobType,
-        projectDuration: "1-3 months", // Default value
         budgetType: "Fixed", // Default value
         budgetAmount: parseFloat(formData.budget),
         deadlineDate: new Date(formData.deadline),
         attachedFiles: uploadedUrls, // Send image URIs as is - backend will handle file upload
         location: formData.jobLocation,
         serviceId: formData.serviceId,
+        paymentMethod: formData.paymentMethod || 'PLATFORM',
+        birdFeeAmount: parseFloat(formData.birdFeeAmount),
+        birdFeePaid: formData.paymentMethod === 'PLATFORM' // Set to true if using platform payment
       };
 
       console.log("Debug - Using clientId:", userProfile.id);

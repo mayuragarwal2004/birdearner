@@ -805,6 +805,7 @@ const ClientChat = ({ route, navigation }) => {
               value={input}
               onChangeText={setInput}
               placeholder="Type your message..."
+              placeholderTextColor={currentTheme.subText || "#666"}
               maxLength={characterLimit || undefined}
             />
             {!fileContent && (

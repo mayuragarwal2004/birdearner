@@ -18,7 +18,7 @@ export default function PickerModal({
   const [searchQuery, setSearchQuery] = useState('');
   
   const filteredItems = items.filter(item => 
-    item.label.toLowerCase().includes(searchQuery.toLowerCase())
+    item.label.toLowerCase().includes(searchQuery ? searchQuery.toLowerCase() : '')
   );
 
   const selectedLabel = items.find((item) => item.value === value)?.label;

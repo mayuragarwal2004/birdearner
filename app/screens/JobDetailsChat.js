@@ -89,8 +89,6 @@ const JobDetailsChatScreen = ({ route, navigation }) => {
                 .join(", "),
             }
           : null,
-        experienceLevel: apiJob.experienceLevel,
-        duration: apiJob.projectDuration,
         paymentType: apiJob.budgetType,
         location: apiJob.location,
         category: apiJob.jobCategory,
@@ -311,6 +309,24 @@ const JobDetailsChatScreen = ({ route, navigation }) => {
           </>
         )}
 
+        {/* Payment Type Indicator */}
+        <View style={styles.paymentTypeContainer}>
+          <View style={[
+            styles.paymentTypeBadge,
+            job.paymentType === 'PLATFORM' ? styles.platformPayment : styles.cashPayment
+          ]}>
+            <FontAwesome
+              name={job.paymentType === 'PLATFORM' ? 'credit-card' : 'money'}
+              size={18}
+              color="#FFF"
+              style={styles.paymentIcon}
+            />
+            <Text style={styles.paymentTypeText}>
+              {job.paymentType === 'PLATFORM' ? 'Platform Payment' : 'Cash Payment'}
+            </Text>
+          </View>
+        </View>
+
         {/* Job Details Grid */}
         <View style={styles.detailsGrid}>
           <View style={styles.detailItem}>
@@ -354,21 +370,6 @@ const JobDetailsChatScreen = ({ route, navigation }) => {
             </View>
           )}
         </View>
-
-        {/* Additional Details */}
-        {job.experienceLevel && (
-          <Text style={styles.detailText}>
-            <Text style={styles.boldText}>Experience Level: </Text>
-            {job.experienceLevel}
-          </Text>
-        )}
-
-        {job.duration && (
-          <Text style={styles.detailText}>
-            <Text style={styles.boldText}>Project Duration: </Text>
-            {job.duration}
-          </Text>
-        )}
 
         {job.paymentType && (
           <Text style={styles.detailText}>
@@ -628,6 +629,41 @@ const getStyles = (currentTheme = {}) =>
       color: "#fff",
       fontSize: 16,
       fontWeight: "600",
+    },
+    paymentTypeContainer: {
+      marginBottom: 15,
+      marginTop: 5,
+    },
+    paymentTypeBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 15,
+      paddingVertical: 10,
+      borderRadius: 25,
+      alignSelf: 'flex-start',
+      elevation: 2,
+      shadowColor: '#000',
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.15,
+      shadowRadius: 3,
+    },
+    platformPayment: {
+      backgroundColor: '#4CAF50', // Green for platform payment
+    },
+    cashPayment: {
+      backgroundColor: '#FF9800', // Orange for cash payment
+    },
+    paymentTypeText: {
+      color: '#FFF',
+      fontSize: 15,
+      fontWeight: '600',
+      marginLeft: 8,
+    },
+    paymentIcon: {
+      marginRight: 4,
     },
   });
 

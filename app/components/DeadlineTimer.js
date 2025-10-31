@@ -41,7 +41,7 @@ const DeadlineTimer = ({ deadline, jobCompleted, style }) => {
 
   return (
     <View>
-      Deadline Timer
+      <Text style={styles.label}>Deadline Timer</Text>
       <View style={[styles.timeContainer, style?.timeContainer]}>
         {timeLeft.split(" ").map((timePart, index) => {
           const unit = timePart.slice(-1);
@@ -61,6 +61,12 @@ const DeadlineTimer = ({ deadline, jobCompleted, style }) => {
 };
 
 const styles = StyleSheet.create({
+  label: {
+    fontSize: 14,
+    fontWeight: "500",
+    marginBottom: 5,
+    textAlign: "center",
+  },
   timeContainer: {
     flexDirection: "row",
     alignItems: "center",

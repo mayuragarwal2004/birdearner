@@ -78,7 +78,7 @@ const ClientChatList = () => {
 
   const renderChatThread = ({ item }) => {
     const job = item.job || {};
-    const freelancerName = item.freelancer?.user.fullName || "Unknown mayur";
+    const freelancerName = item.freelancer?.user.fullName || "Unknown";
     const lastMessage = item.lastMessage || "No messages yet";
     const profileImage = item.freelancer?.profilePhoto
       ? { uri: apiService.loadImageURI(item.freelancer.profilePhoto) }

@@ -86,13 +86,24 @@ const JobDetailsScreen = ({ route, navigation }) => {
                 <Text style={styles.boldText}>Budget </Text> Rs.{" "}
                 {formData.budget}/-
               </Text>
+              <View style={styles.paymentMethodContainer}>
+                <Text style={styles.boldText}>Payment Method</Text>
+                <View style={[
+                  styles.paymentMethodBadge,
+                  formData.paymentMethod === 'PLATFORM' ? styles.platformBadge : styles.cashBadge
+                ]}>
+                  <FontAwesome
+                    name={formData.paymentMethod === 'PLATFORM' ? 'credit-card' : 'money'}
+                    size={16}
+                    color="#fff"
+                    style={styles.paymentIcon}
+                  />
+                  <Text style={styles.paymentMethodText}>
+                    {formData.paymentMethod === 'PLATFORM' ? 'Platform Payment' : 'Direct Cash Payment'}
+                  </Text>
+                </View>
+              </View>
             </View>
-            <FontAwesome
-              name="flag"
-              size={20}
-              color={currentTheme.text || "black"}
-              style={styles.flagIcon}
-            />
           </View>
         </View>
 
@@ -132,18 +143,7 @@ const JobDetailsScreen = ({ route, navigation }) => {
           <TouchableOpacity style={styles.conColor} onPress={handleSubmit}>
             <Text style={styles.applyButtonText}>Confirm Job</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.repColor}
-            onPress={() =>
-              Alert.alert("Report Job", "You have reported this job")
-            }
-          >
-            <Text style={styles.applyButtonText}>Report Job</Text>
-          </TouchableOpacity>
         </View>
-
-        {/* Report Job Link */}
-        <Text style={styles.reportText}>Share this job</Text>
       </ScrollView>
     </ScrollView>
   );
@@ -187,9 +187,6 @@ const getStyles = (currentTheme) =>
     jobTitlebar: {
       flex: 1,
       gap: 10,
-    },
-    flagIcon: {
-      marginLeft: 10,
     },
     jobDetails: {
       backgroundColor: currentTheme.subText || "#f9f9f9",
@@ -301,6 +298,33 @@ const getStyles = (currentTheme) =>
       textAlign: "center",
       textDecorationLine: "underline",
       fontSize: 14,
+    },
+    paymentMethodContainer: {
+      marginVertical: 10,
+    },
+    paymentMethodBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 8,
+      marginTop: 5,
+      width: 'auto',
+      alignSelf: 'flex-start',
+    },
+    platformBadge: {
+      backgroundColor: '#4CAF50',  // Green for platform payment
+    },
+    cashBadge: {
+      backgroundColor: '#FF9800',  // Orange for cash payment
+    },
+    paymentMethodText: {
+      color: '#fff',
+      fontWeight: '600',
+      fontSize: 14,
+    },
+    paymentIcon: {
+      marginRight: 8,
     },
   });
 

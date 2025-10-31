@@ -425,7 +425,9 @@ const FreelancerSignup = ({ navigation, route }) => {
       try {
         setServicesLoading(true);
         await apiService.init();
-        const services = await apiService.getServicesByCategory("freelance");
+        const services = await apiService.getAllServices();
+        console.log(JSON.stringify(services, null, 2));
+        
         setAvailableServices(services);
         setFilteredServices([]); // Start with empty filtered services
       } catch (error) {

@@ -38,6 +38,7 @@ const JobRequirementsScreen = ({ navigation, route }) => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [skills, setSkills] = useState([""]);
   const [jobDes, setJobDes] = useState("");
+  
   const [portfolioImages, setPortfolioImages] = useState([]);
   const [jobTitle, setJobTitle] = useState("");
   const [freelancerType, setFrelancerType] = useState("");
@@ -49,6 +50,7 @@ const JobRequirementsScreen = ({ navigation, route }) => {
   const [isOnSite, setIsOnSite] = useState(false); // Default to Remote (false = Remote, true = On-site)
   const [refreshing, setRefreshing] = useState(false);
   const [locationLoading, setLocationLoading] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState("PLATFORM"); // 'PLATFORM' or 'CASH'
   const [showMapModal, setShowMapModal] = useState(false);
   const [mapRegion, setMapRegion] = useState({
     latitude: 37.78825,
@@ -67,6 +69,15 @@ const JobRequirementsScreen = ({ navigation, route }) => {
   const currentTheme = themeStyles[theme];
 
   const styles = getStyles(currentTheme);
+
+  useEffect(() => {
+    validateBudget(budget);
+  
+    return () => {
+      setBudgetError("");
+    };
+  }, [paymentMethod]);
+  
 
   useFocusEffect(
     useCallback(() => {
@@ -142,24 +153,41 @@ const JobRequirementsScreen = ({ navigation, route }) => {
     const budgetNum = parseFloat(budgetValue);
     setBudgetError("");
     setBudgetValidating(false);
+    const selected = services.find((s) => s.id === serviceId);
+    // verify if budgetNum is within service min/max from the service.birdFee.minimumBudget and service.birdFee.maximumBudget. Please take care, either all or both can be available and may not be available slo
+
 
     if (!budgetValue || isNaN(budgetNum) || budgetNum <= 0) {
       setBudgetError("Please enter a valid budget amount");
       return false;
     }
 
-    if (!walletData) {
-      setBudgetError("Unable to verify wallet balance. Please try again.");
-      return false;
+    if (selected) {
+      const { birdFee } = selected;
+      const minBudget = birdFee?.minimumBudget || 0;
+      const maxBudget = birdFee?.maximumBudget || Infinity;
+
+      if (budgetNum < minBudget || budgetNum > maxBudget) {
+        setBudgetError(
+          `Budget must be between ₹${minBudget.toFixed(2)} and ₹${maxBudget.toFixed(2)}`
+        );
+        return false;
+      }
     }
 
-    if (budgetNum > walletData.availableBalance) {
-      setBudgetError(
-        `Insufficient balance. Available: ₹${walletData.availableBalance?.toFixed(
-          2
-        )}`
-      );
-      return false;
+    // Only validate wallet balance for platform payment
+    if (paymentMethod === "PLATFORM") {
+      if (!walletData) {
+        setBudgetError("Unable to verify wallet balance. Please try again.");
+        return false;
+      }
+
+      if (budgetNum > walletData.availableBalance) {
+        setBudgetError(
+          `Insufficient balance. \nRequired: ₹${budgetNum.toFixed(2)}. \nAvailable: ₹${walletData.availableBalance?.toFixed(2)}`
+        );
+        return false;
+      }
     }
 
     return true;
@@ -220,9 +248,9 @@ const JobRequirementsScreen = ({ navigation, route }) => {
     latitude,
     longitude,
     serviceId,
+    paymentMethod,
   };
-
-  console.log({formData});
+  console.log({ formData });
 
   const requestPermission = async () => {
     const { status } = await Location.requestForegroundPermissionsAsync();
@@ -243,9 +271,9 @@ const JobRequirementsScreen = ({ navigation, route }) => {
         const category = isOnSite ? "household" : "freelance";
         const services = await apiService.getServicesByCategory(category);
         console.log("Fetching services for category:", category);
-        // console.log({services});
+        console.log(JSON.stringify(services, null, 4));
 
-  setServices(services); // Store the full service objects
+        setServices(services); // Store the full service objects
       } catch (error) {
         console.error("Error fetching services:", error);
         Alert.alert("Error", "Failed to fetch services. Please try again.");
@@ -567,6 +595,7 @@ const JobRequirementsScreen = ({ navigation, route }) => {
         // For remote jobs, set default location data
         const updatedFormData = {
           ...formData,
+          paymentMethod,
           jobLocation: "Remote Work",
           latitude: 0,
           longitude: 0,
@@ -731,12 +760,17 @@ const JobRequirementsScreen = ({ navigation, route }) => {
 
         <Text style={styles.label}>Freelancer Type</Text>
         <CustomPicker
-          items={services.map((service) => ({ label: service.name || service.role || service.title, value: service.id }))}
+          items={services.map((service) => ({
+            label: service.name || service.role || service.title,
+            value: service.id,
+          }))}
           value={serviceId}
           onValueChange={(itemValue) => {
             setServiceId(itemValue);
-            const selected = services.find(s => s.id === itemValue);
-            setFrelancerType(selected ? (selected.name || selected.role || selected.title) : "");
+            const selected = services.find((s) => s.id === itemValue);
+            setFrelancerType(
+              selected ? selected.name || selected.role || selected.title : ""
+            );
           }}
           placeholder="Select Freelancer Type"
           style={styles.dropdownContainer}
@@ -746,6 +780,33 @@ const JobRequirementsScreen = ({ navigation, route }) => {
           ]}
           textStyle={{ color: currentTheme.text }}
         />
+
+        <View style={styles.paymentMethodSection}>
+          <Text style={styles.label}>Payment Method</Text>
+          <View style={styles.paymentOptions}>
+            <TouchableOpacity
+              style={[
+                styles.paymentButton,
+                paymentMethod === "PLATFORM" && styles.selectedPayment,
+              ]}
+              onPress={() => setPaymentMethod("PLATFORM")}
+            >
+              <Text style={styles.paymentButtonText}>Platform Payment</Text>
+              <Text style={styles.paymentSubtext}>Pay through BirdEarner</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.paymentButton,
+                paymentMethod === "CASH" && styles.selectedPayment,
+              ]}
+              onPress={() => setPaymentMethod("CASH")}
+            >
+              <Text style={styles.paymentButtonText}>Cash Payment</Text>
+              <Text style={styles.paymentSubtext}>Pay directly in cash</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
 
         <View style={styles.row}>
           <View>
@@ -808,18 +869,16 @@ const JobRequirementsScreen = ({ navigation, route }) => {
               </View>
             )}
 
-            <TextInput
-              placeholderTextColor="#999999"
-              style={[styles.input, budgetError ? styles.inputError : null]}
-              placeholder={
-                walletData
-                  ? `Max: ₹${walletData.availableBalance?.toFixed(2)}`
-                  : "Enter budget amount"
-              }
-              keyboardType="numeric"
-              value={budget}
-              onChangeText={handleBudgetChange}
-            />
+            <View>
+              <TextInput
+                placeholderTextColor="#999999"
+                style={[styles.input, budgetError ? styles.inputError : null, { marginBottom: 0 }]}
+                placeholder="Enter budget amount"
+                keyboardType="numeric"
+                value={budget}
+                onChangeText={handleBudgetChange}
+              />
+            </View>
 
             {budgetError ? (
               <View style={styles.errorContainer}>
@@ -851,7 +910,9 @@ const JobRequirementsScreen = ({ navigation, route }) => {
               </View>
             ) : (
               budget &&
-              walletData && (
+              walletData &&
+              paymentMethod === "PLATFORM" &&
+               (
                 <View style={styles.budgetValidationContainer}>
                   <View style={styles.budgetValidationRow}>
                     <Ionicons
@@ -1049,18 +1110,18 @@ const getStyles = (currentTheme) =>
       borderRadius: 12,
       height: 50,
       borderWidth: 1,
-      borderColor: currentTheme.border || '#ccc',
+      borderColor: currentTheme.border || "#ccc",
     },
     picker: {
-      backgroundColor: 'transparent',
-      marginLeft: Platform.OS === 'android' ? -10 : 0,
+      backgroundColor: "transparent",
+      marginLeft: Platform.OS === "android" ? -10 : 0,
       height: 50,
-      width: '100%'
+      width: "100%",
     },
     pickerItem: {
       color: currentTheme.text,
       backgroundColor: currentTheme.background3,
-      fontSize: 14
+      fontSize: 14,
     },
     label: {
       color: currentTheme.text || "000",
@@ -1461,6 +1522,90 @@ const getStyles = (currentTheme) =>
       fontSize: 12,
       color: "#28A745",
       fontWeight: "500",
+    },
+    // Payment Method Styles
+    paymentMethodSection: {
+      marginTop: 15,
+      marginBottom: 15,
+    },
+    paymentOptions: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      gap: 10,
+      marginTop: 8,
+    },
+    paymentButton: {
+      flex: 1,
+      padding: 15,
+      borderRadius: 8,
+      backgroundColor: "#f8f9fa",
+      borderWidth: 1,
+      borderColor: "#e9ecef",
+      alignItems: "center",
+    },
+    selectedPayment: {
+      borderColor: "#6A0DAD",
+      backgroundColor: "#f8f4ff",
+    },
+    paymentButtonText: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: "#343a40",
+      marginBottom: 4,
+    },
+    paymentSubtext: {
+      fontSize: 12,
+      color: "#6c757d",
+      textAlign: "center",
+    },
+    feeContainer: {
+      marginTop: 4,
+      paddingHorizontal: 5,
+      backgroundColor: "#f8f9fa",
+      padding: 10,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: "#e9ecef",
+    },
+    feeText: {
+      fontSize: 12,
+      color: "#6c757d",
+      marginBottom: 2,
+    },
+    feeTotalText: {
+      fontSize: 14,
+      color: "#343a40",
+      fontWeight: "600",
+    },
+    feeBreakdown: {
+      marginTop: 8,
+      borderTopWidth: 1,
+      borderTopColor: "#e9ecef",
+      paddingTop: 8,
+    },
+    feeRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 4,
+    },
+    feeLabel: {
+      fontSize: 12,
+      color: "#6c757d",
+    },
+    feeAmount: {
+      fontSize: 12,
+      color: "#343a40",
+      fontWeight: "500",
+    },
+    feeTotalRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginTop: 8,
+      paddingTop: 8,
+      borderTopWidth: 1,
+      borderTopColor: "#e9ecef",
     },
   });
 

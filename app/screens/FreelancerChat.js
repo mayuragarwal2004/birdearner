@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
   Platform,
 } from "react-native";
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../context/NewAuthContext";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
@@ -428,20 +428,19 @@ const FreelancerChat = ({ route, navigation }) => {
         </Modal>
 
         <View style={styles.header}>
-                  <TouchableOpacity
-                    onPress={() => navigation.goBack()}
-                    style={styles.backButton}
-                  >
-                    <Ionicons
-                      name="arrow-back"
-                      size={24}
-                      color={currentTheme.text || "black"}
-                    />
-                  </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
+          >
+            <Ionicons
+              name="arrow-back"
+              size={24}
+              color={currentTheme.text || "black"}
+            />
+          </TouchableOpacity>
           <View style={styles.headerData}>
-            <Text style={styles.profile}>Tap for contact details</Text>
-            <Text style={styles.username}>@{full_name}</Text>
-            <Text style={styles.profile}>Last online 3 hrs ago</Text>
+            <Text style={styles.username}>{full_name}</Text>
+            {/* <Text style={styles.profile}>Last online 3 hrs ago</Text> */}
             <View
               style={[
                 styles.statusContainer,
@@ -562,6 +561,7 @@ const FreelancerChat = ({ route, navigation }) => {
               value={input}
               onChangeText={setInput}
               placeholder="Type your message..."
+              placeholderTextColor={currentTheme.subText || "#666"}
               maxLength={characterLimit || undefined}
             />
             {!fileContent && (
@@ -825,9 +825,11 @@ const getStyles = (currentTheme) =>
       flex: 1,
       padding: 10,
       borderWidth: 1,
-      borderColor: currentTheme.background3 || "#ddd",
+      borderColor: currentTheme.border || "#ddd",
       borderRadius: 5,
-      color: currentTheme.subText,
+      color: currentTheme.text || "#000",
+      backgroundColor: currentTheme.background || "#fff",
+      // placeholderTextColor needs to be a prop, not a style
     },
     attachButton: {
       padding: 10,

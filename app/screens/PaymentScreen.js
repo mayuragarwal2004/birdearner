@@ -24,7 +24,7 @@ RAZORPAY_TEST_KEY = extra.RAZORPAY_TEST_KEY
 RAZORPAY_LIVE_KEY = extra.RAZORPAY_LIVE_KEY
 
 // Enable this for development environment to bypass Razorpay
-const DEV_MODE = false;
+const DEV_MODE = true;
 
 const PaymentScreen = ({ navigation }) => {
   const [paymentSuccess, setPaymentSuccess] = useState(false);

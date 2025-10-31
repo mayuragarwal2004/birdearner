@@ -30,7 +30,7 @@ const categorizeJobs = (jobs) => {
     const proposalCount = job.proposalCount || 0;
 
     if (proposalCount === 0) {
-      priority = "Under process";
+      priority = job.jobStatus;
     } else if (proposalCount === 1) {
       priority = `${proposalCount} Entry Received`;
     } else {
