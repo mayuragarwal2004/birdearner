@@ -135,8 +135,8 @@ const ClientChat = ({ route, navigation }) => {
           freelancerId: freelancer.id,
           jobStatus: "IN_PROGRESS",
           deadlineDate: new Date(
-            Date.now() + parseInt(job.projectDuration) * 24 * 60 * 60 * 1000
-          ), // Convert project duration to milliseconds
+            parseInt(job.deadlineDate) * 24 * 60 * 60 * 1000
+          ), // Convert deadline date to milliseconds
         }),
       });
 

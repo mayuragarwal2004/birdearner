@@ -1,7 +1,7 @@
 // API service for communicating with the Bird Earner Node.js backend
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const DEV_API_BASE_URL = "https://held-reply-valuation-quote.trycloudflare.com/api";
+const DEV_API_BASE_URL = "https://promptly-julie-alliance-ocean.trycloudflare.com/api";
 
 const PROD_API_BASE_URL = "https://api.birdearner.com/api";
 

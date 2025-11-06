@@ -286,6 +286,14 @@ const JobDescriptionScreen = ({ route, navigation }) => {
               {formatCurrency(job.budgetAmount || job.budget)}
             </Text>
           </View>
+          {job.birdFeeAmount > 0 && (
+            <View style={styles.detailItem}>
+              <Text style={styles.detailLabel}>Service Fee</Text>
+              <Text style={[styles.detailValue, styles.feeText]}>
+                {formatCurrency(job.birdFeeAmount)}
+              </Text>
+            </View>
+          )}
           <View style={styles.detailItem}>
             <Text style={styles.detailLabel}>Deadline</Text>
             <Text style={styles.detailValue}>
@@ -473,7 +481,7 @@ const getStyles = (currentTheme) =>
     detailsGrid: {
       flexDirection: "row",
       flexWrap: "wrap",
-      justifyContent: "space-between",
+      gap: 10,
       marginTop: 15,
     },
     detailItem: {
@@ -482,6 +490,10 @@ const getStyles = (currentTheme) =>
       padding: 12,
       borderRadius: 8,
       marginBottom: 10,
+    },
+    feeText: {
+      color: currentTheme.primary || '#4e2587',
+      fontWeight: '600',
     },
     detailLabel: {
       fontSize: 16,

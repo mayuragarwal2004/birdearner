@@ -26,6 +26,8 @@ import { useAuth } from "../context/NewAuthContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
 
+const { calculateBirdFee } = require('../utils/feeCalculator');
+
 const JobRequirementsScreen = ({ navigation, route }) => {
   const [jobLocation, setJobLocation] = useState("");
   const [deadline, setDeadline] = useState(new Date());
@@ -38,6 +40,7 @@ const JobRequirementsScreen = ({ navigation, route }) => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [skills, setSkills] = useState([""]);
   const [jobDes, setJobDes] = useState("");
+  const [calculatedBirdFee, setCalculatedBirdFee] = useState(null);
   
   const [portfolioImages, setPortfolioImages] = useState([]);
   const [jobTitle, setJobTitle] = useState("");
@@ -154,8 +157,7 @@ const JobRequirementsScreen = ({ navigation, route }) => {
     setBudgetError("");
     setBudgetValidating(false);
     const selected = services.find((s) => s.id === serviceId);
-    // verify if budgetNum is within service min/max from the service.birdFee.minimumBudget and service.birdFee.maximumBudget. Please take care, either all or both can be available and may not be available slo
-
+    // Calculate bird fee based on the budget amount
 
     if (!budgetValue || isNaN(budgetNum) || budgetNum <= 0) {
       setBudgetError("Please enter a valid budget amount");
@@ -173,6 +175,19 @@ const JobRequirementsScreen = ({ navigation, route }) => {
         );
         return false;
       }
+
+      // Calculate bird fee but don't display it
+      const feeResult = calculateBirdFee(budgetNum, birdFee);
+      
+      if (!feeResult.isValid) {
+        setBudgetError(feeResult.error);
+        setCalculatedBirdFee(null);
+        return false;
+      }
+      
+      // Store the calculated fee for later use
+      setCalculatedBirdFee(feeResult);
+      return true;
     }
 
     // Only validate wallet balance for platform payment
@@ -249,6 +264,7 @@ const JobRequirementsScreen = ({ navigation, route }) => {
     longitude,
     serviceId,
     paymentMethod,
+    birdFeeAmount: calculatedBirdFee ? calculatedBirdFee.feeAmount : null,
   };
   console.log({ formData });
 
