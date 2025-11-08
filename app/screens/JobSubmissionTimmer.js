@@ -70,6 +70,8 @@ const JobSubmissionTimmerScreen = ({ route, navigation }) => {
         deadlineDate: new Date(formData.deadline),
         attachedFiles: uploadedUrls, // Send image URIs as is - backend will handle file upload
         location: formData.jobLocation,
+        latitude: formData.latitude,
+        longitude: formData.longitude,
         serviceId: formData.serviceId,
         paymentMethod: formData.paymentMethod || 'PLATFORM',
         birdFeeAmount: parseFloat(formData.birdFeeAmount),

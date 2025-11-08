@@ -8,23 +8,27 @@
  * @returns {Object} Object containing fee amount and rule details
  */
 export const calculateBirdFee = (budget, birdFee) => {
+  // If no fee structure exists, return valid response with zero fee
   if (!birdFee || !birdFee.feeStructure) {
     return {
       feeAmount: 0,
       applicableRule: null,
-      isValid: false,
-      error: 'Invalid fee structure'
+      isValid: true,
+      error: null,
+      displayText: 'No service fee'
     };
   }
 
-  // Validate budget against min/max constraints
-  if (budget < birdFee.minimumBudget || budget > birdFee.maximumBudget) {
-    return {
-      feeAmount: 0,
-      applicableRule: null,
-      isValid: false,
-      error: `Budget must be between ₹${birdFee.minimumBudget} and ₹${birdFee.maximumBudget}`
-    };
+  // Validate budget against min/max constraints only if they exist
+  if (birdFee.minimumBudget !== undefined && birdFee.maximumBudget !== undefined) {
+    if (budget < birdFee.minimumBudget || budget > birdFee.maximumBudget) {
+      return {
+        feeAmount: 0,
+        applicableRule: null,
+        isValid: false,
+        error: `Budget must be between ₹${birdFee.minimumBudget} and ₹${birdFee.maximumBudget}`
+      };
+    }
   }
 
   // Find the applicable fee rule

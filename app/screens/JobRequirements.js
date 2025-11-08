@@ -26,7 +26,7 @@ import { useAuth } from "../context/NewAuthContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
 
-const { calculateBirdFee } = require('../utils/feeCalculator');
+const { calculateBirdFee } = require("../utils/feeCalculator");
 
 const JobRequirementsScreen = ({ navigation, route }) => {
   const [jobLocation, setJobLocation] = useState("");
@@ -41,7 +41,7 @@ const JobRequirementsScreen = ({ navigation, route }) => {
   const [skills, setSkills] = useState([""]);
   const [jobDes, setJobDes] = useState("");
   const [calculatedBirdFee, setCalculatedBirdFee] = useState(null);
-  
+
   const [portfolioImages, setPortfolioImages] = useState([]);
   const [jobTitle, setJobTitle] = useState("");
   const [freelancerType, setFrelancerType] = useState("");
@@ -75,12 +75,11 @@ const JobRequirementsScreen = ({ navigation, route }) => {
 
   useEffect(() => {
     validateBudget(budget);
-  
+
     return () => {
       setBudgetError("");
     };
   }, [paymentMethod]);
-  
 
   useFocusEffect(
     useCallback(() => {
@@ -171,20 +170,22 @@ const JobRequirementsScreen = ({ navigation, route }) => {
 
       if (budgetNum < minBudget || budgetNum > maxBudget) {
         setBudgetError(
-          `Budget must be between ₹${minBudget.toFixed(2)} and ₹${maxBudget.toFixed(2)}`
+          `Budget must be between ₹${minBudget.toFixed(
+            2
+          )} and ₹${maxBudget.toFixed(2)}`
         );
         return false;
       }
 
       // Calculate bird fee but don't display it
       const feeResult = calculateBirdFee(budgetNum, birdFee);
-      
+
       if (!feeResult.isValid) {
         setBudgetError(feeResult.error);
         setCalculatedBirdFee(null);
         return false;
       }
-      
+
       // Store the calculated fee for later use
       setCalculatedBirdFee(feeResult);
       return true;
@@ -199,7 +200,9 @@ const JobRequirementsScreen = ({ navigation, route }) => {
 
       if (budgetNum > walletData.availableBalance) {
         setBudgetError(
-          `Insufficient balance. \nRequired: ₹${budgetNum.toFixed(2)}. \nAvailable: ₹${walletData.availableBalance?.toFixed(2)}`
+          `Insufficient balance. \nRequired: ₹${budgetNum.toFixed(
+            2
+          )}. \nAvailable: ₹${walletData.availableBalance?.toFixed(2)}`
         );
         return false;
       }
@@ -305,12 +308,12 @@ const JobRequirementsScreen = ({ navigation, route }) => {
       // Refresh services
       const category = isOnSite ? "household" : "freelance";
       const services = await apiService.getServicesByCategory(category);
-      // console.log("Refreshing services for category:", category);
 
       // Extract service names/roles from the response
-      const serviceNames = services.map(
-        (service) => service.name || service.role || service.title
-      );
+      const serviceNames = services.map((service) => ({
+        name: service.name,
+        id: service.id,
+      }));
       setServices(serviceNames);
 
       // Refresh wallet data
@@ -774,28 +777,38 @@ const JobRequirementsScreen = ({ navigation, route }) => {
           </View>
         )}
 
+        {console.log({ services })}
+
         <Text style={styles.label}>Freelancer Type</Text>
-        <CustomPicker
-          items={services.map((service) => ({
-            label: service.name || service.role || service.title,
-            value: service.id,
-          }))}
-          value={serviceId}
-          onValueChange={(itemValue) => {
-            setServiceId(itemValue);
-            const selected = services.find((s) => s.id === itemValue);
-            setFrelancerType(
-              selected ? selected.name || selected.role || selected.title : ""
-            );
-          }}
-          placeholder="Select Freelancer Type"
-          style={styles.dropdownContainer}
-          innerStyle={[
-            styles.dropdown,
-            { backgroundColor: currentTheme.background3 },
-          ]}
-          textStyle={{ color: currentTheme.text }}
-        />
+        {services && Array.isArray(services) ? (
+          <CustomPicker
+            items={
+              services && Array.isArray(services)
+                ? services.map((service) => ({
+                    label: service.name || service.role || service.title,
+                    value: service.id,
+                  }))
+                : []
+            }
+            value={serviceId}
+            onValueChange={(itemValue) => {
+              setServiceId(itemValue);
+              const selected = services.find((s) => s.id === itemValue);
+              setFrelancerType(
+                selected ? selected.name || selected.role || selected.title : ""
+              );
+            }}
+            placeholder="Select Freelancer Type"
+            style={styles.dropdownContainer}
+            innerStyle={[
+              styles.dropdown,
+              { backgroundColor: currentTheme.background3 },
+            ]}
+            textStyle={{ color: currentTheme.text }}
+          />
+        ) : (
+          <Text style={styles.loadingServicesText}>Loading services...</Text>
+        )}
 
         <View style={styles.paymentMethodSection}>
           <Text style={styles.label}>Payment Method</Text>
@@ -888,7 +901,11 @@ const JobRequirementsScreen = ({ navigation, route }) => {
             <View>
               <TextInput
                 placeholderTextColor="#999999"
-                style={[styles.input, budgetError ? styles.inputError : null, { marginBottom: 0 }]}
+                style={[
+                  styles.input,
+                  budgetError ? styles.inputError : null,
+                  { marginBottom: 0 },
+                ]}
                 placeholder="Enter budget amount"
                 keyboardType="numeric"
                 value={budget}
@@ -927,8 +944,7 @@ const JobRequirementsScreen = ({ navigation, route }) => {
             ) : (
               budget &&
               walletData &&
-              paymentMethod === "PLATFORM" &&
-               (
+              paymentMethod === "PLATFORM" && (
                 <View style={styles.budgetValidationContainer}>
                   <View style={styles.budgetValidationRow}>
                     <Ionicons

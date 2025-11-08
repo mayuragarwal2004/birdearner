@@ -13,6 +13,7 @@ import {
   Modal,
   Alert,
   ActivityIndicator,
+  Linking,
 } from "react-native";
 import { FontAwesome } from "@expo/vector-icons";
 import ImageViewer from "react-native-image-zoom-viewer";
@@ -166,6 +167,15 @@ const JobDescriptionScreen = ({ route, navigation }) => {
     }
   };
 
+  const openInMaps = () => {
+    if (job.latitude && job.longitude) {
+      const url = `https://www.google.com/maps?q=${job.latitude},${job.longitude}`;
+      Linking.openURL(url).catch(err => 
+        Alert.alert('Error', 'Could not open maps application')
+      );
+    }
+  };
+
   return (
     <View style={styles.container}>
       {/* Image Modal */}
@@ -300,12 +310,20 @@ const JobDescriptionScreen = ({ route, navigation }) => {
               {formatDate(job.deadlineDate || job.deadline)}
             </Text>
           </View>
-          <View style={styles.detailItem}>
-            <Text style={styles.detailLabel}>Location</Text>
+          <TouchableOpacity 
+            style={[styles.detailItem, job.latitude && job.longitude && styles.clickableDetail]}
+            onPress={job.latitude && job.longitude ? openInMaps : null}
+          >
+            <View style={styles.locationHeader}>
+              <Text style={styles.detailLabel}>Location</Text>
+              {job.latitude && job.longitude && (
+                <FontAwesome name="map-marker" size={16} color="#4CAF50" />
+              )}
+            </View>
             <Text style={styles.detailValue}>
               {job.location || job.projectType || "Remote"}
             </Text>
-          </View>
+          </TouchableOpacity>
           <View style={styles.detailItem}>
             <Text style={styles.detailLabel}>Category</Text>
             <Text style={styles.detailValue}>
@@ -490,6 +508,16 @@ const getStyles = (currentTheme) =>
       padding: 12,
       borderRadius: 8,
       marginBottom: 10,
+    },
+    clickableDetail: {
+      borderColor: '#4CAF50',
+      borderWidth: 1,
+    },
+    locationHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 4,
     },
     feeText: {
       color: currentTheme.primary || '#4e2587',
