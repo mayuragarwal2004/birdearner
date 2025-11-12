@@ -11,10 +11,13 @@ import { MaterialIcons } from "@expo/vector-icons";
 import apiService from "../lib/apiService";
 import { Modal } from "react-native";
 
-const MessageItem = ({ messageData, message, isCurrentUser, media = [] }) => {
+const MessageItem = ({ messageItem, message, isCurrentUser, media = [] }) => {
   const [downloadingIndex, setDownloadingIndex] = useState(null);
   const [loadingImages, setLoadingImages] = useState({});
   const [fullImage, setFullImage] = useState(null); // { uri: string, name: string, index: number }
+
+  console.log({messageItem, message, isCurrentUser});
+  
 
   const handleDownload = async (url, index) => {
     try {
