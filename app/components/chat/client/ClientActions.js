@@ -35,20 +35,6 @@ const ClientActions = ({
     );
   }
 
-  // Show cancel button for assigned jobs
-  if (job.assignedFreelancerId === freelancer.id && (chatStatus === "ACCEPTED" || chatStatus === "IN_PROGRESS")) {
-    return (
-      <View style={styles.actionButtons}>
-        <TouchableOpacity
-          style={styles.cancelButton}
-          onPress={onCancelJob}
-        >
-          <Text style={styles.buttonText}>Cancel Job</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
   return null;
 };
 

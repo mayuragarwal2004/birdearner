@@ -212,6 +212,9 @@ const ClientChat = ({ route, navigation }) => {
       case "Report":
         setReportModalVisible(true);
         break;
+      case "Cancel Job":
+        setCancelModalVisible(true);
+        break;
       default:
         break;
     }
@@ -380,21 +383,45 @@ const ClientChat = ({ route, navigation }) => {
   const handleConfirmProjComp = async () => {
     try {
       await api.init();
-      const res = await api.makeRequest(`/jobs/${route.params.jobId}/complete`, {
-        method: "PATCH",
-        body: JSON.stringify({
-          userRole: "client",
-        }),
-      });
-
-      if (res.success) {
-        Toast.show({
-          type: "success",
-          text1: "Success",
-          text2: "Project marked as completed",
+      
+      if (job?.paymentMethod === 'CASH') {
+        // For cash payments, create special message for payment flow
+        const res = await api.makeRequest(`/jobs/${route.params.jobId}/complete-cash`, {
+          method: "POST",
+          body: JSON.stringify({
+            userRole: "client",
+            threadId: thread?.id,
+            freelancerId: route.params.freelancer.id,
+            budgetAmount: job.budgetAmount
+          }),
         });
-        // Refresh job data or navigate back
-        navigation.goBack();
+
+        if (res.success) {
+          Toast.show({
+            type: "success",
+            text1: "Success",
+            text2: "Project completion initiated",
+          });
+          // Refresh messages to show the new payment flow message
+          handleSendMessage("", null); // This will trigger a refresh
+        }
+      } else {
+        // For platform payments, use existing flow
+        const res = await api.makeRequest(`/jobs/${route.params.jobId}/complete`, {
+          method: "PATCH",
+          body: JSON.stringify({
+            userRole: "client",
+          }),
+        });
+
+        if (res.success) {
+          Toast.show({
+            type: "success",
+            text1: "Success",
+            text2: "Project marked as completed",
+          });
+          navigation.goBack();
+        }
       }
     } catch (err) {
       Toast.show({
@@ -437,6 +464,12 @@ const ClientChat = ({ route, navigation }) => {
           showMenu={showMenu}
           setShowMenu={setShowMenu}
           onMenuAction={handleMenuAction}
+          menuOptions={
+            job?.assignedFreelancerId === route.params.freelancer.id && 
+            (chatStatus === "ACCEPTED" || chatStatus === "IN_PROGRESS")
+              ? ["View Profile", "Block", "Report", "Cancel Job"]
+              : ["View Profile", "Block", "Report"]
+          }
         />
 
         {renderAssignmentBanner()}
@@ -463,6 +496,14 @@ const ClientChat = ({ route, navigation }) => {
               isCurrentUser={item.senderId === userData.id}
               media={item.userMedia}
               isUploading={item.isUploading}
+              currentUserId={userData.id}
+              userRole="client"
+              onMessageUpdate={() => {
+                // Refresh messages when cash payment status updates
+                setTimeout(() => {
+                  handleSendMessage("", null);
+                }, 1000);
+              }}
             />
           )}
           style={styles.chatList}

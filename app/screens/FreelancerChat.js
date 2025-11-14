@@ -201,6 +201,14 @@ const FreelancerChat = ({ route, navigation }) => {
               isCurrentUser={item.senderId === userData.id}
               media={item.userMedia}
               isUploading={item.isUploading}
+              currentUserId={userData.id}
+              userRole="freelancer"
+              onMessageUpdate={() => {
+                // Refresh messages when cash payment status updates
+                setTimeout(() => {
+                  handleSendMessage("", null);
+                }, 1000);
+              }}
             />
           )}
           style={styles.chatList}

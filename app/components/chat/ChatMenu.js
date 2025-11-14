@@ -3,12 +3,10 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../../context/ThemeContext";
 
-const ChatMenu = ({ visible, onToggle, onAction }) => {
+const ChatMenu = ({ visible, onToggle, onAction, menuOptions = ["View Profile", "Block", "Report"] }) => {
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
   const styles = getStyles(currentTheme);
-
-  const menuOptions = ["View Profile", "Block", "Report"];
 
   if (!visible) {
     return (

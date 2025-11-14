@@ -10,8 +10,9 @@ import {
 import { MaterialIcons } from "@expo/vector-icons";
 import apiService from "../lib/apiService";
 import { Modal } from "react-native";
+import CashPaymentMessage from "./chat/CashPaymentMessage";
 
-const MessageItem = ({ messageItem, message, isCurrentUser, media = [] }) => {
+const MessageItem = ({ messageItem, message, isCurrentUser, media = [], onMessageUpdate, currentUserId, userRole }) => {
   const [downloadingIndex, setDownloadingIndex] = useState(null);
   const [loadingImages, setLoadingImages] = useState({});
   const [fullImage, setFullImage] = useState(null); // { uri: string, name: string, index: number }
@@ -84,7 +85,14 @@ const MessageItem = ({ messageItem, message, isCurrentUser, media = [] }) => {
         </View>
       </Modal>
 
-      {message && (
+      {messageItem?.messageType === 'cash_payment' ? (
+        <CashPaymentMessage 
+          message={messageItem} 
+          onUpdate={onMessageUpdate}
+          currentUserId={currentUserId}
+          userRole={userRole}
+        />
+      ) : message && (
         <Text
           style={[
             styles.messageText,

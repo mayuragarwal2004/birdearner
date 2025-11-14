@@ -14,7 +14,8 @@ const ChatHeader = ({
   currentUserId,
   showMenu,
   setShowMenu,
-  onMenuAction
+  onMenuAction,
+  menuOptions
 }) => {
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
@@ -56,6 +57,7 @@ const ChatHeader = ({
         visible={showMenu}
         onToggle={() => setShowMenu(!showMenu)}
         onAction={onMenuAction}
+        menuOptions={menuOptions}
       />
     </View>
   );
