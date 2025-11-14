@@ -2,29 +2,54 @@ import React from 'react';
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { useTheme } from "../../../context/ThemeContext";
 
-const ClientActions = ({ onAccept, onReject, status, assignedFreelancerId, currentFreelancerId }) => {
+const ClientActions = ({ 
+  job, 
+  freelancer, 
+  chatStatus, 
+  onAccept, 
+  onReject, 
+  onCancelJob, 
+  onConfirmCompletion 
+}) => {
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
   const styles = getStyles(currentTheme);
 
-  if (assignedFreelancerId || status !== 'PENDING') return null;
+  // Show accept/reject buttons only when job is unassigned
+  if (!job?.assignedFreelancerId) {
+    return (
+      <View style={styles.actionButtons}>
+        <TouchableOpacity
+          style={styles.acceptButton}
+          onPress={onAccept}
+        >
+          <Text style={styles.buttonText}>Accept</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.rejectButton}
+          onPress={onReject}
+        >
+          <Text style={styles.buttonText}>Reject</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
-  return (
-    <View style={styles.actionButtons}>
-      <TouchableOpacity
-        style={styles.acceptButton}
-        onPress={onAccept}
-      >
-        <Text style={styles.buttonText}>Accept</Text>
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={styles.rejectButton}
-        onPress={onReject}
-      >
-        <Text style={styles.buttonText}>Reject</Text>
-      </TouchableOpacity>
-    </View>
-  );
+  // Show cancel button for assigned jobs
+  if (job.assignedFreelancerId === freelancer.id && (chatStatus === "ACCEPTED" || chatStatus === "IN_PROGRESS")) {
+    return (
+      <View style={styles.actionButtons}>
+        <TouchableOpacity
+          style={styles.cancelButton}
+          onPress={onCancelJob}
+        >
+          <Text style={styles.buttonText}>Cancel Job</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  return null;
 };
 
 const getStyles = (currentTheme) => StyleSheet.create({
@@ -41,12 +66,21 @@ const getStyles = (currentTheme) => StyleSheet.create({
     paddingHorizontal: 22,
     paddingVertical: 7,
     borderRadius: 8,
+    flex: 1,
   },
   rejectButton: {
     backgroundColor: "#A00B0B",
     paddingHorizontal: 22,
     paddingVertical: 7,
     borderRadius: 8,
+    flex: 1,
+  },
+  cancelButton: {
+    backgroundColor: "#FF6B35",
+    paddingHorizontal: 22,
+    paddingVertical: 7,
+    borderRadius: 8,
+    flex: 1,
   },
   buttonText: {
     color: "#fff",

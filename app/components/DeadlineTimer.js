@@ -2,10 +2,7 @@ import React, { useState, useEffect } from "react";
 import { View, Text, StyleSheet } from "react-native";
 
 const DeadlineTimer = ({ deadline, jobCompleted, style }) => {
-  const [timeLeft, setTimeLeft] = useState("00d 00h 00m 00s");
-
-  console.log({deadline, jobCompleted});
-  
+  const [timeLeft, setTimeLeft] = useState("00d 00h 00m 00s");  
 
   useEffect(() => {
     if (!deadline) return;

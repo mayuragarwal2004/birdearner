@@ -56,8 +56,19 @@ export const useChatLogic = (role, params) => {
   const getThreadAndMessages = async () => {
     try {
       await api.init();
-      const freelancerId = userData.freelancer.id;
-      const clientId = params.client.id
+      let freelancerId, clientId;
+
+      console.log({role});
+      
+      
+      if (role === 'freelancer') {
+        freelancerId = userData.freelancer.id;
+        clientId = params.client.id;
+      } else {
+        freelancerId = params.freelancer.id;
+        clientId = userData.client.id;
+      }
+      
       console.log("Fetching thread for:", { jobId: params.jobId, freelancerId, clientId });
 
       const resThread = await api.makeRequest("/chat/thread", {
@@ -76,6 +87,10 @@ export const useChatLogic = (role, params) => {
       Toast.show({ type: "error", text1: "Error", text2: err.message });
     }
   };
+
+  useEffect(() => {
+    getThreadAndMessages();
+  }, [params.jobId, userData.id]);
 
   useEffect(() => {
     if (job?.jobStatus) setChatStatus(job.jobStatus.toUpperCase());
@@ -134,6 +149,7 @@ export const useChatLogic = (role, params) => {
           setFileInfo(null);
           setFileContent('');
         } else {
+          console.error('File upload failed with status:', res.status);
           Toast.show({
             type: 'error',
             text1: 'Error',
@@ -165,6 +181,7 @@ export const useChatLogic = (role, params) => {
   };
 
   const refreshMessages = async () => {
+    if (!thread) return;
     try {
       await api.init();
       const resMessages = await api.makeRequest(`/chat/messages/${thread.id}`);
@@ -172,6 +189,7 @@ export const useChatLogic = (role, params) => {
 
       setMessages(resMessages.data);
     } catch (err) {
+      console.error('Error refreshing messages:', err);
       Toast.show({ type: 'error', text1: 'Error', text2: err.message });
     }
   };
@@ -238,5 +256,6 @@ export const useChatLogic = (role, params) => {
     handleSendMessage,
     handleReport,
     refreshMessages,
+    getThreadAndMessages,
   };
 };
