@@ -1,5 +1,5 @@
 import React from "react";
-import { View, StyleSheet, FlatList, Text } from "react-native";
+import { View, StyleSheet, FlatList, Text, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
 import { useTheme } from "../context/ThemeContext";
@@ -11,6 +11,7 @@ import AssignmentBanner from "../components/chat/freelancer/AssignmentBanner";
 import ReportModal from "../components/chat/ReportModal";
 import { useChatLogic } from "../hooks/useChatLogic";
 import { useAuth } from "../context/NewAuthContext";
+import ApiService from "../lib/apiService";
 
 const getStyles = (currentTheme) =>
   StyleSheet.create({
@@ -89,6 +90,26 @@ const getStyles = (currentTheme) =>
       fontSize: 10,
       fontWeight: "400",
     },
+    completionRequestContainer: {
+      paddingHorizontal: 15,
+      paddingVertical: 10,
+      backgroundColor: currentTheme.cardBackground || "#F1F1F1",
+      marginHorizontal: 15,
+      borderRadius: 10,
+      marginBottom: 5,
+    },
+    completionRequestButton: {
+      backgroundColor: "#4CAF50",
+      paddingVertical: 12,
+      paddingHorizontal: 20,
+      borderRadius: 8,
+      alignItems: "center",
+    },
+    completionRequestText: {
+      color: "white",
+      fontSize: 14,
+      fontWeight: "bold",
+    },
   });
 
 const FreelancerChat = ({ route, navigation }) => {
@@ -99,6 +120,7 @@ const FreelancerChat = ({ route, navigation }) => {
 
   const {
     messages,
+    thread,
     chatStatus,
     characterLimit,
     showMenu,
@@ -121,6 +143,40 @@ const FreelancerChat = ({ route, navigation }) => {
     navigation.navigate("Profile", { userId: route.params.client.user.id });
   };
 
+  const handleRequestCompletion = async () => {
+    try {
+      const api = ApiService;
+      await api.init();
+      
+      const res = await api.makeRequest(`/chat/message/completion-request/freelancer`, {
+        method: 'POST',
+        body: JSON.stringify({
+          threadId: thread?.id,
+          jobId: job?.id
+        }),
+      });
+
+      if (res.success) {
+        Toast.show({
+          type: 'success',
+          text1: 'Success',
+          text2: 'Completion request sent to client',
+        });
+        // Refresh messages to show the new completion request
+        setTimeout(() => {
+          handleSendMessage("", null);
+        }, 1000);
+      }
+    } catch (error) {
+      console.error('Error sending completion request:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to send completion request',
+      });
+    }
+  };
+
   const handleMenuAction = (action) => {
     switch (action) {
       case "View Profile":
@@ -137,11 +193,6 @@ const FreelancerChat = ({ route, navigation }) => {
     }
     setShowMenu(false);
   };
-
-  console.log({ x: job?.assignedFreelancerId });
-  console.log({ y: userData.freelancer.id });
-
-  console.log({ chatStatus });
 
   return (
     <SafeAreaView
@@ -221,6 +272,19 @@ const FreelancerChat = ({ route, navigation }) => {
             <Text style={styles.limitvar}>
               {characterLimit} characters remaining
             </Text>
+          </View>
+        )}
+
+        {/* Completion Request Button for Freelancer */}
+        {(job?.assignedFreelancer?.user?.id === userData.id || job?.assignedFreelancerId === userData.id || job?.assignedFreelancerId === userData.freelancer?.id) && 
+         chatStatus === 'IN_PROGRESS' && !job?.completedStatus && (
+          <View style={styles.completionRequestContainer}>
+            <TouchableOpacity
+              style={styles.completionRequestButton}
+              onPress={handleRequestCompletion}
+            >
+              <Text style={styles.completionRequestText}>Request Project Completion</Text>
+            </TouchableOpacity>
           </View>
         )}
 

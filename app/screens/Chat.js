@@ -16,6 +16,7 @@ import { Ionicons } from "@expo/vector-icons";
 import Toast from 'react-native-toast-message';
 import { useTheme } from "../context/ThemeContext";
 import { useAppwrite } from "../context/AppwriteContext";
+import ApiService from "../lib/apiService";
 const WarningModal = ({ visible, onConfirm, onCancel }) => {
   return (
     <Modal
@@ -768,7 +769,55 @@ const Chat = ({ route, navigation }) => {
     }
   };
 
+  // Handle completion request from freelancer
+  const handleFreelancerRequestCompletion = async () => {
+    try {
+      const api = ApiService;
+      await api.init();
+      
+      const res = await api.makeRequest(`/chat/message/completion-request/freelancer`, {
+        method: 'POST',
+        body: JSON.stringify({
+          threadId: projectId, // Using projectId as threadId
+          jobId: job?.id || job?.$id
+        }),
+      });
 
+      if (res.success) {
+        handleSuccess('Completion request sent to client');
+        // Refresh messages to show the new completion request
+        // The message will be automatically added by the backend
+      }
+    } catch (error) {
+      console.error('Error sending completion request:', error);
+      handleError('Failed to send completion request');
+    }
+  };
+
+  // Handle completion request from client
+  const handleClientRequestCompletion = async () => {
+    try {
+      const api = ApiService;
+      await api.init();
+      
+      const res = await api.makeRequest(`/chat/message/completion-request/client`, {
+        method: 'POST',
+        body: JSON.stringify({
+          threadId: projectId, // Using projectId as threadId
+          jobId: job?.id || job?.$id
+        }),
+      });
+
+      if (res.success) {
+        handleSuccess('Completion request sent to freelancer');
+        // Refresh messages to show the new completion request
+        // The message will be automatically added by the backend
+      }
+    } catch (error) {
+      console.error('Error sending completion request:', error);
+      handleError('Failed to send completion request');
+    }
+  };
 
   const reportOptions = [
     "Bullying or unwanted contact",
@@ -1171,6 +1220,28 @@ const Chat = ({ route, navigation }) => {
         )
       }
 
+      {/* Completion Request Buttons */}
+      {job?.assigned_freelancer && job?.job_status === 'IN_PROGRESS' && !job?.completed_status && (
+        <View style={styles.completionRequestContainer}>
+          {userData?.role === "freelancer" && userData.$id === job?.assigned_freelancer && (
+            <TouchableOpacity
+              style={styles.completionRequestButton}
+              onPress={handleFreelancerRequestCompletion}
+            >
+              <Text style={styles.completionRequestText}>Request Project Completion</Text>
+            </TouchableOpacity>
+          )}
+          {userData?.role === "client" && (
+            <TouchableOpacity
+              style={styles.completionRequestButton}
+              onPress={handleClientRequestCompletion}
+            >
+              <Text style={styles.completionRequestText}>Request Project Completion</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
       {/* Input Box */}
       <View style={styles.inputContainer}>
         <TextInput
@@ -1269,6 +1340,26 @@ const getStyles = (currentTheme) =>
     },
     sender: { fontWeight: "bold", color: "#5c2d91" },
     message: { marginTop: 5, color: "#000" },
+    completionRequestContainer: {
+      paddingHorizontal: 15,
+      paddingVertical: 10,
+      backgroundColor: currentTheme.cardBackground || "#F1F1F1",
+      marginHorizontal: 15,
+      borderRadius: 10,
+      marginBottom: 5,
+    },
+    completionRequestButton: {
+      backgroundColor: "#4CAF50",
+      paddingVertical: 12,
+      paddingHorizontal: 20,
+      borderRadius: 8,
+      alignItems: "center",
+    },
+    completionRequestText: {
+      color: "white",
+      fontSize: 14,
+      fontWeight: "bold",
+    },
     inputContainer: {
       flexDirection: "row",
       alignItems: "center",

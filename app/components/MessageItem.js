@@ -11,6 +11,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import apiService from "../lib/apiService";
 import { Modal } from "react-native";
 import CashPaymentMessage from "./chat/CashPaymentMessage";
+import CompletionRequestMessage from "./chat/CompletionRequestMessage";
 
 const MessageItem = ({ messageItem, message, isCurrentUser, media = [], onMessageUpdate, currentUserId, userRole }) => {
   const [downloadingIndex, setDownloadingIndex] = useState(null);
@@ -87,6 +88,13 @@ const MessageItem = ({ messageItem, message, isCurrentUser, media = [], onMessag
 
       {messageItem?.messageType === 'cash_payment' ? (
         <CashPaymentMessage 
+          message={messageItem} 
+          onUpdate={onMessageUpdate}
+          currentUserId={currentUserId}
+          userRole={userRole}
+        />
+      ) : messageItem?.messageType === 'completion_request' ? (
+        <CompletionRequestMessage 
           message={messageItem} 
           onUpdate={onMessageUpdate}
           currentUserId={currentUserId}

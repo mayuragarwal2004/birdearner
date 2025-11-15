@@ -339,6 +339,38 @@ const ClientChat = ({ route, navigation }) => {
     }
   };
 
+  const handleRequestCompletion = async () => {
+    try {
+      await api.init();
+      const res = await api.makeRequest(`/chat/message/completion-request/client`, {
+        method: 'POST',
+        body: JSON.stringify({
+          threadId: thread.id,
+          jobId: job?.id
+        }),
+      });
+
+      if (res.success) {
+        Toast.show({
+          type: 'success',
+          text1: 'Success',
+          text2: 'Completion request sent to freelancer',
+        });
+        // Refresh messages to show the new completion request
+        setTimeout(() => {
+          handleSendMessage("", null);
+        }, 1000);
+      }
+    } catch (error) {
+      console.error('Error sending completion request:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to send completion request',
+      });
+    }
+  };
+
   const renderDeadlineSection = () => {
     if (chatStatus !== "ACCEPTED" && chatStatus !== "IN_PROGRESS") return null;
 
@@ -482,6 +514,7 @@ const ClientChat = ({ route, navigation }) => {
           onReject={handleReject}
           onCancelJob={() => setCancelModalVisible(true)}
           onConfirmCompletion={handleConfirmProjComp}
+          onRequestCompletion={handleRequestCompletion}
         />
 
         {renderDeadlineSection()}
