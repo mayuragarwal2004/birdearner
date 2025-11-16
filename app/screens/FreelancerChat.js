@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { View, StyleSheet, FlatList, Text, TouchableOpacity, Modal, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
+import * as DocumentPicker from 'expo-document-picker';
 import { useTheme } from "../context/ThemeContext";
 import DeadlineTimer from "../components/DeadlineTimer";
 import MessageItem from "../components/MessageItem";
@@ -9,7 +10,7 @@ import ChatHeader from "../components/chat/ChatHeader";
 import ChatInput from "../components/chat/ChatInput";
 import AssignmentBanner from "../components/chat/freelancer/AssignmentBanner";
 import ReportModal from "../components/chat/ReportModal";
-import { useChatLogic } from "../hooks/useChatLogic";
+import { useChatData } from "../hooks/useChatSWR";
 import { useAuth } from "../context/NewAuthContext";
 import ApiService from "../lib/apiService";
 
@@ -248,28 +249,30 @@ const FreelancerChat = ({ route, navigation }) => {
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
   const styles = getStyles(currentTheme);
+  
+  // Local state for UI interactions
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+  const [reportModalVisible, setReportModalVisible] = useState(false);
+  const [selectedReportReason, setSelectedReportReason] = useState(null);
+  const [fileInfo, setFileInfo] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [sending, setSending] = useState(false);
 
+  // SWR data hooks
   const {
     messages,
     thread,
+    job,
     chatStatus,
     characterLimit,
-    showMenu,
-    setShowMenu,
-    reportModalVisible,
-    setReportModalVisible,
-    selectedReportReason,
-    setSelectedReportReason,
-    job,
-    fileInfo,
-    isUploading,
-    uploadProgress,
-    sending,
-    handleFilePick,
-    handleSendMessage,
-    handleReport,
-  } = useChatLogic("freelancer", route.params);
+    isLoading,
+    sendMessage,
+    handleRequestCompletion: swrHandleRequestCompletion,
+    mutateMessages,
+    mutateJob,
+  } = useChatData("freelancer", route.params);
 
   const handleViewProfile = () => {
     navigation.navigate("Profile", { userId: route.params.client.user.id });
@@ -281,15 +284,65 @@ const FreelancerChat = ({ route, navigation }) => {
 
   const confirmRequestCompletion = async () => {
     setShowConfirmationModal(false);
+    await swrHandleRequestCompletion();
+  };
+
+  // File picking functionality
+  const handleFilePick = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: '*/*',
+        copyToCacheDirectory: false,
+      });
+
+      if (!result.canceled && result.assets && result.assets[0]) {
+        const file = result.assets[0];
+        setFileInfo({
+          name: file.name,
+          uri: file.uri,
+          mimeType: file.mimeType,
+          size: file.size,
+        });
+      }
+    } catch (error) {
+      console.error('Error picking file:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to pick file',
+      });
+    }
+  };
+
+  // Send message functionality
+  const handleSendMessage = async (messageContent, fileData = null) => {
+    if (!messageContent.trim() && !fileInfo && !fileData) return;
+
+    setSending(true);
+    try {
+      await sendMessage(messageContent, fileInfo || fileData);
+      setFileInfo(null); // Clear file after sending
+    } catch (error) {
+      console.error('Error sending message:', error);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  // Report functionality
+  const handleReport = async () => {
+    if (!selectedReportReason) return;
+
     try {
       const api = ApiService;
       await api.init();
       
-      const res = await api.makeRequest(`/chat/message/completion-request/freelancer`, {
+      const res = await api.makeRequest('/chat/report', {
         method: 'POST',
         body: JSON.stringify({
           threadId: thread?.id,
-          jobId: job?.id
+          reason: selectedReportReason,
+          reportedUserId: route.params.client.userId,
         }),
       });
 
@@ -297,19 +350,17 @@ const FreelancerChat = ({ route, navigation }) => {
         Toast.show({
           type: 'success',
           text1: 'Success',
-          text2: 'Completion request sent to client',
+          text2: 'Report submitted successfully',
         });
-        // Refresh messages to show the new completion request
-        setTimeout(() => {
-          handleSendMessage("", null);
-        }, 1000);
+        setReportModalVisible(false);
+        setSelectedReportReason(null);
       }
     } catch (error) {
-      console.error('Error sending completion request:', error);
+      console.error('Error submitting report:', error);
       Toast.show({
         type: 'error',
         text1: 'Error',
-        text2: 'Failed to send completion request',
+        text2: 'Failed to submit report',
       });
     }
   };
@@ -407,10 +458,8 @@ const FreelancerChat = ({ route, navigation }) => {
               currentUserId={userData.id}
               userRole="freelancer"
               onMessageUpdate={() => {
-                // Refresh messages when cash payment status updates
-                setTimeout(() => {
-                  handleSendMessage("", null);
-                }, 1000);
+                // Refresh messages when cash payment status updates using SWR
+                mutateMessages();
               }}
             />
           )}
@@ -418,7 +467,7 @@ const FreelancerChat = ({ route, navigation }) => {
           contentContainerStyle={styles.chatListContainer}
         />
 
-        {chatStatus === "PENDING" && (
+        {chatStatus === "OPEN" && (
           <View style={styles.limit}>
             <Text style={styles.limitchar}>Character Limit</Text>
             <Text style={styles.limitvar}>

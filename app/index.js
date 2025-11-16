@@ -22,6 +22,9 @@ import Signup from "./screens/Signup";
 import ForgotPasswordScreen from "./screens/ForgotPassword";
 import Role from "./screens/Role";
 
+// SWR Provider
+import { SWRProvider } from "./providers/SWRProvider";
+
 // Main App Components
 import LeaderboardScreen from "./screens/Leaderboard";
 import ProfileStack from "./stacks/ProfileStack";
@@ -122,7 +125,9 @@ export default function MainApp() {
     >
       <ThemeProvider>
         <AuthProvider>
-          <App />
+          <SWRProvider>
+            <App />
+          </SWRProvider>
           <StatusBar style="auto" />
         </AuthProvider>
       </ThemeProvider>
