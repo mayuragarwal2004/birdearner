@@ -17,141 +17,229 @@ const getStyles = (currentTheme) =>
   StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: currentTheme.background || "#fff",
+      backgroundColor: currentTheme.background || "#F1F5F9",
     },
     deadlineContainer: {
       alignItems: "center",
-      marginVertical: 10,
+      marginVertical: 4,
+      paddingHorizontal: 20,
     },
     deadline: {
-      fontSize: 15,
-      fontWeight: "500",
-      color: currentTheme.text || "#000000",
-      paddingTop: 6,
+      fontSize: 16,
+      fontWeight: "600",
+      color: currentTheme.text || "#1E293B",
+      paddingTop: 8,
       textAlign: "center",
+      letterSpacing: 0.3,
     },
     deadlineTimerContainer: {
       flexDirection: "row",
       justifyContent: "center",
       alignItems: "center",
-      marginVertical: 5,
-    },
-    timeBox: {
-      paddingHorizontal: 8,
-      paddingVertical: 5,
-      backgroundColor: currentTheme.text || "#000000",
-      marginHorizontal: 1,
-      alignItems: "center",
-      justifyContent: "center",
-      flexDirection: "row",
-      gap: 4,
-    },
-    timeText: {
-      fontSize: 18,
-      fontWeight: "bold",
-      color: currentTheme.background || "#FFFFFF",
-    },
-    unitText: {
-      fontSize: 18,
-      fontWeight: "bold",
-      color: currentTheme.background || "#FFFFFF",
-    },
-    conColorc: {
-      paddingHorizontal: 15,
-      alignItems: "center",
-      marginBottom: 0,
-      color: "#00871E",
-    },
-    chatList: {
-      flex: 1,
-      backgroundColor: currentTheme.cardBackground || "#F1F1F1",
-      marginHorizontal: 15,
-      borderRadius: 10,
-    },
-    chatListContainer: {
-      padding: 10,
-    },
-    limit: {
-      flex: 0,
-      backgroundColor: currentTheme.cardBackground || "#F1F1F1",
-      marginHorizontal: 15,
-      borderRadius: 10,
-      paddingVertical: 20,
-    },
-    limitchar: {
-      color: currentTheme.text || "#464646",
-      textAlign: "center",
-      fontSize: 12,
-      fontWeight: "600",
-    },
-    limitvar: {
-      color: currentTheme.subText || "#464646",
-      textAlign: "center",
-      fontSize: 10,
-      fontWeight: "400",
-    },
-    modalOverlay: {
-      flex: 1,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    modalContent: {
-      backgroundColor: currentTheme.background || '#fff',
-      margin: 20,
-      borderRadius: 15,
-      padding: 25,
-      alignItems: 'center',
-      shadowColor: '#000',
+      marginVertical: 12,
+      backgroundColor: currentTheme.surface || "#FFFFFF",
+      borderRadius: 16,
+      padding: 16,
+      shadowColor: "#000",
       shadowOffset: {
         width: 0,
         height: 2,
       },
-      shadowOpacity: 0.25,
+      shadowOpacity: 0.08,
+      shadowRadius: 8,
+      elevation: 4,
+    },
+    timeBox: {
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      backgroundColor: currentTheme.primary || "#3B82F6",
+      marginHorizontal: 4,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: 12,
+      minWidth: 44,
+      shadowColor: currentTheme.primary || "#3B82F6",
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.2,
       shadowRadius: 4,
-      elevation: 5,
+      elevation: 3,
+    },
+    timeText: {
+      fontSize: 20,
+      fontWeight: "700",
+      color: "#FFFFFF",
+      textAlign: "center",
+    },
+    unitText: {
+      fontSize: 12,
+      fontWeight: "600",
+      color: "#FFFFFF",
+      textAlign: "center",
+      marginTop: 2,
+      opacity: 0.9,
+    },
+    conColorc: {
+      paddingHorizontal: 20,
+      paddingVertical: 12,
+      backgroundColor: "#10B981",
+      borderRadius: 12,
+      alignItems: "center",
+      marginBottom: 8,
+      shadowColor: "#10B981",
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.2,
+      shadowRadius: 4,
+      elevation: 3,
+    },
+    completedText: {
+      color: "#FFFFFF",
+      fontSize: 16,
+      fontWeight: "600",
+      letterSpacing: 0.5,
+    },
+    chatList: {
+      flex: 1,
+      backgroundColor: currentTheme.surface || "#FFFFFF",
+      marginHorizontal: 16,
+      borderTopLeftRadius: 16,
+      borderTopRightRadius: 16,
+      borderBottomLeftRadius: 0,
+      borderBottomRightRadius: 0,
+      shadowColor: "#000",
+      shadowOffset: {
+        width: 0,
+        height: 1,
+      },
+      shadowOpacity: 0.05,
+      shadowRadius: 8,
+      elevation: 2,
+    },
+    chatListContainer: {
+      padding: 16,
+      paddingBottom: 20,
+    },
+    limit: {
+      backgroundColor: currentTheme.surface || "#FFFFFF",
+      marginHorizontal: 16,
+      borderRadius: 16,
+      paddingVertical: 20,
+      paddingHorizontal: 20,
+      marginVertical: 8,
+      borderWidth: 1,
+      borderColor: currentTheme.border || "#E2E8F0",
+      shadowColor: "#000",
+      shadowOffset: {
+        width: 0,
+        height: 1,
+      },
+      shadowOpacity: 0.05,
+      shadowRadius: 4,
+      elevation: 1,
+    },
+    limitchar: {
+      color: currentTheme.text || "#475569",
+      textAlign: "center",
+      fontSize: 14,
+      fontWeight: "600",
+      marginBottom: 4,
+    },
+    limitvar: {
+      color: currentTheme.subText || "#64748B",
+      textAlign: "center",
+      fontSize: 12,
+      fontWeight: "500",
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.6)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: 20,
+    },
+    modalContent: {
+      backgroundColor: currentTheme.surface || '#FFFFFF',
+      borderRadius: 24,
+      padding: 32,
+      alignItems: 'center',
+      shadowColor: '#000',
+      shadowOffset: {
+        width: 0,
+        height: 8,
+      },
+      shadowOpacity: 0.15,
+      shadowRadius: 24,
+      elevation: 8,
+      borderWidth: 1,
+      borderColor: currentTheme.border || '#F1F5F9',
+      maxWidth: '100%',
+      width: '100%',
     },
     modalTitle: {
-      fontSize: 20,
-      fontWeight: 'bold',
-      color: currentTheme.text || '#000',
-      marginBottom: 15,
+      fontSize: 24,
+      fontWeight: '700',
+      color: currentTheme.text || '#1E293B',
+      marginBottom: 16,
       textAlign: 'center',
+      letterSpacing: 0.3,
     },
     modalMessage: {
       fontSize: 16,
-      color: currentTheme.text || '#000',
+      color: currentTheme.subText || '#475569',
       textAlign: 'center',
-      lineHeight: 22,
-      marginBottom: 25,
+      lineHeight: 24,
+      marginBottom: 32,
+      paddingHorizontal: 8,
     },
     modalButtons: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       width: '100%',
+      gap: 12,
     },
     modalButton: {
       flex: 1,
-      paddingVertical: 12,
-      paddingHorizontal: 20,
-      borderRadius: 8,
-      marginHorizontal: 5,
+      paddingVertical: 16,
+      paddingHorizontal: 24,
+      borderRadius: 16,
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: '#000',
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 2,
     },
     cancelButton: {
-      backgroundColor: currentTheme.border || '#E0E0E0',
+      backgroundColor: currentTheme.surface || '#F8FAFC',
+      borderWidth: 2,
+      borderColor: currentTheme.border || '#E2E8F0',
     },
     confirmButton: {
-      backgroundColor: currentTheme.primary || '#007AFF',
+      backgroundColor: currentTheme.primary || '#3B82F6',
+      shadowColor: currentTheme.primary || '#3B82F6',
+      shadowOpacity: 0.3,
     },
     cancelButtonText: {
-      color: currentTheme.text || '#000',
+      color: currentTheme.text || '#475569',
       fontWeight: '600',
+      fontSize: 16,
       textAlign: 'center',
     },
     confirmButtonText: {
-      color: '#fff',
-      fontWeight: '600',
+      color: '#FFFFFF',
+      fontWeight: '700',
+      fontSize: 16,
       textAlign: 'center',
+      letterSpacing: 0.5,
     },
   });
 
@@ -285,17 +373,23 @@ const FreelancerChat = ({ route, navigation }) => {
               </Text>
             )}
             <View style={styles.deadlineTimerContainer}>
-              <DeadlineTimer
-                deadline={job?.deadlineDate}
-                jobCompleted={job?.jobStatus === "COMPLETED"}
-                style={{
-                  timeBox: styles.timeBox,
-                  timeText: styles.timeText,
-                  unitText: styles.unitText,
-                  completedText: styles.conColorc, //completedText
-                  timeContainer: styles.timeContainer,
-                }}
-              />
+              {job?.jobStatus === "COMPLETED" ? (
+                <View style={styles.conColorc}>
+                  <Text style={styles.completedText}>Project Completed ✓</Text>
+                </View>
+              ) : (
+                <DeadlineTimer
+                  deadline={job?.deadlineDate}
+                  jobCompleted={job?.jobStatus === "COMPLETED"}
+                  style={{
+                    timeBox: styles.timeBox,
+                    timeText: styles.timeText,
+                    unitText: styles.unitText,
+                    completedText: styles.conColorc,
+                    timeContainer: styles.timeContainer,
+                  }}
+                />
+              )}
             </View>
           </View>
         )}

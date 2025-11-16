@@ -35,7 +35,6 @@ const ChatHeader = ({
       </TouchableOpacity>
       
       <View style={styles.headerData}>
-        <Text style={styles.profile}>Tap to view profile</Text>
         <TouchableOpacity onPress={onViewProfile}>
           <Text style={styles.username}>@{user.user.fullName}</Text>
         </TouchableOpacity>
@@ -65,30 +64,32 @@ const ChatHeader = ({
 
 const getStyles = (currentTheme) => StyleSheet.create({
   header: {
-    padding: 15,
-    alignItems: "flex-start",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    alignItems: "center",
     flex: 0,
     flexDirection: "row",
-    justifyContent: "space-around",
+    justifyContent: "space-between",
+    backgroundColor: currentTheme.surface || "#FFFFFF",
+    borderBottomWidth: 1,
+    borderBottomColor: currentTheme.border || "#E5E7EB",
   },
   backButton: {
-    padding: 5,
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'transparent',
   },
   headerData: {
     alignItems: "center",
-    flex: 0,
+    flex: 1,
     flexDirection: "column",
-  },
-  profile: {
-    fontSize: 12,
-    fontWeight: "400",
-    color: currentTheme.text || "#000000",
+    marginHorizontal: 16,
   },
   username: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: "600",
-    color: "#5c2d91",
-    paddingVertical: 4,
+    color: currentTheme.primary || "#5c2d91",
+    paddingVertical: 2,
   },
   assignedBanner: {
     backgroundColor: "#FFE0E0",

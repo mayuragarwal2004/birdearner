@@ -57,15 +57,17 @@ const ChatInput = ({
             style={styles.attachButton}
             onPress={onFilePick}
           >
-            <MaterialIcons name="attach-file" size={24} color="#4C0183" />
+            <MaterialIcons name="attach-file" size={20} color={currentTheme.text || "#64748B"} />
           </TouchableOpacity>
         )}
 
         {sending ? (
-          <ActivityIndicator size="small" color="#4C0183" />
+          <View style={styles.sendButton}>
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          </View>
         ) : (
           <TouchableOpacity style={styles.sendButton} onPress={handleSend}>
-            <Text style={styles.sendButtonText}>Send</Text>
+            <MaterialIcons name="send" size={20} color="#FFFFFF" />
           </TouchableOpacity>
         )}
       </View>
@@ -85,50 +87,80 @@ const ChatInput = ({
 const getStyles = (currentTheme) => StyleSheet.create({
   container: {
     flexDirection: "column",
-    padding: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: currentTheme.surface || "#FFFFFF",
     borderTopWidth: 1,
-    borderColor: currentTheme.border || "#ddd",
+    borderColor: currentTheme.border || "#E5E7EB",
   },
   inputRow: {
     flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: currentTheme.background3 || "#fff",
+    alignItems: "flex-end",
+    backgroundColor: currentTheme.surface || "#FFFFFF",
   },
   input: {
     flex: 1,
-    padding: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderWidth: 1,
-    borderColor: currentTheme.border || "#ddd",
-    borderRadius: 5,
-    color: currentTheme.text || "#000",
-    backgroundColor: currentTheme.background || "#fff",
+    borderColor: currentTheme.border || "#E5E7EB",
+    borderRadius: 24,
+    color: currentTheme.text || "#1E293B",
+    backgroundColor: currentTheme.background || "#F8FAFC",
+    fontSize: 16,
+    maxHeight: 120,
+    textAlignVertical: 'top',
   },
   attachButton: {
-    padding: 10,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: "center",
     alignItems: "center",
+    marginLeft: 8,
+    backgroundColor: currentTheme.background || "#F8FAFC",
+    borderWidth: 1,
+    borderColor: currentTheme.border || "#E5E7EB",
   },
   sendButton: {
-    marginLeft: 10,
-    padding: 10,
-    backgroundColor: "#5c2d91",
-    borderRadius: 5,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: 8,
+    backgroundColor: currentTheme.primary || "#5c2d91",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   sendButtonText: {
-    color: "#fff",
+    color: "#FFFFFF",
+    fontWeight: "600",
+    fontSize: 14,
   },
   uploadProgress: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    padding: 10,
-    backgroundColor: currentTheme.cardBackground,
-    borderTopWidth: 1,
-    borderColor: currentTheme.border,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    backgroundColor: currentTheme.background || "#F8FAFC",
+    borderRadius: 12,
+    marginTop: 6,
+    borderWidth: 1,
+    borderColor: currentTheme.border || "#E5E7EB",
   },
   uploadText: {
-    color: currentTheme.text,
-    marginRight: 10,
+    color: currentTheme.text || "#64748B",
+    marginRight: 12,
+    fontSize: 14,
+    fontWeight: "500",
   },
 });
 
