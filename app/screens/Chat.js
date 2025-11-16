@@ -1220,28 +1220,6 @@ const Chat = ({ route, navigation }) => {
         )
       }
 
-      {/* Completion Request Buttons */}
-      {job?.assigned_freelancer && job?.job_status === 'IN_PROGRESS' && !job?.completed_status && (
-        <View style={styles.completionRequestContainer}>
-          {userData?.role === "freelancer" && userData.$id === job?.assigned_freelancer && (
-            <TouchableOpacity
-              style={styles.completionRequestButton}
-              onPress={handleFreelancerRequestCompletion}
-            >
-              <Text style={styles.completionRequestText}>Request Project Completion</Text>
-            </TouchableOpacity>
-          )}
-          {userData?.role === "client" && (
-            <TouchableOpacity
-              style={styles.completionRequestButton}
-              onPress={handleClientRequestCompletion}
-            >
-              <Text style={styles.completionRequestText}>Request Project Completion</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      )}
-
       {/* Input Box */}
       <View style={styles.inputContainer}>
         <TextInput
@@ -1340,26 +1318,6 @@ const getStyles = (currentTheme) =>
     },
     sender: { fontWeight: "bold", color: "#5c2d91" },
     message: { marginTop: 5, color: "#000" },
-    completionRequestContainer: {
-      paddingHorizontal: 15,
-      paddingVertical: 10,
-      backgroundColor: currentTheme.cardBackground || "#F1F1F1",
-      marginHorizontal: 15,
-      borderRadius: 10,
-      marginBottom: 5,
-    },
-    completionRequestButton: {
-      backgroundColor: "#4CAF50",
-      paddingVertical: 12,
-      paddingHorizontal: 20,
-      borderRadius: 8,
-      alignItems: "center",
-    },
-    completionRequestText: {
-      color: "white",
-      fontSize: 14,
-      fontWeight: "bold",
-    },
     inputContainer: {
       flexDirection: "row",
       alignItems: "center",

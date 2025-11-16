@@ -9,8 +9,7 @@ const ClientActions = ({
   onAccept, 
   onReject, 
   onCancelJob, 
-  onConfirmCompletion,
-  onRequestCompletion 
+  onConfirmCompletion 
 }) => {
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
@@ -31,20 +30,6 @@ const ClientActions = ({
           onPress={onReject}
         >
           <Text style={styles.buttonText}>Reject</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
-  // Show completion request button for in-progress jobs
-  if (job?.assignedFreelancerId && chatStatus === 'IN_PROGRESS' && !job?.completedStatus && onRequestCompletion) {
-    return (
-      <View style={styles.actionButtons}>
-        <TouchableOpacity
-          style={styles.completionButton}
-          onPress={onRequestCompletion}
-        >
-          <Text style={styles.buttonText}>Request Project Completion</Text>
         </TouchableOpacity>
       </View>
     );

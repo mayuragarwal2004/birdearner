@@ -1,5 +1,5 @@
-import React from "react";
-import { View, StyleSheet, FlatList, Text, TouchableOpacity } from "react-native";
+import React, { useState } from "react";
+import { View, StyleSheet, FlatList, Text, TouchableOpacity, Modal, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
 import { useTheme } from "../context/ThemeContext";
@@ -90,25 +90,68 @@ const getStyles = (currentTheme) =>
       fontSize: 10,
       fontWeight: "400",
     },
-    completionRequestContainer: {
-      paddingHorizontal: 15,
-      paddingVertical: 10,
-      backgroundColor: currentTheme.cardBackground || "#F1F1F1",
-      marginHorizontal: 15,
-      borderRadius: 10,
-      marginBottom: 5,
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      justifyContent: 'center',
+      alignItems: 'center',
     },
-    completionRequestButton: {
-      backgroundColor: "#4CAF50",
+    modalContent: {
+      backgroundColor: currentTheme.background || '#fff',
+      margin: 20,
+      borderRadius: 15,
+      padding: 25,
+      alignItems: 'center',
+      shadowColor: '#000',
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.25,
+      shadowRadius: 4,
+      elevation: 5,
+    },
+    modalTitle: {
+      fontSize: 20,
+      fontWeight: 'bold',
+      color: currentTheme.text || '#000',
+      marginBottom: 15,
+      textAlign: 'center',
+    },
+    modalMessage: {
+      fontSize: 16,
+      color: currentTheme.text || '#000',
+      textAlign: 'center',
+      lineHeight: 22,
+      marginBottom: 25,
+    },
+    modalButtons: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      width: '100%',
+    },
+    modalButton: {
+      flex: 1,
       paddingVertical: 12,
       paddingHorizontal: 20,
       borderRadius: 8,
-      alignItems: "center",
+      marginHorizontal: 5,
     },
-    completionRequestText: {
-      color: "white",
-      fontSize: 14,
-      fontWeight: "bold",
+    cancelButton: {
+      backgroundColor: currentTheme.border || '#E0E0E0',
+    },
+    confirmButton: {
+      backgroundColor: currentTheme.primary || '#007AFF',
+    },
+    cancelButtonText: {
+      color: currentTheme.text || '#000',
+      fontWeight: '600',
+      textAlign: 'center',
+    },
+    confirmButtonText: {
+      color: '#fff',
+      fontWeight: '600',
+      textAlign: 'center',
     },
   });
 
@@ -117,6 +160,7 @@ const FreelancerChat = ({ route, navigation }) => {
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
   const styles = getStyles(currentTheme);
+  const [showConfirmationModal, setShowConfirmationModal] = useState(false);
 
   const {
     messages,
@@ -143,7 +187,12 @@ const FreelancerChat = ({ route, navigation }) => {
     navigation.navigate("Profile", { userId: route.params.client.user.id });
   };
 
-  const handleRequestCompletion = async () => {
+  const handleRequestCompletion = () => {
+    setShowConfirmationModal(true);
+  };
+
+  const confirmRequestCompletion = async () => {
+    setShowConfirmationModal(false);
     try {
       const api = ApiService;
       await api.init();
@@ -188,6 +237,9 @@ const FreelancerChat = ({ route, navigation }) => {
       case "Report":
         setReportModalVisible(true);
         break;
+      case "Request Project Completion":
+        handleRequestCompletion();
+        break;
       default:
         break;
     }
@@ -210,6 +262,12 @@ const FreelancerChat = ({ route, navigation }) => {
           showMenu={showMenu}
           setShowMenu={setShowMenu}
           onMenuAction={handleMenuAction}
+          menuOptions={
+            (job?.assignedFreelancer?.user?.id === userData.id || job?.assignedFreelancerId === userData.id || job?.assignedFreelancerId === userData.freelancer?.id) && 
+            chatStatus === 'IN_PROGRESS' && !job?.completedStatus
+              ? ["View Profile", "Block", "Report", "Request Project Completion"]
+              : ["View Profile", "Block", "Report"]
+          }
         />
 
         <AssignmentBanner
@@ -275,19 +333,6 @@ const FreelancerChat = ({ route, navigation }) => {
           </View>
         )}
 
-        {/* Completion Request Button for Freelancer */}
-        {(job?.assignedFreelancer?.user?.id === userData.id || job?.assignedFreelancerId === userData.id || job?.assignedFreelancerId === userData.freelancer?.id) && 
-         chatStatus === 'IN_PROGRESS' && !job?.completedStatus && (
-          <View style={styles.completionRequestContainer}>
-            <TouchableOpacity
-              style={styles.completionRequestButton}
-              onPress={handleRequestCompletion}
-            >
-              <Text style={styles.completionRequestText}>Request Project Completion</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
         <ChatInput
           onSend={handleSendMessage}
           onFilePick={handleFilePick}
@@ -305,6 +350,42 @@ const FreelancerChat = ({ route, navigation }) => {
           selectedReason={selectedReportReason}
           onSelectReason={setSelectedReportReason}
         />
+
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={showConfirmationModal}
+          onRequestClose={() => setShowConfirmationModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Confirm Project Completion</Text>
+              <Text style={styles.modalMessage}>
+                By requesting project completion, you confirm that:
+                {'\n\n'}• Your work is completed to satisfaction
+                {'\n'}• There are no pending issues or conflicts
+                {'\n'}• You are ready for final review and payment
+                {'\n\n'}Are you sure you want to proceed?
+              </Text>
+              
+              <View style={styles.modalButtons}>
+                <TouchableOpacity 
+                  style={[styles.modalButton, styles.cancelButton]} 
+                  onPress={() => setShowConfirmationModal(false)}
+                >
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={[styles.modalButton, styles.confirmButton]} 
+                  onPress={confirmRequestCompletion}
+                >
+                  <Text style={styles.confirmButtonText}>Confirm</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
 
         <Toast />
       </View>

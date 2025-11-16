@@ -86,6 +86,17 @@ const CompletionRequestMessage = ({ message, onUpdate, currentUserId, userRole }
       );
     }
 
+    if (status === 'closed') {
+      return (
+        <View style={styles.closedContainer}>
+          <Text style={styles.closedText}>❌ Request Closed</Text>
+          <Text style={styles.closedSubtext}>
+            This completion request has been superseded by a newer request
+          </Text>
+        </View>
+      );
+    }
+
     const isMyRequest = message.senderId === currentUserId;
     const canConfirm = !isMyRequest && status === 'pending';
 
@@ -162,6 +173,25 @@ const getStyles = (currentTheme) => StyleSheet.create({
     fontWeight: 'bold',
     color: '#2E7D32',
     marginBottom: 8,
+  },
+  closedContainer: {
+    backgroundColor: '#FFEBEE',
+    padding: 15,
+    borderRadius: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: '#F44336',
+    alignItems: 'center',
+  },
+  closedText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#C62828',
+    marginBottom: 8,
+  },
+  closedSubtext: {
+    fontSize: 12,
+    color: '#8D6E63',
+    textAlign: 'center',
   },
   requestText: {
     fontSize: 14,

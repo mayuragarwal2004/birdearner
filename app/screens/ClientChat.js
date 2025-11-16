@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, StyleSheet, FlatList, Text, TouchableOpacity } from "react-native";
+import { View, StyleSheet, FlatList, Text, TouchableOpacity, Modal, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
 import { useTheme } from "../context/ThemeContext";
@@ -148,6 +148,69 @@ const getStyles = (currentTheme) =>
       fontSize: 14,
       fontWeight: "500",
     },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    modalContent: {
+      backgroundColor: currentTheme.background || '#fff',
+      margin: 20,
+      borderRadius: 15,
+      padding: 25,
+      alignItems: 'center',
+      shadowColor: '#000',
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.25,
+      shadowRadius: 4,
+      elevation: 5,
+    },
+    modalTitle: {
+      fontSize: 20,
+      fontWeight: 'bold',
+      color: currentTheme.text || '#000',
+      marginBottom: 15,
+      textAlign: 'center',
+    },
+    modalMessage: {
+      fontSize: 16,
+      color: currentTheme.text || '#000',
+      textAlign: 'center',
+      lineHeight: 22,
+      marginBottom: 25,
+    },
+    modalButtons: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      width: '100%',
+    },
+    modalButton: {
+      flex: 1,
+      paddingVertical: 12,
+      paddingHorizontal: 20,
+      borderRadius: 8,
+      marginHorizontal: 5,
+    },
+    cancelButton: {
+      backgroundColor: currentTheme.border || '#E0E0E0',
+    },
+    confirmButton: {
+      backgroundColor: currentTheme.primary || '#007AFF',
+    },
+    cancelButtonText: {
+      color: currentTheme.text || '#000',
+      fontWeight: '600',
+      textAlign: 'center',
+    },
+    confirmButtonText: {
+      color: '#fff',
+      fontWeight: '600',
+      textAlign: 'center',
+    },
   });
 
 const ClientChat = ({ route, navigation }) => {
@@ -159,6 +222,7 @@ const ClientChat = ({ route, navigation }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [cancelModalVisible, setCancelModalVisible] = useState(false);
   const [countdown, setCountdown] = useState(30);
+  const [showConfirmationModal, setShowConfirmationModal] = useState(false);
 
   const api = ApiService;
 
@@ -214,6 +278,9 @@ const ClientChat = ({ route, navigation }) => {
         break;
       case "Cancel Job":
         setCancelModalVisible(true);
+        break;
+      case "Request Project Completion":
+        handleRequestCompletion();
         break;
       default:
         break;
@@ -339,7 +406,12 @@ const ClientChat = ({ route, navigation }) => {
     }
   };
 
-  const handleRequestCompletion = async () => {
+  const handleRequestCompletion = () => {
+    setShowConfirmationModal(true);
+  };
+
+  const confirmRequestCompletion = async () => {
+    setShowConfirmationModal(false);
     try {
       await api.init();
       const res = await api.makeRequest(`/chat/message/completion-request/client`, {
@@ -497,10 +569,18 @@ const ClientChat = ({ route, navigation }) => {
           setShowMenu={setShowMenu}
           onMenuAction={handleMenuAction}
           menuOptions={
-            job?.assignedFreelancerId === route.params.freelancer.id && 
-            (chatStatus === "ACCEPTED" || chatStatus === "IN_PROGRESS")
-              ? ["View Profile", "Block", "Report", "Cancel Job"]
-              : ["View Profile", "Block", "Report"]
+            (() => {
+              const baseOptions = ["View Profile", "Block", "Report"];
+              if (job?.assignedFreelancerId === route.params.freelancer.id && 
+                  (chatStatus === "ACCEPTED" || chatStatus === "IN_PROGRESS")) {
+                const options = [...baseOptions, "Cancel Job"];
+                if (chatStatus === "IN_PROGRESS" && !job?.completedStatus) {
+                  options.push("Request Project Completion");
+                }
+                return options;
+              }
+              return baseOptions;
+            })()
           }
         />
 
@@ -514,7 +594,6 @@ const ClientChat = ({ route, navigation }) => {
           onReject={handleReject}
           onCancelJob={() => setCancelModalVisible(true)}
           onConfirmCompletion={handleConfirmProjComp}
-          onRequestCompletion={handleRequestCompletion}
         />
 
         {renderDeadlineSection()}
@@ -582,6 +661,42 @@ const ClientChat = ({ route, navigation }) => {
           selectedReason={selectedReportReason}
           onSelectReason={setSelectedReportReason}
         />
+
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={showConfirmationModal}
+          onRequestClose={() => setShowConfirmationModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Confirm Project Completion</Text>
+              <Text style={styles.modalMessage}>
+                By requesting project completion, you confirm that:
+                {'\n\n'}• The work meets your requirements
+                {'\n'}• There are no pending issues or conflicts
+                {'\n'}• You are ready to proceed with payment
+                {'\n\n'}Are you sure you want to proceed?
+              </Text>
+              
+              <View style={styles.modalButtons}>
+                <TouchableOpacity 
+                  style={[styles.modalButton, styles.cancelButton]} 
+                  onPress={() => setShowConfirmationModal(false)}
+                >
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={[styles.modalButton, styles.confirmButton]} 
+                  onPress={confirmRequestCompletion}
+                >
+                  <Text style={styles.confirmButtonText}>Confirm</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
 
         <Toast />
       </View>
