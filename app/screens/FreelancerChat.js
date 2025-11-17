@@ -156,6 +156,20 @@ const getStyles = (currentTheme) =>
       fontSize: 12,
       fontWeight: "500",
     },
+    limitInfo: {
+      color: currentTheme.subText || "#64748B",
+      textAlign: "center",
+      fontSize: 12,
+      marginTop: 8,
+      fontStyle: 'italic',
+    },
+    limitWarn: {
+      color: "#EF4444",
+      textAlign: "center",
+      fontSize: 12,
+      marginTop: 6,
+      fontWeight: '600',
+    },
     modalOverlay: {
       flex: 1,
       backgroundColor: 'rgba(0, 0, 0, 0.6)',
@@ -259,6 +273,7 @@ const FreelancerChat = ({ route, navigation }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [sending, setSending] = useState(false);
+  const [currentInputLength, setCurrentInputLength] = useState(0);
 
   // SWR data hooks
   const {
@@ -266,7 +281,12 @@ const FreelancerChat = ({ route, navigation }) => {
     thread,
     job,
     chatStatus,
+    jobStatus,
     characterLimit,
+    charactersUsed,
+    charactersRemaining,
+    otherCharactersUsed,
+    otherCharactersRemaining,
     isLoading,
     sendMessage,
     handleRequestCompletion: swrHandleRequestCompletion,
@@ -322,6 +342,7 @@ const FreelancerChat = ({ route, navigation }) => {
     try {
       await sendMessage(messageContent, fileInfo || fileData);
       setFileInfo(null); // Clear file after sending
+      setCurrentInputLength(0); // Reset input length after sending
     } catch (error) {
       console.error('Error sending message:', error);
     } finally {
@@ -467,12 +488,24 @@ const FreelancerChat = ({ route, navigation }) => {
           contentContainerStyle={styles.chatListContainer}
         />
 
-        {chatStatus === "OPEN" && (
+        {jobStatus === "OPEN" && characterLimit && (
           <View style={styles.limit}>
-            <Text style={styles.limitchar}>Character Limit</Text>
+            <Text style={styles.limitchar}>Character Limit Active</Text>
             <Text style={styles.limitvar}>
-              {characterLimit} characters remaining
+              {charactersRemaining !== null 
+                ? `${Math.max(0, charactersRemaining - currentInputLength)} characters remaining (${charactersUsed + currentInputLength}/${characterLimit} used)`
+                : `Maximum ${characterLimit} characters total`
+              }
             </Text>
+            {/* Info about character limit removal and other user's status */}
+            <Text style={styles.limitInfo}>
+              {`Limit will be removed once the client accepts you as their freelancer.`}
+            </Text>
+            {otherCharactersRemaining === 0 && (
+              <Text style={styles.limitWarn}>
+                {`Client has exhausted their character limit.`}
+              </Text>
+            )}
           </View>
         )}
 
@@ -480,6 +513,8 @@ const FreelancerChat = ({ route, navigation }) => {
           onSend={handleSendMessage}
           onFilePick={handleFilePick}
           characterLimit={characterLimit}
+          charactersRemaining={charactersRemaining}
+          onInputChange={setCurrentInputLength}
           fileInfo={fileInfo}
           sending={sending}
           isUploading={isUploading}

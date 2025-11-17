@@ -164,6 +164,23 @@ export const useChatData = (role, params) => {
   const sendMessage = useCallback(async (messageContent, fileInfo = null) => {
     if (!thread?.id) return;
 
+    // Check cumulative character limit for OPEN jobs
+    if (job?.jobStatus?.toUpperCase() === 'OPEN') {
+      const totalLimit = thread?.characterLimit || job?.characterLimit || 200;
+      const currentUsage = messages
+        .filter(msg => msg.senderId === userData.id)
+        .reduce((total, msg) => total + (msg.messageContent?.length || 0), 0);
+      
+      if (currentUsage + messageContent.length > totalLimit) {
+        Toast.show({
+          type: 'error',
+          text1: 'Character Limit Exceeded',
+          text2: `You have ${Math.max(0, totalLimit - currentUsage)} characters remaining`,
+        });
+        return;
+      }
+    }
+
     // Debug logging
     console.log('SendMessage params:', params);
     console.log('Role:', role);
@@ -332,6 +349,32 @@ export const useChatData = (role, params) => {
     }
   }, [job?.id, mutateJob, mutateThread, mutateMessages]);
 
+  // Calculate character usage for current user
+  const totalCharacterLimit = (job?.jobStatus?.toUpperCase() === 'OPEN') 
+    ? (thread?.characterLimit || job?.characterLimit || 200)
+    : null;
+  
+  const charactersUsed = totalCharacterLimit 
+    ? messages
+        .filter(msg => msg.senderId === userData.id)
+        .reduce((total, msg) => total + (msg.messageContent?.length || 0), 0)
+    : 0;
+  
+  const charactersRemaining = totalCharacterLimit 
+    ? Math.max(0, totalCharacterLimit - charactersUsed)
+    : null;
+
+  // Calculate character usage for the other user in the thread (the other party)
+  const otherCharactersUsed = totalCharacterLimit
+    ? messages
+        .filter(msg => msg.senderId && msg.senderId !== userData.id)
+        .reduce((total, msg) => total + (msg.messageContent?.length || 0), 0)
+    : 0;
+
+  const otherCharactersRemaining = totalCharacterLimit
+    ? Math.max(0, totalCharacterLimit - otherCharactersUsed)
+    : null;
+
   return {
     // Data
     thread,
@@ -362,7 +405,35 @@ export const useChatData = (role, params) => {
     addOptimisticMessage,
     
     // Computed values
-    chatStatus: job?.jobStatus?.toUpperCase() || 'PENDING',
-    characterLimit: thread?.characterLimit || job?.characterLimit || 200,
+    chatStatus: thread?.status || 'PENDING',
+    jobStatus: job?.jobStatus?.toUpperCase() || 'PENDING',
+    characterLimit: (job?.jobStatus?.toUpperCase() === 'OPEN') 
+      ? (thread?.characterLimit || job?.characterLimit || 200)
+      : null,
+    charactersUsed: (job?.jobStatus?.toUpperCase() === 'OPEN') 
+      ? messages
+          .filter(msg => msg.senderId === userData.id)
+          .reduce((total, msg) => total + (msg.messageContent?.length || 0), 0)
+      : 0,
+    charactersRemaining: (job?.jobStatus?.toUpperCase() === 'OPEN') 
+      ? Math.max(0, (thread?.characterLimit || job?.characterLimit || 200) - 
+          messages
+            .filter(msg => msg.senderId === userData.id)
+            .reduce((total, msg) => total + (msg.messageContent?.length || 0), 0)
+        )
+      : null,
+    // Other user's cumulative usage (useful to show notices to each party)
+    otherCharactersUsed: (job?.jobStatus?.toUpperCase() === 'OPEN')
+      ? messages
+          .filter(msg => msg.senderId && msg.senderId !== userData.id)
+          .reduce((total, msg) => total + (msg.messageContent?.length || 0), 0)
+      : 0,
+    otherCharactersRemaining: (job?.jobStatus?.toUpperCase() === 'OPEN')
+      ? Math.max(0, (thread?.characterLimit || job?.characterLimit || 200) - 
+          messages
+            .filter(msg => msg.senderId && msg.senderId !== userData.id)
+            .reduce((total, msg) => total + (msg.messageContent?.length || 0), 0)
+        )
+      : null,
   };
 };

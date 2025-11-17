@@ -15,6 +15,8 @@ const ChatInput = ({
   onSend,
   onFilePick,
   characterLimit,
+  charactersRemaining,
+  onInputChange,
   fileInfo,
   onRemoveFile,
   sending,
@@ -41,15 +43,19 @@ const ChatInput = ({
           onRemove={onRemoveFile}
         />
       )}
-      
+
       <View style={styles.inputRow}>
         <TextInput
           style={styles.input}
           value={input}
-          onChangeText={setInput}
-          placeholder="Type your message..."
+          onChangeText={(text) => {
+            setInput(text);
+            onInputChange?.(text.length);
+          }}
+          placeholder={charactersRemaining === 0 ? "Character limit reached" : "Type your message..."}
           placeholderTextColor={currentTheme.subText || "#666"}
-          maxLength={characterLimit || undefined}
+          maxLength={charactersRemaining !== null ? Math.max(0, charactersRemaining) : undefined}
+          editable={charactersRemaining !== 0}
         />
         
         {!fileInfo && (
