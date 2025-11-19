@@ -55,6 +55,7 @@ export default {
     },
     plugins: [
       "expo-router",
+      "expo-font",
       "react-native-video",
       [
         "expo-build-properties",
