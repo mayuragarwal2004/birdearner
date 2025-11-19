@@ -161,8 +161,12 @@ export const useChatData = (role, params) => {
   }, [mutateMessages]);
 
   // Send message with optimistic update
-  const sendMessage = useCallback(async (messageContent, fileInfo = null) => {
+  const sendMessage = useCallback(async (messageContent, attachmentData = null) => {
     if (!thread?.id) return;
+
+    // Debug logging for attachment data
+    console.log('SendMessage - attachmentData:', attachmentData);
+    console.log('SendMessage - messageContent:', messageContent);
 
     // Check cumulative character limit for OPEN jobs
     if (job?.jobStatus?.toUpperCase() === 'OPEN') {
@@ -186,12 +190,21 @@ export const useChatData = (role, params) => {
     console.log('Role:', role);
     console.log('userData:', userData);
 
+    // Determine message type based on attachment
+    const messageType = attachmentData ? 'ATTACHMENT' : 'text';
+
     const optimisticMessage = {
       id: `temp-${Date.now()}`,
       messageContent,
       senderId: userData.id,
       createdAt: new Date().toISOString(),
-      messageType: 'text',
+      messageType: messageType,
+      attachments: attachmentData ? [{
+        url: attachmentData.attachmentUrl,
+        name: attachmentData.attachmentName,
+        size: attachmentData.attachmentSize,
+        mimeType: attachmentData.attachmentMime,
+      }] : null,
       isOptimistic: true,
     };
 
@@ -211,44 +224,29 @@ export const useChatData = (role, params) => {
         throw new Error('Receiver ID not found in params');
       }
 
-      let response;
+      // Prepare request body
+      const requestBody = {
+        chatThreadId: thread.id,
+        senderId: userData.id,
+        receiverId: receiverId,
+        messageContent: messageContent,
+        messageType: messageType,
+        attachments: attachmentData ? [{
+          url: attachmentData.attachmentUrl,
+          name: attachmentData.attachmentName,
+          size: attachmentData.attachmentSize,
+          mimeType: attachmentData.attachmentMime,
+        }] : null,
+        senderType: role.toUpperCase(),
+      };
 
-      if (fileInfo) {
-        // For messages with attachments, use multipart form data
-        let formData = new FormData();
-        formData.append('threadId', thread.id);
-        formData.append('jobId', params.jobId);
-        formData.append('messageContent', messageContent);
-        formData.append('senderId', userData.id);
-        formData.append('receiverId', receiverId);
-        formData.append('senderType', role.toUpperCase());
-        
-        formData.append('file', {
-          uri: fileInfo.uri,
-          type: fileInfo.mimeType,
-          name: fileInfo.name,
-        });
+      console.log('SendMessage - Request body:', JSON.stringify(requestBody, null, 2));
 
-        response = await api.makeRequest('/chat/message/attachment', {
-          method: 'POST',
-          body: formData,
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
-      } else {
-        // For regular text messages, use JSON
-        response = await api.makeRequest('/chat/message', {
-          method: 'POST',
-          body: JSON.stringify({
-            chatThreadId: thread.id,
-            messageContent,
-            senderId: userData.id,
-            receiverId: receiverId,
-            senderType: role.toUpperCase(),
-            messageType: 'text',
-            attachments: null,
-          }),
-        });
-      }
+      // Send message with attachment data or text only
+      const response = await api.makeRequest('/chat/message', {
+        method: 'POST',
+        body: JSON.stringify(requestBody),
+      });
 
       if (response.success) {
         // Revalidate messages to get the real message from server

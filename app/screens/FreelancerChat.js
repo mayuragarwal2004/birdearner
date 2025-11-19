@@ -307,7 +307,7 @@ const FreelancerChat = ({ route, navigation }) => {
     await swrHandleRequestCompletion();
   };
 
-  // File picking functionality
+  // File picking and Cloudinary upload functionality
   const handleFilePick = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
@@ -317,12 +317,52 @@ const FreelancerChat = ({ route, navigation }) => {
 
       if (!result.canceled && result.assets && result.assets[0]) {
         const file = result.assets[0];
-        setFileInfo({
-          name: file.name,
-          uri: file.uri,
-          mimeType: file.mimeType,
-          size: file.size,
-        });
+        
+        setIsUploading(true);
+        setUploadProgress(0);
+
+        try {
+          const api = ApiService;
+          await api.init();
+
+          // Create FormData for multipart upload
+          const formData = new FormData();
+          formData.append('file', {
+            uri: file.uri,
+            type: file.mimeType || 'application/octet-stream',
+            name: file.name,
+          });
+
+          // Upload to Cloudinary via new chat document route
+          const uploadRes = await api.makeRequest('/messages/upload-chat-document', {
+            method: 'POST',
+            body: formData,
+          });
+
+          if (uploadRes.success && uploadRes.secure_url) {
+            // Store Cloudinary URL instead of local file reference
+            setFileInfo({
+              name: file.name,
+              url: uploadRes.secure_url,
+              cloudinaryPublicId: uploadRes.cloudinaryPublicId,
+              mimeType: file.mimeType,
+              size: file.size,
+            });
+          } else {
+            throw new Error(uploadRes.message || 'Upload failed');
+          }
+        } catch (uploadError) {
+          console.error('Cloudinary upload error:', uploadError);
+          Toast.show({
+            type: 'error',
+            text1: 'Upload Failed',
+            text2: uploadError.message || 'Failed to upload file to Cloudinary',
+          });
+          setFileInfo(null);
+        } finally {
+          setIsUploading(false);
+          setUploadProgress(0);
+        }
       }
     } catch (error) {
       console.error('Error picking file:', error);
@@ -336,18 +376,46 @@ const FreelancerChat = ({ route, navigation }) => {
 
   // Send message functionality
   const handleSendMessage = async (messageContent, fileData = null) => {
+    // Validate message or file
     if (!messageContent.trim() && !fileInfo && !fileData) return;
 
     setSending(true);
     try {
-      await sendMessage(messageContent, fileInfo || fileData);
+      const messageToSend = messageContent.trim() || '';
+      const attachmentData = fileData || fileInfo;
+
+      // If file exists, send with attachment data
+      if (attachmentData && (attachmentData.url || attachmentData.secure_url)) {
+        await sendMessage(messageToSend, {
+          attachmentUrl: attachmentData.url || attachmentData.secure_url,
+          attachmentName: attachmentData.originalName || attachmentData.name || 'attachment',
+          attachmentSize: attachmentData.size || 0,
+          attachmentMime: attachmentData.mimeType || attachmentData.mimetype || 'application/octet-stream',
+        });
+      } else {
+        // Send text-only message
+        await sendMessage(messageToSend, null);
+      }
+      
       setFileInfo(null); // Clear file after sending
       setCurrentInputLength(0); // Reset input length after sending
     } catch (error) {
       console.error('Error sending message:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to send message',
+      });
     } finally {
       setSending(false);
     }
+  };
+
+  // Remove attached file functionality
+  const handleRemoveFile = () => {
+    setFileInfo(null);
+    setUploadProgress(0);
+    setIsUploading(false);
   };
 
   // Report functionality
@@ -512,6 +580,7 @@ const FreelancerChat = ({ route, navigation }) => {
         <ChatInput
           onSend={handleSendMessage}
           onFilePick={handleFilePick}
+          onRemoveFile={handleRemoveFile}
           characterLimit={characterLimit}
           charactersRemaining={charactersRemaining}
           onInputChange={setCurrentInputLength}

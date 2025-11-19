@@ -62,11 +62,18 @@ class ApiService {
 
     const config = {
       headers: {
-        "Content-Type": "application/json",
         ...options.headers,
       },
       ...options,
     };
+
+    // Only set Content-Type if not FormData (let fetch handle multipart)
+    if (!(config.body instanceof FormData)) {
+      config.headers['Content-Type'] = config.headers['Content-Type'] || 'application/json';
+    } else {
+      // For FormData, remove Content-Type header to let fetch set it with boundary
+      delete config.headers['Content-Type'];
+    }
 
     // Add auth token if available
     if (this.token) {
@@ -80,6 +87,7 @@ class ApiService {
       console.log(
         `Auth header present: ${config.headers["Authorization"] ? "Yes" : "No"}`
       );
+      console.log(`Content-Type: ${config.headers['Content-Type'] || 'multipart/form-data (auto)'}`);
 
       const response = await fetch(url, config);
       console.log(`API Response: ${response.status} ${url}`);

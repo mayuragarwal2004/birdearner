@@ -118,7 +118,10 @@ export default function ProfileScreen({ navigation }) {
               `Some services could not be loaded (${failedCount} failed)`
             );
           }
+
+          setData(userProfile);
         } else {
+          setData(userProfile);
           // Clear services if user is not a freelancer or has no selected services
           setUserServices([]);
         }
@@ -285,7 +288,7 @@ Download Bird Earner to connect with amazing freelancers and clients!`,
   }
 
   console.log({
-    roleOptions,
+    data,
   });
 
   return (

@@ -143,6 +143,69 @@ const MessageItem = ({ messageItem, message, isCurrentUser, media = [], onMessag
           currentUserId={currentUserId}
           userRole={userRole}
         />
+      ) : messageItem?.messageType === 'ATTACHMENT' && messageItem?.attachments?.length > 0 ? (
+        <View>
+          {/* Display caption if present */}
+          {message && (
+            <Text
+              style={[
+                styles.messageText,
+                isCurrentUser ? styles.currentUserText : styles.otherUserText,
+              ]}
+            >
+              {message}
+            </Text>
+          )}
+          
+          {/* Display attachments */}
+          {messageItem.attachments.map((attachment, index) => (
+            <View key={index} style={styles.attachmentContainer}>
+              {attachment.mimeType?.startsWith('image/') ? (
+                // Image attachment
+                <TouchableOpacity
+                  onPress={() => setFullImage({ uri: attachment.url, name: attachment.name, index })}
+                >
+                  <Image
+                    source={{ uri: attachment.url }}
+                    style={styles.attachmentImage}
+                    onLoadStart={() => setLoadingImages(prev => ({ ...prev, [index]: true }))}
+                    onLoadEnd={() => setLoadingImages(prev => ({ ...prev, [index]: false }))}
+                  />
+                  {loadingImages[index] && (
+                    <View style={styles.imageLoadingOverlay}>
+                      <Text style={{ color: '#fff' }}>Loading...</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              ) : (
+                // File attachment
+                <TouchableOpacity
+                  style={styles.fileAttachment}
+                  onPress={() => handleDownload(attachment.url, index)}
+                >
+                  <MaterialIcons 
+                    name={getFileIcon(attachment.mimeType)} 
+                    size={24} 
+                    color="#3B82F6" 
+                  />
+                  <View style={{ flex: 1, marginLeft: 12 }}>
+                    <Text style={styles.attachmentName} numberOfLines={2}>
+                      {attachment.name}
+                    </Text>
+                    <Text style={styles.attachmentSize}>
+                      {formatFileSize(attachment.size)}
+                    </Text>
+                  </View>
+                  <MaterialIcons 
+                    name={downloadingIndex === index ? "hourglass-empty" : "download"} 
+                    size={20} 
+                    color="#3B82F6" 
+                  />
+                </TouchableOpacity>
+              )}
+            </View>
+          ))}
+        </View>
       ) : message && (
         <Text
           style={[
@@ -418,6 +481,45 @@ const styles = StyleSheet.create({
   otherUserTimestamp: {
     color: "#ddd",
     textAlign: "left",
+  },
+  attachmentContainer: {
+    marginVertical: 8,
+    borderRadius: 8,
+    overflow: "hidden",
+  },
+  attachmentImage: {
+    width: 200,
+    height: 200,
+    borderRadius: 8,
+  },
+  imageLoadingOverlay: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.3)",
+  },
+  fileAttachment: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 12,
+    backgroundColor: "rgba(59, 130, 246, 0.1)",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#3B82F6",
+  },
+  attachmentName: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#3B82F6",
+  },
+  attachmentSize: {
+    fontSize: 12,
+    color: "#6B7280",
+    marginTop: 2,
   },
 });
 

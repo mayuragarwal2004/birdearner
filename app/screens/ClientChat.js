@@ -427,22 +427,59 @@ const ClientChat = ({ route, navigation }) => {
     setShowMenu(false);
   };
 
-  // File picking functionality
+  // File picking functionality - Upload to Cloudinary via new chat route
   const handleFilePick = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
-        type: '*/*',
-        copyToCacheDirectory: false,
+        type: ['image/*', 'video/*', 'application/*'],
       });
 
-      if (!result.canceled && result.assets && result.assets[0]) {
-        const file = result.assets[0];
-        setFileInfo({
-          name: file.name,
-          uri: file.uri,
-          mimeType: file.mimeType,
-          size: file.size,
+      if (result.canceled || !result.assets || result.assets.length === 0) return;
+
+      const file = result.assets[0];
+      const formData = new FormData();
+      formData.append('file', {
+        uri: file.uri,
+        name: file.name,
+        type: file.mimeType,
+      });
+
+      setIsUploading(true);
+      try {
+        const response = await api.makeRequest(
+          '/messages/upload-chat-document',
+          {
+            method: 'POST',
+            body: formData,
+          }
+        );
+
+        if (response.success) {
+          setFileInfo({
+            name: file.name,
+            url: response.secure_url,
+            cloudinaryPublicId: response.cloudinaryPublicId,
+            mimeType: file.mimeType,
+            size: file.size,
+          });
+
+          Toast.show({
+            type: 'success',
+            text1: 'Success',
+            text2: 'File uploaded to cloud',
+          });
+        } else {
+          throw new Error(response.message || 'Upload failed');
+        }
+      } catch (uploadError) {
+        console.error('Upload error:', uploadError);
+        Toast.show({
+          type: 'error',
+          text1: 'Upload Failed',
+          text2: uploadError.message || 'Failed to upload file to cloud',
         });
+      } finally {
+        setIsUploading(false);
       }
     } catch (error) {
       console.error('Error picking file:', error);
@@ -456,18 +493,46 @@ const ClientChat = ({ route, navigation }) => {
 
   // Send message functionality
   const handleSendMessage = async (messageContent, fileData = null) => {
+    // Validate message or file
     if (!messageContent.trim() && !fileInfo && !fileData) return;
 
     setSending(true);
     try {
-      await sendMessage(messageContent, fileInfo || fileData);
+      const messageToSend = messageContent.trim() || '';
+      const attachmentData = fileData || fileInfo;
+
+      // If file exists, send with attachment data
+      if (attachmentData && (attachmentData.url || attachmentData.secure_url)) {
+        await sendMessage(messageToSend, {
+          attachmentUrl: attachmentData.url || attachmentData.secure_url,
+          attachmentName: attachmentData.originalName || attachmentData.name || 'attachment',
+          attachmentSize: attachmentData.size || 0,
+          attachmentMime: attachmentData.mimeType || attachmentData.mimetype || 'application/octet-stream',
+        });
+      } else {
+        // Send text-only message
+        await sendMessage(messageToSend, null);
+      }
+      
       setFileInfo(null); // Clear file after sending
       setCurrentInputLength(0); // Reset input length after sending
     } catch (error) {
       console.error('Error sending message:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to send message',
+      });
     } finally {
       setSending(false);
     }
+  };
+
+  // Remove attached file functionality
+  const handleRemoveFile = () => {
+    setFileInfo(null);
+    setUploadProgress(0);
+    setIsUploading(false);
   };
 
   // Report functionality
@@ -873,6 +938,7 @@ const ClientChat = ({ route, navigation }) => {
         <ChatInput
           onSend={handleSendMessage}
           onFilePick={handleFilePick}
+          onRemoveFile={handleRemoveFile}
           characterLimit={characterLimit}
           charactersRemaining={charactersRemaining}
           onInputChange={setCurrentInputLength}
