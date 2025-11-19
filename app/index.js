@@ -3,17 +3,13 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createStackNavigator } from "@react-navigation/stack";
 import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { View, StyleSheet, Alert, Platform } from "react-native";
-import { Briefcase, Bird as LucideBird } from "lucide-react-native";
+import { View, StyleSheet, Alert, Platform, Text } from "react-native";
+import { Briefcase, ChartColumn, ClipboardPen, House, Bird as LucideBird, Plus } from "lucide-react-native";
 
 // Import custom SVG files as React components
 import BirdEarnerSvg from "./assets/BirdEarnerSvg";
-import HomeSvg from "./assets/HomeSvg";
 import MarketplaceSvg from "./assets/MarketplaceSvg";
-import StatsSvg from "./assets/StatsSvg";
 import UserSvg from "./assets/UserSvg";
-import JobIconSvg from "./assets/JobIconSvg";
-// import JobIconSvg from "./assets/jobIconSvg";
 import { useAuth } from "./context/NewAuthContext";
 
 // Authentication Screens
@@ -56,14 +52,43 @@ import ClientSignupScreen from "./screens/ClientSignup";
 import FreelancerSignupScreen from "./screens/FreelancerSignup";
 
 import messaging from "@react-native-firebase/messaging";
+import Toast from "react-native-toast-message";
 import { AuthProvider } from "./context/NewAuthContext";
 import { StatusBar } from "expo-status-bar";
 import { ThemeProvider } from "./context/ThemeContext";
 import { NavigationContainer } from "@react-navigation/native";
 import * as Linking from "expo-linking";
 
+// Toast Configuration
+const toastConfig = {
+  success: (props) => (
+    <View style={[styles.toastContainer, styles.successToast]}>
+      <Text style={styles.toastTitle}>{props.text1}</Text>
+      {props.text2 ? <Text style={styles.toastMessage}>{props.text2}</Text> : null}
+    </View>
+  ),
+  error: (props) => (
+    <View style={[styles.toastContainer, styles.errorToast]}>
+      <Text style={styles.toastTitle}>{props.text1}</Text>
+      {props.text2 ? <Text style={styles.toastMessage}>{props.text2}</Text> : null}
+    </View>
+  ),
+  warning: (props) => (
+    <View style={[styles.toastContainer, styles.warningToast]}>
+      <Text style={styles.toastTitle}>{props.text1}</Text>
+      {props.text2 ? <Text style={styles.toastMessage}>{props.text2}</Text> : null}
+    </View>
+  ),
+  info: (props) => (
+    <View style={[styles.toastContainer, styles.infoToast]}>
+      <Text style={styles.toastTitle}>{props.text1}</Text>
+      {props.text2 ? <Text style={styles.toastMessage}>{props.text2}</Text> : null}
+    </View>
+  ),
+};
+
 const linking = {
-  prefixes: ['birdearner://', 'https://birdearner.com'],
+  prefixes: ["birdearner://", "https://birdearner.com"],
   config: {
     screens: {
       MainTabs: {
@@ -71,7 +96,7 @@ const linking = {
           Profile: {
             screens: {
               ProfileScreen: {
-                path: '/profile/:userId',
+                path: "/profile/:userId",
                 parse: {
                   userId: (userId) => userId,
                 },
@@ -82,7 +107,7 @@ const linking = {
       },
       // Direct access to ProfileScreen when not in tabs
       ProfileScreen: {
-        path: '/profile/:userId',
+        path: "/profile/:userId",
         parse: {
           userId: (userId) => userId,
         },
@@ -92,24 +117,22 @@ const linking = {
 };
 
 export default function MainApp() {
-  console.log("hi");
-
   // Add debugging for deep links
   React.useEffect(() => {
     const handleDeepLink = (url) => {
-      console.log('Deep link received:', url);
+      // Handle deep link navigation logic here
+      // TODO: Implement proper deep link routing
     };
 
     // Handle initial URL if app was opened via deep link
     Linking.getInitialURL().then((url) => {
       if (url) {
-        console.log('Initial URL:', url);
         handleDeepLink(url);
       }
     });
 
     // Handle deep links while app is running
-    const subscription = Linking.addEventListener('url', ({ url }) => {
+    const subscription = Linking.addEventListener("url", ({ url }) => {
       handleDeepLink(url);
     });
 
@@ -117,12 +140,7 @@ export default function MainApp() {
   }, []);
 
   return (
-    <NavigationContainer 
-      linking={linking}
-      onStateChange={(state) => {
-        console.log('Navigation state changed:', state);
-      }}
-    >
+    <NavigationContainer linking={linking}>
       <ThemeProvider>
         <AuthProvider>
           <SWRProvider>
@@ -131,6 +149,7 @@ export default function MainApp() {
           <StatusBar style="auto" />
         </AuthProvider>
       </ThemeProvider>
+      <Toast config={toastConfig} />
     </NavigationContainer>
   );
 }
@@ -163,9 +182,28 @@ function MainTabs() {
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarShowLabel: false,
+        tabBarShowLabel: true,
+        tabBarLabelStyle: styles.tabBarLabel,
         tabBarStyle: styles.tabBarStyle,
         tabBarIcon: ({ focused }) => renderTabIcon(route, focused),
+        tabBarActiveTintColor: "#FFFFFF",
+        tabBarInactiveTintColor: "#C4B5FD",
+        tabBarItemStyle: styles.tabBarItem,
+        tabBarHideOnKeyboard: true,
+        tabBarVisibilityAnimationConfig: {
+          show: {
+            animation: "timing",
+            config: {
+              duration: 200,
+            },
+          },
+          hide: {
+            animation: "timing",
+            config: {
+              duration: 200,
+            },
+          },
+        },
       })}
     >
       {tabScreens.map((screen, index) => (
@@ -198,27 +236,27 @@ function RoleDashboardRouter() {
 
 // Function to render tab icons
 function renderTabIcon(route, focused) {
-  const iconColor = focused ? "#FFF" : "#fff";
+  const activeColor = "#FFFFFF";
+  const inactiveColor = "#C4B5FD";
 
   // Material Icons mapping
-  const materialIcons = {
-    "Job Requirements": "add",
-  };
+  const materialIcons = {};
 
   // Lucide icons mapping
   const lucideIcons = {
-    "Job Posted": "briefcase",
+    "Job Posted": Briefcase,
+    "Job Posted": ClipboardPen,
+    "Job Requirements": Plus,
+    Home: House,
+    "Leaderboard": ChartColumn,
   };
 
   // Custom SVG icons mapping
   const customSvgIcons = {
     // Enable these custom SVGs - you can uncomment others as needed
-    "Job Posted": JobIconSvg,
     "AI Bird": BirdEarnerSvg,
     Profile: UserSvg,
     Marketplace: MarketplaceSvg,
-    Home: HomeSvg,
-    Leaderboard: StatsSvg,
   };
 
   const materialIcon = materialIcons[route.name];
@@ -227,155 +265,187 @@ function renderTabIcon(route, focused) {
 
   // Priority: Custom SVG > Lucide > Material Icons
   if (customSvgIcon) {
-    return renderCustomSvgIcon(focused, customSvgIcon, iconColor);
+    return renderCustomSvgIcon(
+      focused,
+      customSvgIcon,
+      focused ? activeColor : inactiveColor
+    );
   } else if (lucideIcon) {
-    return renderLucideIcon(focused, lucideIcon, iconColor);
+    return renderLucideIcon(
+      focused,
+      lucideIcon,
+      focused ? activeColor : inactiveColor
+    );
   } else if (materialIcon) {
-    return renderMaterialIcon(focused, materialIcon, iconColor);
+    return renderMaterialIcon(
+      focused,
+      materialIcon,
+      focused ? activeColor : inactiveColor
+    );
   }
 }
 
 // Render Material Icons
 function renderMaterialIcon(focused, iconName, iconColor) {
   return (
-    <View style={focused ? styles.activeTab : styles.inactiveTab}>
-      {focused ? (
-        <LinearGradient
-          colors={["#300E49", "#762BAD"]}
-          style={styles.gradientBackground}
-        >
-          <MaterialIcons name={iconName} color={iconColor} size={30} />
-        </LinearGradient>
-      ) : (
-        <MaterialIcons name={iconName} color={iconColor} size={30} />
-      )}
+    <View style={styles.iconContainer}>
+      <View style={[styles.iconWrapper, focused && styles.activeIconWrapper]}>
+        {focused ? (
+          <LinearGradient
+            colors={["#762BAD", "#300E49"]}
+            style={styles.gradientBackground}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <MaterialIcons name={iconName} color="#FFFFFF" size={22} />
+          </LinearGradient>
+        ) : (
+          <View style={styles.inactiveIconBackground}>
+            <MaterialIcons name={iconName} color="#C4B5FD" size={22} />
+          </View>
+        )}
+      </View>
     </View>
   );
 }
 
 // Render Custom SVG Icons
 function renderCustomSvgIcon(focused, SvgComponent, iconColor) {
+  const activeColor = "#FFFFFF";
+  const inactiveColor = "#C4B5FD";
+
   return (
-    <View style={focused ? styles.activeTab : styles.inactiveTab}>
-      {focused ? (
-        <LinearGradient
-          colors={["#300E49", "#762BAD"]}
-          style={styles.gradientBackground}
-        >
-          <SvgComponent width={30} height={30} fill={iconColor} />
-        </LinearGradient>
-      ) : (
-        <SvgComponent width={30} height={30} fill={iconColor} />
-      )}
+    <View style={styles.iconContainer}>
+      <View style={[styles.iconWrapper, focused && styles.activeIconWrapper]}>
+        {focused ? (
+          <LinearGradient
+            colors={["#762BAD", "#300E49"]}
+            style={styles.gradientBackground}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <View style={[styles.svgIconWrapper, { tintColor: activeColor }]}>
+              <SvgComponent
+                width={22}
+                height={22}
+                fill={activeColor}
+                color={activeColor}
+                fillColor={activeColor}
+                strokeColor={activeColor}
+              />
+            </View>
+          </LinearGradient>
+        ) : (
+          <View style={styles.inactiveIconBackground}>
+            <View style={[styles.svgIconWrapper, { tintColor: inactiveColor }]}>
+              <SvgComponent
+                width={22}
+                height={22}
+                fill={inactiveColor}
+                color={inactiveColor}
+                fillColor={inactiveColor}
+                strokeColor={inactiveColor}
+              />
+            </View>
+          </View>
+        )}
+      </View>
     </View>
   );
 }
 
 // Render Lucide icons
-function renderLucideIcon(focused, iconType, iconColor) {
-  const IconComponent = iconType === "briefcase" ? Briefcase : LucideBird;
-
+function renderLucideIcon(focused, IconComponent = LucideBird, iconColor) {
   return (
-    <View style={focused ? styles.activeTab : styles.inactiveTab}>
-      {focused ? (
-        <LinearGradient
-          colors={["#300E49", "#762BAD"]}
-          style={styles.gradientBackground}
-        >
-          <IconComponent color={iconColor} size={30} />
-        </LinearGradient>
-      ) : (
-        <IconComponent color={iconColor} size={30} />
-      )}
+    <View style={styles.iconContainer}>
+      <View style={[styles.iconWrapper, focused && styles.activeIconWrapper]}>
+        {focused ? (
+          <LinearGradient
+            colors={["#762BAD", "#300E49"]}
+            style={styles.gradientBackground}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <IconComponent color="#FFFFFF" size={22} />
+          </LinearGradient>
+        ) : (
+          <View style={styles.inactiveIconBackground}>
+            <IconComponent color="#C4B5FD" size={22} />
+          </View>
+        )}
+      </View>
     </View>
   );
 }
 
-async function requestUserPermission() {
-  const authStatus = await messaging().requestPermission();
-  const enabled =
-    authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
-    authStatus === messaging.AuthorizationStatus.PROVISIONAL;
-
-  if (enabled) {
-    console.log("Notification permission granted:", authStatus);
-  } else {
-    console.log("Notification permission denied:", authStatus);
-  }
-}
-
 // Main App Component
 export function App() {
-  console.log("hi");
-  const [skipTrackingHealthy, setSkipTrackingHealthy] = useState(true);
   const { userData, loading } = useAuth();
 
   async function requestUserPermission() {
-    const authStatus = await messaging().requestPermission();
-    const enabled =
-      authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
-      authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+    try {
+      const authStatus = await messaging().requestPermission();
+      const enabled =
+        authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
+        authStatus === messaging.AuthorizationStatus.PROVISIONAL;
 
-    if (enabled) {
-      console.log("Authorization status:", authStatus);
+      return enabled;
+    } catch (error) {
+      console.error("Error requesting push notification permission:", error);
+      return false;
     }
   }
 
   useEffect(() => {
-    try {
-      if (requestUserPermission()) {
-        messaging()
-          .getToken()
-          .then((token) => {
-            console.log(token);
-          });
-      } else {
-        console.log("Failed Auth Status", authStatus);
+    const initializeNotifications = async () => {
+      try {
+        const hasPermission = await requestUserPermission();
+        if (hasPermission) {
+          const token = await messaging().getToken();
+          // Store token securely for push notifications
+          // TODO: Send token to your backend server
+        }
+      } catch (error) {
+        console.error("Error initializing push notifications:", error);
       }
+    };
 
+    initializeNotifications();
+
+    const setupMessageHandlers = () => {
+      // Handle initial notification when app was opened from killed state
       messaging()
         .getInitialNotification()
         .then(async (remoteMessage) => {
           if (remoteMessage) {
-            console.log(
-              "Notification caused app to open from quit state:",
-              remoteMessage
-            );
+            // Handle notification that opened the app
+            console.log("Notification caused app to open from quit state");
           }
         });
 
+      // Handle notification when app is opened from background
       messaging().onNotificationOpenedApp(async (remoteMessage) => {
-        console.log(
-          "Notification caused app to open from background state:",
-          remoteMessage.notification
-        );
+        // Handle notification when app is in background
+        console.log("Notification caused app to open from background");
       });
 
-      // Register background handler
-      messaging().setBackgroundMessageHandler(async (remoteMessage) => {
-        console.log(
-          "Message handled in the background!",
-          remoteMessage.notification
-        );
-      });
-
+      // Handle foreground messages
       const unsubscribe = messaging().onMessage(async (remoteMessage) => {
         Alert.alert(
-          "A new FCM message arrived!",
-          JSON.stringify(remoteMessage)
+          remoteMessage?.notification?.title || "New Notification",
+          remoteMessage?.notification?.body || "You have a new message"
         );
       });
 
       return unsubscribe;
-    } catch (error) {
-      console.log("Error in App.js", error);
-    }
+    };
+
+    const unsubscribe = setupMessageHandlers();
+    return unsubscribe;
   }, []);
 
   // Always show intro screen first, let it handle navigation
   // No need for loading check here since Intro will handle it
-
-  console.log("App: Rendering navigation - user authenticated:", !!userData);
 
   const options = {
     headerShown: Platform.OS === "ios",
@@ -392,7 +462,7 @@ export function App() {
     >
       {/* Intro/Splash Screen - Always shown first */}
       <Stack.Screen name="Intro" component={IntroScreen} />
-      
+
       {userData ? (
         // Authenticated Stack - Route directly to role dashboard
         <>
@@ -415,10 +485,22 @@ export function App() {
             component={JobDetailsChatScreen}
           />
           <Stack.Screen name="PortfolioCom" component={PortfolioComScreen} />
-          <Stack.Screen name="ProfileScreen" component={ProfileScreen} options={options} />
-          <Stack.Screen name="Offers" component={OffersScreen} options={options} />
+          <Stack.Screen
+            name="ProfileScreen"
+            component={ProfileScreen}
+            options={options}
+          />
+          <Stack.Screen
+            name="Offers"
+            component={OffersScreen}
+            options={options}
+          />
           <Stack.Screen name="ReviewGive" component={ReviewGive} />
-          <Stack.Screen name="ReviewsScreen" component={ReviewsScreen} options={options} />
+          <Stack.Screen
+            name="ReviewsScreen"
+            component={ReviewsScreen}
+            options={options}
+          />
           <Stack.Screen
             name="SubmitSolution"
             component={SubmitSolutionScreen}
@@ -468,28 +550,141 @@ export function App() {
 // Shared Styles
 const styles = StyleSheet.create({
   tabBarStyle: {
-    backgroundColor: "#370F54",
-    borderTopWidth: 0,
+    backgroundColor: "#2A1B3D",
+    borderTopWidth: 0.5,
+    borderTopColor: "rgba(118, 43, 173, 0.3)",
+    height: Platform.OS === "ios" ? 85 : 70,
+    paddingBottom: Platform.OS === "ios" ? 20 : 8,
+    paddingTop: 8,
+    paddingHorizontal: 10,
+    elevation: 15,
+    shadowColor: "#762BAD",
+    shadowOffset: {
+      width: 0,
+      height: -4,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
   },
-  activeTab: {
-    width: "100%",
-    height: "100%",
+  tabBarItem: {
+    paddingVertical: 3,
+    paddingHorizontal: 2,
+    flex: 1,
     justifyContent: "center",
     alignItems: "center",
   },
-  inactiveTab: {
+  tabBarLabel: {
+    fontSize: 9,
+    fontWeight: "600",
+    marginTop: 10,
+    textTransform: "capitalize",
+    letterSpacing: 0.3,
+    textShadowColor: "rgba(0, 0, 0, 0.2)",
+    textShadowOffset: { width: 0, height: 0.5 },
+    textShadowRadius: 1,
+  },
+  iconContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 1,
+  },
+  iconWrapper: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: "transparent",
+    transition: "all 0.2s ease-in-out",
+  },
+  activeIconWrapper: {
+    transform: [{ scale: 1.1 }],
+    shadowColor: "#762BAD",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 8,
   },
   gradientBackground: {
-    width: "100%",
-    height: "100%",
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: "center",
     alignItems: "center",
-    // borderRadius: 50,
+    borderWidth: 1.5,
+    borderColor: "rgba(255, 255, 255, 0.2)",
+  },
+  inactiveIconBackground: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.08)",
+    borderWidth: 0.5,
+    borderColor: "rgba(255, 255, 255, 0.15)",
   },
   customIcon: {
-    width: 25,
-    height: 25,
+    width: 22,
+    height: 22,
+  },
+  svgIconWrapper: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  // Toast Styles
+  toastContainer: {
+    height: 80,
+    width: "90%",
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    borderLeftWidth: 5,
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  successToast: {
+    borderLeftColor: "#28a745",
+    backgroundColor: "#d4edda",
+  },
+  errorToast: {
+    borderLeftColor: "#dc3545",
+    backgroundColor: "#f8d7da",
+  },
+  warningToast: {
+    borderLeftColor: "#ffc107",
+    backgroundColor: "#fff3cd",
+  },
+  infoToast: {
+    borderLeftColor: "#17a2b8",
+    backgroundColor: "#d1ecf1",
+  },
+  toastTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#333",
+    marginBottom: 5,
+  },
+  toastMessage: {
+    fontSize: 14,
+    color: "#666",
+    lineHeight: 18,
   },
 });
