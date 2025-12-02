@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,8 +6,11 @@ import {
   TouchableOpacity,
   FlatList,
   StyleSheet,
+  Platform,
+  Keyboard,
 } from "react-native";
 import { useTheme } from "../context/ThemeContext";
+import { useKeyboard } from "../context/KeyboardContext";
 import { MaterialIcons } from "@expo/vector-icons";
 import apiService from "../lib/apiService";
 
@@ -18,9 +21,10 @@ const Bird = () => {
   const [showMenu, setShowMenu] = useState(false);
 
   const { theme, themeStyles } = useTheme();
+  const { isKeyboardVisible } = useKeyboard();
   const currentTheme = themeStyles[theme];
 
-  const styles = getStyles(currentTheme);
+  const styles = getStyles(currentTheme, isKeyboardVisible);
 
   // Send a new message
   const sendMessage = async () => {
@@ -216,13 +220,14 @@ const Bird = () => {
   );
 };
 
-const getStyles = (currentTheme) =>
+const getStyles = (currentTheme, isKeyboardVisible) =>
   StyleSheet.create({
     container: {
       flex: 1,
       backgroundColor: currentTheme.background || "#fff",
       paddingHorizontal: 20,
       paddingTop: 50,
+      paddingBottom: isKeyboardVisible ? 0 : (Platform.OS === "ios" ? 90 : 75), // Only add padding when keyboard is hidden
     },
     chatList: {
       flex: 1,

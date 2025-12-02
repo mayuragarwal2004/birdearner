@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ScrollView,
   RefreshControl,
+  Platform,
 } from "react-native";
 import { FontAwesome, MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "../context/NewAuthContext";
@@ -201,6 +202,7 @@ const HomeScreen = () => {
       <ScrollView
         showsVerticalScrollIndicator={false}
         style={styles.safeContainer}
+        contentContainerStyle={styles.scrollContent}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -416,6 +418,9 @@ const getStyles = (currentTheme) =>
       backgroundColor: currentTheme.background || "#fff",
       paddingHorizontal: 20,
       paddingTop: 30,
+    },
+    scrollContent: {
+      paddingBottom: Platform.OS === "ios" ? 90 : 75, // Add bottom padding to prevent tab bar overlap
     },
     header: {
       flexDirection: "column",
@@ -678,7 +683,7 @@ const getStyles = (currentTheme) =>
       borderRadius: 40,
       backgroundColor: "#3b006b",
       position: "absolute",
-      bottom: 20,
+      bottom: Platform.OS === "ios" ? 105 : 90, // Position above tab bar (85px + 20px buffer for iOS, 70px + 20px for Android)
       right: 20,
       shadowColor: currentTheme.shadow || "#000000",
       shadowOffset: {

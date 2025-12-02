@@ -137,6 +137,7 @@ const SettingsScreen = ({ navigation }) => {
       {/* Settings List */}
       <ScrollView
         style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
         {settingsData.map((section, index) => (
@@ -193,6 +194,9 @@ const getStyles = (currentTheme) =>
     scrollView: {
       flex: 1,
       marginHorizontal: Platform.OS==="ios"? 20:0,
+    },
+    scrollContent: {
+      paddingBottom: Platform.OS === "ios" ? 90 : 75, // Add bottom padding to prevent tab bar overlap
     },
     sectionContainer: {
       marginBottom: 20,

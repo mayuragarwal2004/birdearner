@@ -11,6 +11,7 @@ import {
   ScrollView,
   RefreshControl,
   Alert,
+  Platform,
 } from "react-native";
 import { FontAwesome } from "@expo/vector-icons";
 import { household_service, freelance_service } from "../lib/roleData";
@@ -255,6 +256,7 @@ const ClientHomeScreen = () => {
       <View style={styles.line}></View>
       <ScrollView
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -514,6 +516,9 @@ const getStyles = (currentTheme) =>
       paddingTop: 10,
       // position: "relative"
     },
+    scrollContent: {
+      paddingBottom: Platform.OS === "ios" ? 90 : 75, // Add bottom padding to prevent tab bar overlap
+    },
     header: {
       flexDirection: "row",
       justifyContent: "space-between",
@@ -752,7 +757,7 @@ const getStyles = (currentTheme) =>
       borderRadius: 40,
       backgroundColor: "#3b006b",
       position: "absolute",
-      bottom: 20,
+      bottom: Platform.OS === "ios" ? 105 : 90, // Position above tab bar (85px + 20px buffer for iOS, 70px + 20px for Android)
       right: 20,
       // marginLeft: 310,
       // marginBottom: 12,

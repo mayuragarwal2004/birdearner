@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { View, StyleSheet, FlatList, Text, TouchableOpacity, Modal, Alert } from "react-native";
+import { View, StyleSheet, FlatList, Text, TouchableOpacity, Modal, Alert, Platform, Keyboard } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
 import * as DocumentPicker from 'expo-document-picker';
 import { useTheme } from "../context/ThemeContext";
+import { useKeyboard } from "../context/KeyboardContext";
 import DeadlineTimer from "../components/DeadlineTimer";
 import MessageItem from "../components/MessageItem";
 import ChatHeader from "../components/chat/ChatHeader";
@@ -16,11 +17,12 @@ import { useChatData } from "../hooks/useChatSWR";
 import { useAuth } from "../context/NewAuthContext";
 import ApiService from "../lib/apiService";
 
-const getStyles = (currentTheme) =>
+const getStyles = (currentTheme, isKeyboardVisible) =>
   StyleSheet.create({
     container: {
       flex: 1,
       backgroundColor: currentTheme.background || "#F1F5F9",
+      paddingBottom: isKeyboardVisible ? 0 : (Platform.OS === "ios" ? 85 : 70), // Dynamic padding based on keyboard visibility
     },
     deadlineContainer: {
       alignItems: "center",
@@ -347,8 +349,10 @@ const getStyles = (currentTheme) =>
 const ClientChat = ({ route, navigation }) => {
   const { userData } = useAuth();
   const { theme, themeStyles } = useTheme();
+  const { isKeyboardVisible } = useKeyboard();
   const currentTheme = themeStyles[theme];
-  const styles = getStyles(currentTheme);
+  
+  const styles = getStyles(currentTheme, isKeyboardVisible);
 
   // Local state for UI interactions
   const [modalVisible, setModalVisible] = useState(false);

@@ -699,6 +699,7 @@ const getStyles = (currentTheme) =>
     },
     scrollContent: {
       padding: 20,
+      paddingBottom: Platform.OS === "ios" ? 90 : 75, // Add bottom padding to prevent tab bar overlap
     },
     title: {
       fontSize: 24,

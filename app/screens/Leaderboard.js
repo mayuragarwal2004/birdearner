@@ -6,6 +6,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   SafeAreaView,
+  Platform,
 } from "react-native";
 import { useAuth } from "../context/NewAuthContext";
 // import { useAppwrite } from "../context/AppwriteContext";
@@ -228,6 +229,7 @@ const getStyles = (currentTheme) =>
       padding: 16,
       backgroundColor: currentTheme.background || "#ffffff",
       paddingTop: 50,
+      paddingBottom: Platform.OS === "ios" ? 90 : 75, // Add bottom padding to prevent tab bar overlap
     },
     title: {
       fontSize: 24,

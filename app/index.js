@@ -56,6 +56,7 @@ import Toast from "react-native-toast-message";
 import { AuthProvider } from "./context/NewAuthContext";
 import { StatusBar } from "expo-status-bar";
 import { ThemeProvider } from "./context/ThemeContext";
+import { KeyboardProvider, useKeyboard } from "./context/KeyboardContext";
 import { NavigationContainer } from "@react-navigation/native";
 import * as Linking from "expo-linking";
 
@@ -143,9 +144,11 @@ export default function MainApp() {
     <NavigationContainer linking={linking}>
       <ThemeProvider>
         <AuthProvider>
-          <SWRProvider>
-            <App />
-          </SWRProvider>
+          <KeyboardProvider>
+            <SWRProvider>
+              <App />
+            </SWRProvider>
+          </KeyboardProvider>
           <StatusBar style="auto" />
         </AuthProvider>
       </ThemeProvider>
@@ -160,6 +163,7 @@ const Stack = createStackNavigator();
 // MainTabs Component - Now used only after profile setup is complete
 function MainTabs() {
   const { userData } = useAuth();
+  const { isKeyboardVisible } = useKeyboard();
   const isClient = userData?.role === "CLIENT";
 
   const tabScreens = isClient
@@ -184,7 +188,10 @@ function MainTabs() {
         headerShown: false,
         tabBarShowLabel: true,
         tabBarLabelStyle: styles.tabBarLabel,
-        tabBarStyle: styles.tabBarStyle,
+        tabBarStyle: [
+          styles.tabBarStyle,
+          isKeyboardVisible && { display: 'none' }
+        ],
         tabBarIcon: ({ focused }) => renderTabIcon(route, focused),
         tabBarActiveTintColor: "#FFFFFF",
         tabBarInactiveTintColor: "#C4B5FD",
@@ -194,13 +201,13 @@ function MainTabs() {
           show: {
             animation: "timing",
             config: {
-              duration: 200,
+              duration: 150,
             },
           },
           hide: {
             animation: "timing",
             config: {
-              duration: 200,
+              duration: 150,
             },
           },
         },
