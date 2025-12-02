@@ -35,10 +35,10 @@ export const AuthProvider = ({ children }) => {
   // Helper function to determine user role dynamically based on profiles
   const determineUserRole = (userData, preferredRole = null) => {
     if (!userData) return null;
-    
+
     const hasFreelancerProfile = !!userData.freelancer;
     const hasClientProfile = !!userData.client;
-    
+
     // If user has preferred role and the profile exists, use it
     if (preferredRole === "FREELANCER" && hasFreelancerProfile) {
       return "FREELANCER";
@@ -46,7 +46,7 @@ export const AuthProvider = ({ children }) => {
     if (preferredRole === "CLIENT" && hasClientProfile) {
       return "CLIENT";
     }
-    
+
     // If no preferred role or preferred role doesn't exist, use fallback logic
     if (hasFreelancerProfile && hasClientProfile) {
       // User has both profiles, prefer the one from stored preference or default to FREELANCER
@@ -56,12 +56,12 @@ export const AuthProvider = ({ children }) => {
     } else if (hasClientProfile) {
       return "CLIENT";
     }
-    
+
     return null; // No profiles found
   };
 
   // Fetch user profile data (freelancer/client) from our backend
-  const fetchUserProfile = async (userId, userRole) => {
+  const fetchUserProfile = async (userId = user?.id, userRole) => {
     try {
       // First, verify that the user exists in the database
       try {
@@ -189,11 +189,11 @@ export const AuthProvider = ({ children }) => {
 
         // Get fresh user data to ensure we have the latest profile information
         const freshUserData = await apiService.getUserById(userData.id);
-        
+
         // If stored data has a role preference, preserve it; otherwise determine dynamically
         const preferredRole = userData.role;
         const dynamicRole = determineUserRole(freshUserData, preferredRole);
-        
+
         // Update userData with fresh profile data and determined role
         const updatedUserData = {
           ...freshUserData,
@@ -215,11 +215,14 @@ export const AuthProvider = ({ children }) => {
         }
 
         setUserProfile(profileData);
-        
+
         // Update stored data
         await AsyncStorage.setItem("userData", JSON.stringify(updatedUserData));
         if (profileData) {
-          await AsyncStorage.setItem("userProfile", JSON.stringify(profileData));
+          await AsyncStorage.setItem(
+            "userProfile",
+            JSON.stringify(profileData)
+          );
         }
 
         console.log(`Session restored with role: ${updatedUserData.role}`);
@@ -295,7 +298,10 @@ export const AuthProvider = ({ children }) => {
           setRoleSelectionVisible(true);
 
           // Store user data but don't set userData yet (wait for role selection)
-          await AsyncStorage.setItem("userData", JSON.stringify(completeUserData));
+          await AsyncStorage.setItem(
+            "userData",
+            JSON.stringify(completeUserData)
+          );
           return loginResponse;
         } else if (freelancerProfile) {
           // Only freelancer profile
@@ -323,7 +329,10 @@ export const AuthProvider = ({ children }) => {
           // No profile found, set basic user data without role
           setUserData(completeUserData);
           setUserProfile(null);
-          await AsyncStorage.setItem("userData", JSON.stringify(completeUserData));
+          await AsyncStorage.setItem(
+            "userData",
+            JSON.stringify(completeUserData)
+          );
         }
 
         return loginResponse;
@@ -610,7 +619,7 @@ export const AuthProvider = ({ children }) => {
 
       // Validate that the user has the requested role
       const freshUserData = await apiService.getUserById(user.id);
-      const hasRequestedRole = 
+      const hasRequestedRole =
         (newRole === "FREELANCER" && freshUserData.freelancer) ||
         (newRole === "CLIENT" && freshUserData.client);
 
@@ -661,7 +670,7 @@ export const AuthProvider = ({ children }) => {
           // Preserve the currently selected role from local state, or determine dynamically
           const currentRole = userData?.role;
           const dynamicRole = determineUserRole(freshUserData, currentRole);
-          
+
           const updatedUserData = {
             ...freshUserData,
             role: dynamicRole || currentRole, // Preserve current role if no profiles found
@@ -678,7 +687,7 @@ export const AuthProvider = ({ children }) => {
             freelancerData: null,
             clientData: null,
           };
-          
+
           // Build role options for dual-role users
           if (freshUserData.freelancer) {
             roleOptionsData.freelancerData = {
@@ -702,7 +711,10 @@ export const AuthProvider = ({ children }) => {
             profileData = freshUserData.client;
           }
 
-          if (profileData && JSON.stringify(userProfile) !== JSON.stringify(profileData)) {
+          if (
+            profileData &&
+            JSON.stringify(userProfile) !== JSON.stringify(profileData)
+          ) {
             setUserProfile(profileData);
             await AsyncStorage.setItem(
               "userProfile",
@@ -714,10 +726,15 @@ export const AuthProvider = ({ children }) => {
 
           // Update stored user data with preserved role only if it's different
           if (JSON.stringify(userData) !== JSON.stringify(updatedUserData)) {
-            await AsyncStorage.setItem("userData", JSON.stringify(updatedUserData));
+            await AsyncStorage.setItem(
+              "userData",
+              JSON.stringify(updatedUserData)
+            );
           }
 
-          console.log(`User data refreshed, current role: ${dynamicRole || currentRole}`);
+          console.log(
+            `User data refreshed, current role: ${dynamicRole || currentRole}`
+          );
         }
       } catch (error) {
         console.error("Error refreshing user data:", error);
@@ -738,7 +755,7 @@ export const AuthProvider = ({ children }) => {
   const handleRoleSelection = async (roleData) => {
     try {
       console.log("Handling role selection:", roleData);
-      
+
       setUserData(roleData);
       setUserProfile(roleData.profile);
       setUser(roleData); // Also update the user state
@@ -747,7 +764,10 @@ export const AuthProvider = ({ children }) => {
       // Persist the role selection to AsyncStorage
       await AsyncStorage.setItem("userData", JSON.stringify(roleData));
       if (roleData.profile) {
-        await AsyncStorage.setItem("userProfile", JSON.stringify(roleData.profile));
+        await AsyncStorage.setItem(
+          "userProfile",
+          JSON.stringify(roleData.profile)
+        );
       }
 
       console.log(`Role successfully switched to: ${roleData.role}`);
