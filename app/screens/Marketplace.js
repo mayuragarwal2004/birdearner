@@ -154,7 +154,6 @@ const MarketplaceScreen = ({ navigation }) => {
           
           // Filter out null services (failed to load)
           const validServices = services.filter(s => s !== null);
-          console.log('Valid services loaded:', validServices.length);
           setUserServices(validServices);
           
           // Show warning if some services failed to load
@@ -281,8 +280,6 @@ const MarketplaceScreen = ({ navigation }) => {
         filters.longitude = location.longitude;
         filters.maxDistance = distance;
       }
-
-      console.log('Fetching jobs with filters:', filters);
 
       // Get jobs categorized by priority from the new backend
       const categorizedJobs = await apiService.getAllJobsCategorizedByPriority(filters);

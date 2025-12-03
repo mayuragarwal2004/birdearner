@@ -34,6 +34,7 @@ import {
 
 // Utils
 import apiService from "../lib/apiService";
+import { MARKETPLACE_CONSTANTS } from "../utils/marketplaceUtils";
 
 const MarketplaceScreen = ({ navigation }) => {
   const mapRef = useRef(null);
@@ -75,7 +76,8 @@ const MarketplaceScreen = ({ navigation }) => {
     panResponder,
     incrementDistance,
     decrementDistance,
-    onSliderLayout
+    onSliderLayout,
+    handleSliderPress
   } = useDistanceSlider(handleDistanceChange);
 
   const { cleanupSound } = usePriorityWheel();
@@ -87,7 +89,7 @@ const MarketplaceScreen = ({ navigation }) => {
         // Ensure API service is initialized
         await apiService.init();
         // Initial jobs fetch (this is initial load)
-        fetchJobs(false, null, 20, 'FREELANCER', [], true);
+        fetchJobs(false, null, MARKETPLACE_CONSTANTS.DEFAULT_DISTANCE, 'FREELANCER', [], true);
       } catch (error) {
         console.error('Error initializing app:', error);
         Toast.show({
@@ -189,6 +191,7 @@ const MarketplaceScreen = ({ navigation }) => {
           onSliderLayout={onSliderLayout}
           onIncrementDistance={incrementDistance}
           onDecrementDistance={decrementDistance}
+
           isLoading={filterLoading}
           theme={currentTheme}
         />

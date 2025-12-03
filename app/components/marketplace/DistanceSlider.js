@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, TouchableWithoutFeedback, StyleSheet, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Entypo from '@expo/vector-icons/Entypo';
 import { generateSliderLines, MARKETPLACE_CONSTANTS } from '../../utils/marketplaceUtils';
@@ -46,34 +46,34 @@ const DistanceSlider = ({
           ref={sliderRef}
           {...panResponder.panHandlers}
         >
-          {/* Gradient background and lines */}
-          <LinearGradient
-            colors={["#232222", "#898686"]}
-            start={{ x: 0, y: 1 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.sliderBackground}
-            pointerEvents="none"
-          >
-            <View style={styles.linesContainer}>
-              {lines.map((lineIndex) => (
-                <LinearGradient
-                  key={lineIndex}
-                  colors={["#232222", "#898686"]}
-                  start={{ x: 1, y: 0 }}
-                  end={{ x: 0, y: 0 }}
-                  style={styles.line}
-                />
-              ))}
-            </View>
-            <View
-              style={[
-                styles.sliderIndicator,
-                { left: `${(distance / MARKETPLACE_CONSTANTS.MAX_DISTANCE) * 100}%` },
-              ]}
+            {/* Gradient background and lines */}
+            <LinearGradient
+              colors={["#232222", "#898686"]}
+              start={{ x: 0, y: 1 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.sliderBackground}
+              pointerEvents="box-only"
             >
-              <Text style={styles.sliderIndicatorText}>▼</Text>
-            </View>
-          </LinearGradient>
+              <View style={styles.linesContainer}>
+                {lines.map((lineIndex) => (
+                  <LinearGradient
+                    key={lineIndex}
+                    colors={["#232222", "#898686"]}
+                    start={{ x: 1, y: 0 }}
+                    end={{ x: 0, y: 0 }}
+                    style={styles.line}
+                  />
+                ))}
+              </View>
+              <View
+                style={[
+                  styles.sliderIndicator,
+                  { left: `${(distance / MARKETPLACE_CONSTANTS.MAX_DISTANCE) * 100}%` },
+                ]}
+              >
+                <Text style={styles.sliderIndicatorText}>▼</Text>
+              </View>
+            </LinearGradient>
         </View>
 
         {/* + Button */}

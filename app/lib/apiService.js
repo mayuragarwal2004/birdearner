@@ -83,14 +83,14 @@ class ApiService {
     }
 
     try {
-      console.log(`API Request: ${config.method || "GET"} ${url}`);
-      console.log(
-        `Auth header present: ${config.headers["Authorization"] ? "Yes" : "No"}`
-      );
-      console.log(`Content-Type: ${config.headers['Content-Type'] || 'multipart/form-data (auto)'}`);
+      // console.log(`API Request: ${config.method || "GET"} ${url}`);
+      // console.log(
+      //   `Auth header present: ${config.headers["Authorization"] ? "Yes" : "No"}`
+      // );
+      // console.log(`Content-Type: ${config.headers['Content-Type'] || 'multipart/form-data (auto)'}`);
 
       const response = await fetch(url, config);
-      console.log(`API Response: ${response.status} ${url}`);
+      // console.log(`API Response: ${response.status} ${url}`);
 
       const responseText = await response.text();
       let data;
@@ -437,7 +437,7 @@ class ApiService {
         `/jobs/categorized/priority${queryParams ? `?${queryParams}` : ""}`
       );
 
-      console.log("Categorized jobs response:", response);
+      // console.log("Categorized jobs response:", response);
       return response.data;
     } catch (error) {
       console.error("Error fetching categorized jobs:", error);

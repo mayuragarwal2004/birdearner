@@ -1,6 +1,8 @@
 // Marketplace constants and configurations
 export const MARKETPLACE_CONSTANTS = {
   MAX_DISTANCE: 20,
+  DEFAULT_DISTANCE: 3,
+  MIN_DISTANCE: 0.5,
   DISTANCE_STEP: 0.5,
   MAP_HEIGHT: 220,
   ANIMATION_DURATION: 150,
@@ -60,8 +62,16 @@ export const debounce = (func, delay) => {
 
 // Snap distance to nearest step
 export const snapDistance = (distance, step, maxDistance) => {
+  // Validate inputs
+  if (typeof distance !== 'number' || isNaN(distance)) return MARKETPLACE_CONSTANTS.DEFAULT_DISTANCE;
+  if (typeof step !== 'number' || isNaN(step) || step <= 0) return distance;
+  if (typeof maxDistance !== 'number' || isNaN(maxDistance)) return distance;
+  
   const boundedDistance = Math.min(maxDistance, Math.max(0, distance));
-  return Math.round(boundedDistance / step) * step;
+  const snapped = Math.round(boundedDistance / step) * step;
+  
+  // Ensure result is valid
+  return isNaN(snapped) ? MARKETPLACE_CONSTANTS.DEFAULT_DISTANCE : snapped;
 };
 
 // Get pin color for priority

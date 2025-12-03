@@ -43,12 +43,10 @@ export const useMarketplaceJobs = () => {
         filters.maxDistance = distance;
       }
 
-      console.log('Fetching jobs with filters:', filters);
-
       // Get jobs categorized by priority from the new backend
       const categorizedJobs = await apiService.getAllJobsCategorizedByPriority(filters);
 
-      console.log('Categorized jobs API response:', categorizedJobs);
+    //   console.log('Categorized jobs API response:', categorizedJobs);
 
       setJobs(categorizedJobs);
     } catch (error) {

@@ -25,9 +25,9 @@ export const useUserServices = () => {
           const services = await Promise.all(
             userProfile.selectedServices.map(async (serviceId) => {
               try {
-                console.log(`Loading service: ${serviceId}`);
+                // console.log(`Loading service: ${serviceId}`);
                 const service = await apiService.getServiceById(serviceId);
-                console.log(`Service ${serviceId} loaded:`, service);
+                // console.log(`Service ${serviceId} loaded:`, service);
                 return service;
               } catch (error) {
                 console.error(`Error loading service ${serviceId}:`, error.message);
@@ -39,7 +39,6 @@ export const useUserServices = () => {
           
           // Filter out null services (failed to load)
           const validServices = services.filter(s => s !== null);
-          console.log('Valid services loaded:', validServices.length);
           setUserServices(validServices);
           
           // Show warning if some services failed to load
