@@ -1,6 +1,6 @@
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
-import MarketplaceScreen from '../screens/Marketplace';
+import MarketplaceRefactored from '../screens/MarketplaceRefactored';
 import JobPriority from '../screens/JobPriority';
 import JobDescriptionScreen from '../screens/JobDescription';
 import Chat from '../screens/Chat';
@@ -15,7 +15,7 @@ const MarketPlaceStack = () =>
     <Stack.Navigator>
       <Stack.Screen
         name="MarketplaceScreen"
-        component={MarketplaceScreen}
+        component={MarketplaceRefactored}
         options={{headerShown: false}}
       />
       <Stack.Screen

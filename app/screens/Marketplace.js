@@ -905,7 +905,7 @@ const getStyles = (currentTheme) =>
       height: 450,
       borderRadius: 300,
       position: "absolute",
-      bottom: -380,
+      bottom: -300,
       right: -30,
       padding: 10,
     },
