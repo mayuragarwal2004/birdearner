@@ -4,6 +4,7 @@ import Toast from 'react-native-toast-message';
 
 export const useMarketplaceJobs = () => {
   const [jobs, setJobs] = useState({
+    All: [],
     Immediate: [],
     High: [],
     Standard: [],
@@ -115,7 +116,7 @@ export const useMarketplaceJobs = () => {
   }, [jobs]);
 
   const getAllJobs = useCallback(() => {
-    return [...jobs.Immediate, ...jobs.High, ...jobs.Standard];
+    return jobs.All || [...jobs.Immediate, ...jobs.High, ...jobs.Standard];
   }, [jobs]);
 
   return {

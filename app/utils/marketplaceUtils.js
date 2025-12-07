@@ -11,8 +11,10 @@ export const MARKETPLACE_CONSTANTS = {
   SLIDER_HEIGHT: 32,
   
   PRIORITIES: ["Immediate", "High", "Standard"],
+  PRIORITY_FILTERS: ["All", "Immediate", "High", "Standard"], // Added for wheel navigation
   
   PRIORITY_COLORS: {
+    All: ["#762BAD", "#300E49"], // Purple gradient for "All Jobs"
     Immediate: ["#7C1313", "#E22323"],
     High: ["#896D08", "#EFBE0E"],
     Standard: ["#34660C", "#77CB35"],

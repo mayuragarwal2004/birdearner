@@ -18,12 +18,13 @@ import apiService from "../lib/apiService";
 import Toast from "react-native-toast-message";
 
 const colors = {
+  All: ["#762BAD", "#300E49"],
   Immediate: ["#E22323", "#7C1313"],
   High: ["#896D08", "#EFBE0E"],
   Standard: ["#34660C", "#77CB35"],
 };
 
-const priorities = ["Immediate", "High", "Standard"];
+const priorities = ["All", "Immediate", "High", "Standard"];
 
 
 const JobPriority = ({ navigation, route }) => {
@@ -32,7 +33,6 @@ const JobPriority = ({ navigation, route }) => {
   const [rotation] = useState(new Animated.Value(0)); // Handle rotation animation
 
   const { priority, jobs } = route.params;
-  console.log({ priority, jobs });
 
   const [priorityJob, setPriorityJob] = useState([]);
   const [clientProfiles, setClientProfiles] = useState({});
@@ -81,7 +81,10 @@ const JobPriority = ({ navigation, route }) => {
   };
 
   useEffect(() => {
-    if (currentPriority === "Immediate") {
+    if (currentPriority === "All") {
+      const selectedJobs = jobs.All || [];
+      setPriorityJob(selectedJobs);
+    } else if (currentPriority === "Immediate") {
       const selectedJobs = jobs.Immediate || [];
       setPriorityJob(selectedJobs);
     } else if (currentPriority === "High") {
@@ -252,8 +255,9 @@ const JobPriority = ({ navigation, route }) => {
             style={styles.priorityButton}
           >
             <Text style={styles.priorityText}>
-              {currentPriority}{" "}
-              {currentPriority === "Immediate" ? "Attention" : "Priority"}
+              {currentPriority === "All" ? "All Jobs" :
+               currentPriority === "Immediate" ? "Immediate Attention" : 
+               `${currentPriority} Priority`}
             </Text>
           </LinearGradient>
         </TouchableOpacity>
@@ -273,7 +277,9 @@ const JobPriority = ({ navigation, route }) => {
         ListEmptyComponent={() => (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>
-              No {currentPriority.toLowerCase()} priority jobs available
+              {currentPriority === "All" 
+                ? "No jobs available" 
+                : `No ${currentPriority.toLowerCase()} priority jobs available`}
             </Text>
           </View>
         )}
@@ -409,7 +415,7 @@ const getStyles = (currentTheme) =>
       height: 450,
       borderRadius: 300,
       position: "absolute",
-      bottom: -380,
+      bottom: -300,
       right: -30,
       overflow: "hidden",
     },

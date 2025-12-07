@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   SafeAreaView,
   View,
@@ -8,6 +8,7 @@ import {
   Platform,
   RefreshControl,
 } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 import Toast from "react-native-toast-message";
 
 // Theme and Context
@@ -80,7 +81,18 @@ const MarketplaceScreen = ({ navigation }) => {
     handleSliderPress
   } = useDistanceSlider(handleDistanceChange);
 
-  const { cleanupSound } = usePriorityWheel();
+  const { 
+    priorityIndex, 
+    rotation, 
+    wheelPanResponder, 
+    handlePriorityWheel, 
+    getCurrentPriority, 
+    resetToAllJobs,
+    cleanupSound 
+  } = usePriorityWheel((priority) => {
+    // Handle priority wheel rotation navigation
+    handleWheelPriorityPress(priority);
+  });
 
   // Initialize app
   useEffect(() => {
@@ -111,6 +123,14 @@ const MarketplaceScreen = ({ navigation }) => {
     }
   }, [location, currentUserRole, userServices]);
 
+  // Reset wheel to "All Jobs" whenever screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      // Always reset to "All Jobs" when user comes back to Marketplace
+      resetToAllJobs();
+    }, [resetToAllJobs])
+  );
+
   // Cleanup sound on unmount
   useEffect(() => {
     return cleanupSound;
@@ -127,13 +147,24 @@ const MarketplaceScreen = ({ navigation }) => {
     navigation.navigate("JobPriority", { priority, jobs: jobsData });
   };
 
+  const handleWheelPriorityPress = (priority) => {
+    if (priority === "All") {
+      // Navigate to all jobs
+      const allJobs = getAllJobs();
+      navigation.navigate("JobPriority", { 
+        priority: "All", 
+        jobs: { All: allJobs, Immediate: [], High: [], Standard: [] }
+      });
+    } else {
+      // Navigate to specific priority
+      handlePriorityPress(priority);
+    }
+  };
+
   const handleAllJobsPress = () => {
-    // Navigate to a screen showing all jobs regardless of priority
-    const allJobs = getAllJobs();
-    navigation.navigate("JobPriority", { 
-      priority: "All", 
-      jobs: { All: allJobs, Immediate: [], High: [], Standard: [] }
-    });
+    // Handle wheel button press based on current priority filter
+    const currentPriority = getCurrentPriority();
+    handleWheelPriorityPress(currentPriority);
   };
 
   const handleAddServicesPress = () => {
@@ -212,8 +243,14 @@ const MarketplaceScreen = ({ navigation }) => {
         />
       </ScrollView>
 
-      {/* All Jobs Button */}
-      <AllJobsButton onPress={handleAllJobsPress} />
+      {/* All Jobs Button - Enhanced Priority Wheel */}
+      <AllJobsButton 
+        onPress={handleAllJobsPress} 
+        currentPriority={getCurrentPriority()}
+        rotation={rotation}
+        panHandlers={wheelPanResponder.panHandlers}
+        jobs={jobs}
+      />
 
       <Toast />
     </SafeAreaView>

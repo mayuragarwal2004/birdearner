@@ -4,7 +4,7 @@ import { Audio } from 'expo-av';
 import { MARKETPLACE_CONSTANTS } from '../utils/marketplaceUtils';
 
 export const usePriorityWheel = (onPriorityPress) => {
-  const [priorityIndex, setPriorityIndex] = useState(0);
+  const [priorityIndex, setPriorityIndex] = useState(0); // Start with "All" (index 0)
   const [rotation] = useState(new Animated.Value(0));
   const [sound, setSound] = useState();
 
@@ -25,9 +25,9 @@ export const usePriorityWheel = (onPriorityPress) => {
   const handlePriorityWheel = (direction) => {
     let newIndex;
     if (direction === "left") {
-      newIndex = (priorityIndex + 1) % MARKETPLACE_CONSTANTS.PRIORITIES.length;
+      newIndex = (priorityIndex + 1) % MARKETPLACE_CONSTANTS.PRIORITY_FILTERS.length;
     } else {
-      newIndex = (priorityIndex - 1 + MARKETPLACE_CONSTANTS.PRIORITIES.length) % MARKETPLACE_CONSTANTS.PRIORITIES.length;
+      newIndex = (priorityIndex - 1 + MARKETPLACE_CONSTANTS.PRIORITY_FILTERS.length) % MARKETPLACE_CONSTANTS.PRIORITY_FILTERS.length;
     }
     
     setPriorityIndex(newIndex);
@@ -42,7 +42,7 @@ export const usePriorityWheel = (onPriorityPress) => {
     // Navigate to JobPriority for the new priority
     setTimeout(() => {
       if (onPriorityPress) {
-        onPriorityPress(MARKETPLACE_CONSTANTS.PRIORITIES[newIndex]);
+        onPriorityPress(MARKETPLACE_CONSTANTS.PRIORITY_FILTERS[newIndex]);
       }
     }, 150); // Small delay to let animation start
   };
@@ -61,7 +61,11 @@ export const usePriorityWheel = (onPriorityPress) => {
   });
 
   const getCurrentPriority = () => {
-    return MARKETPLACE_CONSTANTS.PRIORITIES[priorityIndex];
+    return MARKETPLACE_CONSTANTS.PRIORITY_FILTERS[priorityIndex];
+  };
+
+  const resetToAllJobs = () => {
+    setPriorityIndex(0); // Reset to "All" jobs (index 0)
   };
 
   const cleanupSound = () => {
@@ -76,6 +80,7 @@ export const usePriorityWheel = (onPriorityPress) => {
     wheelPanResponder,
     handlePriorityWheel,
     getCurrentPriority,
+    resetToAllJobs,
     cleanupSound
   };
 };

@@ -1,7 +1,7 @@
 // API service for communicating with the Bird Earner Node.js backend
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const DEV_API_BASE_URL = "https://supplemental-timely-becomes-top.trycloudflare.com/api";
+const DEV_API_BASE_URL = "https://larry-relief-probably-breathing.trycloudflare.com/api";
 
 const PROD_API_BASE_URL = "https://api.birdearner.com/api";
 
@@ -438,7 +438,19 @@ class ApiService {
       );
 
       // console.log("Categorized jobs response:", response);
-      return response.data;
+      
+      // Add All jobs array for wheel filtering
+      const categorizedJobs = response.data;
+      const allJobs = [
+        ...(categorizedJobs.Immediate || []),
+        ...(categorizedJobs.High || []),
+        ...(categorizedJobs.Standard || [])
+      ];
+      
+      return {
+        ...categorizedJobs,
+        All: allJobs // Add combined array for "All Jobs" filter
+      };
     } catch (error) {
       console.error("Error fetching categorized jobs:", error);
       throw new Error(`Failed to fetch categorized jobs: ${error.message}`);
