@@ -565,7 +565,15 @@ const FreelancerSignup = ({ navigation, route }) => {
       setStep(step + 1);
     }
   };
-  const prevStep = () => setStep(step - 1);
+  const prevStep = () => {
+    // If we're on step 2 and in create/update mode, go back to previous screen
+    // since step 1 (login) is skipped for these modes
+    if (step === 2 && (mode === "create" || mode === "update")) {
+      navigation.goBack();
+    } else {
+      setStep(step - 1);
+    }
+  };
 
   // Final API call - handles signup, profile creation, and profile update
   const handleSubmit = async () => {
@@ -1079,12 +1087,12 @@ const FreelancerSignup = ({ navigation, route }) => {
                 <TouchableOpacity
                   style={styles.backButton}
                   onPress={prevStep}
-                  disabled={mode !== "signup"}
+                  disabled={mode === "signup"}
                 >
                   <Text
                     style={[
                       styles.backButtonText,
-                      mode !== "signup" && styles.disabledText,
+                      mode === "signup" && styles.disabledText,
                     ]}
                   >
                     Back
