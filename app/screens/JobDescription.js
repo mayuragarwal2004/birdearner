@@ -412,6 +412,7 @@ const getStyles = (currentTheme) =>
     container: {
       flex: 1,
       backgroundColor: currentTheme.background || "#fff",
+      marginBottom: 20,
     },
     scrollContent: {
       padding: 20,

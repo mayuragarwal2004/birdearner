@@ -1120,6 +1120,7 @@ const getStyles = (currentTheme) =>
       paddingHorizontal: 30,
       paddingVertical: 20,
       flexGrow: 1,
+      marginBottom: 70,
     },
     main: {
       marginBottom: 30,
