@@ -14,14 +14,26 @@ import {
   Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { FontAwesome } from "@expo/vector-icons";
+import { FontAwesome, MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "../context/NewAuthContext";
 import ImageViewer from "react-native-image-zoom-viewer";
 import { useTheme } from "../context/ThemeContext";
 import apiService from "../lib/apiService";
+import Toast from "react-native-toast-message";
+import ProfileHeader from "../components/profile/ProfileHeader";
+
+// Helper function to show toast messages
+const showToast = (type, title, message = "") => {
+  Toast.show({
+    type,
+    text1: title,
+    text2: message,
+    position: "top",
+  });
+};
 
 export default function ProfileScreen({ route, navigation }) {
-  // Handle both deep link userId and regular receiverId parameters
+  // ... (hooks and state same as before)
   const { receiverId, userId } = route.params || {};
   const profileUserId = userId || receiverId;
   
@@ -29,15 +41,14 @@ export default function ProfileScreen({ route, navigation }) {
   const [profileData, setProfileData] = useState(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false); // Keep for portfolio
   const [images, setImages] = useState([]);
   const [userServices, setUserServices] = useState([]);
 
-  const role = userData?.role === "CLIENT" ? "FREELANCER" : "CLIENT";
-
+  // ... (rest of logic same as before)
+  
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
-
   const styles = getStyles(currentTheme);
 
   const createdAt = profileData?.createdAt;
@@ -48,8 +59,8 @@ export default function ProfileScreen({ route, navigation }) {
     day: "numeric",
   });
 
-  console.log({ profileData });
-
+  // ... (rest of logic same as before)
+  
   // Fetch profile data on component mount or when profileUserId changes
   const fetchProfile = useCallback(async () => {
     if (!profileUserId) {
@@ -164,6 +175,15 @@ export default function ProfileScreen({ route, navigation }) {
       loadUserInfo();
     }
   }, [userData, profileData]);
+  
+  // onShare logic logic is inside ProfileHeader but ProfileScreen didn't have specific share logic before (it had commented out icons or simple views). 
+  // Wait, looking at ProfileScreen.js (viewed earlier), it had no Share button visible in the header code I saw?
+  // Line 498 had styles for .share but it wasn't rendered in the JSX I saw?
+  // Ah, line 255: TouchableOpacity -> Image (Profile Photo).
+  // There was no Share button explicitly in the JSX I viewed earlier (lines 247-268).
+  // `ProfileHeader` adds a share button. This is a feature add for Public Profile which is good.
+
+  const role = userData?.role === "CLIENT" ? "FREELANCER" : "CLIENT";
 
   const formatXP = (xp) => {
     if (xp >= 1000000) return (xp / 1000000).toFixed(1) + "M";
@@ -172,8 +192,6 @@ export default function ProfileScreen({ route, navigation }) {
   };
 
   const openImageModal = (imageUri) => {
-    // console.log(imageUri);
-
     if (imageUri) {
       setImages([{ url: imageUri }]);
       setModalVisible(true);
@@ -181,7 +199,7 @@ export default function ProfileScreen({ route, navigation }) {
       Alert.alert("No image URI provided");
     }
   };
-
+  
   if (loadingProfile) {
     return (
       <SafeAreaView style={styles.centered}>
@@ -190,9 +208,11 @@ export default function ProfileScreen({ route, navigation }) {
     );
   }
 
+  console.log({profileData});
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-      {/* Image Modal */}
+      {/* Image Modal for Portfolio */}
       <Modal
         visible={modalVisible}
         transparent={true}
@@ -244,63 +264,12 @@ export default function ProfileScreen({ route, navigation }) {
         }
         showsVerticalScrollIndicator={false}
       >
-        <ImageBackground
-          source={
-            profileData?.coverPhoto
-              ? { uri: apiService.loadImageURI(profileData.coverPhoto) }
-              : require("../assets/backGroungBanner.png")
-          }
-          style={styles.backgroundImg}
-        >
-          <TouchableOpacity
-            onPress={() => openImageModal(profileData?.profilePhoto)}
-            style={{ zIndex: 1 }}
-          >
-            <Image
-              source={
-                profileData?.profilePhoto
-                  ? { uri: apiService.loadImageURI(profileData.profilePhoto) }
-                  : require("../assets/profile.png")
-              }
-              style={styles.profileImage}
-            />
-          </TouchableOpacity>
-        </ImageBackground>
-
-        {/* User Details */}
-        <View style={styles.userDetails}>
-          <Text style={styles.nameText}>
-            {profileData?.user.fullName || "User"}
-          </Text>
-          {role === "CLIENT" ? (
-            <Text style={styles.roleText}>
-              {profileData?.organization_type || "Not found"}
-            </Text>
-          ) : (
-            <View style={styles.roleWrap}>
-              <Text>
-                {userServices?.map((item, idx) => (
-                  <Text key={idx} style={styles.roleText}>
-                    {item.name}
-                    {idx < userServices.length - 1 ? ", " : ""}
-                  </Text>
-                )) || (
-                  <Text style={styles.roleText}>
-                    No role designation available
-                  </Text>
-                )}
-              </Text>
-            </View>
-          )}
-          <Text style={styles.statusText}>
-            Status: {profileData?.currentlyAvailable ? "Active" : "Inactive"}
-            <FontAwesome
-              name="circle"
-              size={12}
-              color={profileData?.currentlyAvailable ? "#6BCD2F" : "#FF3131"}
-            />
-          </Text>
-        </View>
+        <ProfileHeader 
+            profileData={profileData}
+            userData={null} // Don't fall back to current user data for public profile 
+            userServices={userServices}
+            isOwnProfile={false}
+        />
 
         {/* FREELANCER Level & XP */}
         {profileData?.role === "FREELANCER" && (
@@ -308,7 +277,7 @@ export default function ProfileScreen({ route, navigation }) {
             <View style={styles.xpRan}>
               <View style={styles.xp}>
                 <Text style={styles.xpText}>
-                  {formatXP(profileData?.XP) || 0} xp
+                  {formatXP(profileData?.xp) || 0} xp
                 </Text>
               </View>
               <Text style={styles.randomText}>

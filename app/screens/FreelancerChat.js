@@ -303,7 +303,7 @@ const FreelancerChat = ({ route, navigation }) => {
   } = useChatData("freelancer", route.params);
 
   const handleViewProfile = () => {
-    navigation.navigate("Profile", { userId: route.params.client.user.id });
+    navigation.navigate("ProfileScreen", { userId: route.params.client.user.id });
   };
 
   const handleRequestCompletion = () => {

@@ -1,7 +1,7 @@
 // API service for communicating with the Bird Earner Node.js backend
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const DEV_API_BASE_URL = "https://exhibit-application-monetary-beverage.trycloudflare.com/api";
+const DEV_API_BASE_URL = "https://remind-travis-dividend-applicable.trycloudflare.com/api";
 
 const PROD_API_BASE_URL = "https://api.birdearner.com/api";
 
@@ -602,9 +602,13 @@ class ApiService {
   // ==================== REVIEWS ====================
 
   // Get reviews for a user
-  async getReviewsByUserId(userId) {
+  async getReviewsByUserId(userId, reviewType = null) {
     try {
-      const response = await this.makeRequest(`/reviews/user/${userId}`);
+      let url = `/reviews/user/${userId}`;
+      if (reviewType) {
+        url += `?type=${reviewType}`;
+      }
+      const response = await this.makeRequest(url);
       return response;
     } catch (error) {
       throw new Error(`Failed to fetch reviews: ${error.message}`);
@@ -612,9 +616,13 @@ class ApiService {
   }
 
   // Get review statistics for a user
-  async getReviewStats(userId) {
+  async getReviewStats(userId, reviewType = null) {
     try {
-      const response = await this.makeRequest(`/reviews/stats/${userId}`);
+      let url = `/reviews/stats/${userId}`;
+      if (reviewType) {
+        url += `?type=${reviewType}`;
+      }
+      const response = await this.makeRequest(url);
       return response;
     } catch (error) {
       throw new Error(`Failed to fetch review statistics: ${error.message}`);

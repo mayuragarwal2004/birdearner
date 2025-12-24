@@ -63,7 +63,7 @@ export default function ReviewCard({
             source={
               reviewerPhoto
                 ? { uri: reviewerPhoto }
-                : require("../assets/userProfile.png")
+                : require("../assets/profile.png")
             }
             style={styles.reviewerImage}
           />

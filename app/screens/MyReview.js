@@ -2,23 +2,30 @@ import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
   Text,
-  Image,
   ScrollView,
   StyleSheet,
-  ImageBackground,
   ActivityIndicator,
-  Share,
   RefreshControl,
-  Alert,
+  TouchableOpacity,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { FontAwesome, MaterialIcons } from "@expo/vector-icons";
-import { TouchableOpacity } from "react-native";
+import Toast from "react-native-toast-message";
 import ReviewCard from "../components/ReviewCard";
+import ProfileHeader from "../components/profile/ProfileHeader";
+import ReviewStats from "../components/profile/ReviewStats";
 import { useAuth } from "../context/NewAuthContext";
 import { useTheme } from "../context/ThemeContext";
-import ApiService from "../lib/apiService";
 import apiService from "../lib/apiService";
+
+// Helper function to show toast messages
+const showToast = (type, title, message = "") => {
+  Toast.show({
+    type,
+    text1: title,
+    text2: message,
+    position: "top",
+  });
+};
 
 export default function MyReview({ navigation }) {
   const { userData, userProfile } = useAuth();
@@ -32,38 +39,43 @@ export default function MyReview({ navigation }) {
   const currentTheme = themeStyles[theme];
   const styles = getStyles(currentTheme);
 
-  // const fetchData = useCallback(async () => {
-  //   if (!userData?.id) return;
+  const fetchData = useCallback(async () => {
+    if (!userData) return;
 
-  //   setLoadingProfile(true);
-  //   try {
-  //     // Get complete profile data
-  //     const profileResponse = await ApiService.getCompleteProfile(userData.id);
-  //     if (profileResponse.success) {
-  //       setProfileData(profileResponse.data);
-  //     }
+    setLoadingProfile(true);
+    try {
+      // Get reviews
+      // const reviewType = userData.role === 'FREELANCER' ? 'FREELANCER' : 'CLIENT';
+      // Actually MyReview shows reviews ABOUT the user.
+      // If I am a Freelancer, I want to see reviews I received from Clients (so type FREELANCER?)
+      // Wait, getReviewsByUserId typically gets reviews *about* the user.
+      
+      const reviewsResponse = await apiService.getReviewsByUserId(userData.id);
+      if (reviewsResponse.success) {
+        setReviews(reviewsResponse.data);
+      }
 
-  //     // Get reviews
-  //     const reviewsResponse = await ApiService.getReviewsByUserId(userData.id);
-  //     if (reviewsResponse.success) {
-  //       setReviews(reviewsResponse.data);
-  //     }
+      // Get review statistics
+      const statsResponse = await apiService.getReviewStats(userData.id);
+      if (statsResponse.success) {
+        setReviewStats(statsResponse.data);
+      }
+    } catch (error) {
+      console.error(error);
+      showToast("error", "Error", "Failed to fetch data");
+    } finally {
+      setLoadingProfile(false);
+    }
+  }, [userData]);
 
-  //     // Get review statistics
-  //     const statsResponse = await ApiService.getReviewStats(userData.id);
-  //     if (statsResponse.success) {
-  //       setReviewStats(statsResponse.data);
-  //     }
-  //   } catch (error) {
-  //     Alert.alert("Error", "Failed to fetch data");
-  //   } finally {
-  //     setLoadingProfile(false);
-  //   }
-  // }, [userData?.id]);
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
-  // useEffect(() => {
-  //   fetchData();
-  // }, [fetchData]);
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchData().finally(() => setRefreshing(false));
+  }, [fetchData]);
 
   // Load user services and role info
   useEffect(() => {
@@ -100,18 +112,6 @@ export default function MyReview({ navigation }) {
           const validServices = services.filter((s) => s !== null);
           console.log("Valid services loaded:", validServices.length);
           setUserServices(validServices);
-
-          // Show warning if some services failed to load
-          if (validServices.length < userProfile.selectedServices.length) {
-            const failedCount =
-              userProfile.selectedServices.length - validServices.length;
-            console.warn(`${failedCount} service(s) failed to load`);
-            showToast(
-              "warning",
-              "Warning",
-              `Some services could not be loaded (${failedCount} failed)`
-            );
-          }
         } else {
           // Clear services if user is not a freelancer or has no selected services
           setUserServices([]);
@@ -128,64 +128,6 @@ export default function MyReview({ navigation }) {
     }
   }, [userData, userProfile]);
 
-  const onRefresh = useCallback(() => {
-    // setRefreshing(true);
-    // fetchData().finally(() => setRefreshing(false));
-  }, []);
-
-  // const onShare = async () => {
-  //   try {
-  //     const profileLink = `https://birdearner.com/profile/${userData.id}`;
-  //     const result = await Share.share({
-  //       message: `Check out my profile on Bird Earner! Name: ${userProfile?.user?.fullName}\n\nProfile Link: ${profileLink}`,
-  //     });
-
-  //     if (result.action === Share.sharedAction) {
-  //       console.log(result.activityType ?
-  //         `Shared with activity: ${result.activityType}` :
-  //         "Profile shared successfully.");
-  //     }
-  //   } catch (error) {
-  //     Alert.alert("Error", "Failed to share the profile.");
-  //   }
-  // };
-
-  const onShare = async () => {
-    try {
-      const profileLink = `https://birdearner.com/profile/${userData.$id}`;
-
-      const result = await Share.share({
-        message: `Check out my profile on our app! Name: ${data?.full_name}\n\nProfile Link: ${profileLink}`,
-      });
-      if (result.action === Share.sharedAction) {
-        if (result.activityType) {
-          // shared with specific activity
-          console.log("Shared with activity:", result.activityType);
-        } else {
-          // shared without specific activity
-          console.log("Profile shared successfully.");
-        }
-      } else if (result.action === Share.dismissedAction) {
-        console.log("Share dismissed.");
-      }
-    } catch (error) {
-      Alert.alert("Error", "Failed to share the profile.");
-    }
-  };
-
-  const RatingBar = ({ rating, count, total }) => {
-    const percentage = total > 0 ? (count / total) * 100 : 0;
-    return (
-      <View style={styles.ratingBarContainer}>
-        <Text style={styles.ratingNumber}>{rating}★</Text>
-        <View style={styles.ratingBarBg}>
-          <View style={[styles.ratingBarFg, { width: `${percentage}%` }]} />
-        </View>
-        <Text style={styles.ratingCount}>{count}</Text>
-      </View>
-    );
-  };
-
   if (loadingProfile) {
     return (
       <SafeAreaView style={styles.centered}>
@@ -200,7 +142,7 @@ export default function MyReview({ navigation }) {
         <View style={styles.tab}>
           <TouchableOpacity
             style={styles.tabButtonL}
-            onPress={() => navigation.navigate("MyProfile")}
+            onPress={() => navigation.goBack()}
           >
             <Text style={styles.tabTextL}>My Profile</Text>
           </TouchableOpacity>
@@ -223,90 +165,16 @@ export default function MyReview({ navigation }) {
         }
         showsVerticalScrollIndicator={false}
       >
+        <ProfileHeader 
+            profileData={userProfile} 
+            userData={userData}
+            userServices={userServices}
+            isOwnProfile={true}
+        />
 
-        <ImageBackground
-          source={
-            userProfile?.coverPhoto
-              ? { uri: apiService.loadImageURI(userProfile.coverPhoto) }
-              : require("../assets/backGroungBanner.png")
-          }
-          style={styles.backgroundImg}
-          imageStyle={styles.backgroundImgStyle}
-        >
-          <Image
-            source={
-              userProfile?.profilePhoto
-                ? { uri: apiService.loadImageURI(userProfile.profilePhoto) }
-                : require("../assets/profile.png")
-            }
-            style={styles.profileImage}
-          />
-          <TouchableOpacity style={styles.share} onPress={onShare}>
-            <FontAwesome name="share" size={24} color="#4C0183" />
-          </TouchableOpacity>
-        </ImageBackground>
-
-        <View style={styles.userDetails}>
-          <Text style={styles.nameText}>{userProfile?.user?.fullName}</Text>
-          <Text style={styles.roleText}>
-            {userProfile?.organizationType ||
-              (userServices.length > 0 &&
-                userServices.map((item, idx) => (
-                  <Text key={idx} style={styles.roleText}>
-                    {item.name}
-                    {idx < userServices.length - 1 ? ", " : ""}
-                  </Text>
-                )))}
-          </Text>
-          <View style={styles.locationContainer}>
-            <MaterialIcons name="location-on" size={16} color="#4C0183" />
-            <Text style={styles.locationText}>
-              {userProfile?.city}, {userProfile?.state}, {userProfile?.country}
-            </Text>
-          </View>
-
-          <View style={styles.statusContainer}>
-            <Text style={styles.statusText}>
-              Status: {userProfile?.currentlyAvailable ? "Active" : "Inactive"}
-            </Text>
-            <FontAwesome
-              name="circle"
-              size={12}
-              color={userProfile?.currentlyAvailable ? "#6BCD2F" : "#FF3131"}
-              style={styles.statusIcon}
-            />
-          </View>
-
-          {reviewStats && (
-            <View style={styles.statsContainer}>
-              <View style={styles.ratingHeader}>
-                <View style={styles.averageRating}>
-                  <Text style={styles.averageRatingNumber}>
-                    {reviewStats.averageRating}
-                  </Text>
-                  <Text style={styles.ratingLabel}>out of 5</Text>
-                </View>
-                <View style={styles.totalReviews}>
-                  <Text style={styles.totalNumber}>
-                    {reviewStats.totalReviews}
-                  </Text>
-                  <Text style={styles.reviewsLabel}>Total Reviews</Text>
-                </View>
-              </View>
-
-              <View style={styles.ratingBars}>
-                {[5, 4, 3, 2, 1].map((rating) => (
-                  <RatingBar
-                    key={rating}
-                    rating={rating}
-                    count={reviewStats.ratingDistribution[rating]}
-                    total={reviewStats.totalReviews}
-                  />
-                ))}
-              </View>
-            </View>
-          )}
-        </View>
+        {reviewStats && (
+            <ReviewStats stats={reviewStats} />
+        )}
 
         <View style={styles.reviewSection}>
           <Text style={styles.reviewSectionTitle}>Recent Reviews</Text>
@@ -314,11 +182,11 @@ export default function MyReview({ navigation }) {
             reviews.map((review) => (
               <ReviewCard
                 key={review.id}
-                reviewerName={review.clientReviewer?.user?.fullName}
-                reviewerLocation={`${review.clientReviewer?.city}, ${review.clientReviewer?.country}`}
+                reviewerName={review.reviewer?.fullName}
+                reviewerLocation={review.reviewer?.location}
                 starRating={review.rating}
                 reviewText={review.reviewText}
-                reviewerPhoto={review.clientReviewer?.profilePhoto}
+                reviewerPhoto={review.reviewer?.profilePhoto}
                 jobTitle={review.job?.jobTitle}
                 date={new Date(review.createdAt).toLocaleDateString()}
               />

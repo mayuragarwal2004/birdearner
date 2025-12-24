@@ -63,7 +63,7 @@ const ReviewGive = ({ navigation, route }) => {
       );
 
       const earnedXP = Math.round(baseXP + starRating * 9);
-      const updatedXP = freelancer.XP + earnedXP;
+      const updatedXP = freelancer.xp + earnedXP;
 
       const currentRating = freelancer.rating || 0;
       const completedJobs = freelancer.completedJobs || 0;

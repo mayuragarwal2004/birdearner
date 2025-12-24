@@ -412,7 +412,7 @@ const ClientChat = ({ route, navigation }) => {
   }, [cancelModalVisible, countdown]);
 
   const handleViewProfile = () => {
-    navigation.navigate("Profile", { userId: route.params.freelancer.user.id });
+    navigation.navigate("ProfileScreen", { userId: route.params.freelancer.user.id });
   };
 
   const handleMenuAction = (action) => {
