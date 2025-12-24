@@ -16,13 +16,7 @@ const CashPaymentMessage = ({ message, onUpdate, currentUserId, userRole }) => {
     return <Text>Error loading payment message</Text>;
   }
 
-  let messageData = {};
-  try {
-    messageData = message.messageData ? JSON.parse(message.messageData) : {};
-  } catch (error) {
-    console.error('Error parsing messageData:', error, 'Raw messageData:', message.messageData);
-    messageData = {};
-  }
+  let messageData = message.messageData;
   
   const { 
     amount = '0', 

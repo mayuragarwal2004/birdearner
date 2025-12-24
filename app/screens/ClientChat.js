@@ -13,6 +13,7 @@ import ClientActions from "../components/chat/client/ClientActions";
 import WarningModal from "../components/chat/client/WarningModal";
 import CancelJobModal from "../components/chat/client/CancelJobModal";
 import ReportModal from "../components/chat/ReportModal";
+import ReviewFormModal from "../components/chat/ReviewFormModal";
 import { useChatData } from "../hooks/useChatSWR";
 import { useAuth } from "../context/NewAuthContext";
 import ApiService from "../lib/apiService";
@@ -368,6 +369,12 @@ const ClientChat = ({ route, navigation }) => {
   const [sending, setSending] = useState(false);
   const [currentInputLength, setCurrentInputLength] = useState(0);
 
+  
+  // Review Modal State
+  const [reviewModalVisible, setReviewModalVisible] = useState(false);
+  const [reviewMessageId, setReviewMessageId] = useState(null);
+  const [submittingReview, setSubmittingReview] = useState(false);
+
   const api = ApiService;
 
   // SWR data hooks
@@ -697,6 +704,59 @@ const ClientChat = ({ route, navigation }) => {
     setShowConfirmationModal(true);
   };
 
+  const handleReviewPress = (message) => {
+    setReviewMessageId(message.id);
+    setReviewModalVisible(true);
+  };
+
+  const calculateReviewLevel = (totalXP) => {
+      // Client side estimation optional, backend handles it.
+  };
+
+  const handleSubmitReview = async (reviewData) => {
+      setSubmittingReview(true);
+      try {
+          await api.init();
+          const { ratings, reviewText } = reviewData;
+          const averageRating = parseFloat(((ratings.experience + ratings.knowledge + ratings.response) / 3).toFixed(1));
+          
+          const res = await api.makeRequest('/reviews', {
+              method: 'POST',
+              body: JSON.stringify({
+                  reviewerId: userData.id,
+                  revieweeId: route.params.freelancer.id,
+                  jobId: route.params.jobId,
+                  rating: averageRating,
+                  reviewText: reviewText,
+                  reviewType: 'FREELANCER',
+                  messageId: reviewMessageId
+              })
+          });
+
+          if (res.success) {
+               Toast.show({
+                  type: 'success',
+                  text1: 'Review Submitted',
+                  text2: 'Thank you for your feedback!'
+              });
+              setReviewModalVisible(false);
+              // Refresh messages to show updated status
+              mutateMessages();
+          } else {
+               throw new Error(res.error || res.message || "Failed to submit review");
+          }
+      } catch (error) {
+          console.error("Submit review error", error);
+          Toast.show({
+              type: 'error',
+              text1: 'Error',
+              text2: 'Failed to submit review'
+          });
+      } finally {
+          setSubmittingReview(false);
+      }
+  };
+
   const confirmRequestCompletion = async () => {
     setShowConfirmationModal(false);
     try {
@@ -782,8 +842,14 @@ const ClientChat = ({ route, navigation }) => {
   const handleConfirmProjComp = async () => {
     try {
       await api.init();
+
+      console.log(job?.paymentMethod);
+      console.log(job);
+      
+      
       
       if (job?.paymentMethod === 'CASH') {
+        console.log("Budget amount", job.budgetAmount);
         // For cash payments, create special message for payment flow
         const res = await api.makeRequest(`/jobs/${route.params.jobId}/complete-cash`, {
           method: "POST",
@@ -814,12 +880,27 @@ const ClientChat = ({ route, navigation }) => {
         });
 
         if (res.success) {
+          // Trigger review request immediately after completion
+          try {
+              await api.makeRequest('/messages/review-request/client', {
+                  method: 'POST',
+                  body: JSON.stringify({
+                      threadId: thread?.id,
+                      jobId: route.params.jobId
+                  })
+              });
+          } catch (e) {
+              console.error("Failed to trigger review request", e);
+          }
+
           Toast.show({
             type: "success",
             text1: "Success",
             text2: "Project marked as completed",
           });
-          navigation.goBack();
+          // Refresh to show review request
+          mutateMessages();
+          mutateJob();
         }
       }
     } catch (err) {
@@ -908,9 +989,13 @@ const ClientChat = ({ route, navigation }) => {
               isUploading={item.isUploading}
               currentUserId={userData.id}
               userRole="client"
-              onMessageUpdate={() => {
-                // Refresh messages when cash payment status updates using SWR
-                mutateMessages();
+              onMessageUpdate={(type, data) => {
+                if (type === 'review_press') {
+                    handleReviewPress(data);
+                } else {
+                     // Handle other updates if needed
+                     mutateMessages();
+                }
               }}
             />
           )}
@@ -971,6 +1056,13 @@ const ClientChat = ({ route, navigation }) => {
           onSubmit={handleReport}
           selectedReason={selectedReportReason}
           onSelectReason={setSelectedReportReason}
+        />
+        
+        <ReviewFormModal 
+          visible={reviewModalVisible}
+          onClose={() => setReviewModalVisible(false)}
+          onSubmit={handleSubmitReview}
+          isSubmitting={submittingReview}
         />
 
         <Modal

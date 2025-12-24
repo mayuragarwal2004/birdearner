@@ -496,7 +496,7 @@ const FreelancerChat = ({ route, navigation }) => {
           onMenuAction={handleMenuAction}
           menuOptions={
             (job?.assignedFreelancer?.user?.id === userData.id || job?.assignedFreelancerId === userData.id || job?.assignedFreelancerId === userData.freelancer?.id) && 
-            chatStatus === 'IN_PROGRESS' && !job?.completedStatus
+            (chatStatus === 'IN_PROGRESS' || chatStatus === 'ACCEPTED') && job?.jobStatus !== 'COMPLETED'
               ? ["View Profile", "Block", "Report", "Request Project Completion"]
               : ["View Profile", "Block", "Report"]
           }
