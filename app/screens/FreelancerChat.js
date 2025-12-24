@@ -14,6 +14,7 @@ import ReportModal from "../components/chat/ReportModal";
 import { useChatData } from "../hooks/useChatSWR";
 import { useAuth } from "../context/NewAuthContext";
 import ApiService from "../lib/apiService";
+import ReviewFormModal from "../components/chat/ReviewFormModal";
 
 const getStyles = (currentTheme, isKeyboardVisible) =>
   StyleSheet.create({
@@ -271,6 +272,9 @@ const FreelancerChat = ({ route, navigation }) => {
   // Local state for UI interactions
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [reviewModalVisible, setReviewModalVisible] = useState(false);
+  const [reviewMessageId, setReviewMessageId] = useState(null);
   const [reportModalVisible, setReportModalVisible] = useState(false);
   const [selectedReportReason, setSelectedReportReason] = useState(null);
   const [fileInfo, setFileInfo] = useState(null);
@@ -458,6 +462,50 @@ const FreelancerChat = ({ route, navigation }) => {
     }
   };
 
+  const handleSubmitReview = async (reviewData) => {
+      setSubmittingReview(true);
+      try {
+          const api = ApiService;
+          await api.init();
+          const { ratings, reviewText } = reviewData;
+          const averageRating = parseFloat(((ratings.experience + ratings.knowledge + ratings.response) / 3).toFixed(1));
+
+          const res = await api.makeRequest('/reviews', {
+              method: 'POST',
+              body: JSON.stringify({
+                  reviewerId: userData.id,
+                  revieweeId: route.params.client?.user?.id,
+                  jobId: route.params.jobId,
+                  rating: averageRating,
+                  ratingDetails: ratings,
+                  reviewText: reviewText,
+                  reviewType: 'CLIENT',
+                  messageId: reviewMessageId
+              })
+          });
+
+          if (res.success) {
+               Toast.show({
+                  type: 'success',
+                  text1: 'Review Submitted',
+                  text2: 'Thank you for your feedback!'
+              });
+              setReviewModalVisible(false);
+          } else {
+               throw new Error(res.error || res.message || "Failed to submit review");
+          }
+      } catch (error) {
+          console.error("Review submission error:", error);
+          Toast.show({
+              type: 'error',
+              text1: 'Submission Failed',
+              text2: error.message
+          });
+      } finally {
+          setSubmittingReview(false);
+      }
+  };
+
   const handleMenuAction = (action) => {
     switch (action) {
       case "View Profile":
@@ -471,6 +519,9 @@ const FreelancerChat = ({ route, navigation }) => {
         break;
       case "Request Project Completion":
         handleRequestCompletion();
+        break;
+      case "Write Review":
+        setReviewModalVisible(true);
         break;
       default:
         break;
@@ -498,7 +549,9 @@ const FreelancerChat = ({ route, navigation }) => {
             (job?.assignedFreelancer?.user?.id === userData.id || job?.assignedFreelancerId === userData.id || job?.assignedFreelancerId === userData.freelancer?.id) && 
             (chatStatus === 'IN_PROGRESS' || chatStatus === 'ACCEPTED') && job?.jobStatus !== 'COMPLETED'
               ? ["View Profile", "Block", "Report", "Request Project Completion"]
-              : ["View Profile", "Block", "Report"]
+              : job?.jobStatus === "COMPLETED" 
+                ? ["View Profile", "Block", "Report", "Write Review"] 
+                : ["View Profile", "Block", "Report"]
           }
         />
 
@@ -600,6 +653,13 @@ const FreelancerChat = ({ route, navigation }) => {
           onSubmit={handleReport}
           selectedReason={selectedReportReason}
           onSelectReason={setSelectedReportReason}
+        />
+
+        <ReviewFormModal
+          visible={reviewModalVisible}
+          onClose={() => setReviewModalVisible(false)}
+          onSubmit={handleSubmitReview}
+          isSubmitting={submittingReview}
         />
 
         <Modal

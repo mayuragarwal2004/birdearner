@@ -35,38 +35,39 @@ export default function MyReview({ navigation, route }) {
   const currentTheme = themeStyles[theme];
   const styles = getStyles(currentTheme);
 
-  // const fetchData = useCallback(async () => {
-  //   if (!userData?.id) return;
+  const fetchData = useCallback(async () => {
+    if (!profileData?.userId) return;
 
-  //   setLoadingProfile(true);
-  //   try {
-  //     // Get complete profile data
-  //     const profileResponse = await ApiService.getCompleteProfile(userData.id);
-  //     if (profileResponse.success) {
-  //       setProfileData(profileResponse.data);
-  //     }
+    setLoadingProfile(true);
+    try {
+      // Get complete profile data
+      // const profileResponse = await apiService.getCompleteProfile(profileData.id);
+      // if (profileResponse.success) {
+      //   setProfileData(profileResponse.data);
+      // }
 
-  //     // Get reviews
-  //     const reviewsResponse = await ApiService.getReviewsByUserId(userData.id);
-  //     if (reviewsResponse.success) {
-  //       setReviews(reviewsResponse.data);
-  //     }
+      // Get reviews
+      const reviewsResponse = await apiService.getReviewsByUserId(profileData.userId);
+      if (reviewsResponse.success) {
+        setReviews(reviewsResponse.data);
+      }
 
-  //     // Get review statistics
-  //     const statsResponse = await ApiService.getReviewStats(userData.id);
-  //     if (statsResponse.success) {
-  //       setReviewStats(statsResponse.data);
-  //     }
-  //   } catch (error) {
-  //     Alert.alert("Error", "Failed to fetch data");
-  //   } finally {
-  //     setLoadingProfile(false);
-  //   }
-  // }, [userData?.id]);
+      // Get review statistics
+      const statsResponse = await apiService.getReviewStats(profileData.userId);
+      if (statsResponse.success) {
+        setReviewStats(statsResponse.data);
+      }
+    } catch (error) {
+      console.error(error);
+      Alert.alert("Error", "Failed to fetch data");
+    } finally {
+      setLoadingProfile(false);
+    }
+  }, [profileData?.userId]);
 
-  // useEffect(() => {
-  //   fetchData();
-  // }, [fetchData]);
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   // Load user services and role info
   useEffect(() => {
@@ -313,18 +314,21 @@ export default function MyReview({ navigation, route }) {
         <View style={styles.reviewSection}>
           <Text style={styles.reviewSectionTitle}>Recent Reviews</Text>
           {reviews.length > 0 ? (
-            reviews.map((review) => (
-              <ReviewCard
-                key={review.id}
-                reviewerName={review.clientReviewer?.user?.fullName}
-                reviewerLocation={`${review.clientReviewer?.city}, ${review.clientReviewer?.country}`}
-                starRating={review.rating}
-                reviewText={review.reviewText}
-                reviewerPhoto={review.clientReviewer?.profilePhoto}
-                jobTitle={review.job?.jobTitle}
-                date={new Date(review.createdAt).toLocaleDateString()}
-              />
-            ))
+            reviews.map((review) => {
+              const reviewer = review.clientReviewer || review.freelancerReviewer;
+              return (
+                <ReviewCard
+                  key={review.id}
+                  reviewerName={reviewer?.user?.fullName}
+                  reviewerLocation={`${reviewer?.city}, ${reviewer?.country}`}
+                  starRating={review.rating}
+                  reviewText={review.reviewText}
+                  reviewerPhoto={reviewer?.profilePhoto}
+                  jobTitle={review.job?.jobTitle}
+                  date={new Date(review.createdAt).toLocaleDateString()}
+                />
+              );
+            })
           ) : (
             <Text style={styles.noReviewsText}>No reviews yet</Text>
           )}

@@ -1,7 +1,7 @@
 // API service for communicating with the Bird Earner Node.js backend
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const DEV_API_BASE_URL = "https://larry-relief-probably-breathing.trycloudflare.com/api";
+const DEV_API_BASE_URL = "https://exhibit-application-monetary-beverage.trycloudflare.com/api";
 
 const PROD_API_BASE_URL = "https://api.birdearner.com/api";
 
@@ -596,6 +596,28 @@ class ApiService {
       return response.data;
     } catch (error) {
       throw new Error(`Failed to fetch job stats: ${error.message}`);
+    }
+  }
+
+  // ==================== REVIEWS ====================
+
+  // Get reviews for a user
+  async getReviewsByUserId(userId) {
+    try {
+      const response = await this.makeRequest(`/reviews/user/${userId}`);
+      return response;
+    } catch (error) {
+      throw new Error(`Failed to fetch reviews: ${error.message}`);
+    }
+  }
+
+  // Get review statistics for a user
+  async getReviewStats(userId) {
+    try {
+      const response = await this.makeRequest(`/reviews/stats/${userId}`);
+      return response;
+    } catch (error) {
+      throw new Error(`Failed to fetch review statistics: ${error.message}`);
     }
   }
 

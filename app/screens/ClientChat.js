@@ -432,6 +432,9 @@ const ClientChat = ({ route, navigation }) => {
       case "Request Project Completion":
         handleRequestCompletion();
         break;
+      case "Write Review":
+        handleReviewPressManual();
+        break;
       default:
         break;
     }
@@ -559,7 +562,7 @@ const ClientChat = ({ route, navigation }) => {
         body: JSON.stringify({
           threadId: thread?.id,
           reason: selectedReportReason,
-          reportedUserId: route.params.freelancer.userId,
+          reportedUserId: route.params.freelancer.user.id,
         }),
       });
 
@@ -709,6 +712,25 @@ const ClientChat = ({ route, navigation }) => {
     setReviewModalVisible(true);
   };
 
+  const handleReviewPressManual = () => {
+      // Try to find a pending review request in messages
+      const pendingReviewMsg = messages.find(m => {
+          if (m.messageType !== 'review_request') return false;
+          try {
+              const content = JSON.parse(m.messageContent);
+              return content.status === 'pending';
+          } catch (e) { return false; }
+      });
+
+      if (pendingReviewMsg) {
+          handleReviewPress(pendingReviewMsg);
+      } else {
+          // Just open the modal
+          setReviewMessageId(null);
+          setReviewModalVisible(true);
+      }
+  };
+
   const calculateReviewLevel = (totalXP) => {
       // Client side estimation optional, backend handles it.
   };
@@ -720,13 +742,27 @@ const ClientChat = ({ route, navigation }) => {
           const { ratings, reviewText } = reviewData;
           const averageRating = parseFloat(((ratings.experience + ratings.knowledge + ratings.response) / 3).toFixed(1));
           
+          console.log("Submitting review with job:", job);
+          console.log("Freelancer params:", route.params.freelancer); // Added log
+          if (!job?.clientId) {
+              console.error("Job or clientId missing:", job);
+              Toast.show({
+                  type: 'error',
+                  text1: 'Error',
+                  text2: 'Missing job or client information'
+              });
+              setSubmittingReview(false);
+              return;
+          }
+
           const res = await api.makeRequest('/reviews', {
               method: 'POST',
               body: JSON.stringify({
-                  reviewerId: userData.id,
-                  revieweeId: route.params.freelancer.id,
+                  reviewerId: userData.id, // Use User ID
+                  revieweeId: route.params.freelancer.user.id, // Use Freelancer's User ID
                   jobId: route.params.jobId,
                   rating: averageRating,
+                  ratingDetails: ratings, // Send detailed ratings
                   reviewText: reviewText,
                   reviewType: 'FREELANCER',
                   messageId: reviewMessageId
@@ -950,6 +986,12 @@ const ClientChat = ({ route, navigation }) => {
           menuOptions={
             (() => {
               const baseOptions = ["View Profile", "Block", "Report"];
+
+              // Add Write Review option if job is completed
+              if (job?.jobStatus === "COMPLETED") {
+                baseOptions.push("Write Review");
+              }
+
               if (job?.assignedFreelancerId === route.params.freelancer.id && 
                   (chatStatus === "ACCEPTED" || chatStatus === "IN_PROGRESS")) {
                 const options = [...baseOptions, "Cancel Job"];

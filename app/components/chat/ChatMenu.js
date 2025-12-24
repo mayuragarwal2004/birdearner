@@ -15,6 +15,8 @@ const getIconForAction = (action) => {
       return "checkmark-circle-outline";
     case "Cancel Job":
       return "close-circle-outline";
+    case "Write Review":
+      return "create-outline";
     default:
       return "ellipsis-horizontal";
   }

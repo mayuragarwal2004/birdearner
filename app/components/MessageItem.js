@@ -12,6 +12,7 @@ import apiService from "../lib/apiService";
 import { Modal } from "react-native";
 import CashPaymentMessage from "./chat/CashPaymentMessage";
 import CompletionRequestMessage from "./chat/CompletionRequestMessage";
+import ReviewRequestMessage from "./chat/ReviewRequestMessage";
 
 const MessageItem = ({ messageItem, message, isCurrentUser, media = [], onMessageUpdate, currentUserId, userRole }) => {
   const [downloadingIndex, setDownloadingIndex] = useState(null);
@@ -140,6 +141,13 @@ const MessageItem = ({ messageItem, message, isCurrentUser, media = [], onMessag
         <CompletionRequestMessage 
           message={messageItem} 
           onUpdate={onMessageUpdate}
+          currentUserId={currentUserId}
+          userRole={userRole}
+        />
+      ) : messageItem?.messageType === 'review_request' ? (
+        <ReviewRequestMessage
+          message={messageItem}
+          onReviewPress={(msg) => onMessageUpdate && onMessageUpdate('review_press', msg)}
           currentUserId={currentUserId}
           userRole={userRole}
         />
