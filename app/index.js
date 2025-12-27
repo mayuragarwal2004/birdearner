@@ -59,6 +59,7 @@ import { ThemeProvider } from "./context/ThemeContext";
 import { KeyboardProvider, useKeyboard } from "./context/KeyboardContext";
 import { NavigationContainer } from "@react-navigation/native";
 import * as Linking from "expo-linking";
+import apiService from "./lib/apiService";
 
 // Toast Configuration
 const toastConfig = {
@@ -168,19 +169,19 @@ function MainTabs() {
 
   const tabScreens = isClient
     ? [
-        { name: "Home", component: ClientHomeStack },
-        { name: "Job Posted", component: JobStack },
-        { name: "Job Requirements", component: JobRequirementStack },
-        { name: "AI Bird", component: Bird },
-        { name: "Profile", component: ProfileStack },
-      ]
+      { name: "Home", component: ClientHomeStack },
+      { name: "Job Posted", component: JobStack },
+      { name: "Job Requirements", component: JobRequirementStack },
+      { name: "AI Bird", component: Bird },
+      { name: "Profile", component: ProfileStack },
+    ]
     : [
-        { name: "Home", component: HomeStack },
-        { name: "Leaderboard", component: LeaderboardScreen },
-        { name: "Marketplace", component: MarketPlaceStack },
-        { name: "AI Bird", component: Bird },
-        { name: "Profile", component: ProfileStack },
-      ];
+      { name: "Home", component: HomeStack },
+      { name: "Leaderboard", component: LeaderboardScreen },
+      { name: "Marketplace", component: MarketPlaceStack },
+      { name: "AI Bird", component: Bird },
+      { name: "Profile", component: ProfileStack },
+    ];
 
   return (
     <Tab.Navigator
@@ -407,17 +408,20 @@ export function App() {
     const initializeNotifications = async () => {
       try {
         const hasPermission = await requestUserPermission();
-        if (hasPermission) {
+        if (hasPermission && userData?.id) {
           const token = await messaging().getToken();
-          // Store token securely for push notifications
-          // TODO: Send token to your backend server
+          // Sending token to backend
+          await apiService.registerPushToken(userData.id, userData.role, token);
+          console.log("Push token registered:", token);
         }
       } catch (error) {
         console.error("Error initializing push notifications:", error);
       }
     };
 
-    initializeNotifications();
+    if (userData?.id) {
+      initializeNotifications();
+    }
 
     const setupMessageHandlers = () => {
       // Handle initial notification when app was opened from killed state
@@ -425,23 +429,31 @@ export function App() {
         .getInitialNotification()
         .then(async (remoteMessage) => {
           if (remoteMessage) {
-            // Handle notification that opened the app
-            console.log("Notification caused app to open from quit state");
+            console.log("Notification caused app to open from quit state:", remoteMessage);
+            // Navigate based on data if needed
           }
         });
 
       // Handle notification when app is opened from background
       messaging().onNotificationOpenedApp(async (remoteMessage) => {
-        // Handle notification when app is in background
-        console.log("Notification caused app to open from background");
+        console.log("Notification caused app to open from background:", remoteMessage);
+        // Navigate based on data if needed
       });
 
       // Handle foreground messages
       const unsubscribe = messaging().onMessage(async (remoteMessage) => {
-        Alert.alert(
-          remoteMessage?.notification?.title || "New Notification",
-          remoteMessage?.notification?.body || "You have a new message"
-        );
+        // Show Toast for foreground message instead of Alert
+        Toast.show({
+          type: 'info',
+          text1: remoteMessage?.notification?.title || "New Notification",
+          text2: remoteMessage?.notification?.body,
+          position: 'top',
+          visibilityTime: 4000,
+          onPress: () => {
+            // Navigate to Notification screen on tap
+            // This requires access to navigation ref or similar global nav
+          }
+        });
       });
 
       return unsubscribe;
@@ -449,7 +461,7 @@ export function App() {
 
     const unsubscribe = setupMessageHandlers();
     return unsubscribe;
-  }, []);
+  }, [userData]);
 
   // Always show intro screen first, let it handle navigation
   // No need for loading check here since Intro will handle it

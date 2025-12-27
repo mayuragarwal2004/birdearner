@@ -1,7 +1,8 @@
 // API service for communicating with the Bird Earner Node.js backend
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Platform } from "react-native";
 
-const DEV_API_BASE_URL = "https://spouse-backgrounds-surgeons-velvet.trycloudflare.com/api";
+const DEV_API_BASE_URL = "https://validation-andrea-conferences-necklace.trycloudflare.com/api";
 
 const PROD_API_BASE_URL = "https://api.birdearner.com/api";
 
@@ -1521,6 +1522,58 @@ class ApiService {
     try {
       const response = await this.makeRequest(`/contact/ticket/${ticketId}`);
       return response;
+    } catch (error) {
+      this.handleApiError(error);
+    }
+  }
+
+  // Notification APIs
+  async registerPushToken(userId, userType, token) {
+    try {
+      const response = await this.makeRequest(`/notifications/register-token`, {
+        method: "POST",
+        body: JSON.stringify({
+          userId,
+          userType,
+          token,
+          platform: Platform.OS
+        })
+      });
+      return response.data;
+    } catch (error) {
+      // Don't throw error for token registration to avoid blocking app init
+      console.warn("Failed to register push token:", error.message);
+      return null;
+    }
+  }
+
+  async getNotifications(userId, page = 1) {
+    try {
+      const response = await this.makeRequest(`/notifications/${userId}/list?page=${page}`);
+      return response; // response already has data, pagination, etc.
+    } catch (error) {
+      console.warn("Fetch notifications failed:", error.message);
+      return { data: [], unreadCount: 0 };
+    }
+  }
+
+  async markNotificationRead(id) {
+    try {
+      const response = await this.makeRequest(`/notifications/${id}/read`, {
+        method: "PUT"
+      });
+      return response.data;
+    } catch (error) {
+      this.handleApiError(error);
+    }
+  }
+
+  async markAllNotificationsRead(userId) {
+    try {
+      const response = await this.makeRequest(`/notifications/${userId}/read-all`, {
+        method: "PUT"
+      });
+      return response.data;
     } catch (error) {
       this.handleApiError(error);
     }
