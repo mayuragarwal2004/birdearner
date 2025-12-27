@@ -1,7 +1,7 @@
 // API service for communicating with the Bird Earner Node.js backend
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const DEV_API_BASE_URL = "https://remind-travis-dividend-applicable.trycloudflare.com/api";
+const DEV_API_BASE_URL = "https://spouse-backgrounds-surgeons-velvet.trycloudflare.com/api";
 
 const PROD_API_BASE_URL = "https://api.birdearner.com/api";
 
@@ -110,8 +110,7 @@ class ApiService {
             data.message || "Access denied"
           );
           throw new Error(
-            `Authentication failed: ${
-              data.message || "Access denied, please login again"
+            `Authentication failed: ${data.message || "Access denied, please login again"
             }`
           );
         }
@@ -308,6 +307,24 @@ class ApiService {
     return response.data;
   }
 
+  // Get leaderboard data
+  async getLeaderboard(scope = "india", userId, limit = 50) {
+    try {
+      const queryParams = new URLSearchParams({
+        scope,
+        userId,
+        limit: limit.toString(),
+      });
+
+      const response = await this.makeRequest(
+        `/freelancers/leaderboard?${queryParams}`
+      );
+      return response.data;
+    } catch (error) {
+      throw new Error(`Failed to fetch leaderboard: ${error.message}`);
+    }
+  }
+
   // Client endpoints
   async createClientProfile(clientData) {
     const response = await this.makeRequest("/clients", {
@@ -438,7 +455,7 @@ class ApiService {
       );
 
       // console.log("Categorized jobs response:", response);
-      
+
       // Add All jobs array for wheel filtering
       const categorizedJobs = response.data;
       const allJobs = [
@@ -446,7 +463,7 @@ class ApiService {
         ...(categorizedJobs.High || []),
         ...(categorizedJobs.Standard || [])
       ];
-      
+
       return {
         ...categorizedJobs,
         All: allJobs // Add combined array for "All Jobs" filter
@@ -1459,7 +1476,7 @@ class ApiService {
         page: page.toString(),
         limit: limit.toString(),
       });
-      
+
       if (status) {
         queryParams.append('status', status);
       }

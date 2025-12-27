@@ -1,377 +1,503 @@
 import React, { useEffect, useState } from "react";
 import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  SafeAreaView,
-  Platform,
+    View,
+    Text,
+    ScrollView,
+    StyleSheet,
+    TouchableOpacity,
+    SafeAreaView,
+    Platform,
+    Image,
+    Dimensions,
+    StatusBar,
+    RefreshControl
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { useAuth } from "../context/NewAuthContext";
-// import { useAppwrite } from "../context/AppwriteContext";
 import { useTheme } from "../context/ThemeContext";
+import apiService from "../lib/apiService";
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+
+const { width } = Dimensions.get('window');
 
 const LeaderboardScreen = () => {
-  // const { appwriteConfig, databases } = useAppwrite();
-  const [selectedTab, setSelectedTab] = useState("india");
-  const [leaderboardData, setLeaderboardData] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const { userData } = useAuth();
+    const [selectedTab, setSelectedTab] = useState("india");
+    const [leaderboardData, setLeaderboardData] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+    const [error, setError] = useState(null);
+    const { userData } = useAuth();
 
-  const { theme, themeStyles } = useTheme();
-  const currentTheme = themeStyles[theme];
+    const { theme, themeStyles } = useTheme();
+    const currentTheme = themeStyles[theme];
+    const styles = getStyles(currentTheme);
 
-  const styles = getStyles(currentTheme);
-
-  const user = {
-    id: userData?.id, // Updated for new backend
-    country: userData?.country || "India", // Default fallback
-    state: userData?.state || "Unknown",
-    pin: userData?.zipcode,
-  };
-
-  useEffect(() => {
-    fetchLeaderboardData(selectedTab);
-  }, [selectedTab]);
-
-  const fetchLeaderboardData = async (tab) => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const response = await databases.listDocuments(
-        appwriteConfig.databaseId,
-        appwriteConfig.freelancerCollectionId
-      );
-
-      const documents = response.documents;
-
-      // Filter and rank data based on the selected tab
-      const rankedData = filterAndRankData(documents, tab);
-      setLeaderboardData(rankedData);
-    } catch (err) {
-      setError("Failed to fetch leaderboard data");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const filterAndRankData = (documents, tab) => {
-    let filteredDocs;
-    if (tab === "india") {
-      filteredDocs = documents;
-    } else if (tab === "state") {
-      filteredDocs = documents.filter((doc) => doc.state === user.state);
-    } else {
-      filteredDocs = documents.filter((doc) => doc.zipcode === user.pin);
-    }
-
-    // Sort by XP and orders
-    const rankedDocs = filteredDocs
-      .sort((a, b) => {
-        if (b.XP === a.XP) {
-          return b.assigned_jobs.length - a.assigned_jobs.length;
+    useEffect(() => {
+        if (userData?.id) {
+            fetchLeaderboardData(selectedTab);
         }
-        return b.XP - a.XP;
-      })
-      .map((doc, index) => ({
-        ...doc,
-        rank: index + 1,
-        isCurrentUser: doc.$id === user.id,
-      }));
+    }, [selectedTab, userData]);
 
-    // Extract top 5 and ensure current user is included
-    const currentUser = rankedDocs.find((doc) => doc.isCurrentUser);
-    const topFive = rankedDocs.slice(0, 5);
+    const fetchLeaderboardData = async (tab, showLoader = true) => {
+        if (showLoader) setIsLoading(true);
+        setError(null);
 
-    if (currentUser && !topFive.some((doc) => doc.isCurrentUser)) {
-      topFive.push(currentUser);
-    }
+        try {
+            const data = await apiService.getLeaderboard(tab, userData.id);
 
-    return topFive.slice(0, 6);
-  };
+            const rankedData = data.map((item, index) => ({
+                ...item,
+                rank: index + 1,
+                isCurrentUser: item.userId === userData.id
+            }));
 
-  const formatXP = (xp) => {
-    if (xp >= 1000000) {
-      return (xp / 1000000).toFixed(1) + "M"; // For millions
-    } else if (xp >= 1000) {
-      return (xp / 1000).toFixed(1) + "K"; // For thousands
-    } else {
-      return xp; // For values less than 1000
-    }
-  };
+            setLeaderboardData(rankedData);
+        } catch (err) {
+            console.error("Leaderboard fetch error:", err);
+            setError("Failed to fetch leaderboard data");
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
-  const handleTabPress = (tab) => {
-    setSelectedTab(tab);
-  };
+    const onRefresh = () => {
+        setRefreshing(true);
+        fetchLeaderboardData(selectedTab, false).finally(() => {
+            setRefreshing(false);
+        });
+    };
 
-  return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <Text style={styles.title}>Lead Board</Text>
-      <Text style={styles.subtitle}>
-        ({selectedTab.charAt(0).toUpperCase() + selectedTab.slice(1)})
-      </Text>
+    const formatXP = (xp) => {
+        if (!xp) return "0";
+        if (xp >= 1000000) return (xp / 1000000).toFixed(1) + "M";
+        if (xp >= 1000) return (xp / 1000).toFixed(1) + "K";
+        return xp;
+    };
 
-      {/* Leaderboard Table */}
-      <ScrollView style={styles.tableContainer}>
-        <View style={styles.tableHeader}>
-          <Text style={[styles.headerText, styles.nameColumn]}>Name</Text>
-          <Text style={[styles.headerText, styles.xpColumn]}>XP</Text>
-          <Text style={[styles.headerText, styles.ordersColumn]}>Orders</Text>
-          <Text style={[styles.headerText, styles.rankColumn]}>Rank</Text>
+    const TopThree = ({ data }) => {
+        const renderPodiumItem = (item, position) => {
+            if (!item) return null;
+
+            let scale = 1;
+            let translateY = 0;
+            let ringColor = "#C0C0C0"; // Silver
+            let crownColor = null;
+
+            if (position === 1) {
+                scale = 1.2;
+                translateY = -20;
+                ringColor = "#FFD700"; // Gold
+                crownColor = "#FFD700";
+            } else if (position === 3) {
+                scale = 0.9;
+                translateY = 10;
+                ringColor = "#CD7F32"; // Bronze
+            }
+
+            return (
+                <View style={[styles.podiumItem, { transform: [{ translateY }] }]}>
+                    {crownColor && (
+                        <MaterialCommunityIcons name="crown" size={24} color={crownColor} style={styles.crown} />
+                    )}
+                    <View style={[styles.avatarContainer, { borderColor: ringColor, borderWidth: 3 }]}>
+                        <Image
+                            source={
+                                item.profilePhoto ?
+                                    { uri: item.profilePhoto }
+                                    : require("../assets/profile.png")
+                            }
+                            style={styles.podiumAvatar}
+                        />
+                        <View style={[styles.rankBadge, { backgroundColor: ringColor }]}>
+                            <Text style={styles.rankText}>{position}</Text>
+                        </View>
+                    </View>
+                    <Text style={styles.podiumName} numberOfLines={1}>
+                        {item.isCurrentUser ? "You" : item.full_name || "Unknown"}
+                    </Text>
+                    <Text style={styles.podiumXP}>{formatXP(item.xp)} XP</Text>
+                </View>
+            );
+        };
+
+        const first = data.find(i => i.rank === 1);
+        const second = data.find(i => i.rank === 2);
+        const third = data.find(i => i.rank === 3);
+
+        return (
+            <View style={styles.podiumContainer}>
+                {/* 2nd Place */}
+                <View style={styles.sidePodium}>
+                    {renderPodiumItem(second, 2)}
+                </View>
+                {/* 1st Place */}
+                <View style={styles.centerPodium}>
+                    {renderPodiumItem(first, 1)}
+                </View>
+                {/* 3rd Place */}
+                <View style={styles.sidePodium}>
+                    {renderPodiumItem(third, 3)}
+                </View>
+            </View>
+        );
+    };
+
+    const ListItem = ({ item }) => (
+        <View style={[styles.listItem, item.isCurrentUser && styles.currentUserItem]}>
+            <View style={styles.rankContainer}>
+                <Text style={styles.listRank}>#{item.rank}</Text>
+            </View>
+
+            <Image
+                source={
+                    item.profilePhoto ?
+                        { uri: item.profilePhoto }
+                        : require("../assets/profile.png")
+                }
+                style={styles.listAvatar}
+            />
+
+            <View style={styles.listInfo}>
+                <Text style={[styles.listName, item.isCurrentUser && styles.currentUserName]} numberOfLines={1}>
+                    {item.isCurrentUser ? "You" : item.full_name || "Unknown"}
+                </Text>
+                <View style={styles.statsRow}>
+                    <MaterialCommunityIcons name="clipboard-check-outline" size={14} color="#666" style={{ marginRight: 4 }} />
+                    <Text style={styles.listSubText}>{item.orderCount || 0} Orders</Text>
+                </View>
+            </View>
+
+            <View style={styles.listScore}>
+                <View style={styles.xpBadge}>
+                    <Text style={styles.xpText}>{formatXP(item.xp)} XP</Text>
+                </View>
+            </View>
         </View>
+    );
 
-        {leaderboardData.map((user, index) => (
-          <View
-            key={index}
-            style={[
-              styles.tableRow,
-              isLoading && styles.fadedRow, // Apply faded style during loading
-              user.isCurrentUser
-                ? styles.currentUserRow
-                : user.rank === 1 || user.rank === 2
-                ? styles.topRankRow
-                : styles.otherUserRow,
-            ]}
-          >
-            <Text
-              style={[styles.tableText, styles.nameColumn]}
-              numberOfLines={1}
-            >
-              {user.isCurrentUser ? `You` : user?.full_name}
-            </Text>
-            <View
-              style={[
-                styles.xpColumn,
-                user.isCurrentUser
-                  ? styles.currentredBackground
-                  : styles.blueBackground,
-              ]}
-            >
-              <Text style={styles.blueText}>{formatXP(user?.XP)}</Text>
-            </View>
-            <Text style={[styles.tableText, styles.ordersColumn]}>
-              {user?.assigned_jobs.length}
-            </Text>
-            <View
-              style={[
-                styles.rankColumn,
-                user.isCurrentUser
-                  ? styles.currentredBackgroundd
-                  : styles.blueBackgroundd,
-              ]}
-            >
-              <Text style={styles.blueText}>{formatXP(user?.rank)}</Text>
-            </View>
-          </View>
-        ))}
-      </ScrollView>
+    return (
+        <View style={styles.mainContainer}>
+            <StatusBar barStyle="light-content" />
+            <LinearGradient
+                colors={['#4C0183', '#2E0054']}
+                style={styles.backgroundGradient}
+            />
 
-      {/* Footer Text */}
-      <Text style={styles.footerText}>
-        Feature on the top 5 on the leaderboard and win coupons, gifts, and less
-        deduction on your bids!
-      </Text>
+            <SafeAreaView style={styles.safeArea}>
+                <View style={styles.header}>
+                    <Text style={styles.headerTitle}>Leaderboard</Text>
 
-      {/* Tab Navigation */}
-      <View style={styles.tabContainer}>
-        <TouchableOpacity
-          style={[styles.tab, selectedTab === "local" && styles.activeTab]}
-          onPress={() => handleTabPress("local")}
-        >
-          <Text
-            style={[
-              styles.tabText,
-              selectedTab === "local" && styles.activeTabText,
-            ]}
-          >
-            Local
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, selectedTab === "state" && styles.activeTab]}
-          onPress={() => handleTabPress("state")}
-        >
-          <Text
-            style={[
-              styles.tabText,
-              selectedTab === "state" && styles.activeTabText,
-            ]}
-          >
-            State
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, selectedTab === "india" && styles.activeTab]}
-          onPress={() => handleTabPress("india")}
-        >
-          <Text
-            style={[
-              styles.tabText,
-              selectedTab === "india" && styles.activeTabText,
-            ]}
-          >
-            India
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </SafeAreaView>
-  );
+                    <View style={styles.tabContainer}>
+                        {['local', 'state', 'india'].map((tab) => (
+                            <TouchableOpacity
+                                key={tab}
+                                style={[styles.tab, selectedTab === tab && styles.activeTab]}
+                                onPress={() => setSelectedTab(tab)}
+                            >
+                                <Text style={[styles.tabText, selectedTab === tab && styles.activeTabText]}>
+                                    {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+                </View>
+
+                <ScrollView
+                    contentContainerStyle={styles.scrollContent}
+                    showsVerticalScrollIndicator={false}
+                    refreshControl={
+                        <RefreshControl
+                            refreshing={refreshing}
+                            onRefresh={onRefresh}
+                            colors={['#4C0183']}
+                            tintColor={'#fff'}
+                        />
+                    }
+                >
+                    {isLoading ? (
+                        <View style={styles.loadingContainer}>
+                            <Text style={styles.loadingText}>Loading...</Text>
+                        </View>
+                    ) : (
+                        <>
+                            {leaderboardData.length > 0 && (
+                                <TopThree data={leaderboardData} />
+                            )}
+
+                            <View style={styles.listContainer}>
+                                {leaderboardData.slice(3).map((item) => (
+                                    <ListItem key={item.id} item={item} />
+                                ))}
+
+                                {leaderboardData.length === 0 && (
+                                    <Text style={styles.emptyText}>No freelancers found in this region.</Text>
+                                )}
+
+                                {/* Add footer padding within list container */}
+                                <Text style={styles.footerText}>
+                                    Feature on the top 5 on the leaderboard and win coupons, gifts, and less deduction on your bids!
+                                </Text>
+                            </View>
+                        </>
+                    )}
+                </ScrollView>
+            </SafeAreaView>
+        </View>
+    );
 };
 
 const getStyles = (currentTheme) =>
-  StyleSheet.create({
-    container: {
-      flex: 1,
-      padding: 16,
-      backgroundColor: currentTheme.background || "#ffffff",
-      paddingTop: 50,
-      paddingBottom: Platform.OS === "ios" ? 90 : 75, // Add bottom padding to prevent tab bar overlap
-    },
-    title: {
-      fontSize: 24,
-      fontWeight: "bold",
-      textAlign: "center",
-      marginBottom: 4,
-      color: currentTheme.text,
-    },
-    subtitle: {
-      fontSize: 16,
-      textAlign: "center",
-      marginBottom: 16,
-      color: currentTheme.subText,
-    },
-    tableContainer: {
-      marginBottom: 16,
-    },
-    tableHeader: {
-      flexDirection: "row",
-      justifyContent: "space-around",
-      // backgroundColor: '#f0f0f0',
-      padding: 12,
-      borderRadius: 10,
-    },
-    headerText: {
-      fontWeight: "bold",
-      fontSize: 16,
-      color: "#726B6B",
-      flex: 1,
-      textAlign: "center",
-    },
-    tableRow: {
-      flexDirection: "row",
-      justifyContent: "space-around",
-      // padding: 12,
-      marginVertical: 4,
-      borderRadius: 12,
-    },
-    fadedRow: {
-      opacity: 0.5,
-    },
-    topRankRow: {
-      backgroundColor: "#71C232",
-    },
-    otherUserRow: {
-      backgroundColor: "#C9D63E",
-    },
-    currentUserRow: {
-      backgroundColor: "#E8E8E8",
-    },
-    tableText: {
-      fontSize: 16,
-      flex: 1,
-      textAlign: "center",
-      padding: 12,
-    },
-    nameColumn: {
-      flex: 2, // Increased width for Name column
-      textAlign: "center", // Align text to the left
-    },
-    xpColumn: {
-      flex: 1, // Default width
-      textAlign: "center",
-    },
-    ordersColumn: {
-      flex: 1, // Default width
-      textAlign: "center",
-    },
-    rankColumn: {
-      flex: 1, // Default width
-      textAlign: "center",
-    },
-    blueBackground: {
-      backgroundColor: currentTheme.primary || "#762BAD",
-      // borderRadius: 5,
-      paddingVertical: 12,
-      flex: 1,
-      alignItems: "center",
-    },
-    blueBackgroundd: {
-      backgroundColor: currentTheme.primary || "#762BAD",
-      borderTopRightRadius: 12,
-      borderBottomRightRadius: 12,
-      paddingVertical: 12,
-      flex: 1,
-      alignItems: "center",
-    },
-    currentredBackground: {
-      backgroundColor: "#DC3737",
-      // borderRadius: 5,
-      paddingVertical: 12,
-      flex: 1,
-      alignItems: "center",
-    },
-    currentredBackgroundd: {
-      backgroundColor: "#DC3737",
-      borderTopRightRadius: 12,
-      borderBottomRightRadius: 12,
-      paddingVertical: 12,
-      flex: 1,
-      alignItems: "center",
-    },
-    blueText: {
-      color: "white",
-      fontSize: 16,
-    },
-    footerText: {
-      textAlign: "center",
-      fontSize: 16,
-      color: currentTheme.subText || "#555",
-      marginVertical: 20,
-      paddingHorizontal: 50,
-    },
-    tabContainer: {
-      flexDirection: "row",
-      justifyContent: "space-around",
-      marginBottom: 15,
-    },
-    tab: {
-      paddingHorizontal: 30,
-      paddingVertical: 8,
-      borderRadius: 10,
-      backgroundColor: currentTheme.cardBackground || "#ccc",
-    },
-    activeTab: {
-      backgroundColor: "#6A1B9A",
-    },
-    tabText: {
-      fontSize: 15,
-      fontWeight: "bold",
-      color: currentTheme.subText || "#fff",
-    },
-    activeTabText: {
-      color: "#fff",
-    },
-    tabShadow: {
-      shadowColor: currentTheme.shadow || "#000",
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.2,
-      shadowRadius: 4,
-      elevation: 5,
-    },
-  });
+    StyleSheet.create({
+        mainContainer: {
+            flex: 1,
+            backgroundColor: currentTheme.background || '#f5f5f5',
+        },
+        safeArea: {
+            flex: 1,
+            backgroundColor: 'transparent',
+        },
+        backgroundGradient: {
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            top: 0,
+            height: '45%', // Percentage height to cover top portion flexibly
+        },
+        header: {
+            paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 24) + 20 : 10,
+            paddingHorizontal: 20,
+            alignItems: 'center',
+            zIndex: 10,
+            marginBottom: 10,
+        },
+        headerTitle: {
+            fontSize: 24,
+            fontWeight: 'bold',
+            color: '#fff',
+            marginBottom: 20,
+        },
+        loadingContainer: {
+            padding: 40,
+            alignItems: 'center',
+        },
+        loadingText: {
+            color: '#fff',
+            fontSize: 16,
+        },
+        tabContainer: {
+            flexDirection: 'row',
+            backgroundColor: 'rgba(255,255,255,0.15)',
+            borderRadius: 25,
+            padding: 4,
+            width: '100%',
+            justifyContent: 'space-between',
+        },
+        tab: {
+            flex: 1,
+            paddingVertical: 8,
+            alignItems: 'center',
+            borderRadius: 20,
+        },
+        activeTab: {
+            backgroundColor: '#fff',
+        },
+        tabText: {
+            color: '#fff',
+            fontWeight: '600',
+            fontSize: 14,
+        },
+        activeTabText: {
+            color: '#4C0183', // Primary Purple
+        },
+        scrollContent: {
+            paddingBottom: 20,
+            flexGrow: 1,
+        },
+        podiumContainer: {
+            flexDirection: 'row',
+            justifyContent: 'center',
+            alignItems: 'flex-end',
+            height: 220,
+            marginTop: 10,
+            marginBottom: 20,
+        },
+        sidePodium: {
+            flex: 1,
+            alignItems: 'center',
+        },
+        centerPodium: {
+            flex: 1,
+            alignItems: 'center',
+            zIndex: 2,
+        },
+        podiumItem: {
+            alignItems: 'center',
+        },
+        crown: {
+            marginBottom: -10,
+            zIndex: 10,
+        },
+        avatarContainer: {
+            borderRadius: 50,
+            padding: 2,
+            backgroundColor: '#fff',
+            marginBottom: 8,
+            shadowColor: "#000",
+            shadowOffset: {
+                width: 0,
+                height: 4,
+            },
+            shadowOpacity: 0.3,
+            shadowRadius: 4.65,
+            elevation: 8,
+        },
+        podiumAvatar: {
+            width: 60,
+            height: 60,
+            borderRadius: 30,
+        },
+        rankBadge: {
+            position: 'absolute',
+            bottom: -10,
+            alignSelf: 'center',
+            width: 24,
+            height: 24,
+            borderRadius: 12,
+            justifyContent: 'center',
+            alignItems: 'center',
+            borderWidth: 2,
+            borderColor: '#fff',
+        },
+        rankText: {
+            color: '#fff',
+            fontSize: 12,
+            fontWeight: 'bold',
+        },
+        podiumName: {
+            color: '#fff',
+            fontWeight: 'bold',
+            fontSize: 14,
+            marginTop: 8,
+            maxWidth: 100,
+            textAlign: 'center',
+            textShadowColor: 'rgba(0, 0, 0, 0.3)',
+            textShadowOffset: { width: 0, height: 1 },
+            textShadowRadius: 2,
+        },
+        podiumXP: {
+            color: 'rgba(255,255,255,0.9)',
+            fontSize: 12,
+            marginTop: 2,
+        },
+        listContainer: {
+            backgroundColor: currentTheme.background || '#fff',
+            borderTopLeftRadius: 30,
+            borderTopRightRadius: 30,
+            paddingTop: 20,
+            paddingHorizontal: 20,
+            paddingBottom: 40,
+            flex: 1, // Ensure it fills remaining space
+            minHeight: 400,
+        },
+        listItem: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            backgroundColor: currentTheme.cardBackground || '#fff',
+            marginBottom: 12,
+            padding: 15, // Increased padding
+            borderRadius: 20, // More rounded
+            shadowColor: "#000",
+            shadowOffset: {
+                width: 0,
+                height: 3,
+            },
+            shadowOpacity: 0.05,
+            shadowRadius: 4,
+            elevation: 3,
+            borderWidth: 1,
+            borderColor: 'rgba(0,0,0,0.03)',
+        },
+        currentUserItem: {
+            borderWidth: 1.5,
+            borderColor: '#4C0183', // Primary Purple
+            backgroundColor: '#F3E5F5', // Very Light Purple
+        },
+        rankContainer: {
+            width: 40,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: '#f8f9fa',
+            height: 40,
+            borderRadius: 20,
+            marginRight: 10,
+        },
+        listRank: {
+            fontSize: 14,
+            fontWeight: 'bold',
+            color: '#666',
+        },
+        listAvatar: {
+            width: 50, // Slightly larger
+            height: 50,
+            borderRadius: 25,
+            marginRight: 15,
+            borderWidth: 2,
+            borderColor: '#fff',
+        },
+        listInfo: {
+            flex: 1,
+        },
+        listName: {
+            fontSize: 16,
+            fontWeight: '700',
+            color: currentTheme.text || '#000',
+            marginBottom: 4,
+        },
+        currentUserName: {
+            color: '#4C0183', // Primary Purple
+            fontWeight: 'bold',
+        },
+        statsRow: {
+            flexDirection: 'row',
+            alignItems: 'center',
+        },
+        listSubText: {
+            fontSize: 13,
+            color: '#666',
+            fontWeight: '500',
+        },
+        listScore: {
+            alignItems: 'flex-end',
+            minWidth: 80,
+        },
+        xpBadge: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            // backgroundColor: '#FFFAE6', // Gold tint
+            paddingHorizontal: 0,
+            paddingVertical: 5,
+            borderRadius: 12,
+        },
+        xpText: {
+            fontSize: 14,
+            fontWeight: 'bold',
+            color: '#4C0183', // Purple for Value
+            marginLeft: 0,
+        },
+        emptyText: {
+            textAlign: 'center',
+            marginTop: 40,
+            color: currentTheme.subText,
+            fontSize: 16,
+        },
+        footerText: {
+            textAlign: "center",
+            fontSize: 12,
+            color: currentTheme.subText || "#999",
+            marginTop: 30,
+            marginBottom: 20,
+            fontStyle: 'italic',
+        }
+    });
 
 export default LeaderboardScreen;
