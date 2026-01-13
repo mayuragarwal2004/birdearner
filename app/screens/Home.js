@@ -8,11 +8,13 @@ import {
   ScrollView,
   RefreshControl,
   Platform,
+  ActivityIndicator,
 } from "react-native";
 import { FontAwesome, MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "../context/NewAuthContext";
 import { useTheme } from "../context/ThemeContext";
 import { useNavigation } from "@react-navigation/native";
+import apiService from "../lib/apiService";
 
 const HomeScreen = () => {
   // const { appwriteConfig, databases } = useAppwrite();
@@ -26,6 +28,8 @@ const HomeScreen = () => {
   const [successScore, setSuccessScore] = useState(0);
   const [showProfileSetup, setShowProfileSetup] = useState(false);
   const [currentSetupStep, setCurrentSetupStep] = useState(null);
+  const [notifications, setNotifications] = useState([]);
+  const [loadingNotifications, setLoadingNotifications] = useState(false);
   const navigation = useNavigation();
 
   const { theme, themeStyles } = useTheme();
@@ -98,9 +102,28 @@ const HomeScreen = () => {
     }
   };
 
+  const fetchNotifications = async () => {
+    try {
+      if (userData?.id) {
+        setLoadingNotifications(true);
+        const response = await apiService.getNotifications(userData.id, 1);
+        if (response && response.data) {
+          setNotifications(response.data.slice(0, 5)); // Show only latest 5
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching notifications in Home:", error);
+    } finally {
+      setLoadingNotifications(false);
+    }
+  };
+
   useEffect(() => {
     fetchOrderRecords();
-  }, []);
+    if (userData?.id) {
+      fetchNotifications();
+    }
+  }, [userData]);
 
   useEffect(() => {
     let percentage = 20; // Start with basic profile
@@ -192,6 +215,7 @@ const HomeScreen = () => {
     // TODO: Implement refresh with new backend
     // fetchUserData();
     fetchOrderRecords();
+    fetchNotifications();
     setTimeout(() => {
       setRefreshing(false);
     }, 1000);
@@ -386,10 +410,31 @@ const HomeScreen = () => {
         ) : null}
 
         <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>What's New</Text>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitle}>What's New</Text>
+            <TouchableOpacity onPress={() => navigation.navigate("Notification")}>
+              <Text style={styles.viewAllText}>View All</Text>
+            </TouchableOpacity>
+          </View>
           <View style={styles.whatsNewContainer}>
-            {/* You can add new content here */}
-            <Text style={styles.whatsNewText}>No updates</Text>
+            {loadingNotifications ? (
+              <ActivityIndicator size="small" color="#3b006b" />
+            ) : notifications.length > 0 ? (
+              notifications.map((item, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.notificationPreviewItem}
+                  onPress={() => navigation.navigate("Notification")}
+                >
+                  <View style={styles.notificationDot} />
+                  <Text style={styles.whatsNewText} numberOfLines={1}>
+                    {item.message || item.title}
+                  </Text>
+                </TouchableOpacity>
+              ))
+            ) : (
+              <Text style={styles.whatsNewText}>No new updates</Text>
+            )}
           </View>
         </View>
       </ScrollView>
@@ -545,6 +590,45 @@ const getStyles = (currentTheme) =>
       shadowOpacity: 0.17,
       shadowRadius: 3.05,
       elevation: 4,
+    },
+    sectionHeaderRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      backgroundColor: currentTheme.primary || "#3b006b",
+      paddingVertical: 8,
+      paddingHorizontal: 15,
+      borderBottomRightRadius: 20,
+      borderTopLeftRadius: 20,
+      shadowColor: currentTheme.shadow || "#000000",
+      shadowOffset: {
+        width: 0,
+        height: 3,
+      },
+      shadowOpacity: 0.17,
+      shadowRadius: 3.05,
+      elevation: 4,
+    },
+    viewAllText: {
+      color: "#fff",
+      fontSize: 12,
+      fontWeight: "600",
+      textDecorationLine: "underline",
+    },
+    notificationPreviewItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: 8,
+      borderBottomWidth: 1,
+      borderBottomColor: "rgba(0,0,0,0.05)",
+      width: "100%",
+    },
+    notificationDot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: "#3b006b",
+      marginRight: 10,
     },
     statsContainer: {
       backgroundColor: currentTheme.cardBackground || "#ffffff",

@@ -12,8 +12,9 @@ import {
   RefreshControl,
   Alert,
   Platform,
+  ActivityIndicator,
 } from "react-native";
-import { FontAwesome } from "@expo/vector-icons";
+import { FontAwesome, MaterialIcons } from "@expo/vector-icons";
 import { household_service, freelance_service } from "../lib/roleData";
 import { useAuth } from "../context/NewAuthContext";
 import { differenceInDays } from "date-fns";
@@ -28,6 +29,8 @@ const placeholderImageURL = "https://picsum.photos/seed/";
 const ClientHomeScreen = () => {
   const [showGif, setShowGif] = useState(false);
   const [loadingJobs, setLoadingJobs] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [loadingNotifications, setLoadingNotifications] = useState(false);
 
   const servicesRef = useRef(null);
 
@@ -89,11 +92,28 @@ const ClientHomeScreen = () => {
 
   console.log({ ongoingJobs });
 
+  const fetchNotifications = async () => {
+    try {
+      if (userData?.id) {
+        setLoadingNotifications(true);
+        const response = await apiService.getNotifications(userData.id, 1);
+        if (response && response.data) {
+          setNotifications(response.data.slice(0, 3)); // Show latest 3
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching notifications in ClientHome:", error);
+    } finally {
+      setLoadingNotifications(false);
+    }
+  };
+
   useEffect(() => {
     const fetchOngoingJobs = async () => {
       try {
         if (userData?.role === "CLIENT" && userData?.id) {
           setLoadingJobs(true); // Start loading
+          fetchNotifications(); // Also fetch notifications
 
           // Fetch ongoing jobs from the new backend API
           const ongoingJobsData = await apiService.getOngoingJobsByClientId(
@@ -203,6 +223,7 @@ const ClientHomeScreen = () => {
     if (servicesRef.current?.refreshCard) {
       servicesRef.current.refreshCard();
     }
+    fetchNotifications();
     setTimeout(() => {
       setRefreshing(false);
     }, 1000);
@@ -240,10 +261,10 @@ const ClientHomeScreen = () => {
                 source={
                   userData.client?.profilePhoto
                     ? {
-                        uri: apiService.loadImageURI(
-                          userData.client.profilePhoto
-                        ),
-                      }
+                      uri: apiService.loadImageURI(
+                        userData.client.profilePhoto
+                      ),
+                    }
                     : require("../assets/profile.png")
                 }
                 style={styles.profileImage}
@@ -283,105 +304,105 @@ const ClientHomeScreen = () => {
 
             {combinedData.length > 0
               ? combinedData.map((item, index) => {
-                  console.log({ item });
+                console.log({ item });
 
-                  const { jobDetails, full_name, profile_photo, color } = item;
-                  const receiverId = jobDetails?.assigned_freelancer || null;
-                  const jobId = jobDetails?.$id || null;
+                const { jobDetails, full_name, profile_photo, color } = item;
+                const receiverId = jobDetails?.assigned_freelancer || null;
+                const jobId = jobDetails?.$id || null;
 
-                  // Get the service for this job
-                  const jobService = jobDetails?.service;
+                // Get the service for this job
+                const jobService = jobDetails?.service;
 
-                  console.log({ jobService });
+                console.log({ jobService });
 
-                  return (
-                    <TouchableOpacity
+                return (
+                  <TouchableOpacity
+                    key={index}
+                    onPress={() =>
+                      openChat(receiverId, full_name, profile_photo, jobId)
+                    }
+                    disabled={!jobDetails}
+                  >
+                    <View
                       key={index}
-                      onPress={() =>
-                        openChat(receiverId, full_name, profile_photo, jobId)
-                      }
-                      disabled={!jobDetails}
-                    >
-                      <View
-                        key={index}
-                        style={[
-                          styles.onGoItem,
-                          {
-                            borderWidth: 4,
-                            borderColor:
-                              jobDetails?.jobStatus === "COMPLETED"
-                                ? "#4CAF50"
-                                : jobDetails?.jobStatus === "IN_PROGRESS"
+                      style={[
+                        styles.onGoItem,
+                        {
+                          borderWidth: 4,
+                          borderColor:
+                            jobDetails?.jobStatus === "COMPLETED"
+                              ? "#4CAF50"
+                              : jobDetails?.jobStatus === "IN_PROGRESS"
                                 ? "#2196F3"
                                 : jobDetails?.jobStatus === "OPEN"
-                                ? "#FFCC00"
-                                : "#aba8a6",
-                            borderRadius: 50,
-                            opacity: jobDetails ? 1 : 0.5,
-                          },
-                        ]}
-                      >
-                        {jobDetails ? (
-                          jobService && jobService.imageUrl ? (
-                            <Image
-                              source={{
-                                uri: apiService.loadImageURI(
-                                  jobService.imageUrl
-                                ),
-                              }}
-                              style={styles.ongoingImage}
-                              onError={(e) => {
-                                console.log(
-                                  "Service image load error:",
-                                  e.nativeEvent.error
-                                );
-                              }}
-                            />
-                          ) : (
-                            // Fallback to attached files if no service image
-                            <Image
-                              source={{
-                                uri:
-                                  apiService.loadImageURI(
-                                    jobDetails.attachedFiles?.[0]
-                                  ) || `${placeholderImageURL}${index}/100/100`,
-                              }}
-                              style={styles.ongoingImage}
-                              onError={(e) => {
-                                console.log(
-                                  "Fallback image load error:",
-                                  e.nativeEvent.error
-                                );
-                              }}
-                            />
-                          )
+                                  ? "#FFCC00"
+                                  : "#aba8a6",
+                          borderRadius: 50,
+                          opacity: jobDetails ? 1 : 0.5,
+                        },
+                      ]}
+                    >
+                      {jobDetails ? (
+                        jobService && jobService.imageUrl ? (
+                          <Image
+                            source={{
+                              uri: apiService.loadImageURI(
+                                jobService.imageUrl
+                              ),
+                            }}
+                            style={styles.ongoingImage}
+                            onError={(e) => {
+                              console.log(
+                                "Service image load error:",
+                                e.nativeEvent.error
+                              );
+                            }}
+                          />
                         ) : (
-                          <Text style={styles.placeholderText}>?</Text>
-                        )}
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })
-              : [0, 1, 2].map((item, index) => {
-                  return (
-                    <TouchableOpacity key={index}>
-                      <View
-                        key={index}
-                        style={[
-                          styles.onGoItem,
-                          {
-                            borderWidth: 4,
-                            borderColor: "#D3D3D3",
-                            borderRadius: 50,
-                            opacity: 0.5,
-                          },
-                        ]}
-                      >
+                          // Fallback to attached files if no service image
+                          <Image
+                            source={{
+                              uri:
+                                apiService.loadImageURI(
+                                  jobDetails.attachedFiles?.[0]
+                                ) || `${placeholderImageURL}${index}/100/100`,
+                            }}
+                            style={styles.ongoingImage}
+                            onError={(e) => {
+                              console.log(
+                                "Fallback image load error:",
+                                e.nativeEvent.error
+                              );
+                            }}
+                          />
+                        )
+                      ) : (
                         <Text style={styles.placeholderText}>?</Text>
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })}
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                );
+              })
+              : [0, 1, 2].map((item, index) => {
+                return (
+                  <TouchableOpacity key={index}>
+                    <View
+                      key={index}
+                      style={[
+                        styles.onGoItem,
+                        {
+                          borderWidth: 4,
+                          borderColor: "#D3D3D3",
+                          borderRadius: 50,
+                          opacity: 0.5,
+                        },
+                      ]}
+                    >
+                      <Text style={styles.placeholderText}>?</Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
           </ScrollView>
         </View>
 
@@ -389,37 +410,55 @@ const ClientHomeScreen = () => {
 
         {/* Job Notifications */}
         <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>Job Notifications</Text>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitle}>Job Notifications</Text>
+            <TouchableOpacity onPress={() => navigation.navigate("Notification")}>
+              <Text style={styles.viewAllText}>View All</Text>
+            </TouchableOpacity>
+          </View>
           <View style={styles.notificationsContainer}>
-            <View style={styles.notificationsBox}>
-              {["Job 1"].map((job, index) => (
-                <View
+            {loadingNotifications ? (
+              <ActivityIndicator size="small" color="#3b006b" />
+            ) : notifications.length > 0 ? (
+              notifications.map((item, index) => (
+                <TouchableOpacity
                   key={index}
-                  style={[
-                    styles.notiItem,
-                    {
-                      borderWidth: 4,
-                      borderColor: index % 2 === 0 ? "#F81919" : "#1DCE44",
-                      borderRadius: 50,
-                    },
-                  ]}
+                  style={styles.notificationsBox}
+                  onPress={() => navigation.navigate("Notification")}
                 >
-                  <Image
-                    source={{ uri: `${placeholderImageURL}${index}/100/100` }}
-                    style={styles.notiImage}
-                  />
-                </View>
-              ))}
-              <View style={styles.notiTextLay}>
-                <Text
-                  style={styles.notiText}
-                  numberOfLines={2}
-                  ellipsizeMode="tail"
-                >
-                  Jack234 has sent you 2 files.
-                </Text>
+                  <View
+                    style={[
+                      styles.notiItem,
+                      {
+                        borderWidth: 2,
+                        borderColor: item.isRead ? "#D3D3D3" : "#3b006b",
+                        borderRadius: 50,
+                      },
+                    ]}
+                  >
+                    <MaterialIcons
+                      name={item.type === 'CHAT' ? 'chat' : 'notifications'}
+                      size={24}
+                      color="#3b006b"
+                      style={{ padding: 10 }}
+                    />
+                  </View>
+                  <View style={styles.notiTextLay}>
+                    <Text
+                      style={styles.notiText}
+                      numberOfLines={2}
+                      ellipsizeMode="tail"
+                    >
+                      {item.message || item.title}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ))
+            ) : (
+              <View style={styles.notificationsBox}>
+                <Text style={styles.notiText}>No new notifications</Text>
               </View>
-            </View>
+            )}
           </View>
         </View>
 
@@ -705,6 +744,35 @@ const getStyles = (currentTheme) =>
       shadowOpacity: 0.17,
       shadowRadius: 3.05,
       elevation: 4,
+    },
+    sectionHeaderRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      backgroundColor: currentTheme.primary || "#3b006b",
+      paddingVertical: 8,
+      paddingHorizontal: 15,
+      borderBottomRightRadius: 20,
+      borderTopLeftRadius: 20,
+      marginHorizontal: 20,
+      shadowColor: currentTheme.shadow || "#000000",
+      shadowOffset: {
+        width: 0,
+        height: 3,
+      },
+      shadowOpacity: 0.17,
+      shadowRadius: 3.05,
+      elevation: 4,
+    },
+    viewAllText: {
+      color: "#fff",
+      fontSize: 12,
+      fontWeight: "600",
+      textDecorationLine: "underline",
+    },
+    notiItem: {
+      justifyContent: "center",
+      alignItems: "center",
     },
     whatsNewContainer: {
       backgroundColor: currentTheme.cardBackground || "#ffffff",
