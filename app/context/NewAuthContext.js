@@ -39,25 +39,28 @@ export const AuthProvider = ({ children }) => {
     const hasFreelancerProfile = !!userData.freelancer;
     const hasClientProfile = !!userData.client;
 
+    // Normalize preferredRole for comparison
+    const normPreferred = preferredRole?.toUpperCase();
+
     // If user has preferred role and the profile exists, use it
-    if (preferredRole === "FREELANCER" && hasFreelancerProfile) {
+    if (normPreferred === "FREELANCER" && hasFreelancerProfile) {
       return "FREELANCER";
     }
-    if (preferredRole === "CLIENT" && hasClientProfile) {
+    if (normPreferred === "CLIENT" && hasClientProfile) {
       return "CLIENT";
     }
 
     // If no preferred role or preferred role doesn't exist, use fallback logic
     if (hasFreelancerProfile && hasClientProfile) {
-      // User has both profiles, prefer the one from stored preference or default to FREELANCER
-      return preferredRole || "FREELANCER";
+      // User has both profiles, prefer the one from stored preference OR the database default
+      return normPreferred || userData.role?.toUpperCase() || "FREELANCER";
     } else if (hasFreelancerProfile) {
       return "FREELANCER";
     } else if (hasClientProfile) {
       return "CLIENT";
     }
 
-    return null; // No profiles found
+    return userData.role?.toUpperCase() || null; // No profiles found, return database role if available
   };
 
   // Helper function to update role options based on user data
@@ -689,7 +692,8 @@ export const AuthProvider = ({ children }) => {
 
         if (freshUserData) {
           // Preserve the currently selected role from local state, or determine dynamically
-          const currentRole = userData?.role;
+          // Prioritize current local role if it exists to avoid auto-switching
+          const currentRole = userData?.role || user?.role;
           const dynamicRole = determineUserRole(freshUserData, currentRole);
 
           const updatedUserData = {
