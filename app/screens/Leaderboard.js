@@ -261,7 +261,7 @@ const getStyles = (currentTheme) =>
             left: 0,
             right: 0,
             top: 0,
-            height: '45%', // Percentage height to cover top portion flexibly
+            height: 480, // Fixed height to ensure it covers header + podium area
         },
         header: {
             paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 24) + 20 : 10,
@@ -385,9 +385,10 @@ const getStyles = (currentTheme) =>
             textShadowRadius: 2,
         },
         podiumXP: {
-            color: 'rgba(255,255,255,0.9)',
+            color: 'rgba(255,255,255,0.95)',
             fontSize: 12,
             marginTop: 2,
+            fontWeight: '600',
         },
         listContainer: {
             backgroundColor: currentTheme.background || '#fff',
@@ -397,7 +398,8 @@ const getStyles = (currentTheme) =>
             paddingHorizontal: 20,
             paddingBottom: 40,
             flex: 1, // Ensure it fills remaining space
-            minHeight: 400,
+            minHeight: 500,
+            marginTop: 0, // Ensure no gap or overlap issues
         },
         listItem: {
             flexDirection: 'row',
