@@ -60,6 +60,35 @@ export const AuthProvider = ({ children }) => {
     return null; // No profiles found
   };
 
+  // Helper function to update role options based on user data
+  const updateRoleOptions = (data) => {
+    if (!data) return { freelancerData: null, clientData: null };
+
+    const roleOptionsData = {
+      freelancerData: null,
+      clientData: null,
+    };
+
+    if (data.freelancer) {
+      roleOptionsData.freelancerData = {
+        ...data,
+        role: "FREELANCER",
+        profile: data.freelancer,
+      };
+    }
+
+    if (data.client) {
+      roleOptionsData.clientData = {
+        ...data,
+        role: "CLIENT",
+        profile: data.client,
+      };
+    }
+
+    setRoleOptions(roleOptionsData);
+    return roleOptionsData;
+  };
+
   // Fetch user profile data (freelancer/client) from our backend
   const fetchUserProfile = async (userId = user?.id, userRole) => {
     try {
@@ -225,6 +254,9 @@ export const AuthProvider = ({ children }) => {
           );
         }
 
+        // Update role options during session restoration
+        updateRoleOptions(freshUserData);
+
         console.log(`Session restored with role: ${updatedUserData.role}`);
       } else {
         // No stored user data, ensure userProfile is explicitly null
@@ -283,18 +315,7 @@ export const AuthProvider = ({ children }) => {
         // Handle dual-role scenario
         if (freelancerProfile && clientProfile) {
           // User has both roles, show selection modal
-          setRoleOptions({
-            freelancerData: {
-              ...completeUserData,
-              role: "FREELANCER",
-              profile: freelancerProfile,
-            },
-            clientData: {
-              ...completeUserData,
-              role: "CLIENT",
-              profile: clientProfile,
-            },
-          });
+          updateRoleOptions(completeUserData);
           setRoleSelectionVisible(true);
 
           // Store user data but don't set userData yet (wait for role selection)
@@ -722,7 +743,7 @@ export const AuthProvider = ({ children }) => {
             );
           }
 
-          setRoleOptions(roleOptionsData);
+          updateRoleOptions(freshUserData);
 
           // Update stored user data with preserved role only if it's different
           if (JSON.stringify(userData) !== JSON.stringify(updatedUserData)) {

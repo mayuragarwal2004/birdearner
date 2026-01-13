@@ -60,13 +60,31 @@ export default function ProfileScreen({ navigation }) {
   const [userServices, setUserServices] = useState([]);
 
   const role = userData?.role;
-  // ... (useEffect for focus listener same as before)
-  // ... (useEffect for loadUserInfo same as before)
+
+  // Update local data when userProfile changes in context
+  useEffect(() => {
+    if (userProfile) {
+      setData(userProfile);
+    }
+  }, [userProfile]);
+
+  // Load user data when screen comes into focus
+  useEffect(() => {
+    const unsubscribe = navigation.addListener("focus", () => {
+      refreshUserData();
+    });
+    return unsubscribe;
+  }, [navigation]);
+
+  // Initial load
+  useEffect(() => {
+    refreshUserData();
+  }, []);
 
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
   const styles = getStyles(currentTheme);
-  
+
   const createdAt = userData?.createdAt;
   const date = new Date(createdAt);
   const formattedDate = date.toLocaleDateString("en-US", {
@@ -92,7 +110,7 @@ export default function ProfileScreen({ navigation }) {
       }).start(async () => {
         setModalVisiblet(false);
         animationProgress.current.setValue(0);
-        
+
         // Use the more robust switchUserRole function
         const newRole = newRoleData.role;
         await switchUserRole(newRole);
@@ -151,12 +169,12 @@ export default function ProfileScreen({ navigation }) {
   };
 
   // ... (openImageModal and onShare can be removed or kept if used elsewhere, but ProfileHeader handles image/share for header. Portfolio still needs openImageModal)
-  
+
   const openImageModal = (imageUri) => {
     setImages([{ url: apiService.loadImageURI(imageUri) }]);
     setModalVisible(true);
   };
-  
+
   // onShare can be removed if strictly using ProfileHeader's share, but keep if useful. ProfileHeader has its own.
 
   if (loading || loadingProfile) {
@@ -223,12 +241,12 @@ export default function ProfileScreen({ navigation }) {
         }
         showsVerticalScrollIndicator={false}
       >
-        <ProfileHeader 
-            profileData={data} 
-            userData={userData}
-            userServices={userServices}
-            isOwnProfile={true}
-            onEditPress={() => navigation.navigate("Settings")}
+        <ProfileHeader
+          profileData={data}
+          userData={userData}
+          userServices={userServices}
+          isOwnProfile={true}
+          onEditPress={() => navigation.navigate("Settings")}
         />
 
         {userData?.role === "FREELANCER" && (
@@ -321,14 +339,14 @@ export default function ProfileScreen({ navigation }) {
         {/* TODO */}
         {userData && (
           <>
-            {roleOptions?.freelancerData && roleOptions?.clientData ? (
+            {userData.freelancer && userData.client ? (
               <TouchableOpacity
                 style={styles.editProfileButton}
                 onPress={() =>
                   handleRoleSwitch(
                     userData.role === "FREELANCER"
-                      ? roleOptions.clientData
-                      : roleOptions.freelancerData
+                      ? { role: "CLIENT" }
+                      : { role: "FREELANCER" }
                   )
                 }
               >
@@ -339,14 +357,14 @@ export default function ProfileScreen({ navigation }) {
               </TouchableOpacity>
             ) : (
               <>
-                {roleOptions?.freelancerData ? (
+                {!userData.client && userData.role === "FREELANCER" ? (
                   <TouchableOpacity
                     style={styles.editProfileButton}
                     onPress={() => handleSetupRole("client")}
                   >
                     <Text style={styles.buttonText}>Setup Client Profile</Text>
                   </TouchableOpacity>
-                ) : (
+                ) : !userData.freelancer && userData.role === "CLIENT" ? (
                   <TouchableOpacity
                     style={styles.editProfileButton}
                     onPress={() => handleSetupRole("freelancer")}
@@ -355,7 +373,7 @@ export default function ProfileScreen({ navigation }) {
                       Setup Freelancer Profile
                     </Text>
                   </TouchableOpacity>
-                )}
+                ) : null}
               </>
             )}
           </>
