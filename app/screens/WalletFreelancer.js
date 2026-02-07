@@ -221,12 +221,21 @@ const WalletFreelancerScreen = ({ navigation }) => {
 
           {walletData?.withdrawableAmount?.toFixed(2) !==
             walletData?.totalEarnings?.toFixed(2) && (
-            <View style={styles.availableContainer}>
-              <Text style={styles.availableLabel}>Total Earnings</Text>
-              <Text style={styles.availableAmount}>
-                ₹{walletData?.totalEarnings?.toFixed(2) || "0.00"}
-              </Text>
-            </View>
+              <View style={styles.availableContainer}>
+                <Text style={styles.availableLabel}>Total Earnings</Text>
+                <Text style={styles.availableAmount}>
+                  ₹{walletData?.totalEarnings?.toFixed(2) || "0.00"}
+                </Text>
+              </View>
+            )}
+
+          {walletData?.withdrawableAmount < 0 && (
+            <TouchableOpacity
+              style={[styles.addAmountButton, { backgroundColor: "#FF3B30", marginBottom: 20 }]}
+              onPress={() => navigation.navigate("SettleBalance")}
+            >
+              <Text style={styles.addAmount}>Settle Outstanding Balance</Text>
+            </TouchableOpacity>
           )}
 
           <View style={styles.historyContainer}>

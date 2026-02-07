@@ -33,7 +33,7 @@ export const AuthProvider = ({ children }) => {
   });
 
   // Helper function to determine user role dynamically based on profiles
-  const determineUserRole = (userData, preferredRole = null) => {
+  const determineUserRole = useCallback((userData, preferredRole = null) => {
     if (!userData) return null;
 
     const hasFreelancerProfile = !!userData.freelancer;
@@ -61,10 +61,10 @@ export const AuthProvider = ({ children }) => {
     }
 
     return userData.role?.toUpperCase() || null; // No profiles found, return database role if available
-  };
+  }, []);
 
   // Helper function to update role options based on user data
-  const updateRoleOptions = (data) => {
+  const updateRoleOptions = useCallback((data) => {
     if (!data) return { freelancerData: null, clientData: null };
 
     const roleOptionsData = {
@@ -90,10 +90,10 @@ export const AuthProvider = ({ children }) => {
 
     setRoleOptions(roleOptionsData);
     return roleOptionsData;
-  };
+  }, []);
 
   // Fetch user profile data (freelancer/client) from our backend
-  const fetchUserProfile = async (userId = user?.id, userRole) => {
+  const fetchUserProfile = useCallback(async (userId = user?.id, userRole) => {
     try {
       // First, verify that the user exists in the database
       try {
@@ -156,7 +156,7 @@ export const AuthProvider = ({ children }) => {
       setUserProfile(null);
       return null;
     }
-  };
+  }, [user?.id, logout]);
 
   // Check if user is already logged in
   const checkUserSession = async () => {
@@ -569,7 +569,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   // Role selection modal handlers
-  const selectRole = async (selectedRole) => {
+  const selectRole = useCallback(async (selectedRole) => {
     try {
       if (selectedRole === "FREELANCER" && roleOptions.freelancerData) {
         const userData = roleOptions.freelancerData;
@@ -604,7 +604,7 @@ export const AuthProvider = ({ children }) => {
       console.error("Error selecting role:", error);
       Alert.alert("Error", "Failed to select role. Please try again.");
     }
-  };
+  }, [roleOptions]);
 
   // Role switching functionality for users with multiple roles
   const updateUserRole = async (newRole) => {
@@ -684,7 +684,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   // Refresh user data
-  const refreshUserData = async () => {
+  const refreshUserData = useCallback(async () => {
     if (user) {
       try {
         // Fetch fresh user data from backend
@@ -708,26 +708,6 @@ export const AuthProvider = ({ children }) => {
 
           // Extract profile data from the response
           let profileData = null;
-          let roleOptionsData = {
-            freelancerData: null,
-            clientData: null,
-          };
-
-          // Build role options for dual-role users
-          if (freshUserData.freelancer) {
-            roleOptionsData.freelancerData = {
-              ...freshUserData,
-              role: "FREELANCER",
-              profile: freshUserData.freelancer,
-            };
-          }
-          if (freshUserData.client) {
-            roleOptionsData.clientData = {
-              ...freshUserData,
-              role: "CLIENT",
-              profile: freshUserData.client,
-            };
-          }
 
           // Set profile based on determined role
           if (dynamicRole === "FREELANCER" && freshUserData.freelancer) {
@@ -775,7 +755,7 @@ export const AuthProvider = ({ children }) => {
         }
       }
     }
-  };
+  }, [user, userData, userProfile, logout, determineUserRole, updateRoleOptions]);
 
   const handleRoleSelection = async (roleData) => {
     try {
@@ -827,7 +807,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const value = {
+  const value = React.useMemo(() => ({
     user,
     userData,
     userProfile,
@@ -849,7 +829,29 @@ export const AuthProvider = ({ children }) => {
     roleOptions,
     roleSelectionVisible,
     handleRoleSelection,
-  };
+  }), [
+    user,
+    userData,
+    userProfile,
+    authToken,
+    loading,
+    login,
+    register,
+    logout,
+    createFreelancerProfile,
+    createClientProfile,
+    updateUserProfile,
+    updateUserRole,
+    switchUserRole,
+    refreshUserData,
+    checkUserSession,
+    fetchUserProfile,
+    validateUserExists,
+    selectRole,
+    roleOptions,
+    roleSelectionVisible,
+    handleRoleSelection,
+  ]);
 
   if (loading) {
     return (

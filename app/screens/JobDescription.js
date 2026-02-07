@@ -24,20 +24,48 @@ import apiService from "../lib/apiService";
 const JobDescriptionScreen = ({ route, navigation }) => {
   // Handler for Apply button
   const { job } = route.params || {};
-  const { userData } = useAuth();
-  const handleApply = () => {
-    // Extract required params
-    const jobId = job.id || job.jobId;
-    const full_name = job.client?.user?.fullName || job.client?.companyName || "";
-    const client = job.client;
-    navigation.navigate("FreelancerChat", { jobId, full_name, client });
+  const { userData, refreshUserData, userProfile } = useAuth();
+  const [isCheckingBalance, setIsCheckingBalance] = useState(false);
+
+  const handleApply = async () => {
+    try {
+      setIsCheckingBalance(true);
+
+      // Refresh user data to get the latest balance
+      await refreshUserData();
+
+      // Check if user is a freelancer and has a negative balance
+      if (userData?.role === 'FREELANCER' && userProfile && parseFloat(userProfile.withdrawableAmount) < 0) {
+        Alert.alert(
+          "Outstanding Fees",
+          "You have a negative balance due to unpaid platform fees. Please settle your outstanding fees before applying for new jobs.",
+          [{ text: "OK" }]
+        );
+        return;
+      }
+
+      // Extract required params
+      const jobId = job.id || job.jobId;
+      const full_name = job.client?.user?.fullName || job.client?.companyName || "";
+      const client = job.client;
+      navigation.navigate("FreelancerChat", { jobId, full_name, client });
+    } catch (error) {
+      console.error("Error during application check:", error);
+      // Fallback: proceed to chat if refresh fails, backend will still block
+      const jobId = job.id || job.jobId;
+      const full_name = job.client?.user?.fullName || job.client?.companyName || "";
+      const client = job.client;
+      navigation.navigate("FreelancerChat", { jobId, full_name, client });
+    } finally {
+      setIsCheckingBalance(false);
+    }
   };
   console.log("Job data received:", job);
 
   const canApply = job.client.user?.id !== userData?.id;
 
-  console.log({job});
-  
+  console.log({ job });
+
 
   // Defensive fallback for missing job
   if (!job) {
@@ -170,7 +198,7 @@ const JobDescriptionScreen = ({ route, navigation }) => {
   const openInMaps = () => {
     if (job.latitude && job.longitude) {
       const url = `https://www.google.com/maps?q=${job.latitude},${job.longitude}`;
-      Linking.openURL(url).catch(err => 
+      Linking.openURL(url).catch(err =>
         Alert.alert('Error', 'Could not open maps application')
       );
     }
@@ -261,7 +289,7 @@ const JobDescriptionScreen = ({ route, navigation }) => {
 
         {/* Skills Required */}
         {(job.skillsRequired && job.skillsRequired.length > 0) ||
-        (job.skills && job.skills.length > 0) ? (
+          (job.skills && job.skills.length > 0) ? (
           <>
             <Text style={styles.sectionTitle}>Skills Required</Text>
             <Text style={styles.skillText}>
@@ -310,7 +338,7 @@ const JobDescriptionScreen = ({ route, navigation }) => {
               {formatDate(job.deadlineDate || job.deadline)}
             </Text>
           </View>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.detailItem, job.latitude && job.longitude && styles.clickableDetail]}
             onPress={job.latitude && job.longitude ? openInMaps : null}
           >
@@ -388,11 +416,15 @@ const JobDescriptionScreen = ({ route, navigation }) => {
         {/* Action Buttons */}
         <View style={styles.actionContainer}>
           <TouchableOpacity
-            style={[styles.applyActionButton, { opacity: canApply ? 1 : 0.6 }]}
+            style={[styles.applyActionButton, { opacity: (canApply && !isCheckingBalance) ? 1 : 0.6 }]}
             onPress={handleApply}
-            disabled={!canApply}
+            disabled={!canApply || isCheckingBalance}
           >
-            <Text style={styles.actionButtonText}>Apply for Job</Text>
+            {isCheckingBalance ? (
+              <ActivityIndicator color="#FFF" />
+            ) : (
+              <Text style={styles.actionButtonText}>Apply for Job</Text>
+            )}
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.backActionButton}

@@ -2,7 +2,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 
-const DEV_API_BASE_URL = "https://rail-equipped-take-return.trycloudflare.com/api";
+const DEV_API_BASE_URL = "https://unsigned-void-saves-scanners.trycloudflare.com/api";
 
 const PROD_API_BASE_URL = "https://api.birdearner.com/api";
 
@@ -1013,15 +1013,28 @@ class ApiService {
   }
 
   // Add money to client wallet
-  async addMoneyToWallet(amount, paymentMethod = "online") {
+  async addMoneyToWallet(amount, paymentMethod = "online", referenceId = null) {
     try {
       const response = await this.makeRequest("/wallet/client/deposit", {
         method: "POST",
-        body: JSON.stringify({ amount, paymentMethod }),
+        body: JSON.stringify({ amount, paymentMethod, referenceId }),
       });
       return response;
     } catch (error) {
       throw new Error(`Failed to add money to wallet: ${error.message}`);
+    }
+  }
+
+  // Settle freelancer outstanding balance
+  async settleFreelancerBalance(amount, paymentMethod = "online", referenceId = null) {
+    try {
+      const response = await this.makeRequest("/wallet/freelancer/settle", {
+        method: "POST",
+        body: JSON.stringify({ amount, paymentMethod, referenceId }),
+      });
+      return response;
+    } catch (error) {
+      throw new Error(`Failed to settle freelancer balance: ${error.message}`);
     }
   }
 

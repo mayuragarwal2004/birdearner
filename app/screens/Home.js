@@ -10,7 +10,7 @@ import {
   Platform,
   ActivityIndicator,
 } from "react-native";
-import { FontAwesome, MaterialIcons } from "@expo/vector-icons";
+import { FontAwesome, MaterialIcons, Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../context/NewAuthContext";
 import { useTheme } from "../context/ThemeContext";
 import { useNavigation } from "@react-navigation/native";
@@ -18,7 +18,7 @@ import apiService from "../lib/apiService";
 
 const HomeScreen = () => {
   // const { appwriteConfig, databases } = useAppwrite();
-  const { userData, logout } = useAuth();
+  const { userData, userProfile, logout } = useAuth();
   const [profilePercentage, setProfilePercentage] = useState(20);
   const [flagsCount, setFlagsCount] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
@@ -408,6 +408,27 @@ const HomeScreen = () => {
             </View>
           </View>
         ) : null}
+
+        {userProfile?.withdrawableAmount < 0 && (
+          <View style={styles.sectionContainer}>
+            <View style={[styles.profileContainers, { backgroundColor: "#FFF5F5", borderColor: "#FFD2D2", borderWidth: 1 }]}>
+              <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}>
+                <Ionicons name="warning" size={24} color="#FF3B30" />
+                <Text style={[styles.profileText, { color: "#FF3B30", marginLeft: 10 }]}>Outstanding Balance</Text>
+              </View>
+              <Text style={[styles.whatsNewText, { color: "#666" }]}>
+                You have an outstanding balance of ₹{Math.abs(userProfile.withdrawableAmount).toFixed(2)}.
+                Please settle it to continue applying for new jobs.
+              </Text>
+              <TouchableOpacity
+                style={[styles.loginButton, { backgroundColor: "#FF3B30", marginTop: 15 }]}
+                onPress={() => navigation.navigate("SettleBalance")}
+              >
+                <Text style={styles.loginButtonText}>Settle Now</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
 
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeaderRow}>

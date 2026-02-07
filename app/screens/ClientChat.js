@@ -352,7 +352,10 @@ const ClientChat = ({ route, navigation }) => {
   const { theme, themeStyles } = useTheme();
   const { isKeyboardVisible } = useKeyboard();
   const currentTheme = themeStyles[theme];
-  
+
+  // Safety guard for when user logs out but screen is still in transition/stack
+  if (!userData) return null;
+
   const styles = getStyles(currentTheme, isKeyboardVisible);
 
   // Local state for UI interactions
@@ -369,7 +372,7 @@ const ClientChat = ({ route, navigation }) => {
   const [sending, setSending] = useState(false);
   const [currentInputLength, setCurrentInputLength] = useState(0);
 
-  
+
   // Review Modal State
   const [reviewModalVisible, setReviewModalVisible] = useState(false);
   const [reviewMessageId, setReviewMessageId] = useState(null);
@@ -527,7 +530,7 @@ const ClientChat = ({ route, navigation }) => {
         // Send text-only message
         await sendMessage(messageToSend, null);
       }
-      
+
       setFileInfo(null); // Clear file after sending
       setCurrentInputLength(0); // Reset input length after sending
     } catch (error) {
@@ -556,7 +559,7 @@ const ClientChat = ({ route, navigation }) => {
     try {
       const api = ApiService;
       await api.init();
-      
+
       const res = await api.makeRequest('/chat/report', {
         method: 'POST',
         body: JSON.stringify({
@@ -667,9 +670,9 @@ const ClientChat = ({ route, navigation }) => {
         // The useChatLogic hook will handle refreshing the job data
       }
     } catch (err) {
-      Toast.show({ 
-        type: "error", 
-        text1: "Error", 
+      Toast.show({
+        type: "error",
+        text1: "Error",
         text2: err.message || "Failed to assign freelancer"
       });
     }
@@ -713,84 +716,84 @@ const ClientChat = ({ route, navigation }) => {
   };
 
   const handleReviewPressManual = () => {
-      // Try to find a pending review request in messages
-      const pendingReviewMsg = messages.find(m => {
-          if (m.messageType !== 'review_request') return false;
-          try {
-              const content = JSON.parse(m.messageContent);
-              return content.status === 'pending';
-          } catch (e) { return false; }
-      });
+    // Try to find a pending review request in messages
+    const pendingReviewMsg = messages.find(m => {
+      if (m.messageType !== 'review_request') return false;
+      try {
+        const content = JSON.parse(m.messageContent);
+        return content.status === 'pending';
+      } catch (e) { return false; }
+    });
 
-      if (pendingReviewMsg) {
-          handleReviewPress(pendingReviewMsg);
-      } else {
-          // Just open the modal
-          setReviewMessageId(null);
-          setReviewModalVisible(true);
-      }
+    if (pendingReviewMsg) {
+      handleReviewPress(pendingReviewMsg);
+    } else {
+      // Just open the modal
+      setReviewMessageId(null);
+      setReviewModalVisible(true);
+    }
   };
 
   const calculateReviewLevel = (totalXP) => {
-      // Client side estimation optional, backend handles it.
+    // Client side estimation optional, backend handles it.
   };
 
   const handleSubmitReview = async (reviewData) => {
-      setSubmittingReview(true);
-      try {
-          await api.init();
-          const { ratings, reviewText } = reviewData;
-          const averageRating = parseFloat(((ratings.experience + ratings.knowledge + ratings.response) / 3).toFixed(1));
-          
-          console.log("Submitting review with job:", job);
-          console.log("Freelancer params:", route.params.freelancer); // Added log
-          if (!job?.clientId) {
-              console.error("Job or clientId missing:", job);
-              Toast.show({
-                  type: 'error',
-                  text1: 'Error',
-                  text2: 'Missing job or client information'
-              });
-              setSubmittingReview(false);
-              return;
-          }
+    setSubmittingReview(true);
+    try {
+      await api.init();
+      const { ratings, reviewText } = reviewData;
+      const averageRating = parseFloat(((ratings.experience + ratings.knowledge + ratings.response) / 3).toFixed(1));
 
-          const res = await api.makeRequest('/reviews', {
-              method: 'POST',
-              body: JSON.stringify({
-                  reviewerId: userData.id, // Use User ID
-                  revieweeId: route.params.freelancer.user.id, // Use Freelancer's User ID
-                  jobId: route.params.jobId,
-                  rating: averageRating,
-                  ratingDetails: ratings, // Send detailed ratings
-                  reviewText: reviewText,
-                  reviewType: 'FREELANCER',
-                  messageId: reviewMessageId
-              })
-          });
-
-          if (res.success) {
-               Toast.show({
-                  type: 'success',
-                  text1: 'Review Submitted',
-                  text2: 'Thank you for your feedback!'
-              });
-              setReviewModalVisible(false);
-              // Refresh messages to show updated status
-              mutateMessages();
-          } else {
-               throw new Error(res.error || res.message || "Failed to submit review");
-          }
-      } catch (error) {
-          console.error("Submit review error", error);
-          Toast.show({
-              type: 'error',
-              text1: 'Error',
-              text2: 'Failed to submit review'
-          });
-      } finally {
-          setSubmittingReview(false);
+      console.log("Submitting review with job:", job);
+      console.log("Freelancer params:", route.params.freelancer); // Added log
+      if (!job?.clientId) {
+        console.error("Job or clientId missing:", job);
+        Toast.show({
+          type: 'error',
+          text1: 'Error',
+          text2: 'Missing job or client information'
+        });
+        setSubmittingReview(false);
+        return;
       }
+
+      const res = await api.makeRequest('/reviews', {
+        method: 'POST',
+        body: JSON.stringify({
+          reviewerId: userData.id, // Use User ID
+          revieweeId: route.params.freelancer.user.id, // Use Freelancer's User ID
+          jobId: route.params.jobId,
+          rating: averageRating,
+          ratingDetails: ratings, // Send detailed ratings
+          reviewText: reviewText,
+          reviewType: 'FREELANCER',
+          messageId: reviewMessageId
+        })
+      });
+
+      if (res.success) {
+        Toast.show({
+          type: 'success',
+          text1: 'Review Submitted',
+          text2: 'Thank you for your feedback!'
+        });
+        setReviewModalVisible(false);
+        // Refresh messages to show updated status
+        mutateMessages();
+      } else {
+        throw new Error(res.error || res.message || "Failed to submit review");
+      }
+    } catch (error) {
+      console.error("Submit review error", error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to submit review'
+      });
+    } finally {
+      setSubmittingReview(false);
+    }
   };
 
   const confirmRequestCompletion = async () => {
@@ -881,9 +884,9 @@ const ClientChat = ({ route, navigation }) => {
 
       console.log(job?.paymentMethod);
       console.log(job);
-      
-      
-      
+
+
+
       if (job?.paymentMethod === 'CASH') {
         console.log("Budget amount", job.budgetAmount);
         // For cash payments, create special message for payment flow
@@ -918,15 +921,15 @@ const ClientChat = ({ route, navigation }) => {
         if (res.success) {
           // Trigger review request immediately after completion
           try {
-              await api.makeRequest('/messages/review-request/client', {
-                  method: 'POST',
-                  body: JSON.stringify({
-                      threadId: thread?.id,
-                      jobId: route.params.jobId
-                  })
-              });
+            await api.makeRequest('/messages/review-request/client', {
+              method: 'POST',
+              body: JSON.stringify({
+                threadId: thread?.id,
+                jobId: route.params.jobId
+              })
+            });
           } catch (e) {
-              console.error("Failed to trigger review request", e);
+            console.error("Failed to trigger review request", e);
           }
 
           Toast.show({
@@ -964,8 +967,8 @@ const ClientChat = ({ route, navigation }) => {
     return null;
   };
 
-  console.log({chatStatus});
-  
+  console.log({ chatStatus });
+
 
   return (
     <SafeAreaView
@@ -992,8 +995,8 @@ const ClientChat = ({ route, navigation }) => {
                 baseOptions.push("Write Review");
               }
 
-              if (job?.assignedFreelancerId === route.params.freelancer.id && 
-                  (chatStatus === "ACCEPTED" || chatStatus === "IN_PROGRESS")) {
+              if (job?.assignedFreelancerId === route.params.freelancer.id &&
+                (chatStatus === "ACCEPTED" || chatStatus === "IN_PROGRESS")) {
                 const options = [...baseOptions, "Cancel Job"];
                 if (chatStatus === "IN_PROGRESS" && !job?.completedStatus) {
                   options.push("Request Project Completion");
@@ -1026,17 +1029,17 @@ const ClientChat = ({ route, navigation }) => {
             <MessageItem
               messageItem={item}
               message={item.messageContent}
-              isCurrentUser={item.senderId === userData.id}
+              isCurrentUser={item.senderId === userData?.id}
               media={item.userMedia}
               isUploading={item.isUploading}
-              currentUserId={userData.id}
+              currentUserId={userData?.id}
               userRole="client"
               onMessageUpdate={(type, data) => {
                 if (type === 'review_press') {
-                    handleReviewPress(data);
+                  handleReviewPress(data);
                 } else {
-                     // Handle other updates if needed
-                     mutateMessages();
+                  // Handle other updates if needed
+                  mutateMessages();
                 }
               }}
             />
@@ -1049,7 +1052,7 @@ const ClientChat = ({ route, navigation }) => {
           <View style={styles.limit}>
             <Text style={styles.limitchar}>Character Limit Active</Text>
             <Text style={styles.limitvar}>
-              {charactersRemaining !== null 
+              {charactersRemaining !== null
                 ? `${Math.max(0, charactersRemaining - currentInputLength)} characters remaining (${charactersUsed + currentInputLength}/${characterLimit} used)`
                 : `Maximum ${characterLimit} characters total`
               }
@@ -1099,8 +1102,8 @@ const ClientChat = ({ route, navigation }) => {
           selectedReason={selectedReportReason}
           onSelectReason={setSelectedReportReason}
         />
-        
-        <ReviewFormModal 
+
+        <ReviewFormModal
           visible={reviewModalVisible}
           onClose={() => setReviewModalVisible(false)}
           onSubmit={handleSubmitReview}
@@ -1123,17 +1126,17 @@ const ClientChat = ({ route, navigation }) => {
                 {'\n'}• You are ready to proceed with payment
                 {'\n\n'}Are you sure you want to proceed?
               </Text>
-              
+
               <View style={styles.modalButtons}>
-                <TouchableOpacity 
-                  style={[styles.modalButton, styles.cancelButton]} 
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.cancelButton]}
                   onPress={() => setShowConfirmationModal(false)}
                 >
                   <Text style={styles.cancelButtonText}>Cancel</Text>
                 </TouchableOpacity>
-                
-                <TouchableOpacity 
-                  style={[styles.modalButton, styles.confirmButton]} 
+
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.confirmButton]}
                   onPress={confirmRequestCompletion}
                 >
                   <Text style={styles.confirmButtonText}>Confirm</Text>

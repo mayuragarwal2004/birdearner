@@ -404,24 +404,28 @@ export function App() {
     }
   }
 
+  // Use a ref to prevent multiple registrations in the same session/load
+  const isRegisteredRef = React.useRef(false);
+
   useEffect(() => {
     const initializeNotifications = async () => {
       try {
+        if (!userData?.id || isRegisteredRef.current) return;
+
         const hasPermission = await requestUserPermission();
-        if (hasPermission && userData?.id) {
+        if (hasPermission) {
           const token = await messaging().getToken();
           // Sending token to backend
           await apiService.registerPushToken(userData.id, userData.role, token);
-          console.log("Push token registered:", token);
+          console.log("Push token registered once for this session:", token);
+          isRegisteredRef.current = true;
         }
       } catch (error) {
         console.error("Error initializing push notifications:", error);
       }
     };
 
-    if (userData?.id) {
-      initializeNotifications();
-    }
+    initializeNotifications();
 
     const setupMessageHandlers = () => {
       // Handle initial notification when app was opened from killed state
@@ -435,13 +439,13 @@ export function App() {
         });
 
       // Handle notification when app is opened from background
-      messaging().onNotificationOpenedApp(async (remoteMessage) => {
+      const onNotificationOpenedAppSub = messaging().onNotificationOpenedApp(async (remoteMessage) => {
         console.log("Notification caused app to open from background:", remoteMessage);
         // Navigate based on data if needed
       });
 
       // Handle foreground messages
-      const unsubscribe = messaging().onMessage(async (remoteMessage) => {
+      const onMessageSub = messaging().onMessage(async (remoteMessage) => {
         // Show Toast for foreground message instead of Alert
         Toast.show({
           type: 'info',
@@ -449,19 +453,18 @@ export function App() {
           text2: remoteMessage?.notification?.body,
           position: 'top',
           visibilityTime: 4000,
-          onPress: () => {
-            // Navigate to Notification screen on tap
-            // This requires access to navigation ref or similar global nav
-          }
         });
       });
 
-      return unsubscribe;
+      return () => {
+        onNotificationOpenedAppSub();
+        onMessageSub();
+      };
     };
 
-    const unsubscribe = setupMessageHandlers();
-    return unsubscribe;
-  }, [userData]);
+    const cleanupHandlers = setupMessageHandlers();
+    return () => cleanupHandlers();
+  }, [userData?.id, userData?.role]);
 
   // Always show intro screen first, let it handle navigation
   // No need for loading check here since Intro will handle it

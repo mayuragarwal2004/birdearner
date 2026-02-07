@@ -5,41 +5,47 @@ import HomeScreen from "../screens/Home";
 import FreelancerChatList from "../screens/FreelancerChatList";
 import FreelancerChat from "../screens/FreelancerChat";
 import Inbox from "../screens/Inbox";
+import SettleBalanceScreen from "../screens/SettleBalance";
 
 const Stack = createStackNavigator();
 
 const HomeStack = () =>
-  (
-    <Stack.Navigator>
-      <Stack.Screen
-        name="HomeScreen"
-        component={HomeScreen}
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        name="Notification"
-        component={NotificationScreen}
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        name="Inbox"
-        component={Inbox}
-        options={{
-          headerShown: false,
-          tabBarStyle: { display: "block" }, 
-        }}
-      />
-      <Stack.Screen
-        name="FreelancerChatList"
-        component={FreelancerChatList}
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        name="FreelancerChat"
-        component={FreelancerChat}
-        options={{ headerShown: false }}
-      />
-    </Stack.Navigator>
-  );
+(
+  <Stack.Navigator>
+    <Stack.Screen
+      name="HomeScreen"
+      component={HomeScreen}
+      options={{ headerShown: false }}
+    />
+    <Stack.Screen
+      name="Notification"
+      component={NotificationScreen}
+      options={{ headerShown: false }}
+    />
+    <Stack.Screen
+      name="Inbox"
+      component={Inbox}
+      options={{
+        headerShown: false,
+        tabBarStyle: { display: "block" },
+      }}
+    />
+    <Stack.Screen
+      name="FreelancerChatList"
+      component={FreelancerChatList}
+      options={{ headerShown: false }}
+    />
+    <Stack.Screen
+      name="FreelancerChat"
+      component={FreelancerChat}
+      options={{ headerShown: false }}
+    />
+    <Stack.Screen
+      name="SettleBalance"
+      component={SettleBalanceScreen}
+      options={{ headerShown: false }}
+    />
+  </Stack.Navigator>
+);
 
-  export default HomeStack;
+export default HomeStack;
