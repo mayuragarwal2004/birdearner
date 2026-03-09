@@ -345,7 +345,7 @@ const FreelancerChat = ({ route, navigation }) => {
           });
 
           // Upload to Cloudinary via new chat document route
-          const uploadRes = await api.makeRequest('/messages/upload-chat-document', {
+          const uploadRes = await api.makeRequest('/chats/upload-chat-document', {
             method: 'POST',
             body: formData,
           });
@@ -437,7 +437,7 @@ const FreelancerChat = ({ route, navigation }) => {
       const api = ApiService;
       await api.init();
 
-      const res = await api.makeRequest('/chat/report', {
+      const res = await api.makeRequest('/chats/report', {
         method: 'POST',
         body: JSON.stringify({
           threadId: thread?.id,

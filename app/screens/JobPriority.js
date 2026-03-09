@@ -61,8 +61,8 @@ const JobPriority = ({ navigation, route }) => {
   useEffect(() => {
     return sound
       ? () => {
-          sound.unloadAsync();
-        }
+        sound.unloadAsync();
+      }
       : undefined;
   }, [sound]);
 
@@ -137,8 +137,22 @@ const JobPriority = ({ navigation, route }) => {
   };
 
   const renderJobItem = ({ item: job }) => {
-    // Use job.client object directly for client info
-    const client = job.client || {};
+    // Normalize client data to ensure consistent nested structure
+    // This handles both the new categorized API (flat) and others (nested)
+    // For the priority API: clientId = Client record ID, clientUserId = User record ID
+    const clientUserId = job.clientUserId || job.client?.userId || job.client?.user?.id;
+    const client = job.client?.user ? job.client : {
+      ...job.client,
+      id: job.clientId || job.client?.id,         // Client record ID (for thread creation)
+      userId: clientUserId,                         // User record ID (for sending messages as receiverId)
+      companyName: job.companyName || job.client?.companyName,
+      profilePhoto: job.clientPhoto || job.client?.profilePhoto,
+      user: {
+        id: clientUserId,                           // User record ID accessible via user.id
+        fullName: job.clientName || job.client?.user?.fullName || job.companyName || "Unknown User",
+      }
+    };
+
     const clientProfileImage =
       client.profilePhoto ||
       "https://via.placeholder.com/95x95/CCCCCC/666666?text=User";
@@ -256,8 +270,8 @@ const JobPriority = ({ navigation, route }) => {
           >
             <Text style={styles.priorityText}>
               {currentPriority === "All" ? "All Jobs" :
-               currentPriority === "Immediate" ? "Immediate Attention" : 
-               `${currentPriority} Priority`}
+                currentPriority === "Immediate" ? "Immediate Attention" :
+                  `${currentPriority} Priority`}
             </Text>
           </LinearGradient>
         </TouchableOpacity>
@@ -277,8 +291,8 @@ const JobPriority = ({ navigation, route }) => {
         ListEmptyComponent={() => (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>
-              {currentPriority === "All" 
-                ? "No jobs available" 
+              {currentPriority === "All"
+                ? "No jobs available"
                 : `No ${currentPriority.toLowerCase()} priority jobs available`}
             </Text>
           </View>

@@ -102,10 +102,27 @@ const NotificationScreen = () => {
       // Example: Navigate to Job Details
       // navigation.navigate('JobDetails', { jobId: data.jobId });
     } else if (type === 'CHAT' && data?.threadId) {
-      navigation.navigate('Chat', {
-        threadId: data.threadId,
-        name: data.senderName || 'Chat'
-      });
+      if (userData?.role === 'CLIENT') {
+        navigation.navigate('ClientChat', {
+          threadId: data.threadId,
+          projectId: data.projectId,
+          freelancer: {
+            user: { fullName: data.senderName || 'Freelancer' },
+            profilePhoto: data.senderImage,
+            id: data.senderId
+          }
+        });
+      } else {
+        navigation.navigate('FreelancerChat', {
+          threadId: data.threadId,
+          projectId: data.projectId,
+          client: {
+            user: { fullName: data.senderName || 'Client' },
+            profilePhoto: data.senderImage,
+            id: data.senderId
+          }
+        });
+      }
     }
   };
 

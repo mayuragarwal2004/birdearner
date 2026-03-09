@@ -24,7 +24,7 @@ const ChatList = () => {
   const { userData } = useAuth();
   const navigation = useNavigation();
   const api = ApiService;
-  
+
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
 
@@ -32,39 +32,39 @@ const ChatList = () => {
 
   const fetchChatThreads = async (isRefreshing = false) => {
     console.log("Fetching chat threads for user:", userData?.id);
-    
+
     if (!isRefreshing) {
       setLoading(true);
     }
     setError(false);
     try {
       console.log("Initializing API service...");
-      
+
       await api.init();
 
       console.log("Fetching user conversations...");
-      
+
       // Use the correct endpoint for getting user conversations
       const response = await api.getUserConversations(userData.id);
       console.log("Fetched chat threads:", response);
-      
-      
+
+
       if (response) {
         // Format conversations into chat threads
         const formattedThreads = response.map(conv => ({
           id: conv.id || `${conv.jobId}-${conv.senderId}-${conv.receiverId}`,
           jobId: conv.jobId,
-          client: conv.otherUser,
+          client: conv.otherUser, // mapped as "client" for backwards compatibility inside ChatList
           lastMessage: conv.lastMessage || "No messages yet",
           timestamp: conv.updatedAt || conv.createdAt,
           projectData: {
-            title: conv.job?.title || "Job",
-            status: conv.job?.status?.toLowerCase() || "pending",
-            deadline: conv.job?.deadline,
+            title: conv.jobTitle || "Job",
+            status: conv.jobStatus?.toLowerCase() || "pending",
+            deadline: conv.deadlineDate,
           },
           isStarred: conv.isStarred || false
         }));
-        
+
         setChatThreads(formattedThreads);
       }
     } catch (err) {
@@ -88,56 +88,13 @@ const ChatList = () => {
     fetchChatThreads();
   }, []);
 
-  const renderChatThread = ({ item }) => {
-    const projectData = item.projectData || {};
-    const clientName = item.client?.user?.fullName || "Unknown";
-    const lastMessage = item.lastMessage || "No messages yet";
-    const profileImage = item.client?.profilePhoto
-      ? { uri: item.client.profilePhoto }
-      : require("../assets/profile.png");
-
-    return (
-      <TouchableOpacity
-        style={styles.jobContainer}
-        onPress={() => navigation.navigate('FreelancerChat', {
-          projectId: item.projectId,
-          full_name: clientName,
-          profileImage: item.client?.profilePhoto,
-          client: item.client
-        })}
-      >
-        <Image source={profileImage} style={styles.avatar} />
-        <View style={styles.jobContent}>
-          <Text style={styles.jobTitle} numberOfLines={1}>
-            {projectData.title || "Untitled"}
-          </Text>
-          <Text style={styles.username}>@{clientName}</Text>
-          <Text style={styles.lastMessage} numberOfLines={1}>
-            {lastMessage}
-          </Text>
-        </View>
-        <View
-          style={[
-            styles.statusIndicator,
-            {
-              backgroundColor:
-                projectData.status === 'completed'
-                  ? '#4CAF50'
-                  : projectData.status === 'in-progress'
-                  ? '#2196F3'
-                  : '#FFC107',
-            },
-          ]}
-        />
-      </TouchableOpacity>
-    );
-  };
+  // renderChatThread removed as it was unused
 
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#3b006b" />
-        <Text style={{color: currentTheme.subText}}>Loading chats...</Text>
+        <Text style={{ color: currentTheme.subText }}>Loading chats...</Text>
       </View>
     );
   }
@@ -211,8 +168,8 @@ const ChatList = () => {
                       projectData.status === 'completed'
                         ? '#4CAF50'
                         : projectData.status === 'in-progress'
-                        ? '#2196F3'
-                        : '#FFC107',
+                          ? '#2196F3'
+                          : '#FFC107',
                   },
                 ]}
               />
@@ -259,7 +216,7 @@ const getStyles = (currentTheme) =>
       textAlign: 'center',
       color: currentTheme.text
     },
-    loadingText: { textAlign: "center", marginTop: 20,  color: currentTheme.subText || "#888" },
+    loadingText: { textAlign: "center", marginTop: 20, color: currentTheme.subText || "#888" },
     chatListContainer: { padding: 10 },
     chatThread: {
       flexDirection: "row",
@@ -370,7 +327,7 @@ const getStyles = (currentTheme) =>
     },
     emptyMessage: {
       fontSize: 16,
-      color:  '#6D6D6D',
+      color: '#6D6D6D',
       textAlign: 'center',
       marginBottom: 20,
     },

@@ -2,7 +2,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 
-const DEV_API_BASE_URL = "https://unsigned-void-saves-scanners.trycloudflare.com/api";
+const DEV_API_BASE_URL = "https://tract-florida-tried-awards.trycloudflare.com/api";
 
 const PROD_API_BASE_URL = "https://api.birdearner.com/api";
 
@@ -665,20 +665,43 @@ class ApiService {
 
   async getFreelancerConversations(freelancerId, page = 1, limit = 20) {
     const response = await this.makeRequest(
-      `/messages/freelancer/conversations/${freelancerId}?page=${page}&limit=${limit}`
+      `/chats/conversations/freelancer/${freelancerId}?page=${page}&limit=${limit}`
     );
     return response.data;
   }
 
   async getClientConversations(clientId, page = 1, limit = 20) {
     const response = await this.makeRequest(
-      `/messages/client/conversations/${clientId}?page=${page}&limit=${limit}`
+      `/chats/conversations/client/${clientId}?page=${page}&limit=${limit}`
     );
     return response.data;
   }
 
+  async getUserConversations(userId, page = 1, limit = 20) {
+    try {
+      const userRes = await this.getCurrentUser();
+      const role = userRes?.data?.role;
+
+      if (role === 'CLIENT') {
+        const clientRes = await this.getClientProfile(userId);
+        if (clientRes?.data?.id) {
+          return await this.getClientConversations(clientRes.data.id, page, limit);
+        }
+      } else {
+        const freelancerRes = await this.getFreelancerProfile(userId);
+        if (freelancerRes?.data?.id) {
+          return await this.getFreelancerConversations(freelancerRes.data.id, page, limit);
+        }
+      }
+      return [];
+    } catch (error) {
+      console.error('Failed to fetch user conversations:', error);
+      throw error;
+    }
+  }
+
   async markMessagesAsRead(senderId, receiverId) {
-    const response = await this.makeRequest("/messages/mark-read", {
+    const response = await this.makeRequest("/chats/mark-read", {
       method: "POST",
       body: JSON.stringify({ senderId, receiverId }),
     });
@@ -992,7 +1015,10 @@ class ApiService {
   // Get current client wallet information (using auth token)
   async getClientWalletInfo() {
     try {
-      const response = await this.makeRequest("/wallet/client/info");
+      const response = await this.makeRequest("/wallet/balance");
+      if (response && response.success && response.data) {
+        return { success: true, data: response.data.client };
+      }
       return response;
     } catch (error) {
       console.error("Wallet info fetch error:", error);
@@ -1003,7 +1029,10 @@ class ApiService {
   // Get freelancer wallet information
   async getFreelancerWalletInfo() {
     try {
-      const response = await this.makeRequest("/wallet/freelancer/info");
+      const response = await this.makeRequest("/wallet/balance");
+      if (response && response.success && response.data) {
+        return { success: true, data: response.data.freelancer };
+      }
       return response;
     } catch (error) {
       throw new Error(
@@ -1056,7 +1085,7 @@ class ApiService {
   // Create a new withdrawal request
   async createWithdrawalRequest(amount, bankDetails = null) {
     try {
-      const response = await this.makeRequest("/withdrawal-requests", {
+      const response = await this.makeRequest("/withdrawals", {
         method: "POST",
         body: JSON.stringify({ amount, bankDetails }),
       });
@@ -1070,7 +1099,7 @@ class ApiService {
   async getMyWithdrawalRequests(page = 1, limit = 10) {
     try {
       const response = await this.makeRequest(
-        `/withdrawal-requests?page=${page}&limit=${limit}`
+        `/withdrawals?page=${page}&limit=${limit}`
       );
       return response;
     } catch (error) {
@@ -1081,7 +1110,7 @@ class ApiService {
   // Get specific withdrawal request by ID
   async getWithdrawalRequestById(requestId) {
     try {
-      const response = await this.makeRequest(`/withdrawal-requests/${requestId}`);
+      const response = await this.makeRequest(`/withdrawals/${requestId}`);
       return response;
     } catch (error) {
       throw new Error(`Failed to fetch withdrawal request: ${error.message}`);

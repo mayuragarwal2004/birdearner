@@ -464,7 +464,7 @@ const ClientChat = ({ route, navigation }) => {
       setIsUploading(true);
       try {
         const response = await api.makeRequest(
-          '/messages/upload-chat-document',
+          '/chats/upload-chat-document',
           {
             method: 'POST',
             body: formData,
@@ -560,7 +560,7 @@ const ClientChat = ({ route, navigation }) => {
       const api = ApiService;
       await api.init();
 
-      const res = await api.makeRequest('/chat/report', {
+      const res = await api.makeRequest('/chats/report', {
         method: 'POST',
         body: JSON.stringify({
           threadId: thread?.id,
@@ -591,7 +591,7 @@ const ClientChat = ({ route, navigation }) => {
   const handleBlock = async () => {
     try {
       await api.init();
-      const res = await api.makeRequest(`/chat/block`, {
+      const res = await api.makeRequest(`/chats/block`, {
         method: "POST",
         body: JSON.stringify({
           threadId: thread.id,
@@ -800,7 +800,7 @@ const ClientChat = ({ route, navigation }) => {
     setShowConfirmationModal(false);
     try {
       await api.init();
-      const res = await api.makeRequest(`/chat/message/completion-request/client`, {
+      const res = await api.makeRequest(`/chats/message/completion-request/client`, {
         method: 'POST',
         body: JSON.stringify({
           threadId: thread.id,
@@ -921,7 +921,7 @@ const ClientChat = ({ route, navigation }) => {
         if (res.success) {
           // Trigger review request immediately after completion
           try {
-            await api.makeRequest('/messages/review-request/client', {
+            await api.makeRequest('/chats/review-request/client', {
               method: 'POST',
               body: JSON.stringify({
                 threadId: thread?.id,

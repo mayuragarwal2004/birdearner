@@ -8,36 +8,36 @@ import Toast from 'react-native-toast-message';
 const fetcher = async (url, options = {}) => {
   const api = ApiService;
   await api.init();
-  
+
   if (options.method && options.method !== 'GET') {
     return api.makeRequest(url, options);
   }
-  
+
   const response = await api.makeRequest(url);
   return response.data;
 };
 
 // Custom hook for chat thread data
 export const useChatThread = (jobId, freelancerId, clientId) => {
-  const key = jobId && freelancerId && clientId 
-    ? ['chat-thread', jobId, freelancerId, clientId] 
+  const key = jobId && freelancerId && clientId
+    ? ['chat-thread', jobId, freelancerId, clientId]
     : null;
 
   const { data, error, mutate, isLoading } = useSWR(
     key,
     async () => {
       try {
-        const response = await fetcher('/chat/thread', {
+        const response = await fetcher('/chats/thread', {
           method: 'POST',
           body: JSON.stringify({ jobId, freelancerId, clientId })
         });
         return response.data;
       } catch (err) {
         console.error('Failed to fetch thread:', err);
-        Toast.show({ 
-          type: "error", 
-          text1: "Error", 
-          text2: "Failed to load chat thread" 
+        Toast.show({
+          type: "error",
+          text1: "Error",
+          text2: "Failed to load chat thread"
         });
         throw err;
       }
@@ -66,13 +66,13 @@ export const useChatMessages = (threadId) => {
     key,
     async () => {
       try {
-        return await fetcher(`/chat/messages/${threadId}`);
+        return await fetcher(`/chats/messages/${threadId}`);
       } catch (err) {
         console.error('Failed to fetch messages:', err);
-        Toast.show({ 
-          type: "error", 
-          text1: "Error", 
-          text2: "Failed to load messages" 
+        Toast.show({
+          type: "error",
+          text1: "Error",
+          text2: "Failed to load messages"
         });
         throw err;
       }
@@ -104,10 +104,10 @@ export const useJobDetails = (jobId) => {
         return await fetcher(`/jobs/${jobId}`);
       } catch (err) {
         console.error('Failed to fetch job details:', err);
-        Toast.show({ 
-          type: "error", 
-          text1: "Error", 
-          text2: "Failed to load job details" 
+        Toast.show({
+          type: "error",
+          text1: "Error",
+          text2: "Failed to load job details"
         });
         throw err;
       }
@@ -131,7 +131,7 @@ export const useJobDetails = (jobId) => {
 // Combined chat hook that uses all the above hooks
 export const useChatData = (role, params) => {
   const { userData } = useAuth();
-  
+
   // Determine freelancer and client IDs based on role
   let freelancerId, clientId;
   if (role === 'freelancer') {
@@ -144,8 +144,8 @@ export const useChatData = (role, params) => {
 
   // Use individual SWR hooks
   const { thread, isThreadLoading, threadError, mutateThread } = useChatThread(
-    params?.jobId, 
-    freelancerId, 
+    params?.jobId,
+    freelancerId,
     clientId
   );
 
@@ -174,7 +174,7 @@ export const useChatData = (role, params) => {
       const currentUsage = messages
         .filter(msg => msg.senderId === userData.id)
         .reduce((total, msg) => total + (msg.messageContent?.length || 0), 0);
-      
+
       if (currentUsage + messageContent.length > totalLimit) {
         Toast.show({
           type: 'error',
@@ -216,7 +216,7 @@ export const useChatData = (role, params) => {
       await api.init();
 
       // Get receiver ID with fallbacks
-      const receiverId = role === 'freelancer' 
+      const receiverId = role === 'freelancer'
         ? (params.client?.userId || params.client?.user?.id)
         : (params.freelancer?.userId || params.freelancer?.user?.id);
 
@@ -243,7 +243,7 @@ export const useChatData = (role, params) => {
       console.log('SendMessage - Request body:', JSON.stringify(requestBody, null, 2));
 
       // Send message with attachment data or text only
-      const response = await api.makeRequest('/chat/message', {
+      const response = await api.makeRequest('/chats/message', {
         method: 'POST',
         body: JSON.stringify(requestBody),
       });
@@ -258,13 +258,13 @@ export const useChatData = (role, params) => {
       }
     } catch (error) {
       console.error('Failed to send message:', error);
-      
+
       // Remove optimistic message on error
-      mutateMessages((currentMessages = []) => 
-        currentMessages.filter(msg => msg.id !== optimisticMessage.id), 
+      mutateMessages((currentMessages = []) =>
+        currentMessages.filter(msg => msg.id !== optimisticMessage.id),
         false
       );
-      
+
       Toast.show({
         type: 'error',
         text1: 'Failed to send message',
@@ -278,11 +278,11 @@ export const useChatData = (role, params) => {
     try {
       const api = ApiService;
       await api.init();
-      
-      const endpoint = role === 'freelancer' 
-        ? '/chat/message/completion-request/freelancer'
-        : '/chat/message/completion-request/client';
-      
+
+      const endpoint = role === 'freelancer'
+        ? '/chats/message/completion-request/freelancer'
+        : '/chats/message/completion-request/client';
+
       const res = await api.makeRequest(endpoint, {
         method: 'POST',
         body: JSON.stringify({
@@ -297,7 +297,7 @@ export const useChatData = (role, params) => {
           mutateMessages(),
           mutateJob(),
         ]);
-        
+
         Toast.show({
           type: 'success',
           text1: 'Success',
@@ -318,7 +318,7 @@ export const useChatData = (role, params) => {
     try {
       const api = ApiService;
       await api.init();
-      
+
       const res = await api.makeRequest(`/jobs/${job?.id}/cancel`, {
         method: 'PATCH',
       });
@@ -330,7 +330,7 @@ export const useChatData = (role, params) => {
           mutateThread(),
           mutateMessages(),
         ]);
-        
+
         Toast.show({
           type: 'success',
           text1: 'Success',
@@ -348,25 +348,25 @@ export const useChatData = (role, params) => {
   }, [job?.id, mutateJob, mutateThread, mutateMessages]);
 
   // Calculate character usage for current user
-  const totalCharacterLimit = (job?.jobStatus?.toUpperCase() === 'OPEN') 
+  const totalCharacterLimit = (job?.jobStatus?.toUpperCase() === 'OPEN')
     ? (thread?.characterLimit || job?.characterLimit || 200)
     : null;
-  
-  const charactersUsed = totalCharacterLimit 
+
+  const charactersUsed = totalCharacterLimit
     ? messages
-        .filter(msg => msg.senderId === userData.id)
-        .reduce((total, msg) => total + (msg.messageContent?.length || 0), 0)
+      .filter(msg => msg.senderId === userData.id)
+      .reduce((total, msg) => total + (msg.messageContent?.length || 0), 0)
     : 0;
-  
-  const charactersRemaining = totalCharacterLimit 
+
+  const charactersRemaining = totalCharacterLimit
     ? Math.max(0, totalCharacterLimit - charactersUsed)
     : null;
 
   // Calculate character usage for the other user in the thread (the other party)
   const otherCharactersUsed = totalCharacterLimit
     ? messages
-        .filter(msg => msg.senderId && msg.senderId !== userData.id)
-        .reduce((total, msg) => total + (msg.messageContent?.length || 0), 0)
+      .filter(msg => msg.senderId && msg.senderId !== userData.id)
+      .reduce((total, msg) => total + (msg.messageContent?.length || 0), 0)
     : 0;
 
   const otherCharactersRemaining = totalCharacterLimit
@@ -378,60 +378,60 @@ export const useChatData = (role, params) => {
     thread,
     messages,
     job,
-    
+
     // Loading states
     isLoading: isThreadLoading || isMessagesLoading || isJobLoading,
     isThreadLoading,
     isMessagesLoading,
     isJobLoading,
-    
+
     // Error states
     error: threadError || messagesError || jobError,
     threadError,
     messagesError,
     jobError,
-    
+
     // Mutations
     mutateThread,
     mutateMessages,
     mutateJob,
-    
+
     // Action handlers
     sendMessage,
     handleRequestCompletion,
     handleJobCancel,
     addOptimisticMessage,
-    
+
     // Computed values
     chatStatus: thread?.status || 'PENDING',
     jobStatus: job?.jobStatus?.toUpperCase() || 'PENDING',
-    characterLimit: (job?.jobStatus?.toUpperCase() === 'OPEN') 
+    characterLimit: (job?.jobStatus?.toUpperCase() === 'OPEN')
       ? (thread?.characterLimit || job?.characterLimit || 200)
       : null,
-    charactersUsed: (job?.jobStatus?.toUpperCase() === 'OPEN') 
+    charactersUsed: (job?.jobStatus?.toUpperCase() === 'OPEN')
       ? messages
+        .filter(msg => msg.senderId === userData.id)
+        .reduce((total, msg) => total + (msg.messageContent?.length || 0), 0)
+      : 0,
+    charactersRemaining: (job?.jobStatus?.toUpperCase() === 'OPEN')
+      ? Math.max(0, (thread?.characterLimit || job?.characterLimit || 200) -
+        messages
           .filter(msg => msg.senderId === userData.id)
           .reduce((total, msg) => total + (msg.messageContent?.length || 0), 0)
-      : 0,
-    charactersRemaining: (job?.jobStatus?.toUpperCase() === 'OPEN') 
-      ? Math.max(0, (thread?.characterLimit || job?.characterLimit || 200) - 
-          messages
-            .filter(msg => msg.senderId === userData.id)
-            .reduce((total, msg) => total + (msg.messageContent?.length || 0), 0)
-        )
+      )
       : null,
     // Other user's cumulative usage (useful to show notices to each party)
     otherCharactersUsed: (job?.jobStatus?.toUpperCase() === 'OPEN')
       ? messages
-          .filter(msg => msg.senderId && msg.senderId !== userData.id)
-          .reduce((total, msg) => total + (msg.messageContent?.length || 0), 0)
+        .filter(msg => msg.senderId && msg.senderId !== userData.id)
+        .reduce((total, msg) => total + (msg.messageContent?.length || 0), 0)
       : 0,
     otherCharactersRemaining: (job?.jobStatus?.toUpperCase() === 'OPEN')
-      ? Math.max(0, (thread?.characterLimit || job?.characterLimit || 200) - 
-          messages
-            .filter(msg => msg.senderId && msg.senderId !== userData.id)
-            .reduce((total, msg) => total + (msg.messageContent?.length || 0), 0)
-        )
+      ? Math.max(0, (thread?.characterLimit || job?.characterLimit || 200) -
+        messages
+          .filter(msg => msg.senderId && msg.senderId !== userData.id)
+          .reduce((total, msg) => total + (msg.messageContent?.length || 0), 0)
+      )
       : null,
   };
 };

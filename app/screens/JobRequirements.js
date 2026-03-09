@@ -287,7 +287,7 @@ const JobRequirementsScreen = ({ navigation, route }) => {
     async function fetchServices() {
       try {
         await apiService.init(); // Initialize the API service
-        const category = isOnSite ? "household" : "freelance";
+        const category = isOnSite ? "HOUSEHOLD" : "FREELANCE";
         const services = await apiService.getServicesByCategory(category);
         console.log("Fetching services for category:", category);
         console.log(JSON.stringify(services, null, 4));
@@ -306,7 +306,7 @@ const JobRequirementsScreen = ({ navigation, route }) => {
     setRefreshing(true);
     try {
       // Refresh services
-      const category = isOnSite ? "household" : "freelance";
+      const category = isOnSite ? "HOUSEHOLD" : "FREELANCE";
       const services = await apiService.getServicesByCategory(category);
 
       // Extract service names/roles from the response
@@ -379,9 +379,8 @@ const JobRequirementsScreen = ({ navigation, route }) => {
 
       if (addressResponse.length > 0) {
         const address = addressResponse[0];
-        const formattedAddress = `${address.street || ""} ${
-          address.city || ""
-        } ${address.region || ""} ${address.country || ""}`.trim();
+        const formattedAddress = `${address.street || ""} ${address.city || ""
+          } ${address.region || ""} ${address.country || ""}`.trim();
         setJobLocation(formattedAddress);
         // Alert.alert("Success", "Current location detected successfully!");
       }
@@ -426,9 +425,8 @@ const JobRequirementsScreen = ({ navigation, route }) => {
 
       if (addressResponse.length > 0) {
         const address = addressResponse[0];
-        const formattedAddress = `${address.street || ""} ${
-          address.city || ""
-        } ${address.region || ""} ${address.country || ""}`.trim();
+        const formattedAddress = `${address.street || ""} ${address.city || ""
+          } ${address.region || ""} ${address.country || ""}`.trim();
         setJobLocation(formattedAddress);
       } else {
         setJobLocation(`${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
@@ -567,6 +565,13 @@ const JobRequirementsScreen = ({ navigation, route }) => {
     }
     if (!jobDes) {
       Alert.alert("Validation Error", "Please enter a job description.");
+      return false;
+    }
+    if (jobDes.length < 20) {
+      Alert.alert(
+        "Validation Error",
+        "Job description must be at least 20 characters."
+      );
       return false;
     }
     if (portfolioImages.length === 0) {
@@ -785,9 +790,9 @@ const JobRequirementsScreen = ({ navigation, route }) => {
             items={
               services && Array.isArray(services)
                 ? services.map((service) => ({
-                    label: service.name || service.role || service.title,
-                    value: service.id,
-                  }))
+                  label: service.name || service.role || service.title,
+                  value: service.id,
+                }))
                 : []
             }
             value={serviceId}

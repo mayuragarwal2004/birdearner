@@ -5,11 +5,11 @@ import { useTheme } from "../../context/ThemeContext";
 import StatusBadge from './StatusBadge';
 import ChatMenu from './ChatMenu';
 
-const ChatHeader = ({ 
-  user, 
-  chatStatus, 
-  onBack, 
-  onViewProfile, 
+const ChatHeader = ({
+  user,
+  chatStatus,
+  onBack,
+  onViewProfile,
   assignedId,
   currentUserId,
   showMenu,
@@ -21,9 +21,6 @@ const ChatHeader = ({
   const currentTheme = themeStyles[theme];
   const styles = getStyles(currentTheme);
 
-  console.log({chat_header_user:user});
-  
-
   return (
     <View style={styles.header}>
       <TouchableOpacity onPress={onBack} style={styles.backButton}>
@@ -33,10 +30,9 @@ const ChatHeader = ({
           color={currentTheme.text || "black"}
         />
       </TouchableOpacity>
-      
       <View style={styles.headerData}>
         <TouchableOpacity onPress={onViewProfile}>
-          <Text style={styles.username}>@{user.user.fullName}</Text>
+          <Text style={styles.username}>{user.user.fullName}</Text>
         </TouchableOpacity>
 
         <StatusBadge status={chatStatus} />
@@ -44,7 +40,7 @@ const ChatHeader = ({
         {assignedId && assignedId !== currentUserId && (
           <View style={styles.assignedBanner}>
             <Text style={styles.assignedText}>
-              {user.role === 'client' 
+              {user.role === 'client'
                 ? 'You have assigned this job to another freelancer'
                 : 'Job has been assigned to another freelancer'}
             </Text>

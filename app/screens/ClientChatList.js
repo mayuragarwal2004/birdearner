@@ -25,30 +25,22 @@ const ClientChatList = () => {
   const navigation = useNavigation();
   const api = ApiService;
 
-  console.log({ chatThreads });
-
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
 
   const styles = getStyles(currentTheme);
 
   const fetchChatThreads = async (isRefreshing = false) => {
-    console.log("Fetching chat threads for client:", userData?.id);
 
     if (!isRefreshing) {
       setLoading(true);
     }
     setError(false);
     try {
-      console.log("Initializing API service...");
-
       await api.init();
 
-      console.log("Fetching client conversations...");
 
       const response = await api.getClientConversations(userData?.client?.id);
-      console.log("Fetched chat threads:", response);
-
       if (response) {
         // Format conversations into chat threads
         const formattedThreads = response.map((conv) => ({
@@ -77,30 +69,30 @@ const ClientChatList = () => {
   }, []);
 
   const renderChatThread = ({ item }) => {
-    const job = item.job || {};
-    const freelancerName = item.freelancer?.user.fullName || "Unknown";
+    const job = item.jobData || item.job || {};
+    const otherUser = item.otherUser?.user || {};
+    const freelancerName = otherUser.fullName || "Freelancer";
     const lastMessage = item.lastMessage || "No messages yet";
-    const profileImage = item.freelancer?.profilePhoto
-      ? { uri: apiService.loadImageURI(item.freelancer.profilePhoto) }
+    const profileImage = item.otherUser?.profilePhoto
+      ? { uri: apiService.loadImageURI(item.otherUser.profilePhoto) }
       : require("../assets/profile.png");
-    console.log({ item });
 
     return (
       <TouchableOpacity
         style={styles.jobContainer}
         onPress={() =>
           navigation.navigate("ClientChat", {
-            jobId: job.id,
-            full_name: freelancerName,
-            profileImage: item.freelancer?.profilePhoto,
-            freelancer: item.freelancer,
+            threadId: item.threadId,
+            freelancer: item.otherUser, // Passing the structured otherUser object
+            projectId: item.projectId,
+            jobData: job,
           })
         }
       >
         <Image source={profileImage} style={styles.avatar} />
         <View style={styles.jobContent}>
           <Text style={styles.jobTitle} numberOfLines={1}>
-            {job.title}
+            {job.title || "Untitled Job"}
           </Text>
           <Text style={styles.username}>@{freelancerName}</Text>
           <Text style={styles.lastMessage} numberOfLines={1}>
@@ -115,18 +107,18 @@ const ClientChatList = () => {
                 job.status === "OPEN" && item.status !== "REJECTED"
                   ? "#aba8a6" // grey
                   : job.status === "OPEN" && item.status === "REJECTED"
-                  ? "#f44336" // red
-                  : job.status === "IN_PROGRESS" && item.status === "ACCEPTED"
-                  ? "#4CAF50" // green
-                  : job.status === "IN_PROGRESS" && item.status === "PENDING"
-                  ? "#2196F3" // blue
-                  : job.status === "COMPLETED"
-                  ? "#4CAF50" // green
-                  : job.status === "ACCEPTED"
-                  ? "#2196F3" // green
-                  : job.status === "BLOCKED"
-                  ? "#ff7300" // orange
-                  : "#FFC107",
+                    ? "#f44336" // red
+                    : job.status === "IN_PROGRESS" && item.status === "ACCEPTED"
+                      ? "#4CAF50" // green
+                      : job.status === "IN_PROGRESS" && item.status === "PENDING"
+                        ? "#2196F3" // blue
+                        : job.status === "COMPLETED"
+                          ? "#4CAF50" // green
+                          : job.status === "ACCEPTED"
+                            ? "#2196F3" // green
+                            : job.status === "BLOCKED"
+                              ? "#ff7300" // orange
+                              : "#FFC107",
             },
           ]}
         />
@@ -147,7 +139,7 @@ const ClientChatList = () => {
     return (
       <View style={styles.errorContainer}>
         <Text style={styles.errorMessage}>
-          Failed to load threads. Please try again later. client chat list
+          Failed to load threads. Please try again later.
         </Text>
         <TouchableOpacity
           onPress={() => navigation.goBack()}

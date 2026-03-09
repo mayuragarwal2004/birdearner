@@ -23,40 +23,42 @@ const FreelancerChatList = () => {
   const { userData } = useAuth();
   const navigation = useNavigation();
   const api = ApiService;
-  
+
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
 
   const styles = getStyles(currentTheme);
 
   const fetchChatThreads = async (isRefreshing = false) => {
-    console.log("Fetching chat threads for freelancer:", userData?.id);
-    
+    const freelancerId = userData?.freelancer?.id;
+    console.log("=== FreelancerChatList Debug ===");
+    console.log("userData:", JSON.stringify(userData?.id, null, 2));
+    console.log("userData.freelancer:", JSON.stringify(userData?.freelancer, null, 2));
+    console.log("Fetching chat threads for freelancerId:", freelancerId);
+
     if (!isRefreshing) {
       setLoading(true);
     }
     setError(false);
     try {
-      console.log("Initializing API service...");
-      
       await api.init();
+      console.log("Token available:", !!api.token);
 
-      console.log("Fetching freelancer conversations...");
-      
-      const response = await api.getFreelancerConversations(userData?.freelancer?.id);
-      console.log("Fetched chat threads:", response);
-      
-      if (response) {
-        // Format conversations into chat threads
+      const response = await api.getFreelancerConversations(freelancerId);
+      console.log("Raw API response:", JSON.stringify(response));
+
+      if (response && Array.isArray(response)) {
         const formattedThreads = response.map(conv => ({
           ...conv,
           isStarred: conv.isStarred || false
         }));
-        
+        console.log("Formatted threads count:", formattedThreads.length);
         setChatThreads(formattedThreads);
+      } else {
+        console.log("Response was not an array:", typeof response, response);
       }
     } catch (err) {
-      console.log("Error fetching chat threads:", err);
+      console.log("Error fetching chat threads:", err?.message, err);
       setError(true);
     } finally {
       setLoading(false);
@@ -76,15 +78,16 @@ const FreelancerChatList = () => {
   console.log({ chatThreads });
 
   const renderChatThread = ({ item }) => {
-    const job = item.job || {};
-    const clientName = item.client?.user?.fullName || "Unknown";
+    const jobTitle = item.jobTitle || "Job";
+    const jobStatus = item.jobStatus?.toLowerCase() || "pending";
+    const clientName = item.otherUser?.user?.fullName || "Unknown";
     const lastMessage = item.lastMessage || "No messages yet";
-    const profileImage = item.client?.profilePhoto
-      ? { uri: api.loadImageURI(item.client.profilePhoto) }
+    const profileImage = item.otherUser?.profilePhoto
+      ? { uri: api.loadImageURI(item.otherUser.profilePhoto) }
       : require("../assets/profile.png");
 
-      console.log({item});
-      
+    console.log({ item });
+
 
     return (
       <TouchableOpacity
@@ -92,14 +95,14 @@ const FreelancerChatList = () => {
         onPress={() => navigation.navigate('FreelancerChat', {
           jobId: item.jobId,
           full_name: clientName,
-          profileImage: item.client?.profilePhoto,
-          client: item.client
+          profileImage: item.otherUser?.profilePhoto,
+          client: item.otherUser
         })}
       >
         <Image source={profileImage} style={styles.avatar} />
         <View style={styles.jobContent}>
           <Text style={styles.jobTitle} numberOfLines={1}>
-            {job.title}
+            {jobTitle}
           </Text>
           <Text style={styles.username}>@{clientName}</Text>
           <Text style={styles.lastMessage} numberOfLines={1}>
@@ -111,11 +114,11 @@ const FreelancerChatList = () => {
             styles.statusIndicator,
             {
               backgroundColor:
-                job.status === 'completed'
+                jobStatus === 'completed'
                   ? '#4CAF50'
-                  : job.status === 'in-progress'
-                  ? '#2196F3'
-                  : '#FFC107',
+                  : jobStatus === 'in-progress'
+                    ? '#2196F3'
+                    : '#FFC107',
             },
           ]}
         />
@@ -127,7 +130,7 @@ const FreelancerChatList = () => {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#3b006b" />
-        <Text style={{color: currentTheme.subText}}>Loading chats...</Text>
+        <Text style={{ color: currentTheme.subText }}>Loading chats...</Text>
       </View>
     );
   }

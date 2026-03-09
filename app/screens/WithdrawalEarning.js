@@ -27,7 +27,7 @@ const WithdrawalEarningScreen = ({ navigation }) => {
   const [showHistory, setShowHistory] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const { refreshUserData } = useAuth();
-  const totalAmountInWallet = walletData?.withdrawableAmount || 0;
+  const totalAmountInWallet = walletData?.withdrawableBalance || 0;
 
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
@@ -145,7 +145,7 @@ const WithdrawalEarningScreen = ({ navigation }) => {
     }
 
     const withdrawalAmount = parseFloat(amount);
-    
+
     if (withdrawalAmount > totalAmountInWallet) {
       handleError("Insufficient withdrawable balance");
       return;
@@ -159,20 +159,20 @@ const WithdrawalEarningScreen = ({ navigation }) => {
 
       if (response.success) {
         handleSuccess("Withdrawal request submitted successfully! Your request is now pending admin approval.");
-        
+
         // Refresh wallet data to get updated balance
         await fetchWalletData();
-        
+
         // Refresh withdrawal history to show the new request
         await fetchWithdrawalHistory();
-        
+
         // Also refresh user data context
         await refreshUserData();
-        
+
         // Clear the amount field
         setAmount("");
         setWarning("");
-        
+
         // Show history section to see the new request
         setShowHistory(true);
       } else {
@@ -228,8 +228,8 @@ const WithdrawalEarningScreen = ({ navigation }) => {
   };
 
   return (
-    <ScrollView 
-      style={styles.container} 
+    <ScrollView
+      style={styles.container}
       contentContainerStyle={styles.contentContainer}
       refreshControl={
         <RefreshControl
@@ -264,7 +264,7 @@ const WithdrawalEarningScreen = ({ navigation }) => {
           {/* Total Amount in Wallet */}
           <Text style={styles.label}>Total Amount in Wallet</Text>
           <Text style={styles.colorText}>
-            RS. {String(walletData?.withdrawableAmount?.toFixed(2) || "0.00")}
+            RS. {String(walletData?.withdrawableBalance?.toFixed(2) || "0.00")}
           </Text>
 
           {/* Info Note */}
@@ -276,30 +276,30 @@ const WithdrawalEarningScreen = ({ navigation }) => {
           </View>
 
           {/* Withdrawal Amount Input */}
-      <Text style={styles.label}>Enter the amount you want to withdraw</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Enter amount"
-        value={amount}
-        onChangeText={handleAmountChange}
-        keyboardType="numeric"
-        autoComplete="off"
-        editable={!isLoading}
-      />
+          <Text style={styles.label}>Enter the amount you want to withdraw</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter amount"
+            value={amount}
+            onChangeText={handleAmountChange}
+            keyboardType="numeric"
+            autoComplete="off"
+            editable={!isLoading}
+          />
 
-      {warning !== "" && <Text style={styles.warning}>{warning}</Text>}
+          {warning !== "" && <Text style={styles.warning}>{warning}</Text>}
 
-      {/* Amount to Withdraw */}
-      <Text style={styles.label}>You’re withdrawing</Text>
-      <View style={styles.withdrawal}>
-        <Text style={styles.withdrawalText}>RS. {amount || "0"}</Text>
-      </View>
+          {/* Amount to Withdraw */}
+          <Text style={styles.label}>You’re withdrawing</Text>
+          <View style={styles.withdrawal}>
+            <Text style={styles.withdrawalText}>RS. {amount || "0"}</Text>
+          </View>
 
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[
-              styles.signupButton, 
+              styles.signupButton,
               (isLoading || !amount || parseFloat(amount) <= 0) && styles.disabledButton
-            ]} 
+            ]}
             onPress={handleProcess}
             disabled={isLoading || !amount || parseFloat(amount) <= 0}
           >
@@ -310,7 +310,7 @@ const WithdrawalEarningScreen = ({ navigation }) => {
 
           {/* Withdrawal History Section */}
           <View style={styles.historySection}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.historyToggle}
               onPress={() => setShowHistory(!showHistory)}
             >
