@@ -44,12 +44,19 @@ const AvailabilityScreen = ({ navigation }) => {
       } else if (userData.role === "CLIENT") {
         await apiService.updateUserAvailability(userData.id, "CLIENT", status);
       }
+
+      // Automatically refresh user data from server so global context stays in sync
+      if (refreshUserData) {
+        await refreshUserData();
+      }
     } catch {
       Toast.show({
         type: "error",
         text1: "Error updating availability",
         text2: "Please try again later",
       });
+      // Revert the local switch state if the server request failed
+      setSelectedStatus(!status);
     }
   };
   const onRefresh = async () => {

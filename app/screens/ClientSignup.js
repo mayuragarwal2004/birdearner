@@ -127,7 +127,7 @@ const createSchema = (mode) => {
 };
 
 const ClientSignup = ({ navigation, route }) => {
-  const { register, user, userProfile, fetchUserProfile } = useAuth(); // Get auth functions from AuthContext
+  const { register, user, userProfile, refreshUserData } = useAuth(); // Get auth functions from AuthContext
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -235,31 +235,32 @@ const ClientSignup = ({ navigation, route }) => {
 
   // Only update form data when user data actually changes and we're in update mode
   useEffect(() => {
-    if (mode === "update" && user?.client) {
+    const dataSource = profileData || user?.client;
+    if (mode === "update" && dataSource) {
       setForm((prevForm) => ({
         ...prevForm,
         full_name: user?.fullName || prevForm.full_name,
-        designation: user?.client?.organizationType || prevForm.designation,
-        heading: user?.client?.companyName || prevForm.heading,
-        city: user?.client?.city || prevForm.city,
-        state: user?.client?.state || prevForm.state,
-        zipCode: user?.client?.zipcode
-          ? user.client.zipcode.toString()
+        designation: dataSource.organizationType || prevForm.designation,
+        heading: dataSource.companyName || prevForm.heading,
+        city: dataSource.city || prevForm.city,
+        state: dataSource.state || prevForm.state,
+        zipCode: dataSource.zipcode
+          ? dataSource.zipcode.toString()
           : prevForm.zipCode,
-        country: user?.client?.country || prevForm.country,
-        bio: user?.client?.profileDescription || prevForm.bio,
-        socialLinks: user?.client?.socialMediaLinks?.length
-          ? user.client.socialMediaLinks
+        country: dataSource.country || prevForm.country,
+        bio: dataSource.profileDescription || prevForm.bio,
+        socialLinks: dataSource.socialMediaLinks?.length
+          ? dataSource.socialMediaLinks
           : prevForm.socialLinks,
-        profileImage: user?.client?.profilePhoto
-          ? { uri: user.client.profilePhoto, isExisting: true }
+        profileImage: dataSource.profilePhoto
+          ? { uri: dataSource.profilePhoto, isExisting: true }
           : prevForm.profileImage,
-        coverImage: user?.client?.coverPhoto
-          ? { uri: user.client.coverPhoto, isExisting: true }
+        coverImage: dataSource.coverPhoto
+          ? { uri: dataSource.coverPhoto, isExisting: true }
           : prevForm.coverImage,
       }));
     }
-  }, [mode, user?.id]); // Only trigger when mode or user ID changes
+  }, [mode, user?.id, profileData]); // Trigger when mode, profileData or user ID changes
 
   console.log({ form, mode, user });
 
@@ -524,7 +525,9 @@ const ClientSignup = ({ navigation, route }) => {
         console.log("Client profile created:", result);
 
         // Refresh user profile data
-        await fetchUserProfile(user.id, user.role);
+        if (refreshUserData) {
+          await refreshUserData();
+        }
 
         showToast(
           "success",
@@ -573,7 +576,9 @@ const ClientSignup = ({ navigation, route }) => {
         console.log("Client profile updated:", result);
 
         // Refresh user profile data
-        await fetchUserProfile(user.id, user.role);
+        if (refreshUserData) {
+          await refreshUserData();
+        }
 
         showToast(
           "success",

@@ -25,7 +25,7 @@ export const useMarketplaceJobs = () => {
       } else {
         setFilterLoading(true);
       }
-      
+
       // Build filter parameters
       const filters = {
         status: 'OPEN', // Only get open jobs that are available
@@ -47,7 +47,7 @@ export const useMarketplaceJobs = () => {
       // Get jobs categorized by priority from the new backend
       const categorizedJobs = await apiService.getAllJobsCategorizedByPriority(filters);
 
-    //   console.log('Categorized jobs API response:', categorizedJobs);
+      //   console.log('Categorized jobs API response:', categorizedJobs);
 
       setJobs(categorizedJobs);
     } catch (error) {
@@ -73,34 +73,34 @@ export const useMarketplaceJobs = () => {
   };
 
   const onRefresh = async (
-    location, 
-    currentUserRole, 
-    userServices, 
+    location,
+    currentUserRole,
+    userServices,
     distance,
-    fetchUserProfile
+    refreshUserData
   ) => {
     try {
       setRefreshing(true);
       console.log('Starting refresh...');
-      
+
       // Refresh user profile to get latest services
-      if (fetchUserProfile) {
+      if (refreshUserData) {
         try {
-          console.log('Refreshing user profile...');
-          await fetchUserProfile();
-          console.log('User profile refreshed successfully');
+          console.log('Refreshing user data...');
+          await refreshUserData();
+          console.log('User data refreshed successfully');
         } catch (error) {
-          console.error('Error refreshing user profile:', error);
+          console.error('Error refreshing user data:', error);
           // Don't block the entire refresh if profile fails
           showToast("warning", "Warning", "Could not refresh user profile");
         }
       }
-      
+
       // Refresh jobs data
       console.log('Refreshing jobs data...');
       await fetchJobs(location ? true : false, location, distance, currentUserRole, userServices, false);
       console.log('Jobs data refreshed successfully');
-      
+
       showToast("success", "Refreshed", "Jobs data updated successfully");
     } catch (error) {
       console.error('Error during refresh:', error);

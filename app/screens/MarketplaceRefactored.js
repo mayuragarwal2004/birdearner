@@ -15,12 +15,12 @@ import Toast from "react-native-toast-message";
 import { useTheme } from "../context/ThemeContext";
 
 // Custom Hooks
-import { 
-  useLocation, 
-  useMarketplaceJobs, 
-  useDistanceSlider, 
-  useUserServices, 
-  usePriorityWheel 
+import {
+  useLocation,
+  useMarketplaceJobs,
+  useDistanceSlider,
+  useUserServices,
+  usePriorityWheel
 } from "../hooks/marketplace";
 
 // Components
@@ -39,7 +39,7 @@ import { MARKETPLACE_CONSTANTS } from "../utils/marketplaceUtils";
 
 const MarketplaceScreen = ({ navigation }) => {
   const mapRef = useRef(null);
-  
+
   // Theme
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
@@ -47,22 +47,22 @@ const MarketplaceScreen = ({ navigation }) => {
 
   // Custom Hooks
   const { location, getLocation } = useLocation();
-  const { 
-    jobs, 
-    loading, 
+  const {
+    jobs,
+    loading,
     refreshing,
     filterLoading,
-    fetchJobs, 
-    onRefresh, 
-    getAllJobs 
+    fetchJobs,
+    onRefresh,
+    getAllJobs
   } = useMarketplaceJobs();
-  
-  const { 
-    userServices, 
-    currentUserRole, 
-    hasServices, 
-    isFreelancer, 
-    fetchUserProfile 
+
+  const {
+    userServices,
+    currentUserRole,
+    hasServices,
+    isFreelancer,
+    refreshUserData
   } = useUserServices();
 
   // Distance slider with callback to fetch jobs (not initial load)
@@ -81,14 +81,14 @@ const MarketplaceScreen = ({ navigation }) => {
     handleSliderPress
   } = useDistanceSlider(handleDistanceChange);
 
-  const { 
-    priorityIndex, 
-    rotation, 
-    wheelPanResponder, 
-    handlePriorityWheel, 
-    getCurrentPriority, 
+  const {
+    priorityIndex,
+    rotation,
+    wheelPanResponder,
+    handlePriorityWheel,
+    getCurrentPriority,
     resetToAllJobs,
-    cleanupSound 
+    cleanupSound
   } = usePriorityWheel((priority) => {
     // Handle priority wheel rotation navigation
     handleWheelPriorityPress(priority);
@@ -106,7 +106,7 @@ const MarketplaceScreen = ({ navigation }) => {
         console.error('Error initializing app:', error);
         Toast.show({
           type: "error",
-          text1: "Error", 
+          text1: "Error",
           text2: "Failed to initialize app",
           position: "top"
         });
@@ -151,8 +151,8 @@ const MarketplaceScreen = ({ navigation }) => {
     if (priority === "All") {
       // Navigate to all jobs
       const allJobs = getAllJobs();
-      navigation.navigate("JobPriority", { 
-        priority: "All", 
+      navigation.navigate("JobPriority", {
+        priority: "All",
         jobs: { All: allJobs, Immediate: [], High: [], Standard: [] }
       });
     } else {
@@ -178,7 +178,7 @@ const MarketplaceScreen = ({ navigation }) => {
       currentUserRole,
       userServices,
       distance,
-      fetchUserProfile
+      refreshUserData
     );
   };
 
@@ -189,7 +189,7 @@ const MarketplaceScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView 
+      <ScrollView
         contentContainerStyle={styles.scrollContent}
         refreshControl={
           <RefreshControl
@@ -244,8 +244,8 @@ const MarketplaceScreen = ({ navigation }) => {
       </ScrollView>
 
       {/* All Jobs Button - Enhanced Priority Wheel */}
-      <AllJobsButton 
-        onPress={handleAllJobsPress} 
+      <AllJobsButton
+        onPress={handleAllJobsPress}
         currentPriority={getCurrentPriority()}
         rotation={rotation}
         panHandlers={wheelPanResponder.panHandlers}

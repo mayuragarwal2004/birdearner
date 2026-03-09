@@ -124,7 +124,7 @@ const createSchema = (mode) => {
 };
 
 const FreelancerSignup = ({ navigation, route }) => {
-  const { register, user, userProfile, fetchUserProfile } = useAuth(); // Get auth functions from AuthContext
+  const { register, user, userProfile, refreshUserData } = useAuth(); // Get auth functions from AuthContext
   const [step, setStep] = useState(2);
   const [isLoading, setIsLoading] = useState(false);
   const [emailChecked, setEmailChecked] = useState(false);
@@ -266,9 +266,9 @@ const FreelancerSignup = ({ navigation, route }) => {
       : null,
     portfolioImages: user?.freelancer?.portfolioImages?.length
       ? user.freelancer.portfolioImages.map((img) => ({
-          uri: img,
-          isExisting: true,
-        }))
+        uri: img,
+        isExisting: true,
+      }))
       : [],
     agreePortfolioTerms: user?.freelancer?.termsAccepted || false,
     selectedServices: user?.freelancer?.selectedServices || [], // Add selectedServices to form state
@@ -279,52 +279,55 @@ const FreelancerSignup = ({ navigation, route }) => {
 
   // Only update form data when user data actually changes and we're in update mode
   useEffect(() => {
-    if (mode === "update" && user?.freelancer) {
+    const dataSource = profileData || user?.freelancer;
+    if (mode === "update" && dataSource) {
       setForm((prevForm) => ({
         ...prevForm,
         full_name: user?.fullName || prevForm.full_name,
-        qualification:
-          user?.freelancer?.highestQualification || prevForm.qualification,
-        experience: user?.freelancer?.experience
-          ? user.freelancer.experience.toString()
+        qualification: dataSource.highestQualification || prevForm.qualification,
+        experience: dataSource.experience
+          ? dataSource.experience.toString()
           : prevForm.experience,
-        heading: user?.freelancer?.profileHeading || prevForm.heading,
-        city: user?.freelancer?.city || prevForm.city,
-        state: user?.freelancer?.state || prevForm.state,
-        zipCode: user?.freelancer?.zipcode
-          ? user.freelancer.zipcode.toString()
+        heading: dataSource.profileHeading || prevForm.heading,
+        city: dataSource.city || prevForm.city,
+        state: dataSource.state || prevForm.state,
+        zipCode: dataSource.zipcode
+          ? dataSource.zipcode.toString()
           : prevForm.zipCode,
-        country: user?.freelancer?.country || prevForm.country,
-        bio: user?.freelancer?.profileDescription || prevForm.bio,
-        gender: user?.freelancer?.gender || prevForm.gender,
-        dob: user?.freelancer?.dob
-          ? new Date(user.freelancer.dob)
+        country: dataSource.country || prevForm.country,
+        bio: dataSource.profileDescription || prevForm.bio,
+        gender: dataSource.gender || prevForm.gender,
+        dob: dataSource.dob
+          ? new Date(dataSource.dob)
           : prevForm.dob,
-        certifications: user?.freelancer?.certifications?.length
-          ? user.freelancer.certifications
+        certifications: dataSource.certifications?.length
+          ? dataSource.certifications
           : prevForm.certifications,
-        socialLinks: user?.freelancer?.socialMediaLinks?.length
-          ? user.freelancer.socialMediaLinks
+        socialLinks: dataSource.socialMediaLinks?.length
+          ? dataSource.socialMediaLinks
           : prevForm.socialLinks,
-        profileImage: user?.freelancer?.profilePhoto
-          ? { uri: user.freelancer.profilePhoto, isExisting: true }
+        profileImage: dataSource.profilePhoto
+          ? { uri: dataSource.profilePhoto, isExisting: true }
           : prevForm.profileImage,
-        coverImage: user?.freelancer?.coverPhoto
-          ? { uri: user.freelancer.coverPhoto, isExisting: true }
+        coverImage: dataSource.coverPhoto
+          ? { uri: dataSource.coverPhoto, isExisting: true }
           : prevForm.coverImage,
-        portfolioImages: user?.freelancer?.portfolioImages?.length
-          ? user.freelancer.portfolioImages.map((img) => ({
-              uri: img,
-              isExisting: true,
-            }))
+        portfolioImages: dataSource.portfolioImages?.length
+          ? dataSource.portfolioImages.map((img) => ({
+            uri: img,
+            isExisting: true,
+          }))
           : prevForm.portfolioImages,
-        agreePortfolioTerms:
-          user?.freelancer?.termsAccepted || prevForm.agreePortfolioTerms,
-        selectedServices:
-          user?.freelancer?.selectedServices || prevForm.selectedServices,
+        agreePortfolioTerms: dataSource.termsAccepted || prevForm.agreePortfolioTerms,
+        selectedServices: dataSource.selectedServices || prevForm.selectedServices,
       }));
+
+      // Keep selectedServices local state in sync
+      if (dataSource.selectedServices) {
+        setSelectedServices(dataSource.selectedServices);
+      }
     }
-  }, [mode, user?.id]); // Only trigger when mode or user ID changes
+  }, [mode, user?.id, profileData]); // Trigger when mode, explicit profile data, or user ID changes
 
   console.log({ form, mode, user });
 
@@ -427,7 +430,7 @@ const FreelancerSignup = ({ navigation, route }) => {
         await apiService.init();
         const services = await apiService.getAllServices();
         console.log(JSON.stringify(services, null, 2));
-        
+
         setAvailableServices(services);
         setFilteredServices([]); // Start with empty filtered services
       } catch (error) {
@@ -759,7 +762,9 @@ const FreelancerSignup = ({ navigation, route }) => {
         console.log("Freelancer profile created:", result);
 
         // Refresh user profile data
-        await fetchUserProfile(user.id, user.role);
+        if (refreshUserData) {
+          await refreshUserData();
+        }
 
         showToast(
           "success",
@@ -818,7 +823,9 @@ const FreelancerSignup = ({ navigation, route }) => {
         console.log("Freelancer profile updated:", result);
 
         // Refresh user profile data
-        await fetchUserProfile(user.id, user.role);
+        if (refreshUserData) {
+          await refreshUserData();
+        }
 
         showToast(
           "success",
@@ -1036,7 +1043,7 @@ const FreelancerSignup = ({ navigation, route }) => {
                               style={[
                                 styles.serviceItem,
                                 selectedServices.includes(service.id) &&
-                                  styles.serviceItemSelected,
+                                styles.serviceItemSelected,
                               ]}
                               onPress={() => toggleServiceSelection(service)}
                               activeOpacity={0.7}
@@ -1046,7 +1053,7 @@ const FreelancerSignup = ({ navigation, route }) => {
                                   style={[
                                     styles.serviceName,
                                     selectedServices.includes(service.id) &&
-                                      styles.serviceNameSelected,
+                                    styles.serviceNameSelected,
                                   ]}
                                 >
                                   {service.name}
@@ -1056,7 +1063,7 @@ const FreelancerSignup = ({ navigation, route }) => {
                                     style={[
                                       styles.serviceDescription,
                                       selectedServices.includes(service.id) &&
-                                        styles.serviceDescriptionSelected,
+                                      styles.serviceDescriptionSelected,
                                     ]}
                                   >
                                     {service.description}
@@ -1067,7 +1074,7 @@ const FreelancerSignup = ({ navigation, route }) => {
                                 style={[
                                   styles.serviceCheckbox,
                                   selectedServices.includes(service.id) &&
-                                    styles.serviceCheckboxSelected,
+                                  styles.serviceCheckboxSelected,
                                 ]}
                               >
                                 {selectedServices.includes(service.id) && (
