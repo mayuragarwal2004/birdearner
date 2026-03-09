@@ -123,6 +123,12 @@ const JobsPostedScreen = ({ navigation }) => {
       navigation.navigate("UpdateJobDetailsScreen", {
         jobId: selectedJob.id,
       });
+    } else if (option === "Chat") {
+      navigation.navigate("ClientChat", {
+        jobId: selectedJob.id,
+        freelancer: selectedJob.assignedFreelancer,
+        receiverId: selectedJob.assignedFreelancer?.userId,
+      });
     } else if (option === "Delete") {
       Alert.alert("Delete Job", "Are you sure you want to delete this job?", [
         { text: "Cancel", style: "cancel" },
@@ -228,8 +234,8 @@ const JobsPostedScreen = ({ navigation }) => {
                 item.jobStatus === "COMPLETED"
                   ? "#4CAF50"
                   : item.jobStatus === "PENDING"
-                  ? "#FF9800"
-                  : "#FF0000",
+                    ? "#FF9800"
+                    : "#FF0000",
             },
           ]}
         />
@@ -324,6 +330,11 @@ const JobsPostedScreen = ({ navigation }) => {
             <TouchableOpacity onPress={() => handleOptionSelect("Update")}>
               <Text style={styles.modalOption}>Update Job Details</Text>
             </TouchableOpacity>
+            {selectedJob?.assignedFreelancer && (
+              <TouchableOpacity onPress={() => handleOptionSelect("Chat")}>
+                <Text style={styles.modalOption}>Chat with Freelancer</Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity onPress={() => handleOptionSelect("Delete")}>
               <Text style={[styles.modalOption, { color: "red" }]}>
                 Delete This Job

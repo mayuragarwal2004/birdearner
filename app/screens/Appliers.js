@@ -78,7 +78,7 @@ const AppliersScreen = ({ navigation, route }) => {
         />
         <View style={styles.textContainer}>
           <Text style={[styles.name, { color: currentTheme.text }]}>
-            {item.fullName}
+            {item.user.fullName}
           </Text>
           <Text style={[styles.heading, { color: currentTheme.subText }]}>
             {item.profileHeading || "Freelancer"}
@@ -142,7 +142,10 @@ const AppliersScreen = ({ navigation, route }) => {
         </TouchableOpacity>
       </View>
     );
-  }  
+  }
+
+  console.log({ freelancers });
+
 
   return (
     <View

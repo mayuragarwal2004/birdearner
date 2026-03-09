@@ -81,17 +81,18 @@ const JobDetailsChatScreen = ({ route, navigation }) => {
         urgent: apiJob.isUrgent,
         client: apiJob.client
           ? {
-              fullname: apiJob.client.user?.fullName,
-              name: apiJob.client.companyName,
-              accountType: apiJob.client.organizationType,
-              location: [apiJob.client.city, apiJob.client.state]
-                .filter(Boolean)
-                .join(", "),
-            }
+            fullname: apiJob.client.user?.fullName,
+            name: apiJob.client.companyName,
+            accountType: apiJob.client.organizationType,
+            location: [apiJob.client.city, apiJob.client.state]
+              .filter(Boolean)
+              .join(", "),
+          }
           : null,
         paymentType: apiJob.budgetType,
         location: apiJob.location,
         category: apiJob.jobCategory,
+        assignedFreelancer: apiJob.assignedFreelancer,
       };
       setJob(mappedJob);
       console.log("Debug - Mapped job data:", mappedJob);
@@ -401,6 +402,23 @@ const JobDetailsChatScreen = ({ route, navigation }) => {
 
         {/* Action Buttons */}
         <View style={styles.actionContainer}>
+          {job.assignedFreelancer && (
+            <TouchableOpacity
+              style={[styles.backActionButton, { marginBottom: 15, backgroundColor: "#4CAF50" }]}
+              onPress={() => {
+                navigation.navigate("ClientChat", {
+                  jobId,
+                  freelancer: job.assignedFreelancer,
+                  receiverId: job.assignedFreelancer.userId,
+                });
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Ionicons name="chatbubble-ellipses" size={20} color="#fff" style={{ marginRight: 8 }} />
+                <Text style={styles.actionButtonText}>Message Freelancer</Text>
+              </View>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity
             style={styles.backActionButton}
             onPress={handleGoBack}
