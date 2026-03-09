@@ -4,66 +4,64 @@ import { MaterialIcons } from '@expo/vector-icons';
 
 const ReviewRequestMessage = ({ message, onReviewPress, currentUserId, userRole }) => {
   const isClient = userRole === 'client';
-  
+
   let content = {};
   try {
-      content = typeof message.messageContent === 'string' 
-          ? JSON.parse(message.messageContent) 
-          : message.messageContent;
+    content = typeof message.messageContent === 'string'
+      ? JSON.parse(message.messageContent)
+      : message.messageContent;
   } catch (e) {
-      console.warn("ReviewRequestMessage: Failed to parse content", e);
+    console.warn("ReviewRequestMessage: Failed to parse content", e);
   }
 
   const isCompleted = content?.status === 'completed';
 
-  return (
-    <View style={styles.container}>
-      <View style={styles.content}>
-        <View style={styles.header}>
-            <View style={[styles.iconContainer, isCompleted ? styles.iconCompleted : styles.iconPending]}>
-                <MaterialIcons 
-                    name={isCompleted ? "rate-review" : "rate-review"} 
-                    size={24} 
-                    color="#FFF" 
-                />
-            </View>
-            <View style={styles.textContainer}>
-                <Text style={styles.title}>
-                    {isCompleted ? "Review Submitted" : "Review Requested"}
-                </Text>
-                <Text style={styles.subtitle}>
-                    {isCompleted 
-                        ? "Thank you for your feedback!" 
-                        : "Please rate your experience with the freelancer."}
-                </Text>
-            </View>
-        </View>
 
-        {!isCompleted && isClient && (
-          <TouchableOpacity 
-            style={styles.actionButton}
-            onPress={() => onReviewPress(message)}
-          >
-            <Text style={styles.buttonText}>Write Review</Text>
-            <MaterialIcons name="arrow-forward" size={18} color="#FFF" />
-          </TouchableOpacity>
-        )}
+  return (
+    <View style={styles.content}>
+      <View style={styles.header}>
+        <View style={[styles.iconContainer, isCompleted ? styles.iconCompleted : styles.iconPending]}>
+          <MaterialIcons
+            name="rate-review"
+            size={24}
+            color="#FFF"
+          />
+        </View>
+        <View style={styles.textContainer}>
+          <Text style={styles.title}>
+            {isCompleted
+              ? (isClient ? "Review Submitted" : "Review Received")
+              : "Review Requested"}
+          </Text>
+          <Text style={styles.subtitle}>
+            {isCompleted
+              ? (isClient
+                ? "Thank you for your feedback!"
+                : "The client has submitted their feedback.")
+              : "Please rate your experience with the freelancer."}
+          </Text>
+        </View>
       </View>
+
+      {!isCompleted && isClient && (
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => onReviewPress(message)}
+        >
+          <Text style={styles.buttonText}>Write Review</Text>
+          <MaterialIcons name="arrow-forward" size={18} color="#FFF" />
+        </TouchableOpacity>
+      )}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    marginVertical: 10,
-    width: '100%',
-    alignItems: 'center',
-  },
   content: {
     backgroundColor: '#FFF',
     borderRadius: 16,
     padding: 16,
-    width: '85%',
+    minWidth: 260, // Ensure minimum width for text visibility
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -77,7 +75,7 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start', // Use flex-start instead of center to handle multi-line text
     marginBottom: 8,
   },
   iconContainer: {
@@ -95,7 +93,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#10B981', // Emerald for completed
   },
   textContainer: {
-    flex: 1,
+    flexShrink: 1, // Allow shrinking but not zero-width collapse
   },
   title: {
     fontSize: 16,
@@ -104,9 +102,10 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   subtitle: {
-    fontSize: 13,
-    color: '#64748B',
-    lineHeight: 18,
+    fontSize: 14,
+    color: '#1E293B', // Slate 900 for maximum visibility
+    lineHeight: 20,
+    marginTop: 2,
   },
   actionButton: {
     backgroundColor: '#4C0183',
