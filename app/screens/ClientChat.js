@@ -637,6 +637,9 @@ const ClientChat = ({ route, navigation }) => {
           text1: "Success",
           text2: "Freelancer rejected successfully",
         });
+        mutateJob();
+        mutateThread();
+        mutateMessages();
         navigation.goBack();
       }
     } catch (err) {
@@ -670,7 +673,10 @@ const ClientChat = ({ route, navigation }) => {
           text1: "Success",
           text2: "Freelancer assigned successfully",
         });
-        // The useChatLogic hook will handle refreshing the job data
+        // Mutate job and messages immediately to update UI
+        mutateJob();
+        mutateThread();
+        mutateMessages();
       }
     } catch (err) {
       Toast.show({
@@ -784,6 +790,7 @@ const ClientChat = ({ route, navigation }) => {
         setReviewModalVisible(false);
         // Refresh messages to show updated status
         mutateMessages();
+        mutateJob();
       } else {
         throw new Error(res.error || res.message || "Failed to submit review");
       }
@@ -819,6 +826,8 @@ const ClientChat = ({ route, navigation }) => {
         });
         // Refresh messages to show the new completion request using SWR
         mutateMessages();
+        mutateJob();
+        mutateThread();
       }
     } catch (error) {
       console.error('Error sending completion request:', error);
