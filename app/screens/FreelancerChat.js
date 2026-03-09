@@ -405,7 +405,7 @@ const FreelancerChat = ({ route, navigation }) => {
         });
       } else {
         // Send text-only message
-        await sendMessage(messageToSend, null);
+        await sendMessage(messageToSend, undefined);
       }
 
       setFileInfo(null); // Clear file after sending

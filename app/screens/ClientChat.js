@@ -400,6 +400,9 @@ const ClientChat = ({ route, navigation }) => {
     mutateJob,
   } = useChatData("client", route.params);
 
+  console.log({ messages });
+
+
   // Countdown timer for cancel modal
   useEffect(() => {
     let timer;
@@ -528,7 +531,7 @@ const ClientChat = ({ route, navigation }) => {
         });
       } else {
         // Send text-only message
-        await sendMessage(messageToSend, null);
+        await sendMessage(messageToSend, undefined);
       }
 
       setFileInfo(null); // Clear file after sending
@@ -620,7 +623,7 @@ const ClientChat = ({ route, navigation }) => {
   const handleReject = async () => {
     try {
       await api.init();
-      const res = await api.makeRequest(`/jobs/${route.params.jobId}/reject-freelancer`, {
+      const res = await api.makeRequest(`/jobs/${route.params.jobId || route.params.projectId}/reject-freelancer`, {
         method: "POST",
         body: JSON.stringify({
           freelancerId: route.params.freelancer.id,
@@ -650,7 +653,7 @@ const ClientChat = ({ route, navigation }) => {
     setModalVisible(false);
     try {
       await api.init();
-      const res = await api.makeRequest(`/jobs/${route.params.jobId}/assign`, {
+      const res = await api.makeRequest(`/jobs/${route.params.jobId || route.params.projectId}/assign`, {
         method: "PATCH",
         body: JSON.stringify({
           freelancerId: route.params.freelancer.id,
@@ -681,7 +684,7 @@ const ClientChat = ({ route, navigation }) => {
   const handleCancelJob = async () => {
     try {
       await api.init();
-      const res = await api.makeRequest(`/jobs/${route.params.jobId}/cancel`, {
+      const res = await api.makeRequest(`/jobs/${route.params.jobId || route.params.projectId}/cancel`, {
         method: "PATCH",
         body: JSON.stringify({
           userRole: "client",
@@ -763,7 +766,7 @@ const ClientChat = ({ route, navigation }) => {
         body: JSON.stringify({
           reviewerId: userData.id, // Use User ID
           revieweeId: route.params.freelancer.user.id, // Use Freelancer's User ID
-          jobId: route.params.jobId,
+          jobId: route.params.jobId || route.params.projectId,
           rating: averageRating,
           ratingDetails: ratings, // Send detailed ratings
           reviewText: reviewText,
@@ -890,7 +893,7 @@ const ClientChat = ({ route, navigation }) => {
       if (job?.paymentMethod === 'CASH') {
         console.log("Budget amount", job.budgetAmount);
         // For cash payments, create special message for payment flow
-        const res = await api.makeRequest(`/jobs/${route.params.jobId}/complete-cash`, {
+        const res = await api.makeRequest(`/jobs/${route.params.jobId || route.params.projectId}/complete-cash`, {
           method: "POST",
           body: JSON.stringify({
             userRole: "client",
@@ -911,7 +914,7 @@ const ClientChat = ({ route, navigation }) => {
         }
       } else {
         // For platform payments, use existing flow
-        const res = await api.makeRequest(`/jobs/${route.params.jobId}/complete`, {
+        const res = await api.makeRequest(`/jobs/${route.params.jobId || route.params.projectId}/complete`, {
           method: "PATCH",
           body: JSON.stringify({
             userRole: "client",
@@ -925,7 +928,7 @@ const ClientChat = ({ route, navigation }) => {
               method: 'POST',
               body: JSON.stringify({
                 threadId: thread?.id,
-                jobId: route.params.jobId
+                jobId: route.params.jobId || route.params.projectId
               })
             });
           } catch (e) {
@@ -967,7 +970,7 @@ const ClientChat = ({ route, navigation }) => {
     return null;
   };
 
-  console.log({ chatStatus });
+  console.log({ job });
 
 
   return (

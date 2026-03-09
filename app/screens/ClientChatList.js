@@ -82,9 +82,9 @@ const ClientChatList = () => {
         style={styles.jobContainer}
         onPress={() =>
           navigation.navigate("ClientChat", {
-            threadId: item.threadId,
+            threadId: item.id,
             freelancer: item.otherUser, // Passing the structured otherUser object
-            projectId: item.projectId,
+            projectId: item.jobId,
             jobData: job,
           })
         }

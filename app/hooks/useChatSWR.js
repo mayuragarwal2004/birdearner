@@ -144,16 +144,16 @@ export const useChatData = (role, params) => {
 
   // Use individual SWR hooks
   const { thread, isThreadLoading, threadError, mutateThread } = useChatThread(
-    params?.jobId,
+    params?.jobId || params?.projectId,
     freelancerId,
     clientId
   );
 
   const { messages, isMessagesLoading, messagesError, mutateMessages } = useChatMessages(
-    thread?.id
+    params?.threadId || thread?.id
   );
 
-  const { job, isJobLoading, jobError, mutateJob } = useJobDetails(params?.jobId);
+  const { job, isJobLoading, jobError, mutateJob } = useJobDetails(params?.jobId || params?.projectId);
 
   // Optimistic message update
   const addOptimisticMessage = useCallback((newMessage) => {
@@ -162,7 +162,8 @@ export const useChatData = (role, params) => {
 
   // Send message with optimistic update
   const sendMessage = useCallback(async (messageContent, attachmentData = null) => {
-    if (!thread?.id) return;
+    const activeThreadId = params?.threadId || thread?.id;
+    if (!activeThreadId) return;
 
     // Debug logging for attachment data
     console.log('SendMessage - attachmentData:', attachmentData);
@@ -193,18 +194,21 @@ export const useChatData = (role, params) => {
     // Determine message type based on attachment
     const messageType = attachmentData ? 'ATTACHMENT' : 'text';
 
+    // Format attachments for backend (must be array or undefined for Zod)
+    const formattedAttachments = attachmentData ? [{
+      url: attachmentData.attachmentUrl,
+      name: attachmentData.attachmentName,
+      size: attachmentData.attachmentSize,
+      mimeType: attachmentData.attachmentMime,
+    }] : undefined;
+
     const optimisticMessage = {
       id: `temp-${Date.now()}`,
       messageContent,
-      senderId: userData.id,
+      senderId: userData?.id,
       createdAt: new Date().toISOString(),
       messageType: messageType,
-      attachments: attachmentData ? [{
-        url: attachmentData.attachmentUrl,
-        name: attachmentData.attachmentName,
-        size: attachmentData.attachmentSize,
-        mimeType: attachmentData.attachmentMime,
-      }] : null,
+      attachments: formattedAttachments || null, // UI can handle null
       isOptimistic: true,
     };
 
@@ -215,28 +219,30 @@ export const useChatData = (role, params) => {
       const api = ApiService;
       await api.init();
 
-      // Get receiver ID with fallbacks
-      const receiverId = role === 'freelancer'
-        ? (params.client?.userId || params.client?.user?.id)
-        : (params.freelancer?.userId || params.freelancer?.user?.id);
+      // Get receiver ID with fallbacks - ensure it's a User ID
+      // receiverId should be the User ID of the other person in the chat
+      let receiverId = role === 'freelancer'
+        ? (params.clientUserId || params.client?.userId || params.client?.user?.id)
+        : (params.freelancerUserId || params.freelancer?.userId || params.freelancer?.user?.id);
+
+      // If still missing, try to get from thread if it exists
+      if (!receiverId && thread) {
+        receiverId = role === 'freelancer' ? thread.clientUserId : thread.freelancerUserId;
+      }
 
       if (!receiverId) {
-        throw new Error('Receiver ID not found in params');
+        console.error('SendMessage - Error: Receiver ID not found. Params:', params, 'Thread:', thread);
+        throw new Error('Receiver ID not found');
       }
 
       // Prepare request body
       const requestBody = {
-        chatThreadId: thread.id,
-        senderId: userData.id,
+        chatThreadId: activeThreadId,
+        senderId: userData?.id,
         receiverId: receiverId,
         messageContent: messageContent,
         messageType: messageType,
-        attachments: attachmentData ? [{
-          url: attachmentData.attachmentUrl,
-          name: attachmentData.attachmentName,
-          size: attachmentData.attachmentSize,
-          mimeType: attachmentData.attachmentMime,
-        }] : null,
+        attachments: formattedAttachments, // Use formattedAttachments (array or undefined)
         senderType: role.toUpperCase(),
       };
 

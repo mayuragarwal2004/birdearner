@@ -94,6 +94,8 @@ const FreelancerChatList = () => {
         style={styles.jobContainer}
         onPress={() => navigation.navigate('FreelancerChat', {
           jobId: item.jobId,
+          projectId: item.jobId,
+          threadId: item.id,
           full_name: clientName,
           profileImage: item.otherUser?.profilePhoto,
           client: item.otherUser
