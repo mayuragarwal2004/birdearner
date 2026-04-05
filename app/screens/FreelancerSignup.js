@@ -213,9 +213,11 @@ const FreelancerSignup = ({ navigation, route }) => {
   const schema = createSchema(mode);
 
   useEffect(() => {
-    const initialStep = mode === "signup" ? 1 : 2; // Skip login step for profile creation/update
-    setStep(initialStep);
-  }, [mode]); // Use mode as dependency instead of initialStep
+    const initialStep = mode === "signup" ? 1 : 2;
+    if (step !== initialStep) {
+      setStep(initialStep);
+    }
+  }, []);
 
   const [uploadingPortfolioImages, setUploadingPortfolioImages] =
     useState(false);
@@ -878,7 +880,7 @@ const FreelancerSignup = ({ navigation, route }) => {
     <SafeAreaView style={{ flex: 1, backgroundColor: "#4B0082" }}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior={Platform.OS === "ios" ? "padding" : "padding"}
         keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}
       >
         <ScrollView contentContainerStyle={styles.container}>

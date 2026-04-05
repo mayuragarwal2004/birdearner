@@ -50,6 +50,7 @@ import TermsAndConditionsScreen from "./screens/TermsAndConditionsScreen";
 import PrivacyPolicyScreen from "./screens/PrivacyPolicyScreen";
 import ClientSignupScreen from "./screens/ClientSignup";
 import FreelancerSignupScreen from "./screens/FreelancerSignup";
+import OtpVerificationScreen from "./screens/OtpVerification";
 
 import messaging from "@react-native-firebase/messaging";
 import Toast from "react-native-toast-message";
@@ -557,6 +558,10 @@ export function App() {
           <Stack.Screen
             name="FreelancerSignup"
             component={FreelancerSignupScreen}
+          />
+          <Stack.Screen
+            name="OtpVerification"
+            component={OtpVerificationScreen}
           />
           <Stack.Screen
             name="TermsAndConditions"

@@ -7,9 +7,9 @@ const Role = ({navigation}) => {
 
     const navigateToSignup = (role) => {
       if (role === "CLIENT") {
-        navigation.navigate("ClientSignup");
+        navigation.navigate("OtpVerification", { role: "CLIENT" });
       } else {
-        navigation.navigate("FreelancerSignup");
+        navigation.navigate("OtpVerification", { role: "FREELANCER" });
       }
     };
 

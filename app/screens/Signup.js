@@ -43,23 +43,17 @@ const Signup = ({ navigation, route }) => {
     setIsLoading(true);
     try {
       const apiService = require('../lib/apiService').default;
-      const data = await apiService.checkEmail(email);
+      const data = await apiService.sendVerificationOTP(email);
       console.log({data});
       
       if (!data.success) {
-        showToast("error", "Signup Failed", data.message || "Email check failed.");
-      } else if (data.exists) {
-        showToast("error", "Signup Failed", "User with this email already exists.");
+        showToast("error", "Error", data.message || "Failed to send OTP.");
       } else {
-        // Redirect to role-specific signup with email
-        if (role === "CLIENT") {
-          navigation.replace("ClientSignup", { email });
-        } else {
-          navigation.replace("FreelancerSignup", { email });
-        }
+        // Navigate to OTP verification screen with email and role
+        navigation.navigate("OtpVerification", { email, role });
       }
     } catch (error) {
-      showToast("error", "Signup Failed", error.message || "Network error. Please try again.");
+      showToast("error", "Error", error.message || "Network error. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -100,7 +94,7 @@ const Signup = ({ navigation, route }) => {
             {isLoading ? (
               <ActivityIndicator color="white" size="small" />
             ) : (
-              <Text style={styles.signupButtonText}>Check Email & Continue</Text>
+              <Text style={styles.signupButtonText}>Send Verification Code</Text>
             )}
           </TouchableOpacity>
 
