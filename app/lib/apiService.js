@@ -2,7 +2,8 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 
-const DEV_API_BASE_URL = "https://already-animal-state-five.trycloudflare.com/api";
+// const DEV_API_BASE_URL = "https://dans-round-villas-boots.trycloudflare.com/api";
+const DEV_API_BASE_URL = "https://api.birdearner.com/api";
 
 const PROD_API_BASE_URL = "https://api.birdearner.com/api";
 

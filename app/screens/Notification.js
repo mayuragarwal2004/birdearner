@@ -176,12 +176,16 @@ const NotificationScreen = () => {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={currentTheme.text} />
+        <View style={styles.handle} />
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.closeButton}
+        >
+          <Ionicons name="close" size={24} color={currentTheme.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Notifications</Text>
-        <TouchableOpacity onPress={handleMarkAllRead}>
-          <Text style={styles.markAllText}>Read All</Text>
+        <TouchableOpacity onPress={handleMarkAllRead} style={styles.markAllButton}>
+          <Text style={styles.markAllText}>Mark all as read</Text>
         </TouchableOpacity>
       </View>
 
@@ -202,8 +206,11 @@ const NotificationScreen = () => {
           contentContainerStyle={styles.listContent}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <MaterialCommunityIcons name="bell-sleep" size={64} color="#ccc" />
-              <Text style={styles.emptyText}>No notifications yet</Text>
+              <View style={styles.illustrationCircle}>
+                <MaterialCommunityIcons name="bell-off-outline" size={50} color="#762BAD" />
+              </View>
+              <Text style={styles.emptyTitle}>No notifications yet</Text>
+              <Text style={styles.emptySubtitle}>We'll notify you when something important happens.</Text>
             </View>
           }
           ListFooterComponent={hasMore && page > 1 && <ActivityIndicator size="small" color="#762BAD" style={{ padding: 10 }} />}
@@ -216,57 +223,62 @@ const NotificationScreen = () => {
 const getStyles = (currentTheme) => StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: currentTheme.background || '#f8f9fa'
+    backgroundColor: currentTheme.background || '#FFF'
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    paddingTop: 10,
     paddingHorizontal: 20,
-    paddingVertical: 15,
-    backgroundColor: currentTheme.cardBackground || '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.05)',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3
+    paddingBottom: 20,
+    alignItems: "center",
+    backgroundColor: currentTheme.background || "#FFF",
+  },
+  handle: {
+    width: 40,
+    height: 4,
+    backgroundColor: "#E0E0E0",
+    borderRadius: 2,
+    marginBottom: 10,
+  },
+  closeButton: {
+    position: "absolute",
+    right: 20,
+    top: 20,
+    zIndex: 1,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: currentTheme.text
+    fontSize: 20,
+    fontWeight: "bold",
+    color: currentTheme.text,
+    marginTop: 10,
   },
-  backButton: {
-    padding: 5
+  markAllButton: {
+    marginTop: 10,
   },
   markAllText: {
-    color: '#762BAD',
-    fontWeight: '600',
-    fontSize: 14
+    color: "#762BAD",
+    fontSize: 14,
+    fontWeight: "600",
   },
   listContent: {
-    paddingBottom: 20
+    paddingBottom: 40,
   },
   notificationItem: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
     padding: 16,
-    backgroundColor: currentTheme.cardBackground || '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.03)'
+    borderBottomColor: 'rgba(0,0,0,0.05)',
+    backgroundColor: currentTheme.cardBackground || '#FFF'
   },
   unreadItem: {
-    backgroundColor: currentTheme.isDark ? '#2a1b3d' : '#F3E5F5'
+    backgroundColor: '#FAF5FF'
   },
   iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 15
+    marginRight: 16
   },
   contentContainer: {
     flex: 1
@@ -274,6 +286,7 @@ const getStyles = (currentTheme) => StyleSheet.create({
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 4
   },
   title: {
@@ -281,15 +294,15 @@ const getStyles = (currentTheme) => StyleSheet.create({
     fontWeight: '700',
     color: currentTheme.text,
     flex: 1,
-    marginRight: 10
+    marginRight: 8
   },
   time: {
     fontSize: 11,
-    color: '#888'
+    color: '#999'
   },
   message: {
     fontSize: 13,
-    color: currentTheme.subText || '#666',
+    color: '#666',
     lineHeight: 18
   },
   dot: {
@@ -297,7 +310,7 @@ const getStyles = (currentTheme) => StyleSheet.create({
     height: 8,
     borderRadius: 4,
     backgroundColor: '#762BAD',
-    marginTop: 6,
+    marginTop: 4,
     marginLeft: 8
   },
   centerContainer: {
@@ -308,12 +321,29 @@ const getStyles = (currentTheme) => StyleSheet.create({
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: 100
+    paddingVertical: 100,
+    paddingHorizontal: 40
   },
-  emptyText: {
-    marginTop: 15,
-    fontSize: 16,
-    color: '#999'
+  illustrationCircle: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: "#F3E5F5",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 20
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: currentTheme.text,
+    marginBottom: 8
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
+    lineHeight: 20
   }
 });
 
