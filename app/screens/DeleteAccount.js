@@ -525,6 +525,7 @@ const getStyles = (currentTheme) =>
     scrollContent: {
       flexGrow: 1,
       padding: 20,
+      paddingBottom: 100,
     },
     loadingContainer: {
       justifyContent: "center",

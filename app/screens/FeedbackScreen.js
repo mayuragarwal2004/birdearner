@@ -514,6 +514,7 @@ const getStyles = (currentTheme) =>
     scrollContainer: {
       flexGrow: 1,
       padding: 20,
+      paddingBottom: 100,
     },
     header: {
       flexDirection: "row",
