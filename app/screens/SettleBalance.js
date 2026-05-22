@@ -15,15 +15,6 @@ import { Ionicons, FontAwesome5 } from "@expo/vector-icons";
 import { useTheme } from "../context/ThemeContext";
 import apiService from "../lib/apiService";
 import Toast from "react-native-toast-message";
-import Constants from 'expo-constants';
-
-const expoConfig = Constants.expoConfig;
-const extra = expoConfig.extra;
-const RAZORPAY_TEST_KEY = extra.RAZORPAY_TEST_KEY;
-const RAZORPAY_LIVE_KEY = extra.RAZORPAY_LIVE_KEY;
-
-// Enable this for development environment to bypass Razorpay
-const DEV_MODE = true;
 
 const SettleBalanceScreen = ({ navigation }) => {
     const [paymentSuccess, setPaymentSuccess] = useState(false);
@@ -64,7 +55,8 @@ const SettleBalanceScreen = ({ navigation }) => {
         try {
             setIsLoading(true);
 
-            if (!amount || parseFloat(amount) <= 0) {
+            const parsedAmount = parseFloat(amount);
+            if (!amount || parsedAmount <= 0) {
                 Toast.show({
                     type: "error",
                     text1: "Invalid Amount",
@@ -75,21 +67,28 @@ const SettleBalanceScreen = ({ navigation }) => {
 
             await apiService.init();
 
-            let paymentData;
+            // NEW SECURE FLOW
 
-            if (DEV_MODE) {
-                console.log("DEV MODE: Simulating settlement payment");
-                paymentData = {
-                    razorpay_payment_id: `dev_settle_${Date.now()}`,
-                };
-            } else {
-                const razorpayKey = userData?.isTestAccount ? RAZORPAY_TEST_KEY : RAZORPAY_LIVE_KEY;
+            // 1. Create order on backend (Type: SETTLEMENT)
+            const orderResponse = await apiService.createPaymentOrder(
+                parsedAmount, 
+                "Outstanding Balance Settlement",
+                "SETTLEMENT"
+            );
+
+                if (!orderResponse.success) {
+                    throw new Error(orderResponse.message || "Failed to initialize settlement order");
+                }
+
+                const { order } = orderResponse;
+
                 const options = {
                     description: "Settle outstanding balance of ₹" + amount,
                     image: pic,
-                    currency: "INR",
-                    key: razorpayKey,
-                    amount: Math.round(parseFloat(amount) * 100),
+                    currency: order.currency,
+                    key: order.key,
+                    amount: order.amount,
+                    order_id: order.id,
                     name: "Bird Earner Settlement",
                     prefill: {
                         email: email,
@@ -100,7 +99,27 @@ const SettleBalanceScreen = ({ navigation }) => {
                 };
 
                 try {
-                    paymentData = await RazorpayCheckout.open(options);
+                    const razorpayResponse = await RazorpayCheckout.open(options);
+
+                    // 2. Verify payment on backend
+                    const verificationResult = await apiService.verifyPayment({
+                        razorpay_order_id: razorpayResponse.razorpay_order_id,
+                        razorpay_payment_id: razorpayResponse.razorpay_payment_id,
+                        razorpay_signature: razorpayResponse.razorpay_signature
+                    });
+
+                    if (verificationResult.success) {
+                        setPaymentSuccess(true);
+                        await refreshUserData();
+                        Toast.show({
+                            type: "success",
+                            text1: "Settlement Successful",
+                            text2: "Your balance has been updated!",
+                        });
+                    } else {
+                        throw new Error(verificationResult.message || "Settlement verification failed");
+                    }
+
                 } catch (error) {
                     if (error?.code === 0 || error?.description === "Payment Cancelled") {
                         Toast.show({
@@ -111,38 +130,15 @@ const SettleBalanceScreen = ({ navigation }) => {
                     }
                     throw error;
                 }
-            }
-
-            await performSettlement(amount, paymentData.razorpay_payment_id);
-            setPaymentSuccess(true);
-            await refreshUserData();
         } catch (error) {
             console.error("Settlement error:", error);
             Toast.show({
                 type: "error",
                 text1: "Settlement Failed",
-                text2: "Please try again later",
+                text2: error.message || "Please try again later",
             });
         } finally {
             setIsLoading(false);
-        }
-    };
-
-    const performSettlement = async (settledAmount, paymentId) => {
-        const result = await apiService.settleFreelancerBalance(
-            parseFloat(settledAmount),
-            "Razorpay settlement",
-            paymentId
-        );
-
-        if (result.success) {
-            Toast.show({
-                type: "success",
-                text1: "Settlement Successful",
-                text2: "Your balance has been updated!",
-            });
-        } else {
-            throw new Error(result.message || "Failed to update balance");
         }
     };
 
@@ -189,7 +185,7 @@ const SettleBalanceScreen = ({ navigation }) => {
                                 <>
                                     <FontAwesome5 name="check-circle" size={20} color="#fff" />
                                     <Text style={styles.settleButtonText}>
-                                        {DEV_MODE ? "Pay Now (DEV)" : "Pay Now"}
+                                        Pay Now
                                     </Text>
                                 </>
                             )}

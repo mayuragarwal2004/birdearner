@@ -73,8 +73,6 @@ export default {
       eas: {
         projectId: "e9ba2ff2-13a3-4a7a-b07b-e184de3972f7",
       },
-      RAZORPAY_TEST_KEY: process.env.RAZORPAY_TEST_KEY,
-      RAZORPAY_LIVE_KEY: process.env.RAZORPAY_LIVE_KEY,
     },
   },
 };

@@ -20,18 +20,13 @@ import Constants from 'expo-constants';
 
 const expoConfig = Constants.expoConfig;
 const extra = expoConfig.extra;
-RAZORPAY_TEST_KEY = extra.RAZORPAY_TEST_KEY
-RAZORPAY_LIVE_KEY = extra.RAZORPAY_LIVE_KEY
-
-// Enable this for development environment to bypass Razorpay
-const DEV_MODE = true;
 
 const PaymentScreen = ({ navigation }) => {
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [amount, setAmount] = useState("");
   const [amountAnimation] = useState(new Animated.Value(0));
   const [isLoading, setIsLoading] = useState(false);
-  const { userData, userProfile } = useAuth();
+  const { userData, userProfile, refreshUserData } = useAuth();
   const pic =
     apiService.loadImageURI(userProfile?.profilePhoto) ||
     "https://example.com/default-profile-pic.png";
@@ -62,8 +57,9 @@ const PaymentScreen = ({ navigation }) => {
     try {
       setIsLoading(true);
 
+      const parsedAmount = parseFloat(amount);
       // Validate amount
-      if (!amount || parseFloat(amount) <= 0) {
+      if (!amount || parsedAmount <= 0) {
         Toast.show({
           type: "error",
           text1: "Invalid Amount",
@@ -74,107 +70,81 @@ const PaymentScreen = ({ navigation }) => {
 
       await apiService.init(); // Initialize API service with token
 
-      let paymentData;
+      // NEW SECURE FLOW
 
-      if (DEV_MODE) {
-        // Simulate payment in development mode
-        console.log("DEV MODE: Simulating Razorpay payment");
-        Toast.show({
-          type: "info",
-          text1: "Dev Mode",
-          text2: "Simulating payment success",
-        });
+      // 1. Create order on backend
+      const orderResponse = await apiService.createPaymentOrder(
+        parsedAmount,
+        "WALLET_DEPOSIT"
+      );
 
-        // Simulate payment data
-        paymentData = {
-          razorpay_payment_id: `dev_payment_${Date.now()}`,
-          razorpay_order_id: `dev_order_${Date.now()}`,
-          razorpay_signature: "dev_signature_mock",
-        };
-      } else {
-        // Use appropriate Razorpay key based on user's test status
-        const razorpayKey = userData?.isTestAccount
-          ? RAZORPAY_TEST_KEY
-          : RAZORPAY_LIVE_KEY;
-        const options = {
-          description: "Add ₹" + amount + " to wallet",
-          image: pic,
-          currency: "INR",
-          key: razorpayKey,
-          amount: amount * 100,
-          name: name,
-          prefill: {
-            email: email,
-            phone: userProfile?.mobileNumber || "",
-            name: name,
-          },
-          theme: { color: "#4B0082" },
-        };
-
-        try {
-          paymentData = await RazorpayCheckout.open(options);
-        } catch (error) {
-          if (
-            error?.code === 0 ||
-            error?.description === "Payment Cancelled" ||
-            error?.error?.description === "Payment Cancelled"
-          ) {
-            Toast.show({
-              type: "info",
-              text1: "Payment Cancelled",
-              text2: "You cancelled the payment",
-            });
-            return;
-          }
-          throw error;
-        }
+      if (!orderResponse.success) {
+        throw new Error(orderResponse.message || "Failed to initialize payment order");
       }
 
-      await updateWalletAmount(amount, paymentData.razorpay_payment_id);
-      setPaymentSuccess(true);
+      const { order } = orderResponse;
+
+      const options = {
+        description: "Add ₹" + amount + " to wallet",
+        image: pic,
+        currency: order.currency,
+        key: order.key,
+        amount: order.amount,
+        order_id: order.id,
+        name: name,
+        prefill: {
+          email: email,
+          phone: userProfile?.mobileNumber || "",
+          name: name,
+        },
+        theme: { color: "#4B0082" },
+      };
+
+      try {
+        const razorpayResponse = await RazorpayCheckout.open(options);
+
+        // 2. Verify payment on backend
+        const verificationResult = await apiService.verifyPayment({
+          razorpay_order_id: razorpayResponse.razorpay_order_id,
+          razorpay_payment_id: razorpayResponse.razorpay_payment_id,
+          razorpay_signature: razorpayResponse.razorpay_signature
+        });
+
+        if (verificationResult.success) {
+          setPaymentSuccess(true);
+          await refreshUserData();
+          Toast.show({
+            type: "success",
+            text1: "Payment Successful",
+            text2: "₹" + amount + " added to your wallet!",
+          });
+        } else {
+          throw new Error(verificationResult.message || "Payment verification failed");
+        }
+      } catch (error) {
+        if (
+          error?.code === 0 ||
+          error?.description === "Payment Cancelled" ||
+          error?.error?.description === "Payment Cancelled"
+        ) {
+          Toast.show({
+            type: "info",
+            text1: "Payment Cancelled",
+            text2: "You cancelled the payment",
+          });
+          return;
+        }
+        throw error;
+      }
     } catch (error) {
       console.error("Payment error:", error);
       Toast.show({
         type: "error",
         text1: "Payment Failed",
-        text2: DEV_MODE
-          ? "DEV MODE: Simulated payment failed"
-          : "Please try again",
+        text2: error.message || "Please try again later",
       });
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const updateWalletAmount = async (addedAmount, paymentId) => {
-    try {
-      if (!userData || !userData.id) {
-        throw new Error("User not authenticated");
-      }
-
-      const result = await apiService.addMoneyToWallet(
-        parseFloat(addedAmount),
-        "Razorpay deposit - Payment ID: " + paymentId,
-        paymentId
-      );
-
-      if (result.success) {
-        Toast.show({
-          type: "success",
-          text1: "Payment Successful",
-          text2: "₹" + addedAmount + " added to your wallet!",
-        });
-      } else {
-        throw new Error(result.message || "Failed to update wallet");
-      }
-    } catch (error) {
-      console.error("Wallet update error:", error);
-      Toast.show({
-        type: "error",
-        text1: "Wallet Update Failed",
-        text2: "Please contact support",
-      });
-      throw error;
     }
   };
 

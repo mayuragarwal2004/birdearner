@@ -2,8 +2,8 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 
-// const DEV_API_BASE_URL = "https://dans-round-villas-boots.trycloudflare.com/api";
-const DEV_API_BASE_URL = "https://api.birdearner.com/api";
+const DEV_API_BASE_URL = "https://spencer-released-framework-undertake.trycloudflare.com/api";
+// const DEV_API_BASE_URL = "https://api.birdearner.com/api";
 
 const PROD_API_BASE_URL = "https://api.birdearner.com/api";
 
@@ -963,25 +963,6 @@ class ApiService {
     }
   }
 
-  // Update client wallet balance
-  async updateClientWallet(userId, amount, operation = "add") {
-    try {
-      const response = await this.makeRequest(
-        `/clients/user/${userId}/wallet`,
-        {
-          method: "PUT",
-          body: JSON.stringify({
-            amount: parseFloat(amount),
-            operation,
-          }),
-        }
-      );
-      return response.data;
-    } catch (error) {
-      throw new Error(`Failed to update wallet: ${error.message}`);
-    }
-  }
-
   // Get client payment history
   async getClientPaymentHistory(userId, page = 1, limit = 20, status = null) {
     try {
@@ -1060,29 +1041,29 @@ class ApiService {
     }
   }
 
-  // Add money to client wallet
-  async addMoneyToWallet(amount, paymentMethod = "online", referenceId = null) {
+  // Create Razorpay payment order
+  async createPaymentOrder(amount, description = "", type = "WALLET_DEPOSIT") {
     try {
-      const response = await this.makeRequest("/wallet/client/deposit", {
+      const response = await this.makeRequest("/payments/create-order", {
         method: "POST",
-        body: JSON.stringify({ amount, paymentMethod, referenceId }),
+        body: JSON.stringify({ amount, description, type }),
       });
       return response;
     } catch (error) {
-      throw new Error(`Failed to add money to wallet: ${error.message}`);
+      throw new Error(`Failed to create payment order: ${error.message}`);
     }
   }
 
-  // Settle freelancer outstanding balance
-  async settleFreelancerBalance(amount, paymentMethod = "online", referenceId = null) {
+  // Verify Razorpay payment
+  async verifyPayment(paymentData) {
     try {
-      const response = await this.makeRequest("/wallet/freelancer/settle", {
+      const response = await this.makeRequest("/payments/verify-payment", {
         method: "POST",
-        body: JSON.stringify({ amount, paymentMethod, referenceId }),
+        body: JSON.stringify(paymentData),
       });
       return response;
     } catch (error) {
-      throw new Error(`Failed to settle freelancer balance: ${error.message}`);
+      throw new Error(`Failed to verify payment: ${error.message}`);
     }
   }
 
@@ -1476,7 +1457,7 @@ class ApiService {
   // Create a delete request
   async createDeleteRequest(reason = null) {
     try {
-      const response = await this.makeRequest("/delete-requests", {
+      const response = await this.makeRequest("/user/delete-requests", {
         method: "POST",
         body: JSON.stringify({ reason }),
       });
@@ -1489,7 +1470,7 @@ class ApiService {
   // Get user's delete request
   async getMyDeleteRequest() {
     try {
-      const response = await this.makeRequest("/delete-requests/my-request");
+      const response = await this.makeRequest("/user/delete-requests/my-request");
       return response;
     } catch (error) {
       this.handleApiError(error);
@@ -1499,9 +1480,21 @@ class ApiService {
   // Check delete request status
   async checkDeleteRequestStatus() {
     try {
-      const response = await this.makeRequest("/delete-requests/check-status");
-      return response;
+      const response = await this.makeRequest("/user/delete-requests/my-request");
+      if (response && response.success) {
+        return {
+          success: true,
+          data: {
+            hasPendingRequest: response.data?.hasPendingRequest ?? false,
+            deleteRequest: response.data?.hasPendingRequest ? response.data : null
+          }
+        };
+      }
+      return { success: true, data: { hasPendingRequest: false } };
     } catch (error) {
+      if (error.message.includes("404")) {
+        return { success: true, data: { hasPendingRequest: false } };
+      }
       this.handleApiError(error);
     }
   }
@@ -1509,11 +1502,9 @@ class ApiService {
   // Update user's delete request
   async updateDeleteRequest(requestId, data) {
     try {
-      const response = await this.makeRequest(`/delete-requests/${requestId}`, {
-        method: "PUT",
-        body: JSON.stringify(data),
-      });
-      return response;
+      // Backend doesn't support PUT for individual delete requests yet
+      // This is a placeholder for future implementation
+      throw new Error("Update not supported yet");
     } catch (error) {
       this.handleApiError(error);
     }
@@ -1522,10 +1513,9 @@ class ApiService {
   // Cancel user's delete request
   async cancelDeleteRequest(requestId) {
     try {
-      const response = await this.makeRequest(`/delete-requests/${requestId}`, {
-        method: "DELETE",
-      });
-      return response;
+      // Backend doesn't support single DELETE yet
+      // This is a placeholder for future implementation
+      throw new Error("Cancellation not supported yet");
     } catch (error) {
       this.handleApiError(error);
     }
