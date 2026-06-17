@@ -6,14 +6,15 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { ArrowLeft, Bank, User, CreditCard, ShieldCheck, CheckCircle } from "phosphor-react-native";
 import Toast from "react-native-toast-message";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import apiService from "../lib/apiService";
 import { useTheme } from "../context/ThemeContext";
 
-// Define state hooks
 const BankAccountDetailsScreen = ({ navigation }) => {
   const [bankName, setBankName] = useState("");
   const [accountHolderName, setAccountHolderName] = useState("");
@@ -25,8 +26,10 @@ const BankAccountDetailsScreen = ({ navigation }) => {
 
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
+  const iconColor = theme === "dark" ? "#C4B5FD" : (currentTheme.primary || "#4B0082");
+  const buttonColor = theme === "dark" ? "#762BAD" : (currentTheme.primary || "#350F6A");
 
-  const styles = getStyles(currentTheme);
+  const styles = getStyles(currentTheme, buttonColor);
 
   useEffect(() => {
     const fetchBankDetails = async () => {
@@ -87,152 +90,237 @@ const BankAccountDetailsScreen = ({ navigation }) => {
 
   const maskValue = (val) => {
     if (!val) return "";
+    if (val.length <= 2) return val;
     return "*".repeat(val.length - 2) + val.slice(-2);
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.maincon}>
-        <View style={styles.main}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={styles.backButton}
-          >
-            <Ionicons
-              name="arrow-back"
-              size={24}
-              color={currentTheme.text || black}
-            />
+    <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView 
+        style={styles.keyboardView}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <ScrollView 
+          style={styles.container}
+          contentContainerStyle={styles.contentContainer}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Header */}
+          <View style={styles.headerContainer}>
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={styles.backButton}
+            >
+              <ArrowLeft size={20} color={currentTheme.text || "#000"} />
+            </TouchableOpacity>
+            <View style={styles.headerTitleContainer}>
+              <Text style={styles.headerTitle}>Bank Account Details</Text>
+            </View>
+            <View style={styles.rightPlaceholder} />
+          </View>
+
+          {/* Select your bank */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Select your bank</Text>
+            <View style={styles.inputWrapper}>
+              <Bank size={24} color={iconColor} style={styles.inputIcon} />
+              <TextInput
+                placeholderTextColor="#9ca3af"
+                style={styles.input}
+                placeholder="Enter bank name"
+                value={bankName}
+                onChangeText={setBankName}
+              />
+            </View>
+          </View>
+
+          {/* Account holder name */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Account holder name</Text>
+            <View style={styles.inputWrapper}>
+              <User size={24} color={iconColor} style={styles.inputIcon} />
+              <TextInput
+                placeholderTextColor="#9ca3af"
+                style={styles.input}
+                placeholder="Enter account holder's name"
+                value={accountHolderName}
+                onChangeText={setAccountHolderName}
+              />
+            </View>
+          </View>
+
+          {/* Enter your account number */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Enter your account number</Text>
+            <View style={styles.inputWrapper}>
+              <CreditCard size={24} color={iconColor} style={styles.inputIcon} />
+              <TextInput
+                placeholderTextColor="#9ca3af"
+                style={styles.input}
+                placeholder="Enter account number"
+                value={isEditingAccountNumber ? accountNumber : maskValue(accountNumber)}
+                onFocus={() => {
+                  setIsEditingAccountNumber(true);
+                  setAccountNumber("");
+                }}
+                onChangeText={(text) => setAccountNumber(text)}
+                keyboardType="numeric"
+                secureTextEntry={!isEditingAccountNumber && accountNumber.length > 0}
+              />
+            </View>
+          </View>
+
+          {/* Confirm your account number */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Confirm your account number</Text>
+            <View style={styles.inputWrapper}>
+              <View style={styles.iconWithBadge}>
+                <CreditCard size={24} color={iconColor} style={styles.inputIcon} />
+                <View style={styles.badgeContainer}>
+                   <CheckCircle size={12} color={iconColor} weight="fill" />
+                </View>
+              </View>
+              <TextInput
+                placeholderTextColor="#9ca3af"
+                style={styles.input}
+                placeholder="Re-enter account number"
+                value={confirmAccountNumber}
+                onChangeText={setConfirmAccountNumber}
+                keyboardType="numeric"
+                secureTextEntry
+              />
+            </View>
+          </View>
+
+          {/* Enter your bank IFSC code */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Enter your bank IFSC code</Text>
+            <View style={styles.inputWrapper}>
+              <ShieldCheck size={24} color={iconColor} style={styles.inputIcon} />
+              <TextInput
+                placeholderTextColor="#9ca3af"
+                style={styles.input}
+                placeholder="Enter IFSC code"
+                value={isEditingIfscCode ? ifscCode : maskValue(ifscCode)}
+                onFocus={() => {
+                  setIsEditingIfscCode(true);
+                  setIfscCode("");
+                }}
+                onChangeText={(text) => setIfscCode(text)}
+                secureTextEntry={!isEditingIfscCode && ifscCode.length > 0}
+              />
+            </View>
+          </View>
+
+          {/* Save Button */}
+          <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+            <Text style={styles.saveButtonText}>Save</Text>
           </TouchableOpacity>
-          <Text style={styles.header}>Bank Account details</Text>
-        </View>
-
-        <Text style={styles.label}>Select your bank</Text>
-        <TextInput
-          placeholderTextColor="#c4c4c4"
-          style={styles.input}
-          placeholder="Enter bank name"
-          value={bankName}
-          onChangeText={setBankName}
-        />
-
-        <Text style={styles.label}>Account holder name</Text>
-        <TextInput
-          placeholderTextColor="#c4c4c4"
-          style={styles.input}
-          placeholder="Enter account holder's name"
-          value={accountHolderName}
-          onChangeText={setAccountHolderName}
-        />
-
-        <Text style={styles.label}>Enter your account number</Text>
-        <TextInput
-          placeholderTextColor="#c4c4c4"
-          style={styles.input}
-          placeholder="Enter account number"
-          value={
-            isEditingAccountNumber ? accountNumber : maskValue(accountNumber)
-          }
-          onFocus={() => {
-            setIsEditingAccountNumber(true);
-            setAccountNumber("");
-          }}
-          onChangeText={(text) => setAccountNumber(text)}
-          keyboardType="numeric"
-          secureTextEntry={isEditingAccountNumber}
-        />
-
-        <Text style={styles.label}>Confirm your account number</Text>
-        <TextInput
-          placeholderTextColor="#c4c4c4"
-          style={styles.input}
-          placeholder="Re-enter account number"
-          value={confirmAccountNumber}
-          onChangeText={setConfirmAccountNumber}
-          keyboardType="numeric"
-          secureTextEntry
-        />
-
-        <Text style={styles.label}>Enter your bank IFSC code</Text>
-        <TextInput
-          placeholderTextColor="#c4c4c4"
-          style={styles.input}
-          placeholder="Enter IFSC code"
-          value={isEditingIfscCode ? ifscCode : maskValue(ifscCode)}
-          onFocus={() => {
-            setIsEditingIfscCode(true);
-            setIfscCode("");
-          }}
-          onChangeText={(text) => setIfscCode(text)}
-          secureTextEntry={isEditingIfscCode}
-        />
-
-        <TouchableOpacity style={styles.signupButton} onPress={handleSave}>
-          <Text style={styles.signupButtonText}>Save</Text>
-        </TouchableOpacity>
-      </View>
-
+        </ScrollView>
+      </KeyboardAvoidingView>
       <Toast />
-    </ScrollView>
+    </SafeAreaView>
   );
 };
 
-const getStyles = (currentTheme) =>
-  StyleSheet.create({
-    container: {
-      flex: 1,
-      padding: 20,
-      backgroundColor: currentTheme.background || "#FFF",
-      paddingHorizontal: 30,
-    },
-    maincon: {
-      alignItems: "center",
-    },
-    main: {
-      marginTop: 45,
-      marginBottom: 50,
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 60,
-    },
-    header: {
-      fontSize: 24,
-      fontWeight: "bold",
-      textAlign: "center",
-      color: currentTheme.text,
-      marginRight: 40,
-    },
-    label: {
-      fontSize: 18,
-      color: currentTheme.text || "#000000",
-      marginBottom: 8,
-      fontWeight: "400",
-      textAlign: "center",
-    },
-    input: {
-      width: "100%",
-      height: 44,
-      backgroundColor: currentTheme.background3 || "#f4f0f0",
-      borderRadius: 12,
-      paddingHorizontal: 20,
-      marginBottom: 20,
-      fontSize: 14,
-      color: currentTheme.subText || "#000000",
-    },
-    signupButton: {
-      width: "40%",
-      height: 50,
-      backgroundColor: currentTheme.primary || "#6A0DAD",
-      borderRadius: 12,
-      alignItems: "center",
-      justifyContent: "center",
-      marginTop: 20,
-    },
-    signupButtonText: {
-      color: "white",
-      fontSize: 18,
-      fontWeight: "700",
-    },
-  });
+const getStyles = (currentTheme, buttonColor) => StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: currentTheme.background || "#FFFFFF",
+  },
+  keyboardView: {
+    flex: 1,
+  },
+  container: {
+    flex: 1,
+  },
+  contentContainer: {
+    paddingHorizontal: 24,
+    paddingTop: 20,
+    paddingBottom: 40,
+  },
+  headerContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 32,
+    justifyContent: "space-between",
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: currentTheme.border || "#E5E7EB",
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: currentTheme.background || "#FFFFFF",
+  },
+  headerTitleContainer: {
+    flex: 1,
+    alignItems: "center",
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: currentTheme.text || "#000000",
+  },
+  rightPlaceholder: {
+    width: 40,
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  label: {
+    fontSize: 15,
+    fontWeight: "500",
+    color: currentTheme.text || "#000000",
+    marginBottom: 8,
+  },
+  inputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: 56,
+    borderWidth: 1,
+    borderColor: currentTheme.border || "#E5E7EB",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    backgroundColor: currentTheme.background || "#FFFFFF",
+  },
+  inputIcon: {
+    marginRight: 12,
+  },
+  iconWithBadge: {
+    position: "relative",
+    marginRight: 12,
+  },
+  badgeContainer: {
+    position: "absolute",
+    bottom: -2,
+    right: -2,
+    backgroundColor: currentTheme.background || "#FFF",
+    borderRadius: 10,
+    padding: 1,
+  },
+  input: {
+    flex: 1,
+    fontSize: 15,
+    color: currentTheme.text || "#000000",
+    height: "100%",
+  },
+  saveButton: {
+    width: "100%",
+    height: 56,
+    backgroundColor: buttonColor,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 12,
+  },
+  saveButtonText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+});
 
 export default BankAccountDetailsScreen;
