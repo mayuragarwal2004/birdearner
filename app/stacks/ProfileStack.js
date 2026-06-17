@@ -10,7 +10,6 @@ import WithdrawalEarningScreen from "../screens/WithdrawalEarning";
 import BankAccountdetailsScreen from "../screens/BankAccountdetails";
 import NotificationsSettingScreen from "../screens/NotificationsSetting";
 import AppearanceScreen from "../screens/Appearance";
-import WalletScreen from "../screens/Wallet";
 import PaymentScreen from "../screens/PaymentScreen";
 import WalletClientScreen from "../screens/WalletClient";
 import SecurityScreen from "../screens/SecurityScreen";
@@ -74,11 +73,6 @@ const ProfileStack = () => (
     <Stack.Screen
       name="Appearance"
       component={AppearanceScreen}
-      options={{ headerShown: false }}
-    />
-    <Stack.Screen
-      name="Wallet"
-      component={WalletScreen}
       options={{ headerShown: false }}
     />
     <Stack.Screen

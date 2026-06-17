@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -9,7 +9,8 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { ArrowLeft, Wallet, ClockCounterClockwise } from "phosphor-react-native";
 import { useAuth } from "../context/NewAuthContext";
 import { useTheme } from "../context/ThemeContext";
 import apiService from "../lib/apiService";
@@ -23,7 +24,11 @@ const WalletClientScreen = ({ navigation }) => {
 
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
-  const styles = getStyles(currentTheme);
+  
+  const isDark = theme === "dark";
+  const primaryColor = isDark ? "#C4B5FD" : (currentTheme.primary || "#4B0082");
+  
+  const styles = useMemo(() => getStyles(currentTheme, primaryColor), [currentTheme, primaryColor]);
 
   // Fetch wallet data when the screen is focused
   useEffect(() => {
@@ -41,7 +46,7 @@ const WalletClientScreen = ({ navigation }) => {
   const fetchWalletData = async () => {
     try {
       setLoading(true);
-      
+
       // Fetch wallet information
       const walletResponse = await apiService.getClientWalletInfo();
       if (walletResponse.success) {
@@ -51,7 +56,6 @@ const WalletClientScreen = ({ navigation }) => {
       // Fetch transaction history
       const historyResponse = await apiService.getClientTransactionHistory();
       if (historyResponse.success) {
-        console.log({ transactions: historyResponse.data.transactions });
         setPaymentHistory(historyResponse.data.transactions || []);
       }
     } catch (error) {
@@ -70,26 +74,17 @@ const WalletClientScreen = ({ navigation }) => {
 
   const formatTransactionType = (type) => {
     switch (type) {
-      case "DEPOSIT":
-        return "Wallet Deposit";
-      case "WITHDRAWAL":
-        return "Wallet Withdrawal";
-      case "JOB_PAYMENT":
-        return "Job Payment";
-      case "JOB_REFUND":
-        return "Job Refund";
-      case "JOB_RESERVE":
-        return "Job Reserve";
-      case "JOB_RELEASE":
-        return "Job Release";
-      case "PENALTY":
-        return "Late Penalty";
-      case "BONUS":
-        return "Early Bonus";
-      case "PLATFORM_FEE":
-        return "Platform Fee";
+      case "DEPOSIT": return "Wallet Deposit";
+      case "WITHDRAWAL": return "Wallet Withdrawal";
+      case "JOB_PAYMENT": return "Job Payment";
+      case "JOB_REFUND": return "Job Refund";
+      case "JOB_RESERVE": return "Job Reserve";
+      case "JOB_RELEASE": return "Job Release";
+      case "PENALTY": return "Late Penalty";
+      case "BONUS": return "Early Bonus";
+      case "PLATFORM_FEE": return "Platform Fee";
       default:
-        return type?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || "Unknown";
+        return type?.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()) || "Unknown";
     }
   };
 
@@ -100,178 +95,182 @@ const WalletClientScreen = ({ navigation }) => {
     // Format the date and time
     const formattedDate = date.toLocaleDateString("en-US", {
       year: "numeric",
-      month: "long",
+      month: "short",
       day: "numeric",
     });
     const formattedTime = date.toLocaleTimeString("en-US", {
       hour: "2-digit",
       minute: "2-digit",
-      second: "2-digit",
       hour12: true,
     });
 
     // Determine if this is a credit or debit transaction
-    const isCredit = ['DEPOSIT', 'JOB_REFUND', 'JOB_RELEASE', 'BONUS'].includes(item?.transactionType);
-    const isDebit = ['WITHDRAWAL', 'JOB_PAYMENT', 'JOB_RESERVE', 'PENALTY', 'PLATFORM_FEE'].includes(item?.transactionType);
+    const isCredit = ["DEPOSIT", "JOB_REFUND", "JOB_RELEASE", "BONUS"].includes(item?.transactionType);
+    const isDebit = ["WITHDRAWAL", "JOB_PAYMENT", "JOB_RESERVE", "PENALTY", "PLATFORM_FEE"].includes(item?.transactionType);
 
     return (
-      <View style={[styles.paymentItem]}>
-        {/* Triangle Indicator and Payment Details */}
-        <View style={{ flexDirection: "row", alignItems: "center" }}>
-          {/* Payment Details */}
-          <View style={styles.paymentDetails}>
-            {/* Triangle Indicator */}
-            <View style={styles.indicatorName}>
-              <View
-                style={[
-                  styles.triangleIndicator,
-                  {
-                    borderLeftColor: isCredit ? "#71C232" : "#FF3B30",
-                  },
-                ]}
-              />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.name}>
-                  {formatTransactionType(item?.transactionType)} 
-                </Text>
-                {item?.description && (
-                  <Text style={styles.description}>
-                    {item.description}
-                  </Text>
-                )}
-                {item?.jobTitle && (
-                  <Text style={styles.jobTitle}>
-                    Job: {item.jobTitle}
-                  </Text>
-                )}
-              </View>
+      <View style={styles.paymentItem}>
+        <View style={styles.paymentItemHeader}>
+          <View style={styles.paymentItemLeft}>
+            <View style={[styles.transactionDot, { backgroundColor: isCredit ? "#4CAF50" : "#FF3B30" }]} />
+            <View>
+              <Text style={styles.transactionName}>{formatTransactionType(item?.transactionType)}</Text>
+              {item?.description && (
+                <Text style={styles.transactionDescription} numberOfLines={1}>{item.description}</Text>
+              )}
             </View>
-            <Text style={[
-              styles.amount,
-              { 
-                color: isCredit ? "#71C232" : "#FF3B30"
-              }
-            ]}>
-              {isDebit ? '-' : '+'}₹{parseFloat(item?.amount || 0).toFixed(2)}
-            </Text>
           </View>
+          <Text style={[styles.transactionAmount, { color: isCredit ? "#4CAF50" : "#FF3B30" }]}>
+            {isDebit ? "-" : "+"}₹{parseFloat(item?.amount || 0).toFixed(2)}
+          </Text>
         </View>
 
-        {/* Date and Balance Info */}
-        <View
-          style={[
-            styles.paymentDetailsn,
-            {
-              flexDirection: "row",
-              justifyContent: "space-between",
-              alignItems: "center",
-            },
-          ]}
-        >
-          <Text style={styles.date}>
-            {formattedDate} | {formattedTime}
-          </Text>
-          <Text style={styles.balanceInfo}>
-            Balance: ₹{parseFloat(item?.balanceAfter || 0).toFixed(2)}
-          </Text>
+        <View style={styles.paymentItemFooter}>
+          <Text style={styles.transactionDate}>{formattedDate} | {formattedTime}</Text>
+          <Text style={styles.transactionBalance}>Bal: ₹{parseFloat(item?.balanceAfter || 0).toFixed(2)}</Text>
         </View>
       </View>
     );
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.main}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backButton}
-        >
-          <Ionicons
-            name="arrow-back"
-            size={24}
-            color={currentTheme.text || "black"}
-          />
-        </TouchableOpacity>
-        <Text style={styles.header}>Wallet</Text>
-      </View>
-
-      {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#6A0DAD" />
-          <Text style={styles.loadingText}>Loading wallet data...</Text>
-        </View>
-      ) : (
-        <>
-          <Text style={styles.label}>Total Amount in Wallet</Text>
-          <Text style={styles.colorText}>
-            ₹{walletData?.totalBalance?.toFixed(2) || "0.00"}
-          </Text>
-          
-          {walletData?.reservedAmount > 0 && (
-            <View style={styles.reservedContainer}>
-              <Text style={styles.reservedLabel}>Reserved Amount</Text>
-              <Text style={styles.reservedAmount}>
-                ₹{walletData.reservedAmount.toFixed(2)}
-              </Text>
-            </View>
-          )}
-
-          <View style={styles.availableContainer}>
-            <Text style={styles.availableLabel}>Available Balance</Text>
-            <Text style={styles.availableAmount}>
-              ₹{walletData?.availableBalance?.toFixed(2) || "0.00"}
-            </Text>
-          </View>
-
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={styles.headerContainer}>
           <TouchableOpacity
-            style={styles.addAmountButton}
-            onPress={() => navigation.navigate("Payment")}
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
+            activeOpacity={0.7}
           >
-            <Text style={styles.addAmount}>Add Amount to Wallet</Text>
+            <ArrowLeft size={20} color={currentTheme.text || "#000"} />
           </TouchableOpacity>
-
-          <View style={styles.historyContainer}>
-            <Text style={styles.headerPay}>Payment History</Text>
-            {paymentHistory.length > 0 ? (
-              <FlatList
-                data={paymentHistory}
-                renderItem={renderItem}
-                keyExtractor={(item) => item.id}
-                style={styles.historyList}
-                refreshControl={
-                  <RefreshControl
-                    refreshing={refreshing}
-                    onRefresh={onRefresh}
-                    colors={["#6A0DAD"]}
-                    tintColor="#6A0DAD"
-                  />
-                }
-              />
-            ) : (
-              <Text style={styles.noHistory}>No payment history available.</Text>
-            )}
+          <View style={styles.headerTitleContainer}>
+            <Text style={styles.headerTitle}>Wallet</Text>
           </View>
-        </>
-      )}
-    </View>
+          <View style={styles.rightPlaceholder} />
+        </View>
+
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={primaryColor} />
+            <Text style={styles.loadingText}>Loading wallet data...</Text>
+          </View>
+        ) : (
+          <View style={styles.content}>
+            {/* Wallet Balance Section */}
+            <View style={styles.balanceSection}>
+              <Text style={styles.balanceLabel}>Total Amount in Wallet</Text>
+              <Text style={styles.balanceAmount}>
+                ₹{walletData?.totalBalance?.toFixed(2) || "0.00"}
+              </Text>
+
+              {walletData?.reservedAmount > 0 && (
+                <Text style={styles.secondaryBalance}>
+                  Reserved: ₹{walletData?.reservedAmount?.toFixed(2)}
+                </Text>
+              )}
+              {walletData?.availableBalance > 0 && (
+                <Text style={[styles.secondaryBalance, { color: "#4CAF50" }]}>
+                  Available: ₹{walletData?.availableBalance?.toFixed(2)}
+                </Text>
+              )}
+
+              <TouchableOpacity
+                style={styles.addAmountButton}
+                onPress={() => navigation.navigate("Payment")}
+              >
+                <Text style={styles.addAmountButtonText}>Add Amount to Wallet</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Divider */}
+            <View style={styles.divider} />
+
+            {/* History Section */}
+            <View style={styles.historySection}>
+              <Text style={styles.historyTitle}>Payment History</Text>
+
+              {paymentHistory.length > 0 ? (
+                <FlatList
+                  data={paymentHistory}
+                  renderItem={renderItem}
+                  keyExtractor={(item, index) => item?.id || index.toString()}
+                  contentContainerStyle={styles.historyList}
+                  showsVerticalScrollIndicator={false}
+                  refreshControl={
+                    <RefreshControl
+                      refreshing={refreshing}
+                      onRefresh={onRefresh}
+                      colors={[primaryColor]}
+                      tintColor={primaryColor}
+                    />
+                  }
+                />
+              ) : (
+                <View style={styles.emptyHistoryContainer}>
+                  <View style={styles.emptyIconContainer}>
+                    <View style={styles.emptyIconBackground}>
+                      <Wallet size={48} color={primaryColor} weight="fill" style={{ opacity: 0.8 }} />
+                      <View style={styles.clockBadge}>
+                        <ClockCounterClockwise size={16} color="#FFF" weight="bold" />
+                      </View>
+                    </View>
+                  </View>
+                  <Text style={styles.emptyHistoryTitle}>No payment history available.</Text>
+                  <Text style={styles.emptyHistorySubtitle}>Your transactions will appear here.</Text>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
+      </View>
+    </SafeAreaView>
   );
 };
 
-const getStyles = (currentTheme) =>
+const getStyles = (currentTheme, primaryColor) =>
   StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: currentTheme.background || "#FFFFFF",
+    },
     container: {
       flex: 1,
-      padding: 20,
-      backgroundColor: currentTheme.background || "#FFF",
-      paddingHorizontal: 40,
     },
-    main: {
-      marginTop: 45,
-      marginBottom: 50,
-      display: "flex",
+    headerContainer: {
       flexDirection: "row",
-      gap: 100,
       alignItems: "center",
+      paddingHorizontal: 24,
+      paddingTop: 20,
+      marginBottom: 30,
+      justifyContent: "space-between",
+    },
+    backButton: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: currentTheme.border || "#E5E7EB",
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: currentTheme.background || "#FFFFFF",
+    },
+    headerTitleContainer: {
+      flex: 1,
+      alignItems: "center",
+    },
+    headerTitle: {
+      fontSize: 20,
+      fontWeight: "bold",
+      color: currentTheme.text || "#000000",
+    },
+    rightPlaceholder: {
+      width: 40,
+    },
+    content: {
+      flex: 1,
+      paddingHorizontal: 24,
     },
     loadingContainer: {
       flex: 1,
@@ -279,168 +278,157 @@ const getStyles = (currentTheme) =>
       alignItems: "center",
     },
     loadingText: {
-      marginTop: 10,
-      fontSize: 16,
+      marginTop: 12,
+      fontSize: 15,
       color: currentTheme.text || "#000",
     },
-    reservedContainer: {
-      marginVertical: 10,
-      padding: 15,
-      backgroundColor: "#FFF3CD",
-      borderRadius: 8,
-      borderLeftWidth: 4,
-      borderLeftColor: "#FFB000",
-    },
-    reservedLabel: {
-      fontSize: 14,
-      color: "#856404",
-      fontWeight: "500",
-    },
-    reservedAmount: {
-      fontSize: 18,
-      color: "#856404",
-      fontWeight: "bold",
-    },
-    availableContainer: {
-      marginBottom: 20,
-      padding: 10,
-      backgroundColor: currentTheme.cardBackground || "#F8F9FA",
-      borderRadius: 8,
+    balanceSection: {
       alignItems: "center",
+      marginBottom: 30,
     },
-    availableLabel: {
+    balanceLabel: {
+      fontSize: 16,
+      color: currentTheme.text || "#333",
+      marginBottom: 8,
+    },
+    balanceAmount: {
+      fontSize: 40,
+      fontWeight: "bold",
+      color: primaryColor,
+    },
+    secondaryBalance: {
       fontSize: 14,
       color: currentTheme.subText || "#666",
-      marginBottom: 5,
-    },
-    availableAmount: {
-      fontSize: 20,
-      color: "#28A745",
-      fontWeight: "600",
+      marginTop: 8,
     },
     addAmountButton: {
-      width: "90%",
-      margin: "auto",
-      padding: 10,
-      backgroundColor: "#6A0DAD",
+      marginTop: 20,
+      backgroundColor: primaryColor,
+      paddingVertical: 12,
+      paddingHorizontal: 24,
       borderRadius: 12,
+    },
+    addAmountButtonText: {
+      color: "#FFF",
+      fontWeight: "bold",
+      fontSize: 16,
+    },
+    divider: {
+      height: 1,
+      backgroundColor: currentTheme.border || "#F0F0F0",
+      width: "100%",
+      marginBottom: 24,
+    },
+    historySection: {
+      flex: 1,
+    },
+    historyTitle: {
+      fontSize: 18,
+      fontWeight: "bold",
+      color: currentTheme.text || "#000",
+      marginBottom: 20,
+    },
+    emptyHistoryContainer: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingBottom: 50,
+    },
+    emptyIconContainer: {
+      marginBottom: 24,
       alignItems: "center",
       justifyContent: "center",
     },
-    addAmount: {
-      color: "#fff",
+    emptyIconBackground: {
+      width: 100,
+      height: 80,
+      backgroundColor: currentTheme.theme === "dark" ? "#2e1f4a" : "#F3E8FF",
+      borderRadius: 16,
+      alignItems: "center",
+      justifyContent: "center",
+      position: "relative",
+    },
+    clockBadge: {
+      position: "absolute",
+      bottom: -6,
+      right: -6,
+      backgroundColor: primaryColor,
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 2,
+      borderColor: currentTheme.background || "#FFF",
+    },
+    emptyHistoryTitle: {
+      fontSize: 16,
       fontWeight: "bold",
-      fontSize: 20,
-    },
-    header: {
-      fontSize: 24,
-      fontWeight: "bold",
-      textAlign: "center",
-      color: currentTheme.text,
-    },
-    headerPay: {
-      fontSize: 22,
-      fontWeight: "600",
-      marginBottom: 20,
-      textAlign: "center",
-      marginTop: 25,
-      color: "#8F8F8F",
-    },
-    label: {
-      fontSize: 18,
-      color: currentTheme.text || "#000000",
+      color: currentTheme.text || "#000",
       marginBottom: 8,
-      fontWeight: "400",
-      textAlign: "center",
     },
-    colorText: {
-      fontSize: 30,
-      fontWeight: "600",
-      color: "#4B0082",
-      textAlign: "center",
-      marginBottom: 20,
-    },
-    historyContainer: {
-      flex: 1,
-      marginTop: 20,
+    emptyHistorySubtitle: {
+      fontSize: 14,
+      color: currentTheme.subText || "#666",
     },
     historyList: {
-      marginTop: 10,
+      paddingBottom: 40,
     },
     paymentItem: {
-      backgroundColor: currentTheme.cardBackground || "#fff",
-      marginVertical: 5,
-      borderRadius: 8,
-      elevation: 3,
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.2,
-      shadowRadius: 1.5,
-      paddingVertical: 10,
-      paddingHorizontal: 15,
+      backgroundColor: currentTheme.theme === "dark" ? "#1f2937" : "#F9FAFB",
+      borderRadius: 12,
+      padding: 16,
+      marginBottom: 12,
     },
-    triangleIndicator: {
-      width: 0,
-      height: 0,
-      borderTopWidth: 8,
-      borderBottomWidth: 8,
-      borderLeftWidth: 16,
-      borderStyle: "solid",
-      borderTopColor: "transparent",
-      borderBottomColor: "transparent",
+    paymentItemHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      marginBottom: 12,
+    },
+    paymentItemLeft: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      flex: 1,
       marginRight: 10,
     },
-    paymentDetails: {
-      flex: 1,
+    transactionDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      marginTop: 6,
+      marginRight: 10,
+    },
+    transactionName: {
+      fontSize: 15,
+      fontWeight: "600",
+      color: currentTheme.text || "#000",
+      marginBottom: 4,
+    },
+    transactionDescription: {
+      fontSize: 13,
+      color: currentTheme.subText || "#666",
+    },
+    transactionAmount: {
+      fontSize: 16,
+      fontWeight: "bold",
+    },
+    paymentItemFooter: {
       flexDirection: "row",
       justifyContent: "space-between",
       alignItems: "center",
-      marginBottom: 5,
+      borderTopWidth: 1,
+      borderTopColor: currentTheme.border || "#E5E7EB",
+      paddingTop: 12,
     },
-    indicatorName: {
-      flex: 1,
-      flexDirection: "row",
-      justifyContent: "flex-start",
-      alignItems: "center",
-    },
-    name: {
-      fontSize: 15,
-      fontWeight: "500",
-      color: currentTheme.text || "#333",
-      marginBottom: 2,
-    },
-    description: {
+    transactionDate: {
       fontSize: 12,
       color: currentTheme.subText || "#666",
-      fontStyle: "italic",
     },
-    jobTitle: {
-      fontSize: 11,
-      color: "#4B0082",
-      fontWeight: "500",
-      marginTop: 2,
-    },
-    amount: {
-      fontSize: 16,
-      fontWeight: "600",
-    },
-    date: {
+    transactionBalance: {
       fontSize: 12,
-      color: "#666",
-    },
-    balanceInfo: {
-      fontSize: 12,
-      color: "#4B0082",
+      color: primaryColor,
       fontWeight: "500",
-    },
-    noHistory: {
-      fontSize: 16,
-      color: "#888",
-      textAlign: "center",
-      marginTop: 20,
-    },
-    paymentDetailsn: {
-      // Additional styles if needed
     },
   });
 
