@@ -49,8 +49,11 @@ export const usePriorityWheel = (onPriorityPress) => {
 
   // PanResponder for wheel
   const wheelPanResponder = PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onMoveShouldSetPanResponder: () => true,
+    onStartShouldSetPanResponder: () => false,
+    onMoveShouldSetPanResponder: (_, gestureState) => {
+      // Only capture the gesture if the user swipes horizontally more than 10 pixels
+      return Math.abs(gestureState.dx) > 10;
+    },
     onPanResponderRelease: (_, gestureState) => {
       if (gestureState.dx > 50) {
         handlePriorityWheel("right"); // Swipe right

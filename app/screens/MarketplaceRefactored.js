@@ -7,9 +7,11 @@ import {
   ScrollView,
   Platform,
   RefreshControl,
+  TouchableOpacity
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import Toast from "react-native-toast-message";
+import { ArrowLeft, CaretRight } from "phosphor-react-native";
 
 // Theme and Context
 import { useTheme } from "../context/ThemeContext";
@@ -189,8 +191,24 @@ const MarketplaceScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Header */}
+      <View style={styles.headerContainer}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.headerButton}
+          activeOpacity={0.7}
+        >
+          <ArrowLeft size={24} color={currentTheme.text || "#000"} />
+        </TouchableOpacity>
+        
+        <Text style={styles.headerTitle}>Marketplace</Text>
+        
+        <View style={{ width: 44 }} />
+      </View>
+
       <ScrollView
         contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -202,9 +220,6 @@ const MarketplaceScreen = ({ navigation }) => {
           />
         }
       >
-        {/* Header */}
-        <Text style={styles.title}>Marketplace</Text>
-
         {/* User Services Section */}
         <UserServicesSection
           isFreelancer={isFreelancer}
@@ -222,7 +237,6 @@ const MarketplaceScreen = ({ navigation }) => {
           onSliderLayout={onSliderLayout}
           onIncrementDistance={incrementDistance}
           onDecrementDistance={decrementDistance}
-
           isLoading={filterLoading}
           theme={currentTheme}
         />
@@ -241,17 +255,21 @@ const MarketplaceScreen = ({ navigation }) => {
           onPriorityPress={handlePriorityPress}
           theme={currentTheme}
         />
+
+        {/* All Jobs Button - Enhanced Priority Wheel */}
+        <View style={styles.allJobsWrapper}>
+          <AllJobsButton
+            onPress={handleAllJobsPress}
+            currentPriority={getCurrentPriority()}
+            rotation={rotation}
+            panHandlers={wheelPanResponder.panHandlers}
+            jobs={jobs}
+          />
+        </View>
+
+
+
       </ScrollView>
-
-      {/* All Jobs Button - Enhanced Priority Wheel */}
-      <AllJobsButton
-        onPress={handleAllJobsPress}
-        currentPriority={getCurrentPriority()}
-        rotation={rotation}
-        panHandlers={wheelPanResponder.panHandlers}
-        jobs={jobs}
-      />
-
       <Toast />
     </SafeAreaView>
   );
@@ -262,19 +280,39 @@ const getStyles = (currentTheme) =>
     container: {
       flex: 1,
       backgroundColor: currentTheme.background || "#fff",
-      paddingTop: 30,
+    },
+    headerContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 20,
+      paddingVertical: 15,
+      marginTop: Platform.OS === 'android' ? 20 : 0,
+    },
+    headerButton: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: currentTheme.theme === 'dark' ? '#1f2937' : '#F3E8FF',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    headerTitle: {
+      fontSize: 22,
+      fontWeight: "bold",
+      color: currentTheme.text,
     },
     scrollContent: {
       padding: 20,
-      paddingBottom: Platform.OS === "ios" ? 90 : 75, // Add bottom padding to prevent tab bar overlap
+      paddingBottom: Platform.OS === "ios" ? 40 : 30, 
     },
-    title: {
-      fontSize: 24,
-      fontWeight: "bold",
-      textAlign: "center",
+    allJobsWrapper: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: -20, // Pull it closer to the priority cards if needed
       marginBottom: 20,
-      color: currentTheme.text,
     },
+
   });
 
 export default MarketplaceScreen;
