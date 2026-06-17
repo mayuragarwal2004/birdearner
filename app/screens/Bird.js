@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   Text,
@@ -7,139 +7,139 @@ import {
   FlatList,
   StyleSheet,
   Platform,
-  Keyboard,
+  KeyboardAvoidingView,
 } from "react-native";
 import { useTheme } from "../context/ThemeContext";
-import { useKeyboard } from "../context/KeyboardContext";
-import { MaterialIcons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
+import { LinearGradient } from "expo-linear-gradient";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { ArrowLeft, ArrowsClockwise, CaretRight, PaperPlaneRight } from "phosphor-react-native";
 import apiService from "../lib/apiService";
+import { useKeyboard } from "../context/KeyboardContext";
 
 const Bird = () => {
-  const [messages, setMessages] = useState([]); // Chat messages
-  const [input, setInput] = useState(""); // Input text
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [showMenu, setShowMenu] = useState(false);
+  const flatListRef = useRef(null);
 
   const { theme, themeStyles } = useTheme();
-  const { isKeyboardVisible } = useKeyboard();
   const currentTheme = themeStyles[theme];
+  const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
+  const { isKeyboardVisible } = useKeyboard();
 
-  const styles = getStyles(currentTheme, isKeyboardVisible);
+  // Dynamic colors for dark/light mode balance
+  const isDark = theme === "dark";
+  const gradientColors = isDark 
+    ? ["#350F6A", currentTheme.background || "#111827"] 
+    : ["#4B0082", currentTheme.background || "#F9FAFB"];
+  const headerTextColor = "#FFFFFF";
+  const titleColor = isDark ? "#FFFFFF" : "#1e1b4b";
+  const subtitleColor = isDark ? "#9ca3af" : "#4b5563";
+  const cardBg = isDark ? "#1f2937" : "#F4F5F7";
+  const iconBg = isDark ? "#374151" : "#EBEBF0";
+  const textColor = isDark ? "#FFFFFF" : "#111827";
+  const primaryPurple = isDark ? "#C4B5FD" : "#4B0082";
+  const inputBg = isDark ? "#1f2937" : "#FFFFFF";
+  const inputBorder = isDark ? "#374151" : "#E5E7EB";
 
-  // Send a new message
-  const sendMessage = async () => {
-    if (!input.trim()) return;
+  const sendMessage = async (overrideText = null) => {
+    const textToSend = overrideText !== null ? overrideText : input;
+    if (!textToSend.trim()) return;
 
-    const userMessage = {
-      sender: "user",
-      text: input,
-    };
-
-    // Add user message to the chat history
-    setMessages((prevMessages) => [...prevMessages, userMessage]);
+    const userMessage = { sender: "user", text: textToSend };
+    setMessages((prev) => [...prev, userMessage]);
+    if (overrideText === null) setInput("");
 
     try {
       setLoading(true);
-
-      // Prepare chat history
       const history = messages.map((msg) => msg.text);
 
-      console.log("test 1");
-
-      // API request to backend
       const response = await fetch(`${apiService.baseURL}/faqs/ai`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: input, history }),
+        body: JSON.stringify({ question: textToSend, history }),
       });
-      console.log("test 2");
 
       const data = await response.json();
-      console.log("test 3");
-
-      console.log(response);
 
       if (response.ok) {
         const botMessage = {
           sender: "bot",
           text: data.answer || "I couldn't process that. Please try again.",
         };
-        console.log("test 4");
-
-        // Add bot response to the chat
-        setMessages((prevMessages) => [...prevMessages, botMessage]);
-        console.log("test 5");
+        setMessages((prev) => [...prev, botMessage]);
       } else {
         throw new Error(data.error || "An error occurred.");
       }
     } catch (error) {
       console.log("Error sending message:", error);
-      console.log("Error sending message:", JSON.stringify(error));
-
       const errorMessage = {
         sender: "bot",
         text: "Oops! Something went wrong. Please try again.",
       };
-
-      setMessages((prevMessages) => [...prevMessages, errorMessage]);
+      setMessages((prev) => [...prev, errorMessage]);
     } finally {
-      setInput("");
       setLoading(false);
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 100);
     }
   };
 
   const resetChat = () => {
     setMessages([]);
-    setShowMenu(false);
+    setInput("");
   };
 
-  // Render individual message
   const renderMessage = ({ item }) => {
     const isUser = item.sender === "user";
     return (
-      <View
-        style={[
-          styles.messageContainer,
-          isUser ? styles.userMessage : styles.botMessage,
-        ]}
-      >
-        <Text
+      <View style={[styles.messageWrapper, isUser ? styles.messageWrapperUser : styles.messageWrapperBot]}>
+        <View
           style={[
-            styles.messageText,
-            isUser ? { color: "#fff" } : { color: "#000" },
+            styles.messageBubble,
+            isUser ? { backgroundColor: "#4B0082" } : { backgroundColor: cardBg },
           ]}
         >
-          {item.text}
-        </Text>
+          <Text style={[styles.messageText, isUser ? { color: "#FFF" } : { color: textColor }]}>
+            {item.text}
+          </Text>
+        </View>
       </View>
     );
   };
 
   const EmptyChat = () => (
     <View style={styles.emptyContainer}>
-      <Text style={styles.welcomeTitle}>Welcome to BirdBot!</Text>
-      <Text style={styles.welcomeSubtitle}>Your AI Assistant</Text>
-      <Text style={styles.welcomeText}>I can help you with:</Text>
+      <Text style={[styles.welcomeTitle, { color: titleColor }]}>Welcome to BirdBot!</Text>
+      <Text style={[styles.welcomeSubtitle, { color: subtitleColor }]}>Your AI Assistant</Text>
+      <Text style={[styles.helpText, { color: textColor }]}>I can help you with:</Text>
+      
       <View style={styles.suggestionContainer}>
-        <TouchableOpacity
-          style={styles.suggestionButton}
-          onPress={() => setInput("What is BirdEarner?")}
-        >
-          <Text style={styles.suggestionText}>🦜 What is BirdEarner?</Text>
+        <TouchableOpacity style={[styles.suggestionButton, { backgroundColor: cardBg }]} onPress={() => sendMessage("What is BirdEarner?")}>
+          <View style={[styles.suggestionIconWrapper, { backgroundColor: iconBg }]}>
+            <Text style={styles.emojiIcon}>🦜</Text>
+          </View>
+          <Text style={[styles.suggestionText, { color: textColor }]}>What is BirdEarner?</Text>
+          <CaretRight size={20} color={primaryPurple} weight="bold" />
         </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.suggestionButton}
-          onPress={() => setInput("What services can I offer?")}
-        >
-          <Text style={styles.suggestionText}>
-            🛠️ What services can I offer?
-          </Text>
+
+        <TouchableOpacity style={[styles.suggestionButton, { backgroundColor: cardBg }]} onPress={() => sendMessage("What services can I offer?")}>
+          <View style={[styles.suggestionIconWrapper, { backgroundColor: iconBg }]}>
+            <Text style={styles.emojiIcon}>🛠️</Text>
+          </View>
+          <Text style={[styles.suggestionText, { color: textColor }]}>What services can I offer?</Text>
+          <CaretRight size={20} color={primaryPurple} weight="bold" />
         </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.suggestionButton}
-          onPress={() => setInput("How does payment work?")}
-        >
-          <Text style={styles.suggestionText}>💰 How does payment work?</Text>
+
+        <TouchableOpacity style={[styles.suggestionButton, { backgroundColor: cardBg }]} onPress={() => sendMessage("How does payment work?")}>
+          <View style={[styles.suggestionIconWrapper, { backgroundColor: iconBg }]}>
+            <Text style={styles.emojiIcon}>💰</Text>
+          </View>
+          <Text style={[styles.suggestionText, { color: textColor }]}>How does payment work?</Text>
+          <CaretRight size={20} color={primaryPurple} weight="bold" />
         </TouchableOpacity>
       </View>
     </View>
@@ -147,202 +147,207 @@ const Bird = () => {
 
   return (
     <View style={styles.container}>
-      <FlatList
-        data={messages}
-        keyExtractor={(_, index) => index.toString()}
-        renderItem={renderMessage}
-        style={styles.chatList}
-        contentContainerStyle={styles.chatListContainer}
-        ListEmptyComponent={EmptyChat}
+      <LinearGradient
+        colors={gradientColors}
+        style={StyleSheet.absoluteFill}
+        locations={[0, 0.4]}
       />
-
-      <View style={styles.inputContainer}>
-        <TextInput
-          placeholderTextColor="#c4c4c4"
-          style={styles.input}
-          value={input}
-          onChangeText={setInput}
-          placeholder="Ask me anything..."
-          editable={!loading}
-        />
-        <TouchableOpacity
-          style={styles.sendButton}
-          onPress={sendMessage}
-          disabled={loading}
+      
+      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+        <KeyboardAvoidingView 
+          style={styles.keyboardView}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
         >
-          <MaterialIcons name="send" color="#fff" size={24} />
-        </TouchableOpacity>
+          {/* Header */}
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerIcon}>
+              <ArrowLeft size={24} color={headerTextColor} />
+            </TouchableOpacity>
+            
+            <TouchableOpacity onPress={resetChat} style={styles.resetButton}>
+              <ArrowsClockwise size={20} color={headerTextColor} style={styles.resetIcon} />
+              <Text style={styles.resetText}>Reset chat</Text>
+            </TouchableOpacity>
+          </View>
 
-        {/* Ellipsis Button */}
-        <View style={styles.threeDots}>
-          <TouchableOpacity
-            onPress={() => setShowMenu((prev) => !prev)}
-            style={{
-              width: 50,
-              height: 50,
-              borderRadius: 25,
-              justifyContent: "center",
-              alignItems: "center",
-            }}
-          >
-            <MaterialIcons
-              name="more-vert"
-              size={24}
-              color={currentTheme.text || "#000"}
-            />
-          </TouchableOpacity>
+          {/* Chat List */}
+          <FlatList
+            ref={flatListRef}
+            data={messages}
+            keyExtractor={(_, index) => index.toString()}
+            renderItem={renderMessage}
+            contentContainerStyle={[styles.chatListContainer, messages.length === 0 && { flex: 1 }]}
+            ListEmptyComponent={EmptyChat}
+            showsVerticalScrollIndicator={false}
+          />
 
-          {/* Dropdown Menu */}
-          {showMenu && (
-            <View
-              style={{
-                position: "absolute",
-                bottom: 60,
-                right: 0,
-                backgroundColor: currentTheme.background3 || "#fff",
-                borderRadius: 8,
-                padding: 10,
-                borderWidth: 1,
-                borderColor: currentTheme.border || "#ccc",
-                elevation: 5,
-                zIndex: 1000,
-                width: 150,
-              }}
-            >
-              <TouchableOpacity onPress={resetChat}>
-                <Text style={{ color: "black", fontSize: 16 }}>Reset Chat</Text>
+          {/* Input Area */}
+          <View style={[styles.inputOuterContainer, { paddingBottom: isKeyboardVisible ? Math.max(insets.bottom + 10, 20) : (Platform.OS === "ios" ? 100 : 85) }]}>
+            <View style={[styles.inputInnerContainer, { backgroundColor: inputBg, borderColor: inputBorder }]}>
+              <TextInput
+                style={[styles.inputField, { color: textColor }]}
+                placeholder="Ask me anything..."
+                placeholderTextColor={subtitleColor}
+                value={input}
+                onChangeText={setInput}
+                editable={!loading}
+                multiline
+                maxLength={500}
+              />
+              <TouchableOpacity 
+                style={[styles.sendButton, (!input.trim() || loading) && { opacity: 0.6 }]}
+                onPress={() => sendMessage(null)}
+                disabled={!input.trim() || loading}
+              >
+                <PaperPlaneRight size={20} color="#FFF" weight="fill" style={styles.sendIcon} />
               </TouchableOpacity>
             </View>
-          )}
-        </View>
-      </View>
+          </View>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
     </View>
   );
 };
 
-const getStyles = (currentTheme, isKeyboardVisible) =>
-  StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: currentTheme.background || "#fff",
-      paddingHorizontal: 20,
-      paddingTop: 50,
-      paddingBottom: isKeyboardVisible ? 0 : (Platform.OS === "ios" ? 90 : 75), // Only add padding when keyboard is hidden
-    },
-    chatList: {
-      flex: 1,
-    },
-    chatListContainer: {
-      padding: 10,
-      flexGrow: 1,
-    },
-    messageContainer: {
-      marginVertical: 5,
-      padding: 12,
-      borderRadius: 15,
-      maxWidth: "85%",
-      shadowColor: "#000",
-      shadowOffset: {
-        width: 0,
-        height: 1,
-      },
-      shadowOpacity: 0.18,
-      shadowRadius: 1.0,
-      elevation: 1,
-    },
-    userMessage: {
-      backgroundColor: "#4C0183",
-      alignSelf: "flex-end",
-      borderTopRightRadius: 5,
-    },
-    botMessage: {
-      backgroundColor: currentTheme.cardBackground || "#f1f1f1",
-      alignSelf: "flex-start",
-      borderTopLeftRadius: 5,
-    },
-    messageText: {
-      fontSize: 16,
-      color: (props) =>
-        props.sender === "user" ? "#fff" : currentTheme.text || "#000",
-      lineHeight: 22,
-    },
-    inputContainer: {
-      flexDirection: "row",
-      paddingVertical: 15,
-      borderTopWidth: 1,
-      borderColor: currentTheme.border || "#ddd",
-      backgroundColor: currentTheme.background || "#fff",
-    },
-    input: {
-      flex: 1,
-      padding: 12,
-      borderWidth: 1,
-      borderColor: currentTheme.border || "#ddd",
-      borderRadius: 20,
-      color: currentTheme.text || "#000000",
-      backgroundColor: currentTheme.background3 || "#fff",
-      fontSize: 16,
-    },
-    sendButton: {
-      marginLeft: 10,
-      padding: 12,
-      backgroundColor: "#4C0183",
-      borderRadius: 25,
-      justifyContent: "center",
-      width: 50,
-      height: 50,
-      alignItems: "center",
-    },
-    sendButtonText: {
-      color: "#fff",
-      fontWeight: "bold",
-      fontSize: 16,
-    },
-    threeDots: {
-      position: "relative",
-      marginLeft: 6,
-      backgroundColor: currentTheme.background3 || "#fff",
-      borderRadius: 25,
-    },
-    emptyContainer: {
-      flex: 1,
-      justifyContent: "center",
-      alignItems: "center",
-      paddingHorizontal: 20,
-      paddingBottom: 100,
-    },
-    welcomeTitle: {
-      fontSize: 28,
-      fontWeight: "bold",
-      color: "#4C0183",
-      marginBottom: 8,
-    },
-    welcomeSubtitle: {
-      fontSize: 18,
-      color: currentTheme.text || "#666",
-      marginBottom: 24,
-    },
-    welcomeText: {
-      fontSize: 16,
-      color: currentTheme.text || "#666",
-      marginBottom: 20,
-      textAlign: "center",
-    },
-    suggestionContainer: {
-      width: "100%",
-      gap: 12,
-    },
-    suggestionButton: {
-      backgroundColor: currentTheme.cardBackground || "#f5f5f5",
-      padding: 16,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: currentTheme.border || "#eee",
-    },
-    suggestionText: {
-      color: currentTheme.text || "#333",
-      fontSize: 16,
-    },
-  });
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  safeArea: {
+    flex: 1,
+  },
+  keyboardView: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+  },
+  headerIcon: {
+    padding: 5,
+  },
+  resetButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 5,
+  },
+  resetIcon: {
+    marginRight: 6,
+  },
+  resetText: {
+    color: "#FFFFFF",
+    fontSize: 15,
+    fontWeight: "500",
+  },
+  chatListContainer: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 20,
+  },
+  emptyContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingTop: 40,
+  },
+  welcomeTitle: {
+    fontSize: 28,
+    fontWeight: "bold",
+    marginBottom: 8,
+  },
+  welcomeSubtitle: {
+    fontSize: 16,
+    marginBottom: 30,
+  },
+  helpText: {
+    fontSize: 16,
+    marginBottom: 20,
+  },
+  suggestionContainer: {
+    width: "100%",
+    gap: 16,
+  },
+  suggestionButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 12,
+    borderRadius: 16,
+  },
+  suggestionIconWrapper: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 16,
+  },
+  emojiIcon: {
+    fontSize: 22,
+  },
+  suggestionText: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: "500",
+  },
+  messageWrapper: {
+    width: "100%",
+    marginBottom: 16,
+  },
+  messageWrapperUser: {
+    alignItems: "flex-end",
+  },
+  messageWrapperBot: {
+    alignItems: "flex-start",
+  },
+  messageBubble: {
+    maxWidth: "85%",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 20,
+  },
+  messageText: {
+    fontSize: 16,
+    lineHeight: 22,
+  },
+  inputOuterContainer: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
+  },
+  inputInnerContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 30,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderWidth: 1,
+    minHeight: 60,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  inputField: {
+    flex: 1,
+    fontSize: 16,
+    maxHeight: 100,
+    paddingRight: 10,
+  },
+  sendButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#4B0082",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  sendIcon: {
+    marginLeft: -2, 
+  },
+});
 
 export default Bird;
