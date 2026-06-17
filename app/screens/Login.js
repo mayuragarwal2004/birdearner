@@ -12,11 +12,22 @@ import {
   ActivityIndicator,
   Linking,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
-import { EyeIcon, EyeSlashIcon, InstagramLogoIcon, XLogoIcon } from "phosphor-react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { 
+  Envelope, 
+  LockKey, 
+  Eye, 
+  EyeSlash, 
+  InstagramLogo, 
+  XLogo, 
+  YoutubeLogo, 
+  Globe 
+} from "phosphor-react-native";
 import { useAuth } from "../context/NewAuthContext";
 import Toast from "react-native-toast-message";
-import { useTheme } from "../context/ThemeContext";
 
 const Login = ({ navigation }) => {
   const [credentials, setCredentials] = useState({ email: "", password: "" });
@@ -25,8 +36,6 @@ const Login = ({ navigation }) => {
   const [isLoading, setIsLoading] = useState(false);
   
   const { login } = useAuth();
-  const { theme, themeStyles } = useTheme();
-  const currentTheme = themeStyles[theme];
 
   const handleInputChange = (field, value) => {
     setCredentials({ ...credentials, [field]: value });
@@ -34,18 +43,15 @@ const Login = ({ navigation }) => {
 
   const validateInputs = () => {
     const { email, password } = credentials;
-
     if (!email || !password) {
       showToast("info", "Warning", "All fields are required.");
       return false;
     }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      showToast("info", "Warning", "Please enter a valid email address.");
+    // Basic check for email or phone length
+    if (email.length < 3) {
+      showToast("info", "Warning", "Please enter a valid email or phone number.");
       return false;
     }
-
     return true;
   };
 
@@ -60,7 +66,6 @@ const Login = ({ navigation }) => {
 
   const handleSocialMediaPress = async (platform) => {
     let url = "";
-    
     switch (platform) {
       case "instagram":
         url = "https://www.instagram.com/thebirdearner/";
@@ -68,41 +73,37 @@ const Login = ({ navigation }) => {
       case "x":
         url = "https://x.com/birdearner";
         break;
+      case "youtube":
+        url = "https://www.youtube.com/@thebirdearner";
+        break;
+      case "web":
+        url = "https://birdearner.com";
+        break;
       default:
         return;
     }
-
     try {
       const supported = await Linking.canOpenURL(url);
       if (supported) {
         await Linking.openURL(url);
       } else {
-        Alert.alert(
-          "Unable to open link",
-          `Cannot open ${platform} at this time. Please try again later.`
-        );
+        Alert.alert("Unable to open link", `Cannot open ${platform} at this time.`);
       }
     } catch (error) {
       console.error("Error opening social media link:", error);
-      Alert.alert(
-        "Error",
-        `Failed to open ${platform}. Please try again later.`
-      );
+      Alert.alert("Error", `Failed to open ${platform}.`);
     }
   };
 
   const handleLogin = async () => {
     if (!validateInputs()) return;
-
     setIsLoading(true);
     try {
       await login(credentials.email, credentials.password);
       showToast("success", "Login Successful!", "Welcome back!");
     } catch (error) {
       console.log("Login Error:", error.message);
-
       let errorMessage = "An unexpected error occurred.";
-
       if (error.message.includes("Invalid email or password")) {
         errorMessage = "Incorrect email or password. Please try again.";
       } else if (error.message.includes("Network error")) {
@@ -110,7 +111,6 @@ const Login = ({ navigation }) => {
       } else if (error.message.includes("JSON Parse error")) {
         errorMessage = "Server error. Please try again later.";
       }
-
       showToast("error", "Login Failed", errorMessage);
     } finally {
       setIsLoading(false);
@@ -119,230 +119,298 @@ const Login = ({ navigation }) => {
 
   const onRefresh = () => {
     setRefreshing(true);
-    // Reset form
     setCredentials({ email: "", password: "" });
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1000);
+    setTimeout(() => setRefreshing(false), 1000);
   };
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: "#4B0082" }]}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContainer}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={["#3b006b"]}
-            progressBackgroundColor="#fff"
-          />
-        }
-      >
-        <View style={[styles.container, { backgroundColor: "#4B0082" }]}>
-          {/* Logo */}
-          <Image source={require("../assets/logo11.png")} style={styles.logo} />
-
-          {/* App Name */}
-          <Text style={[styles.title, { color: "white" }]}>BirdEARNER</Text>
-          <Text style={[styles.subtitle, { color: "white" }]}>
-            Be BirdEARNER, Become Bread Earner!
-          </Text>
-
-          {/* Email Input */}
-          <TextInput
-            style={[styles.input, { 
-              backgroundColor: "#fff",
-              color: "#000",
-              borderColor: "transparent"
-            }]}
-            placeholder="youremail@gmail.com"
-            placeholderTextColor="#999"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-            value={credentials.email}
-            onChangeText={(value) => handleInputChange("email", value)}
-          />
-
-          {/* Password Input */}
-          <View style={[styles.passwordContainer, { 
-            backgroundColor: "#fff",
-            borderColor: "transparent"
-          }]}>
-            <TextInput
-              style={[styles.passwordInput, { color: "#000" }]}
-              placeholder="********"
-              placeholderTextColor="#999"
-              secureTextEntry={!showPassword}
-              value={credentials.password}
-              onChangeText={(value) => handleInputChange("password", value)}
-            />
-            <TouchableOpacity
-              style={styles.eyeIcon}
-              onPress={() => setShowPassword(!showPassword)}
-            >
-              {showPassword ? (
-                <EyeIcon size={20} color="#999" />
-              ) : (
-                <EyeSlashIcon size={20} color="#999" />
-              )}
-            </TouchableOpacity>
-          </View>
-
-          {/* Login Button */}
-          <TouchableOpacity
-            style={[
-              styles.loginButton,
-              isLoading && styles.disabledButton
-            ]}
-            onPress={handleLogin}
-            disabled={isLoading}
+    <View style={styles.container}>
+      <LinearGradient
+        colors={["#350F6A", "#1D0343"]}
+        style={StyleSheet.absoluteFill}
+      />
+      <SafeAreaView style={styles.safeArea}>
+        <KeyboardAvoidingView 
+          style={{ flex: 1 }} 
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+        >
+          <ScrollView
+            contentContainerStyle={styles.scrollContainer}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor="#fff"
+              />
+            }
           >
-            {isLoading ? (
-              <ActivityIndicator color="white" size="small" />
-            ) : (
-              <Text style={styles.loginButtonText}>Log In</Text>
-            )}
-          </TouchableOpacity>
+            {/* Logo */}
+            <View style={styles.logoContainer}>
+              <View style={styles.logoCircle}>
+                <Image source={require("../assets/logo11.png")} style={styles.logo} resizeMode="contain" />
+              </View>
+            </View>
 
-          {/* Links */}
-          {[
-            { text: "Forget Password", screen: "ForgotPassword" },
-            { text: "New Here? Create Your Account Here!", screen: "Role" },
-          ].map((link, index) => (
+            {/* App Name */}
+            <Text style={styles.title}>BirdEARNER</Text>
+            <Text style={styles.subtitle}>Be BirdEARNER, Become Bread Earner!</Text>
+
+            {/* Email Input */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Email or Phone Number</Text>
+              <View style={styles.inputContainer}>
+                <Envelope size={20} color="#C4B5FD" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter your email or phone number"
+                  placeholderTextColor="#9ca3af"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  autoComplete="email"
+                  textContentType="username"
+                  importantForAutofill="yes"
+                  value={credentials.email}
+                  onChangeText={(value) => handleInputChange("email", value)}
+                />
+              </View>
+            </View>
+
+            {/* Password Input */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Password</Text>
+              <View style={styles.inputContainer}>
+                <LockKey size={20} color="#C4B5FD" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter your password"
+                  placeholderTextColor="#9ca3af"
+                  secureTextEntry={!showPassword}
+                  autoComplete="password"
+                  textContentType="password"
+                  importantForAutofill="yes"
+                  value={credentials.password}
+                  onChangeText={(value) => handleInputChange("password", value)}
+                />
+                <TouchableOpacity
+                  style={styles.eyeIcon}
+                  onPress={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? (
+                    <Eye size={20} color="#C4B5FD" />
+                  ) : (
+                    <EyeSlash size={20} color="#C4B5FD" />
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Login Button */}
             <TouchableOpacity
-              key={index}
-              onPress={() => navigation.navigate(link.screen)}
+              style={styles.loginButtonWrapper}
+              onPress={handleLogin}
+              disabled={isLoading}
+              activeOpacity={0.8}
             >
-              <Text style={[styles.linkText, { color: "white" }]}>
-                {link.text}
-              </Text>
+              <LinearGradient
+                colors={["#762BAD", "#4B0082"]}
+                style={[styles.loginButton, isLoading && styles.disabledButton]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+              >
+                {isLoading ? (
+                  <ActivityIndicator color="white" size="small" />
+                ) : (
+                  <Text style={styles.loginButtonText}>Login</Text>
+                )}
+              </LinearGradient>
             </TouchableOpacity>
-          ))}
 
-          {/* Social Icons */}
-          <View style={styles.socialContainer}>
-            <TouchableOpacity 
-              style={styles.socialIcon}
-              onPress={() => handleSocialMediaPress("instagram")}
-              activeOpacity={0.7}
-            >
-              <InstagramLogoIcon size={24} color="white" />
+            {/* Forgot Password */}
+            <TouchableOpacity onPress={() => navigation.navigate("ForgotPassword")}>
+              <Text style={styles.forgotPasswordText}>Forgot password?</Text>
             </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.socialIcon}
-              onPress={() => handleSocialMediaPress("x")}
-              activeOpacity={0.7}
-            >
-              <XLogoIcon size={24} color="white" />
-            </TouchableOpacity>
-          </View>
 
-          {/* Toast container */}
-          <Toast />
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+            {/* Or Divider */}
+            <View style={styles.dividerContainer}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>Or</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            {/* Sign Up Link */}
+            <View style={styles.signupContainer}>
+              <Text style={styles.signupText}>New here? </Text>
+              <TouchableOpacity onPress={() => navigation.navigate("Role")}>
+                <Text style={styles.signupLinkText}>Create account</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Social Icons */}
+            <View style={styles.socialContainer}>
+              <TouchableOpacity style={styles.socialIconBtn} onPress={() => handleSocialMediaPress("youtube")}>
+                <YoutubeLogo size={22} color="#fff" weight="fill" />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.socialIconBtn} onPress={() => handleSocialMediaPress("instagram")}>
+                <InstagramLogo size={22} color="#fff" />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.socialIconBtn} onPress={() => handleSocialMediaPress("x")}>
+                <XLogo size={22} color="#fff" />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.socialIconBtn} onPress={() => handleSocialMediaPress("web")}>
+                <Globe size={22} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+      <Toast />
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   safeArea: {
     flex: 1,
   },
   scrollContainer: {
     flexGrow: 1,
-  },
-  container: {
-    flex: 1,
-    minHeight: "100%",
-    alignItems: "center",
+    paddingHorizontal: 24,
     justifyContent: "center",
-    padding: 20,
+    alignItems: "center",
   },
-  logo: {
+  logoContainer: {
+    marginBottom: 20,
+  },
+  logoCircle: {
     width: 100,
     height: 100,
-    marginBottom: 20,
+    borderRadius: 50,
+    overflow: "hidden",
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "transparent",
+  },
+  logo: {
+    width: "100%",
+    height: "100%",
   },
   title: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: "bold",
+    color: "#ffffff",
+    marginBottom: 6,
   },
   subtitle: {
-    fontSize: 16,
-    marginBottom: 40,
+    fontSize: 14,
+    color: "#e5e7eb",
+    marginBottom: 32,
+  },
+  inputGroup: {
+    width: "100%",
+    marginBottom: 16,
+  },
+  label: {
+    color: "#ffffff",
+    fontSize: 14,
+    marginBottom: 8,
+    fontWeight: "500",
+  },
+  inputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "transparent",
+    borderWidth: 1,
+    borderColor: "#5b21b6",
+    borderRadius: 12,
+    height: 54,
+    paddingHorizontal: 16,
+  },
+  inputIcon: {
+    marginRight: 12,
   },
   input: {
-    width: "100%",
-    height: 44,
-    borderRadius: 12,
-    paddingHorizontal: 20,
-    marginBottom: 20,
-    fontSize: 16,
-    borderWidth: 1,
-  },
-  passwordContainer: {
-    width: "100%",
-    height: 44,
-    borderRadius: 12,
-    marginBottom: 20,
-    borderWidth: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 20,
-  },
-  passwordInput: {
     flex: 1,
-    fontSize: 16,
+    color: "#ffffff",
+    fontSize: 15,
+    height: "100%",
   },
   eyeIcon: {
-    padding: 5,
+    padding: 4,
   },
-  checkboxContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 20,
-    paddingHorizontal: 5,
-  },
-  checkboxLabel: {
-    marginLeft: 8,
-    fontSize: 14,
-    flex: 1,
-  },
-  link: {
-    color: '#aa42f5',
-    textDecorationLine: 'underline',
+  loginButtonWrapper: {
+    width: "100%",
+    marginTop: 8,
+    marginBottom: 24,
+    borderRadius: 12,
+    overflow: "hidden",
   },
   loginButton: {
-    width: "100%",
-    height: 50,
-    backgroundColor: "#6A0DAD",
-    borderRadius: 12,
+    height: 54,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 20,
   },
   disabledButton: {
-    backgroundColor: "gray",
+    opacity: 0.7,
   },
   loginButtonText: {
-    color: "white",
-    fontSize: 18,
-    fontWeight: "bold",
+    color: "#ffffff",
+    fontSize: 16,
+    fontWeight: "600",
   },
-  linkText: {
-    marginVertical: 10,
+  forgotPasswordText: {
+    color: "#e5e7eb",
     fontSize: 14,
-    textDecorationLine: "underline",
+    marginBottom: 32,
+  },
+  dividerContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    width: "100%",
+    marginBottom: 24,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "#5b21b6",
+  },
+  dividerText: {
+    color: "#e5e7eb",
+    paddingHorizontal: 16,
+    fontSize: 14,
+  },
+  signupContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 32,
+  },
+  signupText: {
+    color: "#e5e7eb",
+    fontSize: 14,
+  },
+  signupLinkText: {
+    color: "#ffffff",
+    fontSize: 14,
+    fontWeight: "bold",
   },
   socialContainer: {
     flexDirection: "row",
-    marginTop: 40,
+    justifyContent: "center",
+    width: "100%",
+    gap: 16,
   },
-  socialIcon: {
-    marginHorizontal: 10,
+  socialIconBtn: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    borderWidth: 1,
+    borderColor: "#5b21b6",
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "transparent",
   },
 });
 
