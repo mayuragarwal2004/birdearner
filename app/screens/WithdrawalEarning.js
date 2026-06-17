@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -9,8 +9,11 @@ import {
   ScrollView,
   FlatList,
   RefreshControl,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { ArrowLeft, Info, CurrencyInr, CaretUp, CaretDown, Archive } from "phosphor-react-native";
 import { useAuth } from "../context/NewAuthContext";
 import apiService from "../lib/apiService";
 import Toast from "react-native-toast-message";
@@ -24,7 +27,7 @@ const WithdrawalEarningScreen = ({ navigation }) => {
   const [fetchingWallet, setFetchingWallet] = useState(true);
   const [withdrawalHistory, setWithdrawalHistory] = useState([]);
   const [fetchingHistory, setFetchingHistory] = useState(true);
-  const [showHistory, setShowHistory] = useState(false);
+  const [showHistory, setShowHistory] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const { refreshUserData } = useAuth();
   const totalAmountInWallet = walletData?.withdrawableBalance || 0;
@@ -32,9 +35,12 @@ const WithdrawalEarningScreen = ({ navigation }) => {
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
 
-  const styles = getStyles(currentTheme);
+  const isDark = theme === "dark";
+  const primaryColor = isDark ? "#C4B5FD" : (currentTheme.primary || "#4B0082");
+  const buttonColor = isDark ? "#762BAD" : (currentTheme.primary || "#4B0082");
 
-  // Fetch wallet data when the screen is focused
+  const styles = useMemo(() => getStyles(currentTheme, primaryColor, buttonColor), [currentTheme, primaryColor, buttonColor]);
+
   useEffect(() => {
     const unsubscribe = navigation.addListener("focus", () => {
       fetchWalletData();
@@ -43,7 +49,6 @@ const WithdrawalEarningScreen = ({ navigation }) => {
     return unsubscribe;
   }, [navigation]);
 
-  // Initial load
   useEffect(() => {
     fetchWalletData();
     fetchWithdrawalHistory();
@@ -52,8 +57,6 @@ const WithdrawalEarningScreen = ({ navigation }) => {
   const fetchWalletData = async () => {
     try {
       setFetchingWallet(true);
-
-      // Fetch wallet information
       const walletResponse = await apiService.getFreelancerWalletInfo();
       if (walletResponse.success) {
         setWalletData(walletResponse.data);
@@ -71,8 +74,6 @@ const WithdrawalEarningScreen = ({ navigation }) => {
   const fetchWithdrawalHistory = async () => {
     try {
       setFetchingHistory(true);
-
-      // Fetch withdrawal requests history
       const historyResponse = await apiService.getMyWithdrawalRequests(1, 10);
       if (historyResponse.success) {
         setWithdrawalHistory(historyResponse.data.requests || []);
@@ -129,7 +130,6 @@ const WithdrawalEarningScreen = ({ navigation }) => {
       setWarning("Please enter a valid amount.");
       setAmount(value);
     } else if (numericValue > totalAmountInWallet) {
-      // If the entered amount exceeds the total amount, adjust it to totalAmount
       setAmount(totalAmountInWallet.toString());
       setWarning("Adjusted to maximum withdrawable amount.");
     } else {
@@ -154,26 +154,15 @@ const WithdrawalEarningScreen = ({ navigation }) => {
     setIsLoading(true);
 
     try {
-      // Create withdrawal request using the new API
       const response = await apiService.createWithdrawalRequest(withdrawalAmount);
 
       if (response.success) {
         handleSuccess("Withdrawal request submitted successfully! Your request is now pending admin approval.");
-
-        // Refresh wallet data to get updated balance
         await fetchWalletData();
-
-        // Refresh withdrawal history to show the new request
         await fetchWithdrawalHistory();
-
-        // Also refresh user data context
         await refreshUserData();
-
-        // Clear the amount field
         setAmount("");
         setWarning("");
-
-        // Show history section to see the new request
         setShowHistory(true);
       } else {
         handleError(response.message || "Failed to submit withdrawal request");
@@ -188,31 +177,21 @@ const WithdrawalEarningScreen = ({ navigation }) => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'PENDING':
-        return '#FFA500'; // Orange
-      case 'APPROVED':
-        return '#4CAF50'; // Green
-      case 'PROCESSED':
-        return '#2196F3'; // Blue
-      case 'REJECTED':
-        return '#F44336'; // Red
-      default:
-        return '#9E9E9E'; // Gray
+      case 'PENDING': return '#FFA500';
+      case 'APPROVED': return '#4CAF50';
+      case 'PROCESSED': return '#2196F3';
+      case 'REJECTED': return '#F44336';
+      default: return '#9E9E9E';
     }
   };
 
   const getStatusText = (status) => {
     switch (status) {
-      case 'PENDING':
-        return 'Pending Review';
-      case 'APPROVED':
-        return 'Approved';
-      case 'PROCESSED':
-        return 'Processed';
-      case 'REJECTED':
-        return 'Rejected';
-      default:
-        return status;
+      case 'PENDING': return 'Pending Review';
+      case 'APPROVED': return 'Approved';
+      case 'PROCESSED': return 'Processed';
+      case 'REJECTED': return 'Rejected';
+      default: return status;
     }
   };
 
@@ -227,177 +206,232 @@ const WithdrawalEarningScreen = ({ navigation }) => {
     });
   };
 
+  const isButtonDisabled = isLoading || !amount || parseFloat(amount) <= 0;
+
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.contentContainer}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-          colors={['#6A0DAD']}
-          tintColor="#6A0DAD"
-        />
-      }
-    >
-      <View style={styles.main}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backButton}
+    <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView 
+        style={styles.keyboardView} 
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <ScrollView
+          style={styles.container}
+          contentContainerStyle={styles.contentContainer}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[primaryColor]}
+              tintColor={primaryColor}
+            />
+          }
+          showsVerticalScrollIndicator={false}
         >
-          <Ionicons
-            name="arrow-back"
-            size={24}
-            color={currentTheme.text || black}
-          />
-        </TouchableOpacity>
-        <Text style={styles.header}>Withdrawal Request</Text>
-      </View>
-
-      {fetchingWallet ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#6A0DAD" />
-          <Text style={styles.loadingText}>Loading wallet data...</Text>
-        </View>
-      ) : (
-        <>
-          {/* Total Amount in Wallet */}
-          <Text style={styles.label}>Total Amount in Wallet</Text>
-          <Text style={styles.colorText}>
-            RS. {String(walletData?.withdrawableBalance?.toFixed(2) || "0.00")}
-          </Text>
-
-          {/* Info Note */}
-          <View style={styles.infoNote}>
-            <Ionicons name="information-circle" size={20} color="#2196F3" />
-            <Text style={styles.infoText}>
-              Your withdrawal request will be reviewed by admin before processing
-            </Text>
-          </View>
-
-          {/* Withdrawal Amount Input */}
-          <Text style={styles.label}>Enter the amount you want to withdraw</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter amount"
-            value={amount}
-            onChangeText={handleAmountChange}
-            keyboardType="numeric"
-            autoComplete="off"
-            editable={!isLoading}
-          />
-
-          {warning !== "" && <Text style={styles.warning}>{warning}</Text>}
-
-          {/* Amount to Withdraw */}
-          <Text style={styles.label}>You’re withdrawing</Text>
-          <View style={styles.withdrawal}>
-            <Text style={styles.withdrawalText}>RS. {amount || "0"}</Text>
-          </View>
-
-          <TouchableOpacity
-            style={[
-              styles.signupButton,
-              (isLoading || !amount || parseFloat(amount) <= 0) && styles.disabledButton
-            ]}
-            onPress={handleProcess}
-            disabled={isLoading || !amount || parseFloat(amount) <= 0}
-          >
-            <Text style={styles.signupButtonText}>
-              {isLoading ? "Submitting Request..." : "Submit Withdrawal Request"}
-            </Text>
-          </TouchableOpacity>
-
-          {/* Withdrawal History Section */}
-          <View style={styles.historySection}>
+          {/* Header */}
+          <View style={styles.headerContainer}>
             <TouchableOpacity
-              style={styles.historyToggle}
-              onPress={() => setShowHistory(!showHistory)}
+              onPress={() => navigation.goBack()}
+              style={styles.backButton}
             >
-              <Text style={styles.historyToggleText}>
-                Withdrawal History ({withdrawalHistory.length})
-              </Text>
-              <Ionicons
-                name={showHistory ? "chevron-up" : "chevron-down"}
-                size={20}
-                color={currentTheme.text}
-              />
+              <ArrowLeft size={20} color={currentTheme.text || "#000"} />
             </TouchableOpacity>
+            <View style={styles.headerTitleContainer}>
+              <Text style={styles.headerTitle}>Withdrawal Request</Text>
+            </View>
+            <View style={styles.rightPlaceholder} />
+          </View>
 
-            {showHistory && (
-              <View style={styles.historyContainer}>
-                {fetchingHistory ? (
-                  <ActivityIndicator size="small" color="#6A0DAD" />
-                ) : withdrawalHistory.length === 0 ? (
-                  <Text style={styles.noHistoryText}>No withdrawal requests yet</Text>
-                ) : (
-                  <FlatList
-                    data={withdrawalHistory}
-                    keyExtractor={(item) => item.id}
-                    renderItem={({ item }) => (
-                      <View style={styles.historyItem}>
-                        <View style={styles.historyItemHeader}>
-                          <Text style={styles.historyAmount}>
-                            RS. {parseFloat(item.amount).toFixed(2)}
-                          </Text>
-                          <View style={[
-                            styles.statusBadge,
-                            { backgroundColor: getStatusColor(item.status) }
-                          ]}>
-                            <Text style={styles.statusText}>
-                              {getStatusText(item.status)}
-                            </Text>
-                          </View>
-                        </View>
-                        <Text style={styles.historyDate}>
-                          Requested: {formatDate(item.createdAt)}
-                        </Text>
-                        {item.processedAt && (
-                          <Text style={styles.historyDate}>
-                            Processed: {formatDate(item.processedAt)}
-                          </Text>
-                        )}
-                        {item.notes && (
-                          <Text style={styles.historyNotes}>
-                            Note: {item.notes}
-                          </Text>
-                        )}
-                      </View>
-                    )}
-                    scrollEnabled={false}
-                    nestedScrollEnabled={true}
-                    showsVerticalScrollIndicator={false}
+          {fetchingWallet ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={primaryColor} />
+              <Text style={styles.loadingText}>Loading wallet data...</Text>
+            </View>
+          ) : (
+            <>
+              {/* Total Amount in Wallet */}
+              <View style={styles.centerSection}>
+                <Text style={styles.walletLabel}>Total Amount in Wallet</Text>
+                <Text style={styles.walletAmount}>
+                  ₹{totalAmountInWallet.toFixed(2)}
+                </Text>
+              </View>
+
+              {/* Info Note */}
+              <View style={styles.infoNote}>
+                <Info size={24} color={primaryColor} weight="fill" />
+                <Text style={[styles.infoText, { color: primaryColor }]}>
+                  Your withdrawal request will be reviewed by admin before processing
+                </Text>
+              </View>
+
+              {/* Withdrawal Amount Input */}
+              <View style={styles.inputSection}>
+                <Text style={styles.inputLabel}>Enter the amount you want to withdraw</Text>
+                <View style={styles.inputWrapper}>
+                  <CurrencyInr size={20} color={currentTheme.text || "#000"} weight="bold" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter amount"
+                    placeholderTextColor={currentTheme.subText || "#9ca3af"}
+                    value={amount}
+                    onChangeText={handleAmountChange}
+                    keyboardType="numeric"
+                    autoComplete="off"
+                    editable={!isLoading}
                   />
+                </View>
+                {warning !== "" && <Text style={styles.warning}>{warning}</Text>}
+              </View>
+
+              {/* Amount to Withdraw Display */}
+              <View style={styles.centerSection}>
+                <Text style={styles.walletLabel}>You're withdrawing</Text>
+                <Text style={styles.walletAmount}>
+                  ₹{amount ? parseFloat(amount).toFixed(2) : "0.00"}
+                </Text>
+              </View>
+
+              {/* Submit Button */}
+              <TouchableOpacity
+                style={[
+                  styles.submitButton,
+                  isButtonDisabled && styles.disabledButton
+                ]}
+                onPress={handleProcess}
+                disabled={isButtonDisabled}
+              >
+                <Text style={[
+                  styles.submitButtonText,
+                  isButtonDisabled && styles.disabledButtonText
+                ]}>
+                  Submit Withdrawal Request
+                </Text>
+              </TouchableOpacity>
+
+              {/* Withdrawal History Section */}
+              <View style={styles.historySection}>
+                <TouchableOpacity
+                  style={styles.historyToggle}
+                  onPress={() => setShowHistory(!showHistory)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.historyToggleText}>
+                    Withdrawal History ({withdrawalHistory.length})
+                  </Text>
+                  {showHistory ? (
+                    <CaretUp size={20} color={currentTheme.text || "#000"} />
+                  ) : (
+                    <CaretDown size={20} color={currentTheme.text || "#000"} />
+                  )}
+                </TouchableOpacity>
+
+                {showHistory && (
+                  <View style={styles.historyContent}>
+                    {fetchingHistory ? (
+                      <ActivityIndicator size="small" color={primaryColor} />
+                    ) : withdrawalHistory.length === 0 ? (
+                      <View style={styles.emptyHistoryContainer}>
+                        <View style={styles.emptyHistoryIconWrapper}>
+                          <Archive size={48} color={primaryColor} weight="fill" style={{ opacity: 0.5 }} />
+                        </View>
+                        <Text style={styles.emptyHistoryTitle}>No withdrawal requests yet</Text>
+                        <Text style={styles.emptyHistorySubtitle}>Your withdrawal requests will appear here.</Text>
+                      </View>
+                    ) : (
+                      <FlatList
+                        data={withdrawalHistory}
+                        keyExtractor={(item) => item.id}
+                        renderItem={({ item }) => (
+                          <View style={styles.historyItem}>
+                            <View style={styles.historyItemHeader}>
+                              <Text style={styles.historyAmount}>
+                                ₹{parseFloat(item.amount).toFixed(2)}
+                              </Text>
+                              <View style={[
+                                styles.statusBadge,
+                                { backgroundColor: getStatusColor(item.status) + '20' } // 20% opacity background
+                              ]}>
+                                <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
+                                  {getStatusText(item.status)}
+                                </Text>
+                              </View>
+                            </View>
+                            <Text style={styles.historyDate}>
+                              Requested: {formatDate(item.createdAt)}
+                            </Text>
+                            {item.processedAt && (
+                              <Text style={styles.historyDate}>
+                                Processed: {formatDate(item.processedAt)}
+                              </Text>
+                            )}
+                            {item.notes && (
+                              <Text style={styles.historyNotes}>
+                                Note: {item.notes}
+                              </Text>
+                            )}
+                          </View>
+                        )}
+                        scrollEnabled={false}
+                        nestedScrollEnabled={true}
+                        showsVerticalScrollIndicator={false}
+                      />
+                    )}
+                  </View>
                 )}
               </View>
-            )}
-          </View>
-        </>
-      )}
-
+            </>
+          )}
+        </ScrollView>
+      </KeyboardAvoidingView>
       <Toast />
-    </ScrollView>
+    </SafeAreaView>
   );
 };
 
-const getStyles = (currentTheme) =>
+const getStyles = (currentTheme, primaryColor, buttonColor) =>
   StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: currentTheme.background || "#FFFFFF",
+    },
+    keyboardView: {
+      flex: 1,
+    },
     container: {
       flex: 1,
-      backgroundColor: currentTheme.background || "#FFF",
     },
     contentContainer: {
-      padding: 20,
-      paddingHorizontal: 40,
-      paddingBottom: 40,
+      paddingHorizontal: 24,
+      paddingTop: 20,
+      paddingBottom: Platform.OS === 'ios' ? 100 : 90,
     },
-    main: {
-      marginTop: 45,
-      marginBottom: 50,
-      display: "flex",
+    headerContainer: {
       flexDirection: "row",
-      gap: 50,
       alignItems: "center",
+      marginBottom: 30,
+      justifyContent: "space-between",
+    },
+    backButton: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: currentTheme.border || "#E5E7EB",
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: currentTheme.background || "#FFFFFF",
+    },
+    headerTitleContainer: {
+      flex: 1,
+      alignItems: "center",
+    },
+    headerTitle: {
+      fontSize: 20,
+      fontWeight: "bold",
+      color: currentTheme.text || "#000000",
+    },
+    rightPlaceholder: {
+      width: 40,
     },
     loadingContainer: {
       flex: 1,
@@ -410,126 +444,142 @@ const getStyles = (currentTheme) =>
       fontSize: 16,
       color: currentTheme.text || "#000",
     },
-    header: {
-      fontSize: 24,
-      fontWeight: "bold",
-      textAlign: "center",
-      color: currentTheme.text,
-    },
-    label: {
-      fontSize: 18,
-      color: currentTheme.text || "#000000",
-      marginBottom: 8,
-      fontWeight: "400",
-      textAlign: "center",
-    },
-    colorText: {
-      fontSize: 24,
-      fontWeight: "600",
-      color: currentTheme.primary || "#4B0082",
-      textAlign: "center",
+    centerSection: {
+      alignItems: "center",
       marginBottom: 20,
+    },
+    walletLabel: {
+      fontSize: 15,
+      color: currentTheme.text || "#111827",
+      marginBottom: 8,
+    },
+    walletAmount: {
+      fontSize: 36,
+      fontWeight: "bold",
+      color: primaryColor,
     },
     infoNote: {
       flexDirection: "row",
       alignItems: "center",
-      backgroundColor: "#E3F2FD",
-      padding: 12,
-      borderRadius: 8,
-      marginBottom: 20,
+      backgroundColor: currentTheme.theme === "dark" ? "#2e1f4a" : "#F9F5FF",
+      padding: 16,
+      borderRadius: 12,
+      marginBottom: 30,
     },
     infoText: {
-      marginLeft: 8,
+      marginLeft: 12,
       fontSize: 14,
-      color: "#1976D2",
       flex: 1,
+      lineHeight: 20,
     },
-    withdrawal: {
-      display: "flex",
-      justifyContent: "center",
-      alignItems: "center",
-      marginTop: 10,
+    inputSection: {
+      marginBottom: 30,
     },
-    withdrawalText: {
-      color: "#fff",
-      fontSize: 24,
-      fontWeight: "600",
+    inputLabel: {
+      fontSize: 15,
+      color: currentTheme.text || "#111827",
+      marginBottom: 10,
       textAlign: "center",
-      backgroundColor: currentTheme.primary || "#4B0082",
-      // width: 100,
-      paddingHorizontal: 20,
-      paddingVertical: 10,
+    },
+    inputWrapper: {
+      flexDirection: "row",
+      alignItems: "center",
+      height: 56,
+      borderWidth: 1,
+      borderColor: currentTheme.border || "#E5E7EB",
       borderRadius: 12,
+      paddingHorizontal: 16,
+      backgroundColor: currentTheme.background || "#FFFFFF",
+    },
+    inputIcon: {
+      marginRight: 12,
     },
     input: {
-      // width: "100%",
-      height: 44,
-      backgroundColor: currentTheme.background3 || "#fff",
-      borderRadius: 12,
-      paddingHorizontal: 20,
-      // marginBottom: 40,
+      flex: 1,
       fontSize: 16,
-      borderColor: "#4B0082",
-      borderWidth: 2,
-      marginVertical: 10,
-      margin: "auto",
-      color: currentTheme.subText,
+      color: currentTheme.text || "#000000",
+      height: "100%",
     },
     warning: {
-      color: "red",
-      fontSize: 14,
+      color: "#F44336",
+      fontSize: 13,
+      marginTop: 8,
       textAlign: "center",
-      marginBottom: 40,
     },
-    signupButton: {
-      width: "80%",
-      height: 50,
-      backgroundColor: currentTheme.primary || "#6A0DAD",
+    submitButton: {
+      height: 56,
+      backgroundColor: buttonColor,
       borderRadius: 12,
       alignItems: "center",
       justifyContent: "center",
-      marginTop: 30,
-      alignSelf: "center",
+      marginTop: 10,
+      marginBottom: 30,
     },
     disabledButton: {
-      backgroundColor: "#ccc",
-      opacity: 0.6,
+      backgroundColor: currentTheme.theme === "dark" ? "#374151" : "#E5E7EB",
     },
-    signupButtonText: {
-      color: "white",
-      fontSize: 18,
-      fontWeight: "700",
-      textAlign: "center",
+    submitButtonText: {
+      color: "#fff",
+      fontSize: 16,
+      fontWeight: "600",
+    },
+    disabledButtonText: {
+      color: currentTheme.theme === "dark" ? "#9ca3af" : "#6b7280",
     },
     historySection: {
-      marginTop: 40,
+      borderWidth: 1,
+      borderColor: currentTheme.border || "#E5E7EB",
+      borderRadius: 12,
+      backgroundColor: currentTheme.background || "#FFFFFF",
+      overflow: "hidden",
     },
     historyToggle: {
       flexDirection: "row",
       justifyContent: "space-between",
       alignItems: "center",
-      backgroundColor: currentTheme.background3 || "#f5f5f5",
-      padding: 15,
-      borderRadius: 12,
-      marginBottom: 10,
+      padding: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: currentTheme.border || "#E5E7EB",
     },
     historyToggleText: {
-      fontSize: 18,
+      fontSize: 16,
       fontWeight: "600",
       color: currentTheme.text || "#000",
     },
-    historyContainer: {
-      backgroundColor: currentTheme.background3 || "#f5f5f5",
+    historyContent: {
+      padding: 16,
+    },
+    emptyHistoryContainer: {
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: 30,
+      backgroundColor: currentTheme.theme === "dark" ? "#1f2937" : "#F9FAFB",
       borderRadius: 12,
-      padding: 15,
+    },
+    emptyHistoryIconWrapper: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      backgroundColor: currentTheme.theme === "dark" ? "#374151" : "#F3E8FF",
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: 16,
+    },
+    emptyHistoryTitle: {
+      fontSize: 16,
+      fontWeight: "500",
+      color: currentTheme.text || "#111827",
+      marginBottom: 8,
+    },
+    emptyHistorySubtitle: {
+      fontSize: 14,
+      color: currentTheme.subText || "#6b7280",
     },
     historyItem: {
-      backgroundColor: currentTheme.background || "#fff",
-      padding: 15,
-      borderRadius: 8,
-      marginBottom: 10,
-      borderLeftWidth: 4,
-      borderLeftColor: currentTheme.primary || "#4B0082",
+      backgroundColor: currentTheme.theme === "dark" ? "#1f2937" : "#F9FAFB",
+      padding: 16,
+      borderRadius: 12,
+      marginBottom: 12,
     },
     historyItemHeader: {
       flexDirection: "row",
@@ -548,27 +598,19 @@ const getStyles = (currentTheme) =>
       borderRadius: 20,
     },
     statusText: {
-      color: "#fff",
       fontSize: 12,
       fontWeight: "600",
     },
     historyDate: {
-      fontSize: 12,
+      fontSize: 13,
       color: currentTheme.subText || "#666",
       marginBottom: 4,
     },
     historyNotes: {
-      fontSize: 14,
+      fontSize: 13,
       color: currentTheme.text || "#000",
       fontStyle: "italic",
       marginTop: 8,
-    },
-    noHistoryText: {
-      textAlign: "center",
-      color: currentTheme.subText || "#666",
-      fontSize: 16,
-      fontStyle: "italic",
-      padding: 20,
     },
   });
 

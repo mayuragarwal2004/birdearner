@@ -11,7 +11,8 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { ArrowLeft, LockKey, Eye, EyeSlash, CheckCircle, XCircle } from "phosphor-react-native";
 import { useTheme } from "../context/ThemeContext";
 import apiService from "../lib/apiService";
 
@@ -27,8 +28,12 @@ const PasswordUpdateScreen = ({ navigation }) => {
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
 
-  // Memoize styles to prevent recreation on every render
-  const styles = useMemo(() => getStyles(currentTheme), [currentTheme]);
+  // Dynamic colors for dark/light mode balance
+  const isDark = theme === "dark";
+  const iconColor = isDark ? "#C4B5FD" : (currentTheme.primary || "#4B0082");
+  const buttonColor = isDark ? "#762BAD" : (currentTheme.primary || "#350F6A");
+
+  const styles = useMemo(() => getStyles(currentTheme, buttonColor), [currentTheme, buttonColor]);
 
   // Memoize password validation to prevent unnecessary recalculations
   const validatePassword = useCallback((password) => {
@@ -111,7 +116,19 @@ const PasswordUpdateScreen = ({ navigation }) => {
     }
   };
 
-  // Memoized components to prevent unnecessary rerenders
+  const StrengthRule = useCallback(({ met, text, theme, styles }) => (
+    <View style={styles.strengthRule}>
+      {met ? (
+        <CheckCircle size={16} color="#4CAF50" weight="fill" />
+      ) : (
+        <XCircle size={16} color="#F44336" weight="fill" />
+      )}
+      <Text style={[styles.strengthText, { color: met ? "#4CAF50" : theme.subText || "#9ca3af" }]}>
+        {text}
+      </Text>
+    </View>
+  ), []);
+
   const PasswordStrengthIndicator = useCallback(({ password }) => {
     const validation = validatePassword(password);
     
@@ -148,20 +165,7 @@ const PasswordUpdateScreen = ({ navigation }) => {
         </View>
       </View>
     );
-  }, [validatePassword, currentTheme, styles]);
-
-  const StrengthRule = useCallback(({ met, text, theme, styles }) => (
-    <View style={styles.strengthRule}>
-      <Ionicons 
-        name={met ? "checkmark-circle" : "close-circle"} 
-        size={16} 
-        color={met ? "#4CAF50" : "#F44336"} 
-      />
-      <Text style={[styles.strengthText, { color: met ? "#4CAF50" : theme.subText }]}>
-        {text}
-      </Text>
-    </View>
-  ), []);
+  }, [validatePassword, currentTheme, styles, StrengthRule]);
 
   const PasswordInput = useCallback(({ 
     label, 
@@ -172,16 +176,17 @@ const PasswordUpdateScreen = ({ navigation }) => {
     setShowPassword,
     showStrength = false 
   }) => (
-    <View style={styles.inputContainer}>
+    <View style={styles.inputGroup}>
       <Text style={styles.label}>{label}</Text>
-      <View style={styles.passwordInputContainer}>
+      <View style={styles.inputWrapper}>
+        <LockKey size={24} color={iconColor} style={styles.inputIcon} />
         <TextInput
-          style={styles.passwordInput}
+          style={styles.input}
           placeholder={placeholder}
           value={value}
           onChangeText={onChangeText}
           secureTextEntry={!showPassword}
-          placeholderTextColor={currentTheme.subText}
+          placeholderTextColor={currentTheme.subText || "#9ca3af"}
           autoCorrect={false}
           autoCapitalize="none"
           textContentType="password"
@@ -190,190 +195,210 @@ const PasswordUpdateScreen = ({ navigation }) => {
           style={styles.eyeButton}
           onPress={() => setShowPassword(!showPassword)}
           activeOpacity={0.7}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Ionicons
-            name={showPassword ? "eye-off" : "eye"}
-            size={20}
-            color={currentTheme.subText}
-          />
+          {showPassword ? (
+            <EyeSlash size={24} color={currentTheme.subText || "#6b7280"} />
+          ) : (
+            <Eye size={24} color={currentTheme.subText || "#6b7280"} />
+          )}
         </TouchableOpacity>
       </View>
       {showStrength && <PasswordStrengthIndicator password={value} />}
     </View>
-  ), [styles, currentTheme, PasswordStrengthIndicator]);
+  ), [styles, currentTheme, iconColor, PasswordStrengthIndicator]);
+
+  const isFormFilled = currentPassword.length > 0 && newPassword.length > 0 && confirmPassword.length > 0;
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container} 
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
-      <ScrollView 
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
+    <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView 
+        style={styles.keyboardView} 
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={styles.backButton}
-          >
-            <Ionicons
-              name="arrow-back"
-              size={24}
-              color={currentTheme.text}
-            />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Update Password</Text>
-          <View style={styles.placeholder} />
-        </View>
-
-        <View style={styles.content}>
-          <Text style={styles.subtitle}>
-            Keep your account secure with a strong password
-          </Text>
-
-          <PasswordInput
-            label="Current Password"
-            value={currentPassword}
-            onChangeText={setCurrentPassword}
-            placeholder="Enter your current password"
-            showPassword={showCurrentPassword}
-            setShowPassword={setShowCurrentPassword}
-          />
-
-          <PasswordInput
-            label="New Password"
-            value={newPassword}
-            onChangeText={setNewPassword}
-            placeholder="Enter your new password"
-            showPassword={showNewPassword}
-            setShowPassword={setShowNewPassword}
-            showStrength={true}
-          />
-
-          <PasswordInput
-            label="Confirm New Password"
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            placeholder="Confirm your new password"
-            showPassword={showConfirmPassword}
-            setShowPassword={setShowConfirmPassword}
-          />
-
-          {confirmPassword && newPassword !== confirmPassword && (
-            <View style={styles.errorContainer}>
-              <Ionicons name="alert-circle" size={16} color="#F44336" />
-              <Text style={styles.errorText}>Passwords do not match</Text>
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Header */}
+          <View style={styles.headerContainer}>
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={styles.backButton}
+              activeOpacity={0.7}
+            >
+              <ArrowLeft size={20} color={currentTheme.text || "#000"} />
+            </TouchableOpacity>
+            <View style={styles.headerTitleContainer}>
+              <Text style={styles.headerTitle}>Update Password</Text>
             </View>
-          )}
+            <View style={styles.rightPlaceholder} />
+          </View>
 
-          <TouchableOpacity
-            style={[
-              styles.updateButton,
-              loading && styles.updateButtonDisabled
-            ]}
-            onPress={handlePasswordUpdate}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" size="small" />
-            ) : (
-              <Text style={styles.updateButtonText}>Update Password</Text>
+          <View style={styles.content}>
+            <Text style={styles.subtitle}>
+              Keep your account secure with a{"\n"}strong password
+            </Text>
+
+            <PasswordInput
+              label="Current Password"
+              value={currentPassword}
+              onChangeText={setCurrentPassword}
+              placeholder="Enter your current password"
+              showPassword={showCurrentPassword}
+              setShowPassword={setShowCurrentPassword}
+            />
+
+            <PasswordInput
+              label="New Password"
+              value={newPassword}
+              onChangeText={setNewPassword}
+              placeholder="Enter your new password"
+              showPassword={showNewPassword}
+              setShowPassword={setShowNewPassword}
+              showStrength={true}
+            />
+
+            <PasswordInput
+              label="Confirm New Password"
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              placeholder="Confirm your new password"
+              showPassword={showConfirmPassword}
+              setShowPassword={setShowConfirmPassword}
+            />
+
+            {confirmPassword.length > 0 && newPassword !== confirmPassword && (
+              <View style={styles.errorContainer}>
+                <XCircle size={16} color="#F44336" weight="fill" />
+                <Text style={styles.errorText}>Passwords do not match</Text>
+              </View>
             )}
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+
+            <TouchableOpacity
+              style={[
+                styles.updateButton,
+                (!isFormFilled || loading) && styles.updateButtonDisabled
+              ]}
+              onPress={handlePasswordUpdate}
+              disabled={!isFormFilled || loading}
+              activeOpacity={0.8}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Text style={styles.updateButtonText}>Update Password</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
-// Move styles outside component to prevent recreation on every render
-const getStyles = (currentTheme) =>
+const getStyles = (currentTheme, buttonColor) =>
   StyleSheet.create({
-    container: {
+    safeArea: {
       flex: 1,
-      backgroundColor: currentTheme.background || "#FFF",
+      backgroundColor: currentTheme.background || "#FFFFFF",
+    },
+    keyboardView: {
+      flex: 1,
     },
     scrollContent: {
       flexGrow: 1,
+      paddingHorizontal: 24,
+      paddingTop: 20,
       paddingBottom: 40,
     },
-    header: {
+    headerContainer: {
       flexDirection: "row",
       alignItems: "center",
+      marginBottom: 20,
       justifyContent: "space-between",
-      paddingHorizontal: 20,
-      paddingTop: Platform.OS === "ios" ? 60 : 40,
-      paddingBottom: 20,
-      borderBottomWidth: 1,
-      borderBottomColor: currentTheme.border || "#E0E0E0",
     },
     backButton: {
-      padding: 8,
-      borderRadius: 8,
-      backgroundColor: currentTheme.background2 || "#F5F5F5",
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: currentTheme.border || "#E5E7EB",
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: currentTheme.background || "#FFFFFF",
+    },
+    headerTitleContainer: {
+      flex: 1,
+      alignItems: "center",
     },
     headerTitle: {
       fontSize: 20,
-      fontWeight: "600",
-      color: currentTheme.text,
+      fontWeight: "bold",
+      color: currentTheme.text || "#000000",
     },
-    placeholder: {
-      width: 40, // To center the title
+    rightPlaceholder: {
+      width: 40,
     },
     content: {
       flex: 1,
-      paddingHorizontal: 20,
-      paddingTop: 30,
+      paddingTop: 10,
     },
     subtitle: {
-      fontSize: 16,
-      color: currentTheme.subText || "#666",
+      fontSize: 15,
+      color: currentTheme.subText || "#666666",
       textAlign: "center",
       marginBottom: 30,
       lineHeight: 22,
     },
-    inputContainer: {
-      marginBottom: 25,
+    inputGroup: {
+      marginBottom: 20,
     },
     label: {
-      fontSize: 16,
+      fontSize: 15,
+      fontWeight: "500",
       color: currentTheme.text || "#000000",
       marginBottom: 8,
-      fontWeight: "500",
     },
-    passwordInputContainer: {
+    inputWrapper: {
       flexDirection: "row",
       alignItems: "center",
-      backgroundColor: currentTheme.background3 || "#f4f0f0",
-      borderRadius: 12,
+      height: 56,
       borderWidth: 1,
-      borderColor: currentTheme.border || "#E0E0E0",
-    },
-    passwordInput: {
-      flex: 1,
-      height: 50,
+      borderColor: currentTheme.border || "#E5E7EB",
+      borderRadius: 12,
       paddingHorizontal: 16,
-      fontSize: 16,
+      backgroundColor: currentTheme.background || "#FFFFFF",
+    },
+    inputIcon: {
+      marginRight: 12,
+    },
+    input: {
+      flex: 1,
+      fontSize: 15,
       color: currentTheme.text || "#000000",
+      height: "100%",
     },
     eyeButton: {
-      padding: 15,
+      paddingLeft: 10,
     },
     strengthContainer: {
       marginTop: 12,
       padding: 12,
-      backgroundColor: currentTheme.background2 || "#F8F8F8",
-      borderRadius: 8,
+      backgroundColor: currentTheme.background2 || "#F9FAFB",
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: currentTheme.border || "#E5E7EB",
     },
     strengthTitle: {
       fontSize: 14,
       fontWeight: "500",
-      color: currentTheme.text,
+      color: currentTheme.text || "#000000",
       marginBottom: 8,
     },
     strengthRules: {
-      gap: 4,
+      gap: 6,
     },
     strengthRule: {
       flexDirection: "row",
@@ -381,45 +406,35 @@ const getStyles = (currentTheme) =>
       gap: 8,
     },
     strengthText: {
-      fontSize: 12,
+      fontSize: 13,
       flex: 1,
     },
     errorContainer: {
       flexDirection: "row",
       alignItems: "center",
       gap: 8,
-      marginTop: -15,
-      marginBottom: 15,
+      marginTop: -10,
+      marginBottom: 20,
     },
     errorText: {
       fontSize: 14,
       color: "#F44336",
     },
     updateButton: {
-      height: 52,
-      backgroundColor: currentTheme.primary || "#6A0DAD",
+      height: 56,
+      backgroundColor: buttonColor,
       borderRadius: 12,
       alignItems: "center",
       justifyContent: "center",
-      marginTop: 30,
-      shadowColor: currentTheme.primary || "#6A0DAD",
-      shadowOffset: {
-        width: 0,
-        height: 4,
-      },
-      shadowOpacity: 0.3,
-      shadowRadius: 8,
-      elevation: 8,
+      marginTop: 10,
     },
     updateButtonDisabled: {
-      backgroundColor: currentTheme.disabled || "#CCC",
-      shadowOpacity: 0,
-      elevation: 0,
+      opacity: 0.6,
     },
     updateButtonText: {
       color: "#fff",
       fontWeight: "600",
-      fontSize: 18,
+      fontSize: 16,
     },
   });
 

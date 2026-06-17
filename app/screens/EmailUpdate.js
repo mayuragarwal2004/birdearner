@@ -5,155 +5,16 @@ import {
   StyleSheet,
   TouchableOpacity,
   TextInput,
-  Alert,
   ActivityIndicator,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { ArrowLeft, Envelope, LockKey, Eye, EyeSlash } from "phosphor-react-native";
 import { useTheme } from "../context/ThemeContext";
 import apiService from "../lib/apiService";
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import Toast from "react-native-toast-message";
-
-// Move getStyles outside component to prevent recreation
-const getStyles = (currentTheme) =>
-  StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: currentTheme.background || "#FFF",
-    },
-    scrollContent: {
-      flexGrow: 1,
-      padding: 20,
-      paddingHorizontal: 30,
-    },
-    main: {
-      marginTop: 45,
-      marginBottom: 30,
-      flexDirection: "row",
-      alignItems: "center",
-    },
-    backButton: {
-      marginRight: 20,
-      padding: 8,
-      borderRadius: 20,
-      backgroundColor: currentTheme.background2 || "#f5f5f5",
-    },
-    header: {
-      flex: 1,
-      fontSize: 24,
-      fontWeight: "bold",
-      color: currentTheme.text,
-      textAlign: "center",
-      marginRight: 48, // Compensate for back button width
-    },
-    formContainer: {
-      marginTop: 20,
-    },
-    inputGroup: {
-      marginBottom: 20,
-    },
-    label: {
-      fontSize: 16,
-      color: currentTheme.text || "#000000",
-      marginBottom: 8,
-      fontWeight: "500",
-    },
-    inputContainer: {
-      position: "relative",
-    },
-    input: {
-      width: "100%",
-      height: 50,
-      backgroundColor: currentTheme.background3 || "#f4f0f0",
-      borderRadius: 12,
-      paddingHorizontal: 20,
-      paddingRight: 50,
-      fontSize: 16,
-      color: currentTheme.subText || "#000000",
-      borderWidth: 1,
-      borderColor: "transparent",
-    },
-    inputFocused: {
-      borderColor: currentTheme.primary || "#6A0DAD",
-      backgroundColor: currentTheme.background || "#FFF",
-      shadowColor: currentTheme.primary || "#6A0DAD",
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 3,
-    },
-    inputError: {
-      borderColor: "#ff4757",
-      backgroundColor: "#fff5f5",
-    },
-    inputIcon: {
-      position: "absolute",
-      right: 15,
-      top: 13,
-    },
-    errorText: {
-      color: "#ff4757",
-      fontSize: 12,
-      marginTop: 5,
-      marginLeft: 5,
-    },
-    updateButton: {
-      width: "100%",
-      height: 50,
-      backgroundColor: currentTheme.primary || "#6A0DAD",
-      borderRadius: 12,
-      alignItems: "center",
-      justifyContent: "center",
-      marginTop: 30,
-      shadowColor: currentTheme.primary || "#6A0DAD",
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.3,
-      shadowRadius: 8,
-      elevation: 5,
-    },
-    updateButtonDisabled: {
-      backgroundColor: currentTheme.background3 || "#cccccc",
-      shadowOpacity: 0,
-      elevation: 0,
-    },
-    updateButtonText: {
-      color: "white",
-      fontSize: 18,
-      fontWeight: "700",
-    },
-    updateButtonTextDisabled: {
-      color: currentTheme.subText || "#666666",
-    },
-    loadingContainer: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    loadingText: {
-      color: "white",
-      fontSize: 16,
-      marginLeft: 10,
-      fontWeight: "600",
-    },
-    infoContainer: {
-      backgroundColor: currentTheme.background2 || "#f5f5f5",
-      padding: 15,
-      borderRadius: 12,
-      marginBottom: 20,
-      flexDirection: "row",
-      alignItems: "center",
-    },
-    infoText: {
-      flex: 1,
-      color: currentTheme.subText || "#666666",
-      fontSize: 14,
-      marginLeft: 10,
-      lineHeight: 18,
-    },
-  });
 
 const EmailUpdateScreen = ({ navigation }) => {
   const [newEmail, setNewEmail] = useState("");
@@ -167,8 +28,12 @@ const EmailUpdateScreen = ({ navigation }) => {
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
 
-  // Memoize styles to prevent recreation on every render
-  const styles = useMemo(() => getStyles(currentTheme), [currentTheme]);
+  // Dynamic colors for dark/light mode balance
+  const isDark = theme === "dark";
+  const iconColor = isDark ? "#C4B5FD" : (currentTheme.primary || "#4B0082");
+  const buttonColor = isDark ? "#762BAD" : (currentTheme.primary || "#350F6A");
+
+  const styles = useMemo(() => getStyles(currentTheme, buttonColor), [currentTheme, buttonColor]);
 
   // Email validation function
   const validateEmail = useCallback((email) => {
@@ -263,59 +128,6 @@ const EmailUpdateScreen = ({ navigation }) => {
     showToast("error", "Update Failed", "Unable to update email. Please try again later.");
   }, [showToast]);
 
-  // Input components with error handling
-  const EmailInput = useCallback(({ 
-    label, 
-    value, 
-    onChangeText, 
-    placeholder, 
-    error, 
-    fieldName,
-    secureTextEntry = false 
-  }) => (
-    <View style={styles.inputGroup}>
-      <Text style={styles.label}>{label}</Text>
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={[
-            styles.input,
-            error && showErrors && styles.inputError,
-          ]}
-          placeholder={placeholder}
-          value={value}
-          onChangeText={onChangeText}
-          keyboardType={secureTextEntry ? "default" : "email-address"}
-          secureTextEntry={secureTextEntry && fieldName === "password" ? !showPassword : secureTextEntry}
-          autoCorrect={false}
-          autoCapitalize={secureTextEntry ? "none" : "none"}
-          placeholderTextColor={currentTheme.subText || "#999"}
-        />
-        <View style={styles.inputIcon}>
-          {secureTextEntry && fieldName === "password" ? (
-            <TouchableOpacity
-              onPress={() => setShowPassword(!showPassword)}
-              activeOpacity={0.7}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <Ionicons
-                name={showPassword ? "eye-off" : "eye"}
-                size={20}
-                color={error && showErrors ? "#ff4757" : currentTheme.subText || "#999"}
-              />
-            </TouchableOpacity>
-          ) : (
-            <Ionicons
-              name={secureTextEntry ? "lock-closed" : "mail"}
-              size={20}
-              color={error && showErrors ? "#ff4757" : currentTheme.subText || "#999"}
-            />
-          )}
-        </View>
-      </View>
-      {error && showErrors && <Text style={styles.errorText}>{error}</Text>}
-    </View>
-  ), [styles, currentTheme, showPassword, showErrors]);
-
   const handleEmailUpdate = useCallback(async () => {
     const validationErrors = validateForm();
     
@@ -366,87 +178,240 @@ const EmailUpdateScreen = ({ navigation }) => {
   }, [newEmail, confirmEmail, password]);
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container} 
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
-      <ScrollView 
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
+    <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView 
+        style={styles.keyboardView} 
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <View style={styles.main}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={styles.backButton}
-            activeOpacity={0.7}
-          >
-            <Ionicons
-              name="arrow-back"
-              size={24}
-              color={currentTheme.text || "#000"}
-            />
-          </TouchableOpacity>
-          <Text style={styles.header}>Change Email</Text>
-        </View>
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Header */}
+          <View style={styles.headerContainer}>
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={styles.backButton}
+              activeOpacity={0.7}
+            >
+              <ArrowLeft size={20} color={currentTheme.text || "#000"} />
+            </TouchableOpacity>
+            <View style={styles.headerTitleContainer}>
+              <Text style={styles.headerTitle}>Change Email</Text>
+            </View>
+            <View style={styles.rightPlaceholder} />
+          </View>
 
-        <View style={styles.formContainer}>
-          <EmailInput
-            label="New Email Address"
-            value={newEmail}
-            onChangeText={setNewEmail}
-            placeholder="Enter new email address"
-            error={errors.newEmail}
-            fieldName="newEmail"
-          />
-
-          <EmailInput
-            label="Confirm New Email Address"
-            value={confirmEmail}
-            onChangeText={setConfirmEmail}
-            placeholder="Confirm new email address"
-            error={errors.confirmEmail}
-            fieldName="confirmEmail"
-          />
-
-          <EmailInput
-            label="Current Password"
-            value={password}
-            onChangeText={setPassword}
-            placeholder="Enter your current password"
-            error={errors.password}
-            fieldName="password"
-            secureTextEntry={true}
-          />
-
-          <TouchableOpacity 
-            style={[
-              styles.updateButton,
-              (!isFormFilled || loading) && styles.updateButtonDisabled
-            ]} 
-            onPress={handleEmailUpdate}
-            disabled={!isFormFilled || loading}
-            activeOpacity={0.8}
-          >
-            {loading ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="small" color="white" />
-                <Text style={styles.loadingText}>Updating...</Text>
+          <View style={styles.formContainer}>
+            
+            {/* New Email Address */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>New Email Address</Text>
+              <View style={[styles.inputWrapper, errors.newEmail && showErrors && styles.inputError]}>
+                <Envelope size={24} color={iconColor} style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter new email address"
+                  placeholderTextColor={currentTheme.subText || "#9ca3af"}
+                  value={newEmail}
+                  onChangeText={setNewEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
               </View>
-            ) : (
-              <Text style={[
-                styles.updateButtonText,
-                (!isFormFilled || loading) && styles.updateButtonTextDisabled
-              ]}>
-                Update Email
-              </Text>
-            )}
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
+              {errors.newEmail && showErrors && <Text style={styles.errorText}>{errors.newEmail}</Text>}
+            </View>
+
+            {/* Confirm New Email Address */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Confirm New Email Address</Text>
+              <View style={[styles.inputWrapper, errors.confirmEmail && showErrors && styles.inputError]}>
+                <Envelope size={24} color={iconColor} style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Confirm new email address"
+                  placeholderTextColor={currentTheme.subText || "#9ca3af"}
+                  value={confirmEmail}
+                  onChangeText={setConfirmEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+              </View>
+              {errors.confirmEmail && showErrors && <Text style={styles.errorText}>{errors.confirmEmail}</Text>}
+            </View>
+
+            {/* Current Password */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Current Password</Text>
+              <View style={[styles.inputWrapper, errors.password && showErrors && styles.inputError]}>
+                <LockKey size={24} color={iconColor} style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter your current password"
+                  placeholderTextColor={currentTheme.subText || "#9ca3af"}
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+                <TouchableOpacity
+                  onPress={() => setShowPassword(!showPassword)}
+                  activeOpacity={0.7}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  {showPassword ? (
+                    <EyeSlash size={24} color={currentTheme.subText || "#6b7280"} />
+                  ) : (
+                    <Eye size={24} color={currentTheme.subText || "#6b7280"} />
+                  )}
+                </TouchableOpacity>
+              </View>
+              {errors.password && showErrors && <Text style={styles.errorText}>{errors.password}</Text>}
+            </View>
+
+            <TouchableOpacity 
+              style={[
+                styles.updateButton,
+                (!isFormFilled || loading) && styles.updateButtonDisabled
+              ]} 
+              onPress={handleEmailUpdate}
+              disabled={!isFormFilled || loading}
+              activeOpacity={0.8}
+            >
+              {loading ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="small" color="white" />
+                  <Text style={styles.loadingText}>Updating...</Text>
+                </View>
+              ) : (
+                <Text style={styles.updateButtonText}>
+                  Update Email
+                </Text>
+              )}
+            </TouchableOpacity>
+
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
       <Toast />
-    </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
+
+const getStyles = (currentTheme, buttonColor) => StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: currentTheme.background || "#FFFFFF",
+  },
+  keyboardView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 24,
+    paddingTop: 20,
+    paddingBottom: 40,
+  },
+  headerContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 32,
+    justifyContent: "space-between",
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: currentTheme.border || "#E5E7EB",
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: currentTheme.background || "#FFFFFF",
+  },
+  headerTitleContainer: {
+    flex: 1,
+    alignItems: "center",
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: currentTheme.text || "#000000",
+  },
+  rightPlaceholder: {
+    width: 40,
+  },
+  formContainer: {
+    marginTop: 10,
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  label: {
+    fontSize: 15,
+    fontWeight: "500",
+    color: currentTheme.text || "#000000",
+    marginBottom: 8,
+  },
+  inputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: 56,
+    borderWidth: 1,
+    borderColor: currentTheme.border || "#E5E7EB",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    backgroundColor: currentTheme.background || "#FFFFFF",
+  },
+  inputError: {
+    borderColor: "#ff4757",
+  },
+  inputIcon: {
+    marginRight: 12,
+  },
+  input: {
+    flex: 1,
+    fontSize: 15,
+    color: currentTheme.text || "#000000",
+    height: "100%",
+  },
+  errorText: {
+    color: "#ff4757",
+    fontSize: 12,
+    marginTop: 6,
+    marginLeft: 4,
+  },
+  updateButton: {
+    width: "100%",
+    height: 56,
+    backgroundColor: buttonColor,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 16,
+  },
+  updateButtonDisabled: {
+    opacity: 0.6,
+  },
+  updateButtonText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  loadingContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  loadingText: {
+    color: "white",
+    fontSize: 16,
+    marginLeft: 10,
+    fontWeight: "600",
+  },
+});
 
 export default React.memo(EmailUpdateScreen);
