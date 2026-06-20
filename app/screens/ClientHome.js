@@ -255,7 +255,7 @@ const ClientHomeScreen = () => {
           ) : (
             <TouchableOpacity
               style={styles.notificationIcon}
-              onPress={handlePress}
+              onPress={() => navigation.navigate("Notification")}
             >
               <Image
                 source={
@@ -385,7 +385,7 @@ const ClientHomeScreen = () => {
               })
               : [0, 1, 2].map((item, index) => {
                 return (
-                  <TouchableOpacity key={index}>
+                  <TouchableOpacity key={index} onPress={() => navigation.navigate("Job Requirements")}>
                     <View
                       key={index}
                       style={[
@@ -466,7 +466,7 @@ const ClientHomeScreen = () => {
           <View style={styles.sectionContainer}>
             <View style={styles.profileContainers}>
               <Text style={styles.profileText}>Complete Your Profile</Text>
-              <Text style={styles.whatsNewText}>
+              <Text style={{ fontSize: 16, color: currentTheme.subText || "#000", marginBottom: 12 }}>
                 Your profile is {profilePercentage}% complete
               </Text>
               <View style={styles.boxColor}>
@@ -512,20 +512,19 @@ const ClientHomeScreen = () => {
               <TouchableOpacity
                 style={styles.loginButton}
                 onPress={handleCompleteProfile}
-                F
               >
                 <Text style={styles.loginButtonText}>Complete Now</Text>
               </TouchableOpacity>
             </View>
           </View>
         )}
-
         <View style={styles.sectionContainer}>
           <Text style={styles.sectionTitle}>What's New</Text>
           <View style={styles.whatsNewContainer}>
             <Text style={styles.whatsNewText}>No new updates</Text>
           </View>
         </View>
+
       </ScrollView>
       <View style={styles.stickyButton}>
         <TouchableOpacity
@@ -556,7 +555,7 @@ const getStyles = (currentTheme) =>
       // position: "relative"
     },
     scrollContent: {
-      paddingBottom: Platform.OS === "ios" ? 90 : 75, // Add bottom padding to prevent tab bar overlap
+      paddingBottom: Platform.OS === "ios" ? 150 : 130, // Increased bottom padding to prevent tab bar overlap
     },
     header: {
       flexDirection: "row",
@@ -774,6 +773,7 @@ const getStyles = (currentTheme) =>
       justifyContent: "center",
       alignItems: "center",
     },
+
     whatsNewContainer: {
       backgroundColor: currentTheme.cardBackground || "#ffffff",
       padding: 10,
@@ -793,6 +793,10 @@ const getStyles = (currentTheme) =>
       elevation: 4,
       borderBottomRightRadius: 20,
       borderTopLeftRadius: 20,
+    },
+    whatsNewText: {
+      fontSize: 16,
+      color: currentTheme.subText || "#000",
     },
     profileContainers: {
       backgroundColor: currentTheme.cardBackground || "#ffffff",
@@ -815,10 +819,7 @@ const getStyles = (currentTheme) =>
       borderBottomRightRadius: 20,
       borderTopLeftRadius: 20,
     },
-    whatsNewText: {
-      fontSize: 16,
-      color: currentTheme.subText || "#000",
-    },
+
     stickyButton: {
       width: 60,
       height: 60,

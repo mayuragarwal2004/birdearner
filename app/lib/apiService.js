@@ -2,7 +2,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 
-const DEV_API_BASE_URL = "https://spencer-released-framework-undertake.trycloudflare.com/api";
+const DEV_API_BASE_URL = "https://median-roughly-shops-widespread.trycloudflare.com/api";
 // const DEV_API_BASE_URL = "https://api.birdearner.com/api";
 
 const PROD_API_BASE_URL = "https://api.birdearner.com/api";
@@ -325,6 +325,39 @@ class ApiService {
 
     const response = await this.makeRequest(`/freelancers?${queryParams}`);
     return response.data;
+  }
+
+  // Get freelancer earnings overview
+  async getFreelancerEarnings(userId, period = 'All Time') {
+    try {
+      const response = await this.makeRequest(`/freelancers/user/${userId}/earnings?period=${encodeURIComponent(period)}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Failed to fetch freelancer earnings: ${error.message}`);
+      return null;
+    }
+  }
+
+  // Get freelancer orders overview
+  async getFreelancerOrders(userId, period = 'All Time') {
+    try {
+      const response = await this.makeRequest(`/freelancers/user/${userId}/orders?period=${encodeURIComponent(period)}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Failed to fetch freelancer orders: ${error.message}`);
+      return null;
+    }
+  }
+
+  // Get freelancer stats overview
+  async getFreelancerStats(userId, period = 'All Time') {
+    try {
+      const response = await this.makeRequest(`/freelancers/user/${userId}/stats?period=${encodeURIComponent(period)}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Failed to fetch freelancer stats: ${error.message}`);
+      return null;
+    }
   }
 
   // Get leaderboard data
