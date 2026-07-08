@@ -1,4 +1,3 @@
-import ProfileHeader from "../components/profile/ProfileHeader";
 import { useAuth } from "../context/NewAuthContext";
 import { useTheme } from "../context/ThemeContext";
 import React, { useEffect, useRef, useState } from "react";
@@ -9,7 +8,6 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  ImageBackground,
   ActivityIndicator,
   Share,
   Modal,
@@ -26,6 +24,12 @@ import LottieView from "lottie-react-native";
 import apiService from "../lib/apiService";
 
 const AnimatedLottieView = Animated.createAnimatedComponent(LottieView);
+const PURPLE = "#7B2CFF";
+const DEEP_PURPLE = "#1B1028";
+const TEXT = "#101114";
+const MUTED = "#656B7A";
+const BORDER = "#E7E1EF";
+const SOFT_PURPLE = "#F3EAFF";
 
 // Helper function to show toast messages
 const showToast = (type, title, message = "") => {
@@ -35,6 +39,68 @@ const showToast = (type, title, message = "") => {
     text2: message,
     position: "top",
   });
+};
+
+const parseArray = (value) => {
+  if (!value) return [];
+  if (Array.isArray(value)) return value.filter(Boolean);
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+    } catch {
+      return value ? [value] : [];
+    }
+  }
+  return [];
+};
+
+const getImageUri = (image) => {
+  const raw = image?.uri || image?.url || image?.secure_url || image;
+  return typeof raw === "string" && raw ? apiService.loadImageURI(raw) : null;
+};
+
+const getDisplayName = (data, userData) =>
+  data?.fullName || data?.user?.fullName || userData?.fullName || "Bird Earner";
+
+const getProfileTitle = (role, data, services) => {
+  if (role === "CLIENT") {
+    return data?.companyName || data?.company_name || data?.organizationType || "Client";
+  }
+
+  return data?.profileHeading || services?.[0]?.name || "Freelancer";
+};
+
+const formatMemberSince = (dateValue) => {
+  if (!dateValue) return "Not available";
+  const date = new Date(dateValue);
+  if (Number.isNaN(date.getTime())) return "Not available";
+  return date.toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+  });
+};
+
+const formatExperience = (months) => {
+  const value = Number(months || 0);
+  if (!value) return "No experience added";
+  if (value < 12) return `${value} Month${value === 1 ? "" : "s"} of Experience`;
+  const years = Math.floor(value / 12);
+  const remainder = value % 12;
+  if (!remainder) return `${years} Year${years === 1 ? "" : "s"} of Experience`;
+  return `${years} Year${years === 1 ? "" : "s"} ${remainder} Month${remainder === 1 ? "" : "s"}`;
+};
+
+const formatLocation = (data, userData) => {
+  const parts = [data?.city, data?.state, data?.country || userData?.country].filter(Boolean);
+  return parts.length ? parts.join(", ") : "Location not added";
+};
+
+const getBadgeLabel = (level) => {
+  const value = Number(level || 1);
+  if (value >= 10) return "Expert Badge";
+  if (value >= 5) return "Pro Badge";
+  return "Beginner Badge";
 };
 
 export default function ProfileScreen({ navigation }) {
@@ -56,6 +122,7 @@ export default function ProfileScreen({ navigation }) {
   const [refreshing, setRefreshing] = useState(false);
   const [images, setImages] = useState([]);
   const [modalVisiblet, setModalVisiblet] = useState(false);
+  const [switchingRole, setSwitchingRole] = useState(false);
   const animationProgress = useRef(new Animated.Value(0));
   const [userServices, setUserServices] = useState([]);
 
@@ -81,17 +148,40 @@ export default function ProfileScreen({ navigation }) {
     refreshUserData();
   }, []);
 
+  useEffect(() => {
+    const loadServices = async () => {
+      const serviceIds = parseArray(userProfile?.selectedServices);
+      if (!serviceIds.length) {
+        setUserServices([]);
+        return;
+      }
+
+      try {
+        const serviceResults = await Promise.all(
+          serviceIds.map(async (serviceId) => {
+            try {
+              return await apiService.getServiceById(serviceId);
+            } catch (error) {
+              console.warn(`Failed to load service ${serviceId}:`, error.message);
+              return null;
+            }
+          })
+        );
+        setUserServices(serviceResults.filter(Boolean));
+      } catch (error) {
+        console.error("Error loading services:", error);
+        setUserServices([]);
+      }
+    };
+
+    loadServices();
+  }, [userProfile?.selectedServices]);
+
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
   const styles = getStyles(currentTheme);
 
-  const createdAt = userData?.createdAt;
-  const date = new Date(createdAt);
-  const formattedDate = date.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  const formattedDate = formatMemberSince(data?.createdAt || userData?.createdAt);
   // ... (other hooks and functions)
 
   const transitionText =
@@ -99,27 +189,38 @@ export default function ProfileScreen({ navigation }) {
       ? "Switching to Client"
       : "Switching to Freelancer";
 
-  const handleRoleSwitch = async (newRoleData) => {
-    try {
-      setModalVisiblet(true);
+  const runRoleSwitchAnimation = () =>
+    new Promise((resolve) => {
+      animationProgress.current.setValue(0);
       Animated.timing(animationProgress.current, {
         toValue: 1,
         duration: 2500,
         easing: Easing.linear,
         useNativeDriver: false,
-      }).start(async () => {
-        setModalVisiblet(false);
-        animationProgress.current.setValue(0);
+      }).start(resolve);
+    });
 
-        // Use the more robust switchUserRole function
-        const newRole = newRoleData.role;
-        await switchUserRole(newRole);
-      });
+  const handleRoleSwitch = async (newRoleData) => {
+    if (switchingRole) return;
+
+    const newRole = newRoleData?.role;
+    if (!newRole || newRole === userData?.role) return;
+
+    try {
+      setSwitchingRole(true);
+      setModalVisiblet(true);
+
+      await Promise.all([
+        runRoleSwitchAnimation(),
+        switchUserRole(newRole),
+      ]);
     } catch (error) {
       console.error("Error switching role:", error);
-      setModalVisiblet(false);
-      animationProgress.current.setValue(0);
       Alert.alert("Error", "Failed to switch role. Please try again.");
+    } finally {
+      setModalVisiblet(false);
+      setSwitchingRole(false);
+      animationProgress.current.setValue(0);
     }
   };
 
@@ -168,14 +269,45 @@ export default function ProfileScreen({ navigation }) {
     }
   };
 
-  // ... (openImageModal and onShare can be removed or kept if used elsewhere, but ProfileHeader handles image/share for header. Portfolio still needs openImageModal)
+  const openImageModal = (imageUri, imageSet = [imageUri]) => {
+    const currentUri = getImageUri(imageUri);
+    if (!currentUri) return;
 
-  const openImageModal = (imageUri) => {
-    setImages([{ url: apiService.loadImageURI(imageUri) }]);
+    const normalizedImages = imageSet
+      .map((item) => ({ url: getImageUri(item) }))
+      .filter((item) => item.url);
+    const startIndex = Math.max(
+      normalizedImages.findIndex((item) => item.url === currentUri),
+      0
+    );
+
+    setImages([
+      ...normalizedImages.slice(startIndex),
+      ...normalizedImages.slice(0, startIndex),
+    ]);
     setModalVisible(true);
   };
 
-  // onShare can be removed if strictly using ProfileHeader's share, but keep if useful. ProfileHeader has its own.
+  const handleShare = async () => {
+    try {
+      const idToShare = data?.userId || data?.user?.id || userData?.id;
+      if (!idToShare) {
+        Alert.alert("Error", "Unable to share profile - user ID not found");
+        return;
+      }
+
+      const name = getDisplayName(data, userData);
+      const title = getProfileTitle(role, data, userServices);
+      const webLink = `https://birdearner.com/profile/${idToShare}`;
+      await Share.share({
+        title: `${name}'s Bird Earner Profile`,
+        message: `Check out ${role === "CLIENT" ? "my client" : "my freelancer"} profile on Bird Earner:\n\n${name}\n${title}\n\n${webLink}`,
+      });
+    } catch (error) {
+      console.error("Share error:", error);
+      Alert.alert("Error", "Failed to share the profile.");
+    }
+  };
 
   if (loading || loadingProfile) {
     return (
@@ -184,6 +316,13 @@ export default function ProfileScreen({ navigation }) {
       </SafeAreaView>
     );
   }
+
+  const displayName = getDisplayName(data, userData);
+  const profileTitle = getProfileTitle(role, data, userServices);
+  const profilePhotoUri = getImageUri(data?.profilePhoto);
+  const portfolioImages = parseArray(data?.portfolioImages);
+  const certifications = parseArray(data?.certifications);
+  const isAvailable = data?.currentlyAvailable !== false;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
@@ -212,22 +351,6 @@ export default function ProfileScreen({ navigation }) {
         />
       </Modal>
 
-      <View style={styles.tabContainer}>
-        <View style={styles.tab}>
-          <TouchableOpacity style={styles.tabButtonL}>
-            <Text style={styles.tabTextL}>My Profile</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.tabButtonR}
-            onPress={() => {
-              navigation.navigate("MyReview");
-            }}
-          >
-            <Text style={styles.tabTextR}>My Reviews</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.scrollContent}
@@ -241,107 +364,219 @@ export default function ProfileScreen({ navigation }) {
         }
         showsVerticalScrollIndicator={false}
       >
-        <ProfileHeader
-          profileData={data}
-          userData={userData}
-          userServices={userServices}
-          isOwnProfile={true}
-          onEditPress={() => navigation.navigate("Settings")}
-        />
+        <View style={styles.hero}>
+          <View style={styles.topBar}>
+            <TouchableOpacity
+              style={styles.iconButton}
+              onPress={() => navigation.navigate("Settings")}
+            >
+              <MaterialIcons name="settings" size={26} color={PURPLE} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
+              <MaterialIcons name="share" size={23} color={PURPLE} />
+              <Text style={styles.shareText}>Share profile</Text>
+            </TouchableOpacity>
+          </View>
 
-        {userData?.role === "FREELANCER" && (
-          <View style={styles.levelContainer}>
-            <View style={styles.xpRan}>
-              <View style={styles.xp}>
-                <Text style={styles.xpText}>{formatXP(data?.xp || 0)} xp</Text>
+          <TouchableOpacity
+            style={styles.avatarButton}
+            onPress={() => openImageModal(data?.profilePhoto)}
+            disabled={!profilePhotoUri}
+            activeOpacity={0.85}
+          >
+            <View style={styles.avatarRing}>
+              <Image
+                source={
+                  profilePhotoUri
+                    ? { uri: profilePhotoUri }
+                    : require("../assets/profile.png")
+                }
+                style={styles.avatar}
+              />
+            </View>
+            <View
+              style={[
+                styles.statusDot,
+                !isAvailable && styles.statusDotMuted,
+              ]}
+            />
+          </TouchableOpacity>
+
+          <Text style={styles.nameText}>{displayName}</Text>
+          <Text style={styles.roleText}>{profileTitle}</Text>
+
+          <View style={styles.ratingRow}>
+            {role === "FREELANCER" ? (
+              <>
+                <Text style={styles.ratingText}>{formatXP(data?.xp || 0)} xp</Text>
+                <Text style={styles.reviewCount}>Lev. {data?.level || 1}</Text>
+                <View style={styles.badge}>
+                  <MaterialIcons name="workspace-premium" size={20} color={PURPLE} />
+                  <Text style={styles.badgeText}>{getBadgeLabel(data?.level)}</Text>
+                </View>
+              </>
+            ) : (
+              <View style={styles.badge}>
+                <MaterialIcons name="business-center" size={20} color={PURPLE} />
+                <Text style={styles.badgeText}>Client Profile</Text>
               </View>
-              <Text style={styles.randomText}>
-                Earn xp and promote to next level
-              </Text>
-            </View>
-            <View style={styles.level}>
-              <Text style={styles.levelText}>Lev. {data?.level || 1}</Text>
-            </View>
+            )}
           </View>
-        )}
+        </View>
 
-        <Text style={styles.Profile_heading}>
-          {role === "CLIENT"
-            ? `Company Name: ${data?.companyName || "--"}`
-            : data?.profileHeading || "No profile heading"}
-        </Text>
+        <View style={styles.tabShell}>
+          <TouchableOpacity style={styles.profileTabButton} activeOpacity={0.85}>
+            <Text style={styles.profileTabTextActive}>My Profile</Text>
+            <View style={styles.profileTabIndicatorActive} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.profileTabButton}
+            activeOpacity={0.85}
+            onPress={() => navigation.navigate("MyReview", { profileData: data })}
+          >
+            <Text style={styles.profileTabText}>My Reviews</Text>
+            <View style={styles.profileTabIndicator} />
+          </TouchableOpacity>
+        </View>
 
-        <Text style={styles.about}>About me</Text>
-        <Text style={styles.about_des}>
-          {data?.profileDescription || "No description available"}
-        </Text>
+        <View style={styles.profileContent}>
+          <Text style={styles.sectionTitleLeft}>About me</Text>
+          <Text style={styles.aboutDescription}>
+            {data?.profileDescription || "No description available"}
+          </Text>
 
-        {/* Portfolio Section */}
-        {role === "FREELANCER" && data?.portfolioImages?.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Portfolio</Text>
-            <View style={styles.portfolioImages}>
-              {data?.portfolioImages.map((image, index) => (
-                <TouchableOpacity
-                  key={index}
-                  onPress={() => openImageModal(image)}
-                >
-                  <Image
-                    source={{ uri: apiService.loadImageURI(image) }}
-                    style={styles.portfolioImage}
-                  />
-                </TouchableOpacity>
-              ))}
-            </View>
+          <View style={styles.infoList}>
+            {role === "FREELANCER" ? (
+              <>
+                <InfoRow
+                  styles={styles}
+                  icon="work-outline"
+                  label="Experience"
+                  value={formatExperience(data?.experience)}
+                />
+                <InfoRow
+                  styles={styles}
+                  icon="leaderboard"
+                  label="Level"
+                  value={`Lev. ${data?.level || 1} ${getBadgeLabel(data?.level).replace(" Badge", "")}`}
+                />
+                <InfoRow
+                  styles={styles}
+                  icon="public"
+                  label="Freelancer category"
+                  value={
+                    userServices?.[0]?.category === "HOUSEHOLD"
+                      ? "On-site"
+                      : "Remote"
+                  }
+                />
+              </>
+            ) : (
+              <InfoRow
+                styles={styles}
+                icon="business"
+                label="Company"
+                value={data?.companyName || data?.company_name || "Not added"}
+              />
+            )}
+            <InfoRow
+              styles={styles}
+              icon="place"
+              label="From"
+              value={formatLocation(data, userData)}
+            />
+            <InfoRow
+              styles={styles}
+              icon="calendar-today"
+              label="Member Since"
+              value={formattedDate}
+            />
           </View>
-        )}
 
-        {/* Experience & Certifications */}
-        {role === "FREELANCER" &&
-          (data?.experience || data?.certifications?.length > 0) && (
-            <View style={styles.section}>
-              {data?.experience && (
-                <>
-                  <Text style={styles.sectionTitle}>Experience</Text>
-                  <Text style={styles.sectionContent}>
-                    {data?.experience} months of experience
-                  </Text>
-                </>
-              )}
+          {role === "FREELANCER" && (
+            <>
+              <Text style={styles.sectionTitleLeft}>Skills</Text>
+              <View style={styles.chips}>
+                {userServices.length ? (
+                  userServices.map((service) => (
+                    <View key={service.id || service.name} style={styles.skillChip}>
+                      <Text style={styles.skillText}>{service.name}</Text>
+                    </View>
+                  ))
+                ) : (
+                  <Text style={styles.emptyText}>No skills added yet</Text>
+                )}
+              </View>
 
-              {data?.certifications?.length > 0 && (
-                <>
-                  <Text style={[styles.sectionTitle, { marginTop: 20 }]}>
-                    Certifications
-                  </Text>
-                  {data?.certifications.map((cert, index) => (
-                    <Text key={index} style={styles.sectionContent}>
-                      {cert}
+              <Text style={styles.sectionTitleLeft}>Portfolio</Text>
+              <View style={styles.portfolioGrid}>
+                {portfolioImages.length ? (
+                  portfolioImages.map((image, index) => (
+                    <TouchableOpacity
+                      key={`${getImageUri(image)}-${index}`}
+                      style={[
+                        styles.portfolioTile,
+                        index === 0 && styles.portfolioTileLarge,
+                      ]}
+                      onPress={() => openImageModal(image, portfolioImages)}
+                      activeOpacity={0.85}
+                    >
+                      <Image
+                        source={{ uri: getImageUri(image) }}
+                        style={styles.portfolioTileImage}
+                      />
+                    </TouchableOpacity>
+                  ))
+                ) : (
+                  [0, 1, 2, 3].map((item) => (
+                    <View
+                      key={item}
+                      style={[
+                        styles.portfolioPlaceholder,
+                        item === 0 && styles.portfolioPlaceholderLarge,
+                      ]}
+                    >
+                      <Text style={styles.plus}>+</Text>
+                    </View>
+                  ))
+                )}
+              </View>
+
+              <Text style={styles.sectionTitleLeft}>Certification</Text>
+              {certifications.length ? (
+                certifications.map((cert, index) => (
+                  <View key={`${cert}-${index}`} style={styles.certCard}>
+                    <View style={styles.certTextWrap}>
+                      <Text style={styles.certTitle}>{cert}</Text>
+                      <Text style={styles.certSubtitle}>
+                        {data?.highestQualification || "Qualification added"}
+                      </Text>
+                    </View>
+                  </View>
+                ))
+              ) : (
+                <View style={styles.certCard}>
+                  <View style={styles.certTextWrap}>
+                    <Text style={styles.certTitle}>
+                      {data?.highestQualification || "No certification added"}
                     </Text>
-                  ))}
-                </>
+                  </View>
+                </View>
               )}
-            </View>
+            </>
           )}
-
-        <View style={styles.line}></View>
-
-        <Text style={styles.locTitle}>Location</Text>
-        <Text style={styles.locSubTitle}>
-          {data?.city ? `${data?.city}, ` : ""}{" "}
-          {data?.state ? `${data?.state} ` : ""}(
-          {data?.country || userData?.country})
-        </Text>
-
-        <Text style={styles.locTitle}>Member Since</Text>
-        <Text style={styles.locSubTitle}>{formattedDate}</Text>
+        </View>
 
         {/* TODO */}
         {userData && (
           <>
             {userData.freelancer && userData.client ? (
               <TouchableOpacity
-                style={styles.editProfileButton}
+                style={[
+                  styles.editProfileButton,
+                  switchingRole && styles.buttonDisabled,
+                ]}
+                disabled={switchingRole}
                 onPress={() =>
                   handleRoleSwitch(
                     userData.role === "FREELANCER"
@@ -384,7 +619,9 @@ export default function ProfileScreen({ navigation }) {
           animationType="fade"
           transparent={true}
           visible={modalVisiblet}
-          onRequestClose={() => setModalVisiblet(false)}
+          onRequestClose={() => {
+            if (!switchingRole) setModalVisiblet(false);
+          }}
         >
           <View style={[styles.modalContainer, {}]}>
             {/* <LottieView
@@ -447,18 +684,311 @@ export default function ProfileScreen({ navigation }) {
   );
 }
 
-const getStyles = (currentTheme) =>
-  StyleSheet.create({
+function InfoRow({ styles, icon, label, value }) {
+  return (
+    <View style={styles.infoRow}>
+      <MaterialIcons name={icon} size={28} color={PURPLE} />
+      <Text style={styles.infoLabel}>{label}</Text>
+      <Text style={styles.infoValue}>{value}</Text>
+    </View>
+  );
+}
+
+const getStyles = (currentTheme) => {
+  const surface = currentTheme.background || "#FFFFFF";
+  const card = currentTheme.cardBackground || surface;
+  const text = currentTheme.text || TEXT;
+  const muted = currentTheme.subText || MUTED;
+  const border = currentTheme.border || BORDER;
+  const softSurface = currentTheme.background3 || "#F6F3FA";
+  const badgeSurface = currentTheme.background2 || SOFT_PURPLE;
+  const tabSurface = surface === "#000000" ? "#13091F" : DEEP_PURPLE;
+
+  return StyleSheet.create({
     safeArea: {
       flex: 1,
-      backgroundColor: currentTheme.background || "#fff",
+      backgroundColor: surface,
     },
     container: {
       flex: 1,
-      backgroundColor: currentTheme.background || "#fff",
+      backgroundColor: surface,
     },
     scrollContent: {
       paddingBottom: 100, // Extra padding for bottom content
+    },
+    hero: {
+      paddingHorizontal: 22,
+      paddingTop: 8,
+      paddingBottom: 24,
+      alignItems: "center",
+      backgroundColor: surface,
+    },
+    topBar: {
+      width: "100%",
+      minHeight: 44,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 8,
+    },
+    iconButton: {
+      width: 44,
+      height: 44,
+      justifyContent: "center",
+      alignItems: "flex-start",
+    },
+    shareButton: {
+      minHeight: 44,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    shareText: {
+      color: PURPLE,
+      fontSize: 18,
+      fontWeight: "700",
+    },
+    avatarButton: {
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    avatarRing: {
+      width: 146,
+      height: 146,
+      borderRadius: 73,
+      borderWidth: 3,
+      borderColor: "#B05CFF",
+      padding: 5,
+      backgroundColor: surface,
+      shadowColor: PURPLE,
+      shadowOpacity: 0.22,
+      shadowRadius: 12,
+      shadowOffset: { width: 0, height: 6 },
+      elevation: 5,
+    },
+    avatar: {
+      width: "100%",
+      height: "100%",
+      borderRadius: 68,
+      backgroundColor: softSurface,
+    },
+    statusDot: {
+      position: "absolute",
+      right: 13,
+      bottom: 12,
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: "#A857F4",
+      borderWidth: 5,
+      borderColor: surface,
+    },
+    statusDotMuted: {
+      backgroundColor: "#B9B1C6",
+    },
+    ratingRow: {
+      marginTop: 18,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      flexWrap: "wrap",
+    },
+    ratingText: {
+      color: text,
+      fontSize: 19,
+      fontWeight: "800",
+    },
+    reviewCount: {
+      color: muted,
+      fontSize: 18,
+    },
+    badge: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 7,
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: 18,
+      backgroundColor: badgeSurface,
+      borderWidth: 1,
+      borderColor: "#E4CAFF",
+    },
+    badgeText: {
+      color: PURPLE,
+      fontSize: 16,
+      fontWeight: "700",
+    },
+    tabShell: {
+      marginHorizontal: 20,
+      marginTop: 2,
+      borderRadius: 18,
+      backgroundColor: tabSurface,
+      flexDirection: "row",
+      paddingHorizontal: 10,
+      paddingTop: 10,
+      height: 60,
+      shadowColor: "#000",
+      shadowOpacity: 0.2,
+      shadowRadius: 14,
+      shadowOffset: { width: 0, height: 8 },
+      elevation: 5,
+    },
+    profileTabButton: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "flex-start",
+    },
+    profileTabText: {
+      color: "#A8A6B0",
+      fontSize: 16,
+      fontWeight: "700",
+    },
+    profileTabTextActive: {
+      color: "#C36DFF",
+      fontSize: 16,
+      fontWeight: "700",
+    },
+    profileTabIndicator: {
+      height: 4,
+      width: "68%",
+      borderRadius: 3,
+      backgroundColor: "transparent",
+      marginTop: 8,
+    },
+    profileTabIndicatorActive: {
+      height: 4,
+      width: "68%",
+      borderRadius: 3,
+      backgroundColor: "#B65CFF",
+      marginTop: 8,
+    },
+    profileContent: {
+      paddingHorizontal: 26,
+      paddingTop: 28,
+      backgroundColor: surface,
+    },
+    sectionTitleLeft: {
+      color: text,
+      fontSize: 23,
+      fontWeight: "800",
+      marginBottom: 18,
+      marginTop: 6,
+    },
+    aboutDescription: {
+      color: muted,
+      fontSize: 17,
+      lineHeight: 25,
+      marginBottom: 22,
+    },
+    infoList: {
+      borderTopWidth: 1,
+      borderTopColor: border,
+      marginBottom: 26,
+    },
+    infoRow: {
+      minHeight: 72,
+      borderBottomWidth: 1,
+      borderBottomColor: border,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 16,
+    },
+    infoLabel: {
+      flex: 1.2,
+      color: muted,
+      fontSize: 16,
+    },
+    infoValue: {
+      flex: 1.45,
+      color: text,
+      fontSize: 16,
+      fontWeight: "600",
+    },
+    chips: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 12,
+      marginBottom: 30,
+    },
+    skillChip: {
+      paddingHorizontal: 16,
+      paddingVertical: 11,
+      borderRadius: 22,
+      borderWidth: 1,
+      borderColor: "#C995FF",
+      backgroundColor: card,
+    },
+    skillText: {
+      color: PURPLE,
+      fontSize: 16,
+      fontWeight: "700",
+    },
+    portfolioGrid: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 10,
+      marginBottom: 26,
+    },
+    portfolioTile: {
+      width: "31.6%",
+      aspectRatio: 1,
+      borderRadius: 10,
+      overflow: "hidden",
+      backgroundColor: softSurface,
+    },
+    portfolioTileLarge: {
+      width: "64.8%",
+      aspectRatio: 1,
+    },
+    portfolioTileImage: {
+      width: "100%",
+      height: "100%",
+    },
+    portfolioPlaceholder: {
+      width: "31.6%",
+      aspectRatio: 1,
+      borderRadius: 10,
+      backgroundColor: softSurface,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    portfolioPlaceholderLarge: {
+      width: "64.8%",
+      aspectRatio: 1,
+    },
+    plus: {
+      color: "#8E73C6",
+      fontSize: 36,
+      fontWeight: "300",
+    },
+    certCard: {
+      borderWidth: 1,
+      borderColor: border,
+      borderRadius: 12,
+      padding: 18,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 16,
+      marginBottom: 12,
+      backgroundColor: card,
+    },
+    certTextWrap: {
+      flex: 1,
+    },
+    certTitle: {
+      color: text,
+      fontSize: 16,
+      fontWeight: "800",
+    },
+    certSubtitle: {
+      color: muted,
+      fontSize: 15,
+      marginTop: 6,
+    },
+    emptyText: {
+      color: muted,
+      fontSize: 16,
     },
     tabContainer: {
       backgroundColor: currentTheme.background || "#fff",
@@ -609,9 +1139,11 @@ const getStyles = (currentTheme) =>
       paddingTop: 30,
     },
     nameText: {
-      fontSize: 28,
-      fontWeight: "600",
-      color: currentTheme.text,
+      marginTop: 18,
+      color: text,
+      fontSize: 34,
+      fontWeight: "800",
+      textAlign: "center",
     },
     roleWrap: {
       display: "flex",
@@ -620,10 +1152,11 @@ const getStyles = (currentTheme) =>
       paddingHorizontal: 30,
     },
     roleText: {
-      fontSize: 14,
-      fontWeight: "400",
-      color: currentTheme.text,
+      marginTop: 8,
+      color: muted,
+      fontSize: 19,
       textAlign: "center",
+      textTransform: "capitalize",
     },
     statusText: {
       fontSize: 14,
@@ -658,12 +1191,19 @@ const getStyles = (currentTheme) =>
       borderRadius: 6,
     },
     editProfileButton: {
-      backgroundColor: "#4C0183",
-      paddingVertical: 12,
-      marginHorizontal: 20,
+      backgroundColor: PURPLE,
+      paddingVertical: 14,
+      marginHorizontal: 26,
       borderRadius: 12,
-      // marginBottom: 15,
-      marginTop: 40,
+      marginTop: 28,
+      shadowColor: PURPLE,
+      shadowOpacity: 0.2,
+      shadowRadius: 10,
+      shadowOffset: { width: 0, height: 6 },
+      elevation: 3,
+    },
+    buttonDisabled: {
+      opacity: 0.65,
     },
     buttonText: {
       color: "#fff",
@@ -672,14 +1212,15 @@ const getStyles = (currentTheme) =>
     },
     deactivateLink: {
       textAlign: "center",
-      color: "#4C0183",
+      color: PURPLE,
       marginBottom: 50,
       borderWidth: 1,
-      padding: 10,
+      padding: 12,
       borderRadius: 12,
-      borderColor: "#4C0183",
-      marginHorizontal: 20,
+      borderColor: "#D6B7FF",
+      marginHorizontal: 26,
       marginTop: 20,
+      fontWeight: "700",
     },
     Profile_heading: {
       textAlign: "center",
@@ -777,3 +1318,4 @@ const getStyles = (currentTheme) =>
       marginLeft: 25,
     },
   });
+};

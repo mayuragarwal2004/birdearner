@@ -1,23 +1,30 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
   ActivityIndicator,
+  Alert,
+  Image,
   RefreshControl,
+  ScrollView,
+  Share,
+  StyleSheet,
+  Text,
   TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { FontAwesome, MaterialIcons } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
-import ReviewCard from "../components/ReviewCard";
-import ProfileHeader from "../components/profile/ProfileHeader";
-import ReviewStats from "../components/profile/ReviewStats";
 import { useAuth } from "../context/NewAuthContext";
 import { useTheme } from "../context/ThemeContext";
 import apiService from "../lib/apiService";
 
-// Helper function to show toast messages
+const PURPLE = "#7B2CFF";
+const DEEP_PURPLE = "#1B1028";
+const TEXT = "#101114";
+const MUTED = "#656B7A";
+const BORDER = "#E7E1EF";
+const SOFT_PURPLE = "#F3EAFF";
+
 const showToast = (type, title, message = "") => {
   Toast.show({
     type,
@@ -27,131 +34,205 @@ const showToast = (type, title, message = "") => {
   });
 };
 
-export default function MyReview({ navigation }) {
+const parseArray = (value) => {
+  if (!value) return [];
+  if (Array.isArray(value)) return value.filter(Boolean);
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+    } catch {
+      return value ? [value] : [];
+    }
+  }
+  return [];
+};
+
+const getImageUri = (image) => {
+  const raw = image?.uri || image?.url || image?.secure_url || image;
+  return typeof raw === "string" && raw ? apiService.loadImageURI(raw) : null;
+};
+
+const formatRating = (rating) => {
+  const value = Number(rating || 0);
+  return value ? value.toFixed(1).replace(".0", "") : "0.0";
+};
+
+const formatDate = (dateValue) => {
+  if (!dateValue) return "";
+  const date = new Date(dateValue);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+};
+
+const getDisplayName = (profileData, userData) =>
+  profileData?.fullName ||
+  profileData?.user?.fullName ||
+  userData?.fullName ||
+  "Bird Earner";
+
+const getProfileTitle = (role, profileData, services) => {
+  if (role === "CLIENT") {
+    return (
+      profileData?.companyName ||
+      profileData?.company_name ||
+      profileData?.organizationType ||
+      "Client"
+    );
+  }
+
+  return profileData?.profileHeading || services?.[0]?.name || "Freelancer";
+};
+
+const getBadgeLabel = (level) => {
+  const value = Number(level || 1);
+  if (value >= 10) return "Expert Badge";
+  if (value >= 5) return "Pro Badge";
+  return "Beginner Badge";
+};
+
+const getReviewerName = (review) =>
+  review?.reviewer?.fullName ||
+  review?.reviewer?.user?.fullName ||
+  review?.reviewerName ||
+  "Bird Earner user";
+
+const getReviewerLocation = (review) => {
+  const reviewer = review?.reviewer || {};
+  const parts = [
+    reviewer.city,
+    reviewer.state || review?.reviewerstate,
+    reviewer.country || review?.reviewerCountry,
+  ].filter(Boolean);
+  return parts.join(", ");
+};
+
+export default function MyReview({ navigation, route }) {
   const { userData, userProfile } = useAuth();
+  const profileData = route?.params?.profileData || userProfile || {};
+  const role = userData?.role || profileData?.role;
+  const profileUserId = profileData?.userId || profileData?.user?.id || userData?.id;
+
+  const { theme, themeStyles } = useTheme();
+  const currentTheme = themeStyles[theme];
+  const styles = useMemo(() => getStyles(currentTheme), [currentTheme]);
+
   const [loadingProfile, setLoadingProfile] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [reviews, setReviews] = useState([]);
   const [reviewStats, setReviewStats] = useState(null);
   const [userServices, setUserServices] = useState([]);
 
-  const { theme, themeStyles } = useTheme();
-  const currentTheme = themeStyles[theme];
-  const styles = getStyles(currentTheme);
+  const displayName = getDisplayName(profileData, userData);
+  const profileTitle = getProfileTitle(role, profileData, userServices);
+  const profilePhotoUri = getImageUri(profileData?.profilePhoto);
+  const isAvailable = profileData?.currentlyAvailable !== false;
 
-  const fetchData = useCallback(async () => {
-    if (!userData) return;
+  const fetchReviews = useCallback(async () => {
+    if (!profileUserId) return;
 
     setLoadingProfile(true);
     try {
-      // Get reviews
-      // const reviewType = userData.role === 'FREELANCER' ? 'FREELANCER' : 'CLIENT';
-      // Actually MyReview shows reviews ABOUT the user.
-      // If I am a Freelancer, I want to see reviews I received from Clients (so type FREELANCER?)
-      // Wait, getReviewsByUserId typically gets reviews *about* the user.
-      
-      const reviewsResponse = await apiService.getReviewsByUserId(userData.id);
-      if (reviewsResponse.success) {
-        setReviews(reviewsResponse.data);
-      }
+      const [reviewsResponse, statsResponse] = await Promise.all([
+        apiService.getReviewsByUserId(profileUserId),
+        apiService.getReviewStats(profileUserId),
+      ]);
 
-      // Get review statistics
-      const statsResponse = await apiService.getReviewStats(userData.id);
-      if (statsResponse.success) {
-        setReviewStats(statsResponse.data);
-      }
+      setReviews(reviewsResponse?.success ? reviewsResponse.data || [] : []);
+      setReviewStats(statsResponse?.success ? statsResponse.data : null);
     } catch (error) {
-      console.error(error);
-      showToast("error", "Error", "Failed to fetch data");
+      console.error("Failed to fetch reviews:", error);
+      showToast("error", "Error", "Failed to fetch reviews");
     } finally {
       setLoadingProfile(false);
     }
-  }, [userData]);
+  }, [profileUserId]);
+
+  const loadUserServices = useCallback(async () => {
+    if (role !== "FREELANCER") {
+      setUserServices([]);
+      return;
+    }
+
+    const serviceIds = parseArray(profileData?.selectedServices);
+    if (!serviceIds.length) {
+      setUserServices([]);
+      return;
+    }
+
+    try {
+      const serviceResults = await Promise.all(
+        serviceIds.map(async (serviceId) => {
+          try {
+            return await apiService.getServiceById(serviceId);
+          } catch (error) {
+            console.warn(`Failed to load service ${serviceId}:`, error.message);
+            return null;
+          }
+        })
+      );
+      setUserServices(serviceResults.filter(Boolean));
+    } catch (error) {
+      console.error("Failed to load services:", error);
+      setUserServices([]);
+    }
+  }, [profileData?.selectedServices, role]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    fetchReviews();
+  }, [fetchReviews]);
+
+  useEffect(() => {
+    loadUserServices();
+  }, [loadUserServices]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    fetchData().finally(() => setRefreshing(false));
-  }, [fetchData]);
+    Promise.all([fetchReviews(), loadUserServices()]).finally(() => {
+      setRefreshing(false);
+    });
+  }, [fetchReviews, loadUserServices]);
 
-  // Load user services and role info
-  useEffect(() => {
-    const loadUserInfo = async () => {
-      try {
-        if (
-          userData &&
-          userData.role === "FREELANCER" &&
-          userProfile?.selectedServices
-        ) {
-          console.log("Loading services for user:", userData.id);
-          console.log("Selected services:", userProfile.selectedServices);
-
-          // Load service details for the user's selected services
-          const services = await Promise.all(
-            userProfile.selectedServices.map(async (serviceId) => {
-              try {
-                console.log(`Loading service: ${serviceId}`);
-                const service = await apiService.getServiceById(serviceId);
-                console.log(`Service ${serviceId} loaded:`, service);
-                return service;
-              } catch (error) {
-                console.error(
-                  `Error loading service ${serviceId}:`,
-                  error.message
-                );
-                // Return null for invalid services instead of breaking
-                return null;
-              }
-            })
-          );
-
-          // Filter out null services (failed to load)
-          const validServices = services.filter((s) => s !== null);
-          console.log("Valid services loaded:", validServices.length);
-          setUserServices(validServices);
-        } else {
-          // Clear services if user is not a freelancer or has no selected services
-          setUserServices([]);
-        }
-      } catch (error) {
-        console.error("Error loading user info:", error);
-        setUserServices([]);
-        showToast("error", "Error", "Failed to load user services");
+  const handleShare = async () => {
+    try {
+      if (!profileUserId) {
+        Alert.alert("Error", "Unable to share profile - user ID not found");
+        return;
       }
-    };
 
-    if (userData) {
-      loadUserInfo();
+      const webLink = `https://birdearner.com/profile/${profileUserId}`;
+      await Share.share({
+        title: `${displayName}'s Bird Earner Profile`,
+        message: `Check out my ${role === "CLIENT" ? "client" : "freelancer"} profile on Bird Earner:\n\n${displayName}\n${profileTitle}\n\n${webLink}`,
+      });
+    } catch (error) {
+      console.error("Share error:", error);
+      Alert.alert("Error", "Failed to share the profile.");
     }
-  }, [userData, userProfile]);
+  };
 
-  if (loadingProfile) {
+  const goToProfile = () => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+    navigation.navigate("MyProfile");
+  };
+
+  if (loadingProfile && !reviews.length && !reviewStats) {
     return (
       <SafeAreaView style={styles.centered}>
-        <ActivityIndicator size="large" color="#4C0183" />
+        <ActivityIndicator size="large" color={PURPLE} />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-      <View style={styles.tabContainer}>
-        <View style={styles.tab}>
-          <TouchableOpacity
-            style={styles.tabButtonL}
-            onPress={() => navigation.goBack()}
-          >
-            <Text style={styles.tabTextL}>My Profile</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.tabButtonR}>
-            <Text style={styles.tabTextR}>My Reviews</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-      
+    <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.scrollContent}
@@ -159,277 +240,557 @@ export default function MyReview({ navigation }) {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={["#4C0183"]}
-            progressBackgroundColor={currentTheme.cardBackground}
+            colors={[PURPLE]}
+            progressBackgroundColor={currentTheme.cardBackground || "#fff"}
           />
         }
         showsVerticalScrollIndicator={false}
       >
-        <ProfileHeader 
-            profileData={userProfile} 
-            userData={userData}
-            userServices={userServices}
-            isOwnProfile={true}
-        />
+        <View style={styles.hero}>
+          <View style={styles.topBar}>
+            <TouchableOpacity
+              style={styles.iconButton}
+              onPress={() => navigation.navigate("Settings")}
+            >
+              <MaterialIcons name="settings" size={26} color={PURPLE} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
+              <MaterialIcons name="share" size={23} color={PURPLE} />
+              <Text style={styles.shareText}>Share profile</Text>
+            </TouchableOpacity>
+          </View>
 
-        {reviewStats && (
-            <ReviewStats stats={reviewStats} />
-        )}
-
-        <View style={styles.reviewSection}>
-          <Text style={styles.reviewSectionTitle}>Recent Reviews</Text>
-          {reviews.length > 0 ? (
-            reviews.map((review) => (
-              <ReviewCard
-                key={review.id}
-                reviewerName={review.reviewer?.fullName}
-                reviewerLocation={review.reviewer?.location}
-                starRating={review.rating}
-                reviewText={review.reviewText}
-                reviewerPhoto={review.reviewer?.profilePhoto}
-                jobTitle={review.job?.jobTitle}
-                date={new Date(review.createdAt).toLocaleDateString()}
+          <View style={styles.avatarButton}>
+            <View style={styles.avatarRing}>
+              <Image
+                source={
+                  profilePhotoUri
+                    ? { uri: profilePhotoUri }
+                    : require("../assets/profile.png")
+                }
+                style={styles.avatar}
               />
+            </View>
+            <View style={[styles.statusDot, !isAvailable && styles.statusDotMuted]} />
+          </View>
+
+          <Text style={styles.nameText}>{displayName}</Text>
+          <Text style={styles.roleText}>{profileTitle}</Text>
+
+          <View style={styles.ratingRow}>
+            <Text style={styles.ratingText}>{formatRating(reviewStats?.averageRating)}</Text>
+            <Text style={styles.reviewCount}>
+              ({reviewStats?.totalReviews || reviews.length || 0})
+            </Text>
+            <View style={styles.badge}>
+              <MaterialIcons
+                name={role === "CLIENT" ? "business-center" : "workspace-premium"}
+                size={20}
+                color={PURPLE}
+              />
+              <Text style={styles.badgeText}>
+                {role === "CLIENT" ? "Client Profile" : getBadgeLabel(profileData?.level)}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.tabShell}>
+          <TouchableOpacity
+            style={styles.profileTabButton}
+            activeOpacity={0.85}
+            onPress={goToProfile}
+          >
+            <Text style={styles.profileTabText}>My Profile</Text>
+            <View style={styles.profileTabIndicator} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.profileTabButton} activeOpacity={0.85}>
+            <Text style={styles.profileTabTextActive}>My Reviews</Text>
+            <View style={styles.profileTabIndicatorActive} />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.content}>
+          <ReviewSummary styles={styles} stats={reviewStats} reviewCount={reviews.length} />
+
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Recent Reviews</Text>
+            <Text style={styles.sectionMeta}>
+              {reviewStats?.totalReviews || reviews.length || 0} total
+            </Text>
+          </View>
+
+          {reviews.length ? (
+            reviews.map((review) => (
+              <ReviewItem key={review.id} styles={styles} review={review} />
             ))
           ) : (
-            <Text style={styles.noReviewsText}>No reviews yet</Text>
+            <View style={styles.emptyState}>
+              <MaterialIcons name="rate-review" size={38} color={PURPLE} />
+              <Text style={styles.emptyTitle}>No reviews yet</Text>
+              <Text style={styles.emptyText}>
+                Reviews from completed work will appear here.
+              </Text>
+            </View>
           )}
         </View>
       </ScrollView>
+      <Toast />
     </SafeAreaView>
   );
 }
 
-const getStyles = (currentTheme) =>
-  StyleSheet.create({
+function ReviewSummary({ styles, stats, reviewCount }) {
+  const total = stats?.totalReviews || reviewCount || 0;
+  const average = Number(stats?.averageRating || 0);
+  const distribution = stats?.ratingDistribution || {};
+
+  return (
+    <View style={styles.summaryCard}>
+      <View style={styles.summaryTop}>
+        <View>
+          <Text style={styles.summaryRating}>{formatRating(average)}</Text>
+          <View style={styles.summaryStars}>
+            {[1, 2, 3, 4, 5].map((item) => (
+              <FontAwesome
+                key={item}
+                name={item <= Math.round(average) ? "star" : "star-o"}
+                size={16}
+                color={PURPLE}
+              />
+            ))}
+          </View>
+        </View>
+        <View style={styles.summaryCountBox}>
+          <Text style={styles.summaryCount}>{total}</Text>
+          <Text style={styles.summaryLabel}>Total Reviews</Text>
+        </View>
+      </View>
+
+      <View style={styles.ratingBars}>
+        {[5, 4, 3, 2, 1].map((rating) => {
+          const count = Number(distribution[rating] || 0);
+          const percentage = total ? `${(count / total) * 100}%` : "0%";
+          return (
+            <View key={rating} style={styles.ratingBarRow}>
+              <Text style={styles.ratingBarLabel}>{rating}</Text>
+              <View style={styles.ratingBarTrack}>
+                <View style={[styles.ratingBarFill, { width: percentage }]} />
+              </View>
+              <Text style={styles.ratingBarCount}>{count}</Text>
+            </View>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+function ReviewItem({ styles, review }) {
+  const reviewerPhotoUri = getImageUri(review?.reviewer?.profilePhoto || review?.reviewerPhoto);
+  const reviewerLocation = getReviewerLocation(review);
+  const rating = Number(review?.rating || 0);
+
+  return (
+    <View style={styles.reviewCard}>
+      <View style={styles.reviewHeader}>
+        <Image
+          source={
+            reviewerPhotoUri
+              ? { uri: reviewerPhotoUri }
+              : require("../assets/profile.png")
+          }
+          style={styles.reviewerAvatar}
+        />
+        <View style={styles.reviewMeta}>
+          <Text style={styles.reviewerName}>{getReviewerName(review)}</Text>
+          {!!reviewerLocation && (
+            <Text style={styles.reviewerLocation}>{reviewerLocation}</Text>
+          )}
+          <View style={styles.reviewStars}>
+            {[1, 2, 3, 4, 5].map((item) => (
+              <FontAwesome
+                key={item}
+                name={item <= rating ? "star" : "star-o"}
+                size={15}
+                color={PURPLE}
+              />
+            ))}
+          </View>
+        </View>
+        <Text style={styles.reviewDate}>{formatDate(review?.createdAt)}</Text>
+      </View>
+
+      {!!(review?.job?.jobTitle || review?.jobTitle) && (
+        <Text style={styles.jobTitle} numberOfLines={1}>
+          {review?.job?.jobTitle || review?.jobTitle}
+        </Text>
+      )}
+      <Text style={styles.reviewText}>
+        {review?.reviewText || "No review text provided"}
+      </Text>
+    </View>
+  );
+}
+
+const getStyles = (currentTheme) => {
+  const surface = currentTheme.background || "#FFFFFF";
+  const card = currentTheme.cardBackground || surface;
+  const text = currentTheme.text || TEXT;
+  const muted = currentTheme.subText || MUTED;
+  const border = currentTheme.border || BORDER;
+  const softSurface = currentTheme.background3 || "#F6F3FA";
+  const badgeSurface = currentTheme.background2 || SOFT_PURPLE;
+  const tabSurface = surface === "#000000" ? "#13091F" : DEEP_PURPLE;
+
+  return StyleSheet.create({
     safeArea: {
       flex: 1,
-      backgroundColor: currentTheme.background,
-    },
-    tabContainer: {
-      backgroundColor: currentTheme.background,
-      paddingVertical: 10,
-      paddingTop: 20,
-      paddingHorizontal: 20,
+      backgroundColor: surface,
     },
     container: {
       flex: 1,
-      backgroundColor: currentTheme.background,
+      backgroundColor: surface,
     },
     scrollContent: {
-      paddingBottom: 100, // Extra padding for bottom content
+      paddingBottom: 100,
     },
     centered: {
       flex: 1,
       justifyContent: "center",
       alignItems: "center",
-      backgroundColor: currentTheme.background,
+      backgroundColor: surface,
     },
-    tab: {
-      flexDirection: "row",
-      justifyContent: "center",
-      backgroundColor: currentTheme.background2 || "#F8F9FA",
-      marginHorizontal: 20,
-      borderRadius: 12,
-      padding: 4,
-      shadowColor: "#000",
-      shadowOffset: {
-        width: 0,
-        height: 1,
-      },
-      shadowOpacity: 0.05,
-      shadowRadius: 2,
-      elevation: 1,
-    },
-    tabButtonL: {
-      backgroundColor: "transparent",
-      width: "48%",
-      height: 36,
-      justifyContent: "center",
+    hero: {
+      paddingHorizontal: 22,
+      paddingTop: 8,
+      paddingBottom: 24,
       alignItems: "center",
-      borderRadius: 8,
+      backgroundColor: surface,
     },
-    tabButtonR: {
-      backgroundColor: "#4C0183",
-      width: "48%",
-      height: 36,
-      justifyContent: "center",
-      alignItems: "center",
-      borderRadius: 8,
-      shadowColor: "#4C0183",
-      shadowOffset: {
-        width: 0,
-        height: 2,
-      },
-      shadowOpacity: 0.15,
-      shadowRadius: 3,
-      elevation: 2,
-    },
-    tabTextL: {
-      color: currentTheme.text || "#64748B",
-      fontSize: 16,
-      fontWeight: "500",
-    },
-    tabTextR: {
-      color: "#fff",
-      fontSize: 16,
-      fontWeight: "600",
-    },
-    backgroundImg: {
+    topBar: {
       width: "100%",
-      height: 150,
-      position: "relative",
+      minHeight: 44,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 8,
     },
-    backgroundImgStyle: {
-      opacity: 0.7,
-    },
-    profileImage: {
-      width: 100,
-      height: 100,
-      borderRadius: 50,
-      position: "absolute",
-      bottom: -20,
-      left: "38%",
-      borderWidth: 3,
-      borderColor: "#fff",
-    },
-    share: {
-      position: "absolute",
-      bottom: 10,
-      right: 20,
-      backgroundColor: "#fff",
-      width: 40,
-      height: 40,
-      borderRadius: 20,
+    iconButton: {
+      width: 44,
+      height: 44,
       justifyContent: "center",
-      alignItems: "center",
-      elevation: 4,
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.25,
-      shadowRadius: 3.84,
+      alignItems: "flex-start",
     },
-    userDetails: {
+    shareButton: {
+      minHeight: 44,
+      flexDirection: "row",
       alignItems: "center",
-      paddingTop: 30,
-      paddingHorizontal: 20,
+      gap: 8,
+    },
+    shareText: {
+      color: PURPLE,
+      fontSize: 18,
+      fontWeight: "700",
+    },
+    avatarButton: {
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    avatarRing: {
+      width: 146,
+      height: 146,
+      borderRadius: 73,
+      borderWidth: 3,
+      borderColor: "#B05CFF",
+      padding: 5,
+      backgroundColor: surface,
+      shadowColor: PURPLE,
+      shadowOpacity: 0.22,
+      shadowRadius: 12,
+      shadowOffset: { width: 0, height: 6 },
+      elevation: 5,
+    },
+    avatar: {
+      width: "100%",
+      height: "100%",
+      borderRadius: 68,
+      backgroundColor: softSurface,
+    },
+    statusDot: {
+      position: "absolute",
+      right: 13,
+      bottom: 12,
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: "#A857F4",
+      borderWidth: 5,
+      borderColor: surface,
+    },
+    statusDotMuted: {
+      backgroundColor: "#B9B1C6",
     },
     nameText: {
-      fontSize: 28,
-      fontWeight: "600",
-      color: currentTheme.text,
-      marginBottom: 5,
-    },
-    roleText: {
-      fontSize: 16,
-      color: currentTheme.text,
-      marginBottom: 10,
+      marginTop: 18,
+      color: text,
+      fontSize: 34,
+      fontWeight: "800",
       textAlign: "center",
     },
-    locationContainer: {
+    roleText: {
+      marginTop: 8,
+      color: muted,
+      fontSize: 19,
+      textAlign: "center",
+      textTransform: "capitalize",
+    },
+    ratingRow: {
+      marginTop: 18,
       flexDirection: "row",
       alignItems: "center",
-      marginBottom: 15,
+      justifyContent: "center",
+      gap: 8,
+      flexWrap: "wrap",
     },
-    locationText: {
-      fontSize: 14,
-      color: currentTheme.subText,
-      marginLeft: 5,
+    ratingText: {
+      color: text,
+      fontSize: 19,
+      fontWeight: "800",
     },
-    statusContainer: {
+    reviewCount: {
+      color: muted,
+      fontSize: 18,
+    },
+    badge: {
       flexDirection: "row",
       alignItems: "center",
-      marginBottom: 20,
+      gap: 7,
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: 18,
+      backgroundColor: badgeSurface,
+      borderWidth: 1,
+      borderColor: "#E4CAFF",
     },
-    statusText: {
-      fontSize: 14,
-      fontWeight: "600",
-      color: currentTheme.text,
-      marginRight: 5,
+    badgeText: {
+      color: PURPLE,
+      fontSize: 16,
+      fontWeight: "700",
     },
-    statusIcon: {
-      marginLeft: 5,
-    },
-    statsContainer: {
-      width: "100%",
-      backgroundColor: currentTheme.cardBackground,
-      borderRadius: 15,
-      padding: 20,
-      marginBottom: 20,
-    },
-    ratingHeader: {
+    tabShell: {
+      marginHorizontal: 20,
+      marginTop: 2,
+      borderRadius: 18,
+      backgroundColor: tabSurface,
       flexDirection: "row",
-      justifyContent: "space-between",
-      marginBottom: 20,
       paddingHorizontal: 10,
+      paddingTop: 10,
+      height: 60,
+      shadowColor: "#000",
+      shadowOpacity: 0.2,
+      shadowRadius: 14,
+      shadowOffset: { width: 0, height: 8 },
+      elevation: 5,
     },
-    averageRating: {
+    profileTabButton: {
+      flex: 1,
       alignItems: "center",
+      justifyContent: "flex-start",
     },
-    averageRatingNumber: {
+    profileTabText: {
+      color: "#A8A6B0",
+      fontSize: 16,
+      fontWeight: "700",
+    },
+    profileTabTextActive: {
+      color: "#C36DFF",
+      fontSize: 16,
+      fontWeight: "700",
+    },
+    profileTabIndicator: {
+      height: 4,
+      width: "68%",
+      borderRadius: 3,
+      backgroundColor: "transparent",
+      marginTop: 8,
+    },
+    profileTabIndicatorActive: {
+      height: 4,
+      width: "68%",
+      borderRadius: 3,
+      backgroundColor: "#B65CFF",
+      marginTop: 8,
+    },
+    content: {
+      paddingHorizontal: 24,
+      paddingTop: 28,
+    },
+    summaryCard: {
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: border,
+      backgroundColor: card,
+      padding: 18,
+      marginBottom: 24,
+    },
+    summaryTop: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      borderBottomWidth: 1,
+      borderBottomColor: border,
+      paddingBottom: 18,
+      marginBottom: 18,
+    },
+    summaryRating: {
+      color: PURPLE,
       fontSize: 48,
-      fontWeight: "bold",
-      color: "#4C0183",
+      fontWeight: "900",
     },
-    ratingLabel: {
-      color: currentTheme.subText,
+    summaryStars: {
+      flexDirection: "row",
+      gap: 4,
+      marginTop: 4,
+    },
+    summaryCountBox: {
+      alignItems: "flex-end",
+    },
+    summaryCount: {
+      color: text,
+      fontSize: 28,
+      fontWeight: "900",
+    },
+    summaryLabel: {
+      color: muted,
       fontSize: 14,
-    },
-    totalReviews: {
-      alignItems: "center",
-    },
-    totalNumber: {
-      fontSize: 24,
-      fontWeight: "bold",
-      color: currentTheme.text,
-    },
-    reviewsLabel: {
-      color: currentTheme.subText,
-      fontSize: 14,
+      fontWeight: "700",
+      marginTop: 4,
     },
     ratingBars: {
       gap: 10,
     },
-    ratingBarContainer: {
+    ratingBarRow: {
       flexDirection: "row",
       alignItems: "center",
       gap: 10,
     },
-    ratingNumber: {
-      width: 30,
+    ratingBarLabel: {
+      width: 22,
+      color: text,
       fontSize: 14,
-      color: currentTheme.text,
+      fontWeight: "800",
     },
-    ratingBarBg: {
+    ratingBarTrack: {
       flex: 1,
       height: 8,
-      backgroundColor: currentTheme.border,
       borderRadius: 4,
+      overflow: "hidden",
+      backgroundColor: softSurface,
     },
-    ratingBarFg: {
+    ratingBarFill: {
       height: "100%",
-      backgroundColor: "#4C0183",
       borderRadius: 4,
+      backgroundColor: PURPLE,
     },
-    ratingCount: {
-      width: 30,
-      fontSize: 14,
-      color: currentTheme.subText,
+    ratingBarCount: {
+      width: 28,
+      color: muted,
+      fontSize: 13,
       textAlign: "right",
+      fontWeight: "700",
     },
-    reviewSection: {
-      padding: 20,
+    sectionHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 14,
     },
-    reviewSectionTitle: {
-      fontSize: 20,
-      fontWeight: "600",
-      color: currentTheme.text,
-      marginBottom: 15,
+    sectionTitle: {
+      color: text,
+      fontSize: 22,
+      fontWeight: "800",
     },
-    noReviewsText: {
-      textAlign: "center",
-      color: currentTheme.subText,
+    sectionMeta: {
+      color: muted,
+      fontSize: 14,
+      fontWeight: "700",
+    },
+    reviewCard: {
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: border,
+      backgroundColor: card,
+      padding: 16,
+      marginBottom: 14,
+    },
+    reviewHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    reviewerAvatar: {
+      width: 52,
+      height: 52,
+      borderRadius: 26,
+      backgroundColor: softSurface,
+    },
+    reviewMeta: {
+      flex: 1,
+      marginLeft: 12,
+    },
+    reviewerName: {
+      color: text,
       fontSize: 16,
-      marginTop: 20,
+      fontWeight: "800",
+    },
+    reviewerLocation: {
+      color: muted,
+      fontSize: 13,
+      marginTop: 2,
+    },
+    reviewStars: {
+      flexDirection: "row",
+      gap: 3,
+      marginTop: 5,
+    },
+    reviewDate: {
+      color: muted,
+      fontSize: 12,
+      fontWeight: "600",
+    },
+    jobTitle: {
+      color: PURPLE,
+      fontSize: 14,
+      fontWeight: "800",
+      marginTop: 14,
+    },
+    reviewText: {
+      color: muted,
+      fontSize: 15,
+      lineHeight: 22,
+      marginTop: 10,
+    },
+    emptyState: {
+      minHeight: 220,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: border,
+      backgroundColor: card,
+      padding: 18,
+    },
+    emptyTitle: {
+      color: text,
+      fontSize: 18,
+      fontWeight: "800",
+      marginTop: 10,
+    },
+    emptyText: {
+      color: muted,
+      fontSize: 15,
+      textAlign: "center",
+      marginTop: 6,
     },
   });
+};

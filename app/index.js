@@ -16,6 +16,7 @@ import { useAuth } from "./context/NewAuthContext";
 import LoginScreen from "./screens/Login";
 import Signup from "./screens/Signup";
 import ForgotPasswordScreen from "./screens/ForgotPassword";
+import ResetPasswordScreen from "./screens/ResetPassword";
 import Role from "./screens/Role";
 
 // SWR Provider
@@ -91,7 +92,14 @@ const toastConfig = {
 };
 
 const linking = {
-  prefixes: ["birdearner://", "https://birdearner.com"],
+  prefixes: [
+    "birdearner://",
+    "https://birdearner.com",
+    "https://app.birdearner.com",
+    "https://web.birdearner.com",
+    "http://localhost:3000",
+    "http://localhost:3001",
+  ],
   config: {
     screens: {
       MainTabs: {
@@ -113,6 +121,13 @@ const linking = {
         path: "/profile/:userId",
         parse: {
           userId: (userId) => userId,
+        },
+      },
+      // Password Reset
+      ResetPassword: {
+        path: "/auth/reset-password/:token",
+        parse: {
+          token: (token) => token,
         },
       },
     },
@@ -552,6 +567,10 @@ export function App() {
           <Stack.Screen
             name="ForgotPassword"
             component={ForgotPasswordScreen}
+          />
+          <Stack.Screen
+            name="ResetPassword"
+            component={ResetPasswordScreen}
           />
           <Stack.Screen name="Role" component={Role} />
           <Stack.Screen name="ClientSignup" component={ClientSignupScreen} />
