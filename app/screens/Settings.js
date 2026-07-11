@@ -1,229 +1,546 @@
-import React, { useState, useEffect } from "react";
+import React, { useMemo, useState } from "react";
 import {
-  View,
-  Text,
+  ActivityIndicator,
+  Alert,
+  Image,
+  ImageBackground,
+  Platform,
+  SafeAreaView,
   ScrollView,
   StyleSheet,
-  TextInput,
+  Switch,
+  Text,
   TouchableOpacity,
-  SafeAreaView,
-  Platform,
+  View,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import Toast from "react-native-toast-message";
 import { useAuth } from "../context/NewAuthContext";
 import { useTheme } from "../context/ThemeContext";
-import { Ionicons } from "@expo/vector-icons";
+import apiService from "../lib/apiService";
+
+const PURPLE = "#7B2CFF";
+const DEEP = "#17151D";
+const BORDER = "#E7E1EF";
+
+const showToast = (type, title, message = "") => {
+  Toast.show({
+    type,
+    text1: title,
+    text2: message,
+    position: "top",
+  });
+};
+
+const getImageUri = (image) => {
+  const raw = image?.uri || image?.url || image?.secure_url || image;
+  return typeof raw === "string" && raw ? apiService.loadImageURI(raw) : null;
+};
+
+const getDisplayName = (userData, userProfile) =>
+  userProfile?.fullName ||
+  userProfile?.user?.fullName ||
+  userData?.fullName ||
+  "Bird Earner";
+
+const getEmail = (userData, userProfile) =>
+  userData?.email || userProfile?.email || userProfile?.user?.email || "Email not added";
+
+const getPhone = (userData, userProfile) =>
+  userProfile?.phone ||
+  userProfile?.phoneNumber ||
+  userData?.phone ||
+  userData?.phoneNumber ||
+  "Phone not added";
 
 const SettingsScreen = ({ navigation }) => {
-  const { userData, userProfile, roleOptions } = useAuth();
-  const role = userData?.role;
+  const {
+    userData,
+    userProfile,
+    logout,
+    switchUserRole,
+    refreshUserData,
+  } = useAuth();
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
+  const styles = useMemo(() => getStyles(currentTheme), [currentTheme]);
 
-  const styles = getStyles(currentTheme);
+  const [switchingRole, setSwitchingRole] = useState(false);
 
-  // Create dynamic profile editing options based on user's profiles
-  const getProfileEditingOptions = () => {
-    const options = [];
-    
-    // Add current profile editing option
+  const role = userData?.role;
+  const hasBothProfiles = !!userData?.freelancer && !!userData?.client;
+  const nextRole = role === "FREELANCER" ? "CLIENT" : "FREELANCER";
+  const profilePhotoUri = getImageUri(userProfile?.profilePhoto);
+
+  const editProfileOption = useMemo(() => {
     if (role === "CLIENT") {
-      options.push({ 
-        name: "Edit Client Profile", 
-        stack_name: "EditClientProfile",
+      return {
+        stack_name: "ClientSignup",
         params: {
           mode: "update",
           profileData: userProfile,
-          title: "Edit Client Profile"
-        }
-      });
-    } else if (role === "FREELANCER") {
-      options.push({ 
-        name: "Edit Freelancer Profile", 
-        stack_name: "EditFreelancerProfile",
-        params: {
-          mode: "update", 
-          profileData: userProfile,
-          title: "Edit Freelancer Profile"
-        }
-      });
+          title: "Edit Client Profile",
+        },
+      };
     }
 
-    return options;
+    return {
+      stack_name: "FreelancerSignup",
+      params: {
+        mode: "update",
+        profileData: userProfile,
+        title: "Edit Freelancer Profile",
+      },
+    };
+  }, [role, userProfile]);
+
+  const walletRoute = role === "CLIENT" ? "WalletClient" : "WalletFreelancer";
+
+  const navigateTo = (routeName, params) => {
+    if (!routeName) return;
+    navigation.navigate(routeName, params);
   };
 
-  const handleNavigation = (option) => {
-    if (option.stack_name === "EditClientProfile") {
-      // Navigate to ClientSignup with update mode and profile data
-      navigation.navigate("ClientSignup", option.params);
-    } else if (option.stack_name === "EditFreelancerProfile") {
-      // Navigate to FreelancerSignup with update mode and profile data
-      navigation.navigate("FreelancerSignup", option.params);
-    } else {
-      // Regular navigation for other options
-      navigation.navigate(option.stack_name);
+  const handleEditProfile = () => {
+    navigateTo(editProfileOption.stack_name, editProfileOption.params);
+  };
+
+  const handleRoleSwitch = async () => {
+    if (!hasBothProfiles || switchingRole) return;
+
+    try {
+      setSwitchingRole(true);
+      await switchUserRole(nextRole);
+      await refreshUserData();
+      showToast("success", "Role switched", `You are now using ${nextRole.toLowerCase()} mode`);
+    } catch (error) {
+      console.error("Error switching role from settings:", error);
+      Alert.alert("Error", "Failed to switch role. Please try again.");
+    } finally {
+      setSwitchingRole(false);
     }
   };
 
-  const settingsData = [
+  const handleLogout = () => {
+    Alert.alert("Logout", "Are you sure you want to logout?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Logout",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await logout();
+            showToast("success", "Logged out successfully");
+          } catch (error) {
+            showToast("error", "Logout Failed", error.message);
+          }
+        },
+      },
+    ]);
+  };
+
+  const sections = [
     {
       title: "Account Settings",
-      options: [
-        { name: "Availability", stack_name: "Availability" },
-        ...getProfileEditingOptions(),
-        { name: "Password update", stack_name: "Password update" },
-        { name: "Change your email", stack_name: "Email update" },
+      items: [
+        {
+          label: "Edit Profile",
+          icon: "person-outline",
+          onPress: handleEditProfile,
+        },
+        {
+          label: "Manage Addresses",
+          icon: "location-outline",
+          onPress: handleEditProfile,
+        },
+        {
+          label: "Security",
+          icon: "shield-checkmark-outline",
+          route: "Security",
+        },
       ],
     },
     {
       title: "Payment Settings",
-      options:
-        role === "FREELANCER"
-          ? [
-              { name: "Withdrawal Earning", stack_name: "Withdrawal Earning" },
-              {
-                name: "Link your wallet/Bank account",
-                stack_name: "Bank Account details",
-              },
-              { name: "Your Wallet & History", stack_name: "WalletFreelancer" },
-            ]
-          : [
-              {
-                name: "Link your wallet/Bank account",
-                stack_name: "Bank Account details",
-              },
-              { name: "Your Wallet & History", stack_name: "WalletClient" },
-            ],
+      items: [
+        {
+          label: "Payment Methods",
+          icon: "card-outline",
+          route: "Bank Account details",
+        },
+        {
+          label: "Wallet",
+          icon: "wallet-outline",
+          route: walletRoute,
+        },
+        {
+          label: "Transaction History",
+          icon: "receipt-outline",
+          route: walletRoute,
+        },
+      ],
     },
     {
       title: "Preferences",
-      options: [
-        { name: "Notifications", stack_name: "Notifications Setting" },
-        { name: "Appearance", stack_name: "Appearance" },
-        { name: "Security", stack_name: "Security" },
+      items: [
+        {
+          label: "Notifications",
+          icon: "notifications-outline",
+          route: "Notifications Setting",
+        },
+        {
+          label: "Appearance",
+          icon: "color-palette-outline",
+          route: "Appearance",
+        },
       ],
     },
     {
       title: "About",
-      options: [
-        { name: "Terms & Conditions", stack_name: "TermsAndConditions" },
-        { name: "Feedback", stack_name: "Feedback" },
-        { name: "Privacy Policy", stack_name: "PrivacyPolicy" },
-        // { name: "Blogs & Forum", stack_name: "BlogsAndForum" },
+      items: [
+        {
+          label: "Terms and Condition",
+          icon: "document-text-outline",
+          route: "TermsAndConditions",
+        },
+        {
+          label: "Policy and Data",
+          icon: "shield-outline",
+          route: "PrivacyPolicy",
+        },
+        {
+          label: "Your Feedbacks",
+          icon: "chatbox-ellipses-outline",
+          route: "Feedback",
+        },
+        {
+          label: "Support",
+          icon: "headset-outline",
+          route: "Feedback",
+        },
       ],
     },
     {
       title: "More",
-      options: [{ name: "Delete Account", stack_name: "DeleteAccount" }],
+      items: [
+        {
+          label: "Job Post History",
+          icon: "briefcase-outline",
+          route: "Job Posted",
+        },
+        {
+          label: "Delete Account",
+          icon: "trash-outline",
+          route: "DeleteAccount",
+        },
+        {
+          label: "Logout",
+          icon: "log-out-outline",
+          danger: true,
+          onPress: handleLogout,
+        },
+      ],
     },
   ];
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.main}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backButton}
-        >
-          <Ionicons
-            name="arrow-back"
-            size={24}
-            color={currentTheme.text || black}
-          />
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={30} color={currentTheme.text || "#000"} />
         </TouchableOpacity>
-        <Text style={styles.header}>Settings</Text>
+        <Text style={styles.headerTitle}>Settings</Text>
+        <View style={styles.headerSpacer} />
       </View>
 
-      {/* Settings List */}
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {settingsData.map((section, index) => (
-          <View key={index} style={styles.sectionContainer}>
+        <ImageBackground
+          source={require("../assets/backGroungBanner.png")}
+          imageStyle={styles.profileImageBackground}
+          style={styles.profileCard}
+        >
+          <View style={styles.profileTop}>
+            <View style={styles.profileIdentity}>
+              <View style={styles.avatarRing}>
+                <Image
+                  source={
+                    profilePhotoUri
+                      ? { uri: profilePhotoUri }
+                      : require("../assets/profile.png")
+                  }
+                  style={styles.avatar}
+                />
+              </View>
+              <View style={styles.profileText}>
+                <Text style={styles.profileName} numberOfLines={1}>
+                  {getDisplayName(userData, userProfile)}
+                </Text>
+                <Text style={styles.profileMeta} numberOfLines={1}>
+                  {getPhone(userData, userProfile)}
+                </Text>
+                <Text style={styles.profileMeta} numberOfLines={2}>
+                  {getEmail(userData, userProfile)}
+                </Text>
+              </View>
+            </View>
+
+            <TouchableOpacity style={styles.editShortcut} onPress={handleEditProfile}>
+              <Ionicons name="create-outline" size={30} color="#FFFFFF" />
+              <Text style={styles.editShortcutText}>Edit Profile</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.switchDivider} />
+          <View style={styles.switchRow}>
+            <Text style={styles.switchLabel}>
+              {hasBothProfiles ? `Switch to ${nextRole === "CLIENT" ? "Client" : "Freelancer"}` : "Switch role"}
+            </Text>
+            {switchingRole ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Switch
+                value={role === "FREELANCER"}
+                onValueChange={handleRoleSwitch}
+                disabled={!hasBothProfiles}
+                trackColor={{ false: "#46454D", true: "#7B2CFF" }}
+                thumbColor="#FFFFFF"
+                ios_backgroundColor="#46454D"
+              />
+            )}
+          </View>
+        </ImageBackground>
+
+        {sections.map((section) => (
+          <View key={section.title} style={styles.section}>
             <Text style={styles.sectionTitle}>{section.title}</Text>
-            {section.options.map((option, idx) => (
-              <TouchableOpacity
-                key={idx}
-                style={styles.optionContainer}
-                onPress={() => handleNavigation(option)}
-              >
-                <Text style={styles.optionText}>{option.name}</Text>
-                <Text style={styles.arrowIcon}>›</Text>
-              </TouchableOpacity>
-            ))}
+            <View style={styles.sectionCard}>
+              {section.items.map((item, index) => (
+                <SettingsRow
+                  key={item.label}
+                  item={item}
+                  isLast={index === section.items.length - 1}
+                  styles={styles}
+                  onPress={() => (item.onPress ? item.onPress() : navigateTo(item.route, item.params))}
+                />
+              ))}
+            </View>
           </View>
         ))}
       </ScrollView>
+      <Toast />
     </SafeAreaView>
   );
 };
 
-const getStyles = (currentTheme) =>
-  StyleSheet.create({
-    main: {
-      marginTop: 15,
-      marginBottom: 15,
-      display: "flex",
-      flexDirection: "row",
-      gap: 120,
-      alignItems: "center",
-      marginHorizontal: Platform.OS === "ios" ? 20 : 0,
+function SettingsRow({ item, isLast, styles, onPress }) {
+  return (
+    <TouchableOpacity
+      style={[styles.row, isLast && styles.rowLast]}
+      onPress={onPress}
+      activeOpacity={0.82}
+    >
+      <View style={styles.rowLeft}>
+        <Ionicons
+          name={item.icon}
+          size={28}
+          color={item.danger ? "#FF1F1F" : PURPLE}
+        />
+        <Text style={[styles.rowText, item.danger && styles.rowTextDanger]}>
+          {item.label}
+        </Text>
+      </View>
+      <Ionicons name="chevron-forward" size={22} color={styles.chevronColor.color} />
+    </TouchableOpacity>
+  );
+}
+
+const getStyles = (currentTheme) => {
+  const surface = currentTheme.background || "#FFFFFF";
+  const card = currentTheme.cardBackground || surface;
+  const text = currentTheme.text || "#101114";
+  const muted = currentTheme.subText || "#656B7A";
+  const border = currentTheme.border || BORDER;
+  const isDark = surface === "#000000";
+
+  return StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: surface,
     },
     header: {
-      fontSize: 24,
-      fontWeight: "bold",
-      // marginBottom: 20,
-      textAlign: "center",
-      color: currentTheme.text,
+      minHeight: 64,
+      paddingHorizontal: 24,
+      paddingTop: Platform.OS === "android" ? 24 : 6,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      backgroundColor: surface,
     },
-    container: {
-      flex: 1,
-      backgroundColor: currentTheme.background || "#fff",
-      padding: 16,
-      paddingTop: 50,
+    backButton: {
+      width: 44,
+      height: 44,
+      justifyContent: "center",
+      alignItems: "flex-start",
     },
-    title: {
-      fontSize: 24,
-      fontWeight: "bold",
+    headerTitle: {
+      color: text,
+      fontSize: 25,
+      fontWeight: "900",
       textAlign: "center",
-      marginBottom: 16,
-      color: currentTheme.text || "white",
+    },
+    headerSpacer: {
+      width: 44,
     },
     scrollView: {
       flex: 1,
-      marginHorizontal: Platform.OS==="ios"? 20:0,
+      backgroundColor: surface,
     },
     scrollContent: {
-      paddingBottom: Platform.OS === "ios" ? 90 : 75, // Add bottom padding to prevent tab bar overlap
+      paddingHorizontal: 18,
+      paddingBottom: Platform.OS === "ios" ? 112 : 96,
     },
-    sectionContainer: {
-      marginBottom: 20,
+    profileCard: {
+      borderRadius: 12,
+      overflow: "hidden",
+      backgroundColor: DEEP,
+      marginTop: 8,
+      marginBottom: 26,
+      borderWidth: 1,
+      borderColor: isDark ? "#2A2634" : "#1F1B29",
+    },
+    profileImageBackground: {
+      opacity: 0.14,
+      resizeMode: "cover",
+    },
+    profileTop: {
+      paddingHorizontal: 18,
+      paddingTop: 20,
+      paddingBottom: 20,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 10,
+      backgroundColor: "rgba(17, 16, 22, 0.94)",
+    },
+    profileIdentity: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 14,
+      minWidth: 0,
+    },
+    avatarRing: {
+      width: 92,
+      height: 92,
+      borderRadius: 46,
+      borderWidth: 3,
+      borderColor: "#B070FF",
+      padding: 4,
+      backgroundColor: "#F7F4FB",
+    },
+    avatar: {
+      width: "100%",
+      height: "100%",
+      borderRadius: 41,
+      backgroundColor: "#ECE7F3",
+    },
+    profileText: {
+      flex: 1,
+      minWidth: 0,
+    },
+    profileName: {
+      color: "#FFFFFF",
+      fontSize: 23,
+      fontWeight: "900",
+      marginBottom: 6,
+    },
+    profileMeta: {
+      color: "#FFFFFF",
+      fontSize: 15,
+      lineHeight: 21,
+    },
+    editShortcut: {
+      width: 62,
+      alignItems: "center",
+      gap: 5,
+    },
+    editShortcutText: {
+      color: "#FFFFFF",
+      fontSize: 12,
+      fontWeight: "700",
+      textAlign: "center",
+    },
+    switchDivider: {
+      height: 1,
+      backgroundColor: "rgba(255,255,255,0.16)",
+    },
+    switchRow: {
+      minHeight: 82,
+      paddingHorizontal: 20,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      backgroundColor: "rgba(17, 16, 22, 0.96)",
+    },
+    switchLabel: {
+      color: "#FFFFFF",
+      fontSize: 23,
+      fontWeight: "900",
+    },
+    section: {
+      marginBottom: 26,
     },
     sectionTitle: {
-      fontSize: 16,
-      fontWeight: "600",
-      color: currentTheme.text || "#555",
-      marginBottom: 10,
+      color: text,
+      fontSize: 19,
+      fontWeight: "900",
+      marginBottom: 12,
+      marginLeft: 18,
     },
-    optionContainer: {
+    sectionCard: {
+      borderWidth: 1,
+      borderColor: border,
+      borderRadius: 12,
+      overflow: "hidden",
+      backgroundColor: isDark ? card : "#FFFFFF",
+    },
+    row: {
+      minHeight: 68,
+      paddingHorizontal: 24,
       flexDirection: "row",
+      alignItems: "center",
       justifyContent: "space-between",
-      paddingVertical: 12,
-      paddingHorizontal: 10,
-      backgroundColor: currentTheme.background3 || "#f0f0f0",
-      borderRadius: 8,
-      marginBottom: 10,
+      borderBottomWidth: 1,
+      borderBottomColor: border,
+      backgroundColor: isDark ? card : "#FFFFFF",
     },
-    optionText: {
-      fontSize: 14,
-      color: currentTheme.text || "#333",
+    rowLast: {
+      borderBottomWidth: 0,
     },
-    arrowIcon: {
+    rowLeft: {
+      flex: 1,
+      minWidth: 0,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 24,
+    },
+    rowText: {
+      flex: 1,
+      color: text,
       fontSize: 18,
-      color: currentTheme.text || "#888",
+      fontWeight: "600",
+    },
+    rowTextDanger: {
+      color: "#FF1F1F",
+    },
+    chevronColor: {
+      color: text,
     },
   });
+};
 
 export default SettingsScreen;

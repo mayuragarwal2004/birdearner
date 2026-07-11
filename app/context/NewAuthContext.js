@@ -11,7 +11,6 @@ import {
   Modal,
   TouchableOpacity,
   StyleSheet,
-  ActivityIndicator,
   Alert,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -163,7 +162,6 @@ export const AuthProvider = ({ children }) => {
     try {
       setLoading(true);
 
-      // Check for stored user data
       const [storedUserData, storedUserProfile, storedAuthToken] =
         await Promise.all([
           AsyncStorage.getItem("userData"),
@@ -172,26 +170,49 @@ export const AuthProvider = ({ children }) => {
         ]);
 
       if (storedUserData) {
-        const userData = JSON.parse(storedUserData);
+        const cachedUserData = JSON.parse(storedUserData);
+        const cachedProfile = storedUserProfile
+          ? JSON.parse(storedUserProfile)
+          : null;
 
-        // Verify user still exists in database before setting state
+        setUser(cachedUserData);
+        setUserData(cachedUserData);
+        setUserProfile(cachedProfile);
+        setAuthToken(storedAuthToken);
+        updateRoleOptions(cachedUserData);
+        setLoading(false);
+
         try {
-          const userExists = await apiService.getUserById(userData.id);
-          if (!userExists) {
-            console.log(
-              "Stored user not found in database during session check, clearing session"
-            );
-            await AsyncStorage.multiRemove([
-              "userData",
-              "userProfile",
-              "authToken",
-            ]);
-            setUser(null);
-            setUserData(null);
-            setUserProfile(null);
-            setAuthToken(null);
-            return;
+          const freshUserData = await apiService.getUserById(cachedUserData.id);
+          if (!freshUserData) throw new Error("User not found");
+
+          const preferredRole = cachedUserData.role;
+          const dynamicRole = determineUserRole(freshUserData, preferredRole);
+          const updatedUserData = {
+            ...freshUserData,
+            role: dynamicRole || preferredRole,
+          };
+
+          let profileData = cachedProfile;
+          if (dynamicRole === "FREELANCER" && freshUserData.freelancer) {
+            profileData = freshUserData.freelancer;
+          } else if (dynamicRole === "CLIENT" && freshUserData.client) {
+            profileData = freshUserData.client;
           }
+
+          setUser(updatedUserData);
+          setUserData(updatedUserData);
+          setUserProfile(profileData);
+          updateRoleOptions(freshUserData);
+
+          await AsyncStorage.setItem("userData", JSON.stringify(updatedUserData));
+          if (profileData) {
+            await AsyncStorage.setItem("userProfile", JSON.stringify(profileData));
+          } else {
+            await AsyncStorage.removeItem("userProfile");
+          }
+
+          console.log(`Session restored with role: ${updatedUserData.role}`);
         } catch (error) {
           if (
             error.message &&
@@ -212,67 +233,25 @@ export const AuthProvider = ({ children }) => {
             setAuthToken(null);
             return;
           }
-          // For other errors, continue with normal flow but log the warning
           console.warn(
-            "Error verifying user existence during session check:",
+            "Using cached session; background refresh failed:",
             error.message
           );
         }
-
-        // Get fresh user data to ensure we have the latest profile information
-        const freshUserData = await apiService.getUserById(userData.id);
-
-        // If stored data has a role preference, preserve it; otherwise determine dynamically
-        const preferredRole = userData.role;
-        const dynamicRole = determineUserRole(freshUserData, preferredRole);
-
-        // Update userData with fresh profile data and determined role
-        const updatedUserData = {
-          ...freshUserData,
-          role: dynamicRole || preferredRole, // Keep preferred role if no profiles found
-        };
-
-        // Set user state with updated data
-        setUser(updatedUserData);
-        setUserData(updatedUserData);
-
-        // Set appropriate profile based on the determined role
-        let profileData = null;
-        if (dynamicRole === "FREELANCER" && freshUserData.freelancer) {
-          profileData = freshUserData.freelancer;
-        } else if (dynamicRole === "CLIENT" && freshUserData.client) {
-          profileData = freshUserData.client;
-        } else if (storedUserProfile) {
-          profileData = JSON.parse(storedUserProfile);
-        }
-
-        setUserProfile(profileData);
-
-        // Update stored data
-        await AsyncStorage.setItem("userData", JSON.stringify(updatedUserData));
-        if (profileData) {
-          await AsyncStorage.setItem(
-            "userProfile",
-            JSON.stringify(profileData)
-          );
-        }
-
-        // Update role options during session restoration
-        updateRoleOptions(freshUserData);
-
-        console.log(`Session restored with role: ${updatedUserData.role}`);
       } else {
-        // No stored user data, ensure userProfile is explicitly null
+        setUser(null);
+        setUserData(null);
         setUserProfile(null);
+        setAuthToken(null);
+        setLoading(false);
       }
     } catch (error) {
       console.error("Error checking user session :", error);
-      // Clear invalid session data
       await AsyncStorage.multiRemove(["userData", "userProfile", "authToken"]);
       setUser(null);
       setUserData(null);
       setUserProfile(null);
-    } finally {
+      setAuthToken(null);
       setLoading(false);
     }
   };
@@ -853,15 +832,6 @@ export const AuthProvider = ({ children }) => {
     handleRoleSelection,
   ]);
 
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#0066CC" />
-        <Text style={styles.loadingText}>Loading...</Text>
-      </View>
-    );
-  }
-
   return (
     <AuthContext.Provider value={value}>
       {children}
@@ -912,17 +882,6 @@ export const useAuth = () => {
 };
 
 const styles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#f5f5f5",
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: "#666",
-  },
   modalContainer: {
     flex: 1,
     justifyContent: "center",

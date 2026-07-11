@@ -3,7 +3,7 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createStackNavigator } from "@react-navigation/stack";
 import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { View, StyleSheet, Alert, Platform, Text } from "react-native";
+import { View, StyleSheet, Platform, Text } from "react-native";
 import { Briefcase, ChartColumn, ClipboardPen, House, Bird as LucideBird, Plus } from "lucide-react-native";
 
 // Import custom SVG files as React components
@@ -53,7 +53,6 @@ import ClientSignupScreen from "./screens/ClientSignup";
 import FreelancerSignupScreen from "./screens/FreelancerSignup";
 import OtpVerificationScreen from "./screens/OtpVerification";
 
-import messaging from "@react-native-firebase/messaging";
 import Toast from "react-native-toast-message";
 import { AuthProvider } from "./context/NewAuthContext";
 import { StatusBar } from "expo-status-bar";
@@ -404,10 +403,12 @@ function renderLucideIcon(focused, IconComponent = LucideBird, iconColor) {
 
 // Main App Component
 export function App() {
-  const { userData, loading } = useAuth();
+  const { userData } = useAuth();
+  const getMessaging = () => require("@react-native-firebase/messaging").default;
 
   async function requestUserPermission() {
     try {
+      const messaging = getMessaging();
       const authStatus = await messaging().requestPermission();
       const enabled =
         authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
@@ -430,6 +431,7 @@ export function App() {
 
         const hasPermission = await requestUserPermission();
         if (hasPermission) {
+          const messaging = getMessaging();
           const token = await messaging().getToken();
           // Sending token to backend
           await apiService.registerPushToken(userData.id, userData.role, token);
@@ -441,9 +443,9 @@ export function App() {
       }
     };
 
-    initializeNotifications();
-
     const setupMessageHandlers = () => {
+      const messaging = getMessaging();
+
       // Handle initial notification when app was opened from killed state
       messaging()
         .getInitialNotification()
@@ -478,8 +480,16 @@ export function App() {
       };
     };
 
-    const cleanupHandlers = setupMessageHandlers();
-    return () => cleanupHandlers();
+    let cleanupHandlers = () => {};
+    const startupTimer = setTimeout(() => {
+      initializeNotifications();
+      cleanupHandlers = setupMessageHandlers();
+    }, __DEV__ ? 1500 : 600);
+
+    return () => {
+      clearTimeout(startupTimer);
+      cleanupHandlers();
+    };
   }, [userData?.id, userData?.role]);
 
   // Always show intro screen first, let it handle navigation
