@@ -18,6 +18,53 @@ import { useTheme } from "../context/ThemeContext";
 import { useNavigation } from "@react-navigation/native";
 import apiService from "../lib/apiService";
 
+const parseArray = (value) => {
+  if (!value) return [];
+  if (Array.isArray(value)) return value.filter(Boolean);
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+    } catch {
+      return value ? [value] : [];
+    }
+  }
+  return [];
+};
+
+const getFreelancerProfileCompletion = (userData, userProfile) => {
+  const profile = userProfile || userData?.freelancer || {};
+  let completed = 0;
+  const total = 5;
+
+  if (userData?.fullName && userData?.email) completed += 1;
+
+  if (parseArray(profile.selectedServices).length > 0) completed += 1;
+
+  if (profile.profileHeading && profile.profileDescription) completed += 1;
+
+  if (
+    profile.highestQualification &&
+    profile.experience !== null &&
+    profile.experience !== undefined &&
+    profile.city &&
+    profile.state
+  ) {
+    completed += 1;
+  }
+
+  if (
+    profile.profilePhoto &&
+    profile.coverPhoto &&
+    parseArray(profile.portfolioImages).length > 0 &&
+    profile.termsAccepted
+  ) {
+    completed += 1;
+  }
+
+  return Math.round((completed / total) * 100);
+};
+
 const HomeScreen = () => {
   // const { appwriteConfig, databases } = useAppwrite();
   const { userData, userProfile, logout } = useAuth();
@@ -128,50 +175,25 @@ const HomeScreen = () => {
   }, [userData]);
 
   useEffect(() => {
-    let percentage = 20; // Start with basic profile
-
-    // Update profile percentage based on available user data
-    console.log({ userData });
-
-    if (userData?.email) percentage = 40;
-    if (userData?.role) percentage = 60;
-    if (userData?.id) percentage = 80;
-    // TODO: Add more fields as they become available in backend
-
-    setProfilePercentage(percentage);
+    setProfilePercentage(getFreelancerProfileCompletion(userData, userProfile));
     setFlagsCount(0); // TODO: Implement flags in new backend
-  }, [userData]);
+  }, [userData, userProfile]);
 
   const handleCompleteProfile = () => {
-    // TODO: Update for new backend structure
-    const email = userData?.email;
-    const userRole = userData?.role;
+    const profileData = userProfile || userData?.freelancer || null;
+    const mode = profileData?.id ? "update" : "create";
+    const params = {
+      mode,
+      profileData,
+      title: mode === "update" ? "Complete Freelancer Profile" : "Create Freelancer Profile",
+    };
 
-    // For now, navigate to a simple profile completion flow
-    // TODO: Implement proper profile completion with new backend
-    console.log("Complete profile clicked - TODO: implement with new backend");
+    const rootNavigation =
+      navigation.getParent?.()?.getParent?.() ||
+      navigation.getParent?.() ||
+      navigation;
 
-    /* Original logic - commented out for migration
-    if (profilePercentage < 20) {
-      navigation.navigate("DescribeRoleCom", {
-        fullName,
-        email,
-        password,
-        role,
-      });
-    } else if (profilePercentage >= 20 && profilePercentage < 40) {
-      navigation.navigate("DescribeRoleCom", {
-        fullName,
-        email,
-        password,
-        role,
-      });
-    } else if (profilePercentage >= 40 && profilePercentage < 70) {
-      navigation.navigate("TellUsAboutYouCom", { role });
-    } else if (profilePercentage >= 70 && profilePercentage < 100) {
-      navigation.navigate("PortfolioCom", { role });
-    }
-    */
+    rootNavigation.navigate("FreelancerSignup", params);
   };
 
   // TODO: Implement user data fetching with new backend
@@ -370,7 +392,7 @@ const HomeScreen = () => {
         </View>
 
         {/* Complete Profile Widget */}
-        {!userData?.terms_accepted && profilePercentage !== 100 ? (
+        {profilePercentage < 100 ? (
           <View style={styles.completeProfileWidget}>
             <View style={styles.completeProfileLeft}>
               <View style={styles.clipboardIllustration}>
