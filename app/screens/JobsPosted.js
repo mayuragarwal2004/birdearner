@@ -73,11 +73,12 @@ const formatAmount = (value) => {
 
 const normalizeJobs = (jobs) =>
   jobs.map((job) => {
-    const rawCount = job.proposalCount ?? job.applicantsCount ?? job.applicationsCount;
-    const proposalCount = Number(rawCount || 0);
+    // Prefer applicantsCount (live) over proposalCount (DB column is not maintained)
+    const rawCount =
+      job.applicantsCount ?? job.applicationsCount ?? job.proposalCount;
+    const proposalCount = Number(rawCount ?? 0);
     return {
       ...job,
-      needsApplicantCountHydration: rawCount === undefined || rawCount === null,
       proposalCount,
       proposalLabel:
         proposalCount === 1
@@ -120,43 +121,9 @@ const JobsPostedScreen = ({ navigation }) => {
         return;
       }
 
-      const response = await apiService.getJobsByClientId(userProfile.id);
+      const response = await apiService.getJobsByClientId(userProfile.id, 1, 100);
       const fetchedJobs = response?.jobs || response || [];
-      let nextJobs = normalizeJobs(Array.isArray(fetchedJobs) ? fetchedJobs : []);
-
-      const jobsNeedingCounts = nextJobs.filter((job) => job.needsApplicantCountHydration);
-      if (jobsNeedingCounts.length) {
-        const countResults = await Promise.all(
-          jobsNeedingCounts.map(async (job) => {
-            try {
-              const applicantsResponse = await apiService.makeRequest(`/jobs/${job.id}/applicants`);
-              return {
-                jobId: job.id,
-                count: applicantsResponse?.success && Array.isArray(applicantsResponse.data)
-                  ? applicantsResponse.data.length
-                  : 0,
-              };
-            } catch (countError) {
-              console.warn(`Failed to load applicant count for job ${job.id}:`, countError.message);
-              return { jobId: job.id, count: 0 };
-            }
-          })
-        );
-        const countsByJobId = countResults.reduce((acc, item) => {
-          acc[item.jobId] = item.count;
-          return acc;
-        }, {});
-
-        nextJobs = nextJobs.map((job) => {
-          const hydratedCount = countsByJobId[job.id];
-          if (hydratedCount === undefined) return job;
-          return {
-            ...job,
-            proposalCount: hydratedCount,
-            proposalLabel: hydratedCount === 1 ? "1 applicant" : `${hydratedCount} applicants`,
-          };
-        });
-      }
+      const nextJobs = normalizeJobs(Array.isArray(fetchedJobs) ? fetchedJobs : []);
 
       if (JSON.stringify(nextJobs) !== JSON.stringify(cachedJobs.current)) {
         cachedJobs.current = nextJobs;
