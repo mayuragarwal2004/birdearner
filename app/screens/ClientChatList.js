@@ -1,20 +1,105 @@
-import React, { useState, useEffect } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
-  View,
+  ActivityIndicator,
+  FlatList,
+  Image,
+  RefreshControl,
+  StyleSheet,
   Text,
   TouchableOpacity,
-  FlatList,
-  StyleSheet,
-  Image,
-  ActivityIndicator,
-  RefreshControl,
+  View,
 } from "react-native";
-import { useAuth } from "../context/NewAuthContext";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import {
+  ChatCircleDots,
+  ChatCircleText,
+  CheckCircle,
+  Clock,
+  Prohibit,
+  WarningCircle,
+} from "phosphor-react-native";
+import { format, isValid, isToday, isYesterday } from "date-fns";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import { useAuth } from "../context/NewAuthContext";
 import { useTheme } from "../context/ThemeContext";
-import ApiService from "../lib/apiService";
 import apiService from "../lib/apiService";
+
+const PURPLE = "#7B2CFF";
+const SOFT_PURPLE = "#F3EAFF";
+const BORDER = "#E7E1EF";
+
+const getThreadStatusMeta = (thread, isDark = false) => {
+  const jobStatus = (thread.jobStatus || thread.job?.status || thread.jobData?.status || "").toUpperCase();
+  const threadStatus = (thread.status || "").toUpperCase();
+
+  if (jobStatus === "COMPLETED" || threadStatus === "COMPLETED") {
+    return {
+      label: "Completed",
+      color: isDark ? "#4ADE80" : "#22C55E",
+      bg: isDark ? "rgba(34,197,94,0.18)" : "#EAF8EF",
+      Icon: CheckCircle,
+    };
+  }
+  if (threadStatus === "REJECTED" || jobStatus === "CANCELLED" || jobStatus === "REJECTED") {
+    return {
+      label: "Rejected",
+      color: isDark ? "#F87171" : "#EF4444",
+      bg: isDark ? "rgba(239,68,68,0.2)" : "#FDECEC",
+      Icon: Prohibit,
+    };
+  }
+  if (threadStatus === "BLOCKED") {
+    return {
+      label: "Blocked",
+      color: isDark ? "#FB923C" : "#F97316",
+      bg: isDark ? "rgba(249,115,22,0.2)" : "#FFF4E8",
+      Icon: WarningCircle,
+    };
+  }
+  if (
+    (jobStatus === "IN_PROGRESS" || jobStatus === "ASSIGNED" || jobStatus === "ACTIVE") &&
+    (threadStatus === "ACCEPTED" || thread.isAccepted)
+  ) {
+    return {
+      label: "Active",
+      color: isDark ? "#4ADE80" : "#16A34A",
+      bg: isDark ? "rgba(22,163,74,0.2)" : "#EAF8EF",
+      Icon: CheckCircle,
+    };
+  }
+  if (jobStatus === "IN_PROGRESS" || threadStatus === "ACCEPTED" || threadStatus === "PENDING") {
+    return {
+      label: threadStatus === "PENDING" ? "Pending" : "In progress",
+      color: isDark ? "#60A5FA" : "#2563EB",
+      bg: isDark ? "rgba(37,99,235,0.22)" : "#EAF1FF",
+      Icon: Clock,
+    };
+  }
+  if (jobStatus === "OPEN") {
+    return {
+      label: "Open",
+      color: isDark ? "#A78BFA" : "#7B2CFF",
+      bg: isDark ? "rgba(123,44,255,0.2)" : "#F3EAFF",
+      Icon: ChatCircleDots,
+    };
+  }
+  return {
+    label: threadStatus || jobStatus || "Chat",
+    color: isDark ? "#FBBF24" : "#F59E0B",
+    bg: isDark ? "rgba(245,158,11,0.2)" : "#FFF6DF",
+    Icon: Clock,
+  };
+};
+
+const formatMessageTime = (value) => {
+  if (!value) return "";
+  const date = new Date(value);
+  if (!isValid(date)) return "";
+  if (isToday(date)) return format(date, "hh:mm a");
+  if (isYesterday(date)) return "Yesterday";
+  return format(date, "MMM d");
+};
 
 const ClientChatList = () => {
   const [chatThreads, setChatThreads] = useState([]);
@@ -23,303 +108,460 @@ const ClientChatList = () => {
   const [error, setError] = useState(false);
   const { userData } = useAuth();
   const navigation = useNavigation();
-  const api = ApiService;
-
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
+  const isDark = theme === "dark";
+  const styles = useMemo(() => getStyles(currentTheme, isDark), [currentTheme, isDark]);
+  const accent = isDark ? "#B794FF" : PURPLE;
 
-  const styles = getStyles(currentTheme);
+  const summary = useMemo(() => {
+    const total = chatThreads.length;
+    const active = chatThreads.filter((thread) => {
+      const meta = getThreadStatusMeta(thread);
+      return meta.label === "Active" || meta.label === "In progress" || meta.label === "Open";
+    }).length;
+    const completed = chatThreads.filter(
+      (thread) => getThreadStatusMeta(thread).label === "Completed"
+    ).length;
+    return { total, active, completed };
+  }, [chatThreads]);
 
-  const fetchChatThreads = async (isRefreshing = false) => {
-
-    if (!isRefreshing) {
-      setLoading(true);
-    }
-    setError(false);
-    try {
-      await api.init();
-
-
-      const response = await api.getClientConversations(userData?.client?.id);
-      if (response) {
-        // Format conversations into chat threads
-        const formattedThreads = response.map((conv) => ({
-          ...conv,
-          isStarred: conv.isStarred || false,
-        }));
-
-        setChatThreads(formattedThreads);
+  const fetchChatThreads = useCallback(
+    async (isRefreshing = false) => {
+      if (!isRefreshing) setLoading(true);
+      setError(false);
+      try {
+        await apiService.init();
+        const clientId = userData?.client?.id;
+        if (!clientId) {
+          setChatThreads([]);
+          return;
+        }
+        const response = await apiService.getClientConversations(clientId);
+        const threads = Array.isArray(response) ? response : [];
+        setChatThreads(
+          threads.map((conv) => ({
+            ...conv,
+            isStarred: conv.isStarred || false,
+          }))
+        );
+      } catch (err) {
+        console.log("Error fetching chat threads:", err);
+        if (!err?.isAuthError) setError(true);
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
       }
-    } catch (err) {
-      console.log("Error fetching chat threads:", err);
-      setError(true);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useFocusEffect(
-    React.useCallback(() => {
-      fetchChatThreads();
-    }, [navigation, userData?.id])
+    },
+    [userData?.client?.id]
   );
 
-  useEffect(() => {
-    fetchChatThreads();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      fetchChatThreads();
+    }, [fetchChatThreads])
+  );
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchChatThreads(true);
+  };
+
+  const openChat = (item) => {
+    navigation.navigate("ClientChat", {
+      threadId: item.id,
+      freelancer: item.otherUser,
+      projectId: item.jobId,
+      jobId: item.jobId,
+      jobData: {
+        id: item.jobId,
+        jobTitle: item.jobTitle,
+        jobStatus: item.jobStatus,
+        deadlineDate: item.deadlineDate,
+        title: item.jobTitle,
+        status: item.jobStatus,
+      },
+      receiverId: item.otherUser?.userId,
+      full_name: item.otherUser?.user?.fullName,
+    });
+  };
 
   const renderChatThread = ({ item }) => {
-    const job = item.jobData || item.job || {};
-    const otherUser = item.otherUser?.user || {};
-    const freelancerName = otherUser.fullName || "Freelancer";
+    const status = getThreadStatusMeta(item, isDark);
+    const StatusIcon = status.Icon;
+    const freelancerName = item.otherUser?.user?.fullName || "Freelancer";
+    const jobTitle = item.jobTitle || item.job?.jobTitle || item.jobData?.title || "Untitled job";
     const lastMessage = item.lastMessage || "No messages yet";
+    const timeLabel = formatMessageTime(item.lastMessageAt || item.updatedAt);
     const profileImage = item.otherUser?.profilePhoto
       ? { uri: apiService.loadImageURI(item.otherUser.profilePhoto) }
       : require("../assets/profile.png");
 
     return (
       <TouchableOpacity
-        style={styles.jobContainer}
-        onPress={() =>
-          navigation.navigate("ClientChat", {
-            threadId: item.id,
-            freelancer: item.otherUser, // Passing the structured otherUser object
-            projectId: item.jobId,
-            jobData: job,
-          })
-        }
+        style={styles.card}
+        onPress={() => openChat(item)}
+        activeOpacity={0.86}
       >
-        <Image source={profileImage} style={styles.avatar} />
-        <View style={styles.jobContent}>
-          <Text style={styles.jobTitle} numberOfLines={1}>
-            {job.title || "Untitled Job"}
-          </Text>
-          <Text style={styles.username}>@{freelancerName}</Text>
-          <Text style={styles.lastMessage} numberOfLines={1}>
-            {lastMessage}
-          </Text>
+        <View style={styles.cardTop}>
+          <View style={styles.avatarWrap}>
+            <Image source={profileImage} style={styles.avatar} />
+            <View style={[styles.statusDot, { backgroundColor: status.color }]} />
+          </View>
+
+          <View style={styles.cardBody}>
+            <View style={styles.titleRow}>
+              <Text style={styles.jobTitle} numberOfLines={1}>
+                {jobTitle}
+              </Text>
+              {!!timeLabel && <Text style={styles.timeText}>{timeLabel}</Text>}
+            </View>
+            <Text style={styles.username} numberOfLines={1}>
+              @{freelancerName}
+            </Text>
+            <Text style={styles.lastMessage} numberOfLines={1}>
+              {lastMessage}
+            </Text>
+          </View>
         </View>
-        <View
-          style={[
-            styles.statusIndicator,
-            {
-              backgroundColor:
-                job.status === "OPEN" && item.status !== "REJECTED"
-                  ? "#aba8a6" // grey
-                  : job.status === "OPEN" && item.status === "REJECTED"
-                    ? "#f44336" // red
-                    : job.status === "IN_PROGRESS" && item.status === "ACCEPTED"
-                      ? "#4CAF50" // green
-                      : job.status === "IN_PROGRESS" && item.status === "PENDING"
-                        ? "#2196F3" // blue
-                        : job.status === "COMPLETED"
-                          ? "#4CAF50" // green
-                          : job.status === "ACCEPTED"
-                            ? "#2196F3" // green
-                            : job.status === "BLOCKED"
-                              ? "#ff7300" // orange
-                              : "#FFC107",
-            },
-          ]}
-        />
+
+        <View style={styles.cardFooter}>
+          <View style={[styles.statusPill, { backgroundColor: status.bg }]}>
+            <StatusIcon size={13} color={status.color} weight="fill" />
+            <Text style={[styles.statusText, { color: status.color }]}>{status.label}</Text>
+          </View>
+          <View style={styles.openChatHint}>
+            <ChatCircleText size={16} color={accent} weight="fill" />
+            <Text style={styles.openChatText}>Open chat</Text>
+            <Ionicons name="chevron-forward" size={16} color={styles.chevronColor.color} />
+          </View>
+        </View>
       </TouchableOpacity>
     );
   };
 
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#3b006b" />
-        <Text style={{ color: currentTheme.subText }}>Loading chats...</Text>
-      </View>
-    );
-  }
-
-  if (error) {
-    return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorMessage}>
-          Failed to load threads. Please try again later.
-        </Text>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.retryButton}
-        >
-          <Text style={styles.retryButtonText}>Go Back</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
-  if (chatThreads.length === 0) {
-    return (
-      <View style={styles.emptyContainer}>
-        <Text style={styles.emptyMessage}>No job threads.</Text>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backButton}
-        >
-          <Text style={styles.backButtonText}>Go Back</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
   return (
-    <View style={styles.container}>
-      <View style={styles.main}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backButton}
-        >
-          <Ionicons
-            name="arrow-back"
-            size={24}
-            color={currentTheme.text || "black"}
-          />
+    <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={28} color={currentTheme.text || "#000"} />
         </TouchableOpacity>
-        <Text style={styles.header}>Client Inbox</Text>
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerTitle}>Client Inbox</Text>
+          <Text style={styles.headerSubtitle}>Your job conversations</Text>
+        </View>
+        <TouchableOpacity style={styles.refreshButton} onPress={onRefresh}>
+          <Ionicons name="refresh" size={22} color={PURPLE} />
+        </TouchableOpacity>
       </View>
+
       <FlatList
-        data={chatThreads}
+        data={loading ? [] : chatThreads}
         keyExtractor={(item) => item.id}
         renderItem={renderChatThread}
-        contentContainerStyle={styles.chatListContainer}
+        contentContainerStyle={styles.listContainer}
+        showsVerticalScrollIndicator={false}
+        ListHeaderComponent={
+          !loading && !error ? (
+            <View style={styles.summaryRow}>
+              <SummaryItem styles={styles} label="Total" value={summary.total} />
+              <SummaryItem styles={styles} label="Active" value={summary.active} />
+              <SummaryItem styles={styles} label="Done" value={summary.completed} />
+            </View>
+          ) : null
+        }
+        ListEmptyComponent={
+          loading ? (
+            <View style={styles.stateContainer}>
+              <ActivityIndicator size="large" color={PURPLE} />
+              <Text style={styles.stateText}>Loading conversations...</Text>
+            </View>
+          ) : error ? (
+            <View style={styles.stateContainer}>
+              <Ionicons name="warning-outline" size={38} color="#EF4444" />
+              <Text style={styles.stateTitle}>Failed to load inbox</Text>
+              <Text style={styles.stateText}>Please try again in a moment.</Text>
+              <TouchableOpacity onPress={() => fetchChatThreads()} style={styles.primaryButton}>
+                <Text style={styles.primaryButtonText}>Retry</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.stateContainer}>
+              <ChatCircleDots size={46} color={accent} />
+              <Text style={styles.stateTitle}>No conversations yet</Text>
+              <Text style={styles.stateText}>
+                When freelancers message you about a job, threads will show up here.
+              </Text>
+              <TouchableOpacity
+                onPress={() => navigation.goBack()}
+                style={styles.secondaryButton}
+              >
+                <Ionicons name="arrow-back" size={18} color={PURPLE} />
+                <Text style={styles.secondaryButtonText}>Go back</Text>
+              </TouchableOpacity>
+            </View>
+          )
+        }
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
-            onRefresh={async () => {
-              setRefreshing(true);
-              await fetchChatThreads(true);
-              setRefreshing(false);
-            }}
-            colors={["#3b006b"]}
-            tintColor={currentTheme.text}
+            onRefresh={onRefresh}
+            colors={[PURPLE]}
+            tintColor={PURPLE}
+            progressBackgroundColor={currentTheme.cardBackground || "#fff"}
           />
         }
       />
-    </View>
+    </SafeAreaView>
   );
 };
 
-const getStyles = (currentTheme) =>
-  StyleSheet.create({
-    container: {
+function SummaryItem({ styles, label, value }) {
+  return (
+    <View style={styles.summaryItem}>
+      <Text style={styles.summaryValue}>{value}</Text>
+      <Text style={styles.summaryLabel}>{label}</Text>
+    </View>
+  );
+}
+
+const getStyles = (currentTheme, isDark) => {
+  const surface = currentTheme.background || "#FFFFFF";
+  const card = currentTheme.cardBackground || surface;
+  const text = currentTheme.text || "#101114";
+  const muted = currentTheme.subText || "#656B7A";
+  const border = currentTheme.border || BORDER;
+  const accentSoft = isDark ? "#2A2034" : "#F7F2FF";
+  const accentLink = isDark ? "#B794FF" : PURPLE;
+
+  return StyleSheet.create({
+    safeArea: {
       flex: 1,
-      backgroundColor: currentTheme.background || "#fff",
-      paddingHorizontal: 20,
-      paddingTop: 40,
-    },
-    main: {
-      marginTop: 25,
-      marginBottom: 20,
-      display: "flex",
-      flexDirection: "row",
-      gap: 100,
-      alignItems: "center",
+      backgroundColor: surface,
     },
     header: {
-      fontSize: 24,
-      fontWeight: "bold",
-      textAlign: "center",
-      color: currentTheme.text,
-    },
-    loadingText: {
-      textAlign: "center",
-      marginTop: 20,
-      color: currentTheme.subText || "#888",
-    },
-    chatListContainer: {
-      padding: 10,
-    },
-    jobContainer: {
+      minHeight: 68,
+      paddingHorizontal: 22,
+      paddingTop: 4,
       flexDirection: "row",
       alignItems: "center",
-      backgroundColor: currentTheme.cardBackground || "#F5F5F5",
-      borderTopRightRadius: 10,
-      borderBottomRightRadius: 10,
-      borderTopLeftRadius: 40,
-      borderBottomLeftRadius: 40,
-      marginTop: 20,
-      shadowColor: currentTheme.shadow || "#000",
-      shadowOpacity: 0.1,
-      shadowOffset: { width: 0, height: 2 },
-      shadowRadius: 5,
-      elevation: 2,
-      height: 70,
+      justifyContent: "space-between",
+      backgroundColor: surface,
+    },
+    backButton: {
+      width: 44,
+      height: 44,
+      justifyContent: "center",
+      alignItems: "flex-start",
+    },
+    headerCenter: {
+      flex: 1,
+      alignItems: "center",
+      paddingHorizontal: 8,
+    },
+    headerTitle: {
+      color: text,
+      fontSize: 24,
+      fontWeight: "900",
+      textAlign: "center",
+    },
+    headerSubtitle: {
+      color: muted,
+      fontSize: 13,
+      fontWeight: "600",
+      marginTop: 2,
+      textAlign: "center",
+    },
+    refreshButton: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: accentSoft,
+    },
+    listContainer: {
+      paddingHorizontal: 20,
+      paddingBottom: 110,
+      flexGrow: 1,
+    },
+    summaryRow: {
+      flexDirection: "row",
+      gap: 10,
+      marginTop: 8,
+      marginBottom: 6,
+    },
+    summaryItem: {
+      flex: 1,
+      borderRadius: 14,
+      paddingVertical: 14,
+      alignItems: "center",
+      borderWidth: 1,
+      borderColor: border,
+      backgroundColor: card,
+    },
+    summaryValue: {
+      color: text,
+      fontSize: 22,
+      fontWeight: "900",
+    },
+    summaryLabel: {
+      color: muted,
+      fontSize: 12,
+      fontWeight: "700",
+      marginTop: 4,
+    },
+    card: {
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: border,
+      backgroundColor: card,
+      padding: 14,
+      marginTop: 14,
+      shadowColor: isDark ? "#000000" : "#2C1B3F",
+      shadowOpacity: isDark ? 0 : 0.06,
+      shadowRadius: 12,
+      shadowOffset: { width: 0, height: 6 },
+      elevation: isDark ? 0 : 2,
+    },
+    cardTop: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+    },
+    avatarWrap: {
+      position: "relative",
     },
     avatar: {
-      width: 80,
-      height: 80,
-      borderRadius: 40,
-      marginRight: 15,
+      width: 58,
+      height: 58,
+      borderRadius: 18,
+      backgroundColor: isDark ? currentTheme.background3 : SOFT_PURPLE,
+      borderWidth: 1,
+      borderColor: border,
     },
-    jobContent: {
+    statusDot: {
+      position: "absolute",
+      right: -1,
+      bottom: -1,
+      width: 14,
+      height: 14,
+      borderRadius: 7,
+      borderWidth: 2,
+      borderColor: card,
+    },
+    cardBody: {
       flex: 1,
-      paddingRight: 6,
+      minWidth: 0,
+    },
+    titleRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
     },
     jobTitle: {
+      flex: 1,
+      color: text,
       fontSize: 16,
-      fontWeight: "bold",
-      color: "#5A4CAE",
+      fontWeight: "900",
+    },
+    timeText: {
+      color: muted,
+      fontSize: 11,
+      fontWeight: "700",
     },
     username: {
-      fontSize: 14,
-      color: currentTheme.subText || "#6D6D6D",
+      color: accentLink,
+      fontSize: 13,
+      fontWeight: "800",
+      marginTop: 3,
     },
     lastMessage: {
+      color: muted,
+      fontSize: 13,
+      fontWeight: "600",
+      marginTop: 4,
+    },
+    cardFooter: {
+      marginTop: 14,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 10,
+    },
+    statusPill: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 999,
+    },
+    statusText: {
+      fontSize: 12,
+      fontWeight: "900",
+    },
+    openChatHint: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
+    openChatText: {
+      color: accentLink,
+      fontSize: 13,
+      fontWeight: "900",
+    },
+    chevronColor: {
+      color: muted,
+    },
+    stateContainer: {
+      minHeight: 330,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 24,
+    },
+    stateTitle: {
+      color: text,
+      fontSize: 19,
+      fontWeight: "900",
+      marginTop: 12,
+      textAlign: "center",
+    },
+    stateText: {
+      color: muted,
       fontSize: 14,
-      color: currentTheme.subText || "#6D6D6D",
-    },
-    statusIndicator: {
-      width: 10,
-      height: "100%",
-      borderTopRightRadius: 10,
-      borderBottomRightRadius: 10,
-    },
-    loadingContainer: {
-      flex: 1,
-      justifyContent: "center",
-      alignItems: "center",
-      backgroundColor: currentTheme.background,
-    },
-    errorContainer: {
-      flex: 1,
-      justifyContent: "center",
-      alignItems: "center",
-      backgroundColor: currentTheme.background,
-    },
-    errorMessage: {
-      fontSize: 16,
-      color: "#FF3B30",
+      lineHeight: 20,
+      marginTop: 8,
       textAlign: "center",
-      marginBottom: 20,
     },
-    retryButton: {
-      backgroundColor: "#3b006b",
-      padding: 10,
-      borderRadius: 5,
+    primaryButton: {
+      marginTop: 18,
+      borderRadius: 12,
+      backgroundColor: PURPLE,
+      paddingHorizontal: 22,
+      paddingVertical: 12,
     },
-    retryButtonText: {
+    primaryButtonText: {
       color: "#FFFFFF",
-      fontSize: 16,
+      fontSize: 15,
+      fontWeight: "900",
     },
-    emptyContainer: {
-      flex: 1,
-      justifyContent: "center",
+    secondaryButton: {
+      marginTop: 18,
+      flexDirection: "row",
       alignItems: "center",
-      backgroundColor: currentTheme.background || "#fff",
+      gap: 8,
+      borderRadius: 12,
+      backgroundColor: accentSoft,
+      paddingHorizontal: 18,
+      paddingVertical: 12,
     },
-    emptyMessage: {
-      fontSize: 16,
-      color: "#6D6D6D",
-      textAlign: "center",
-      marginBottom: 20,
-    },
-    backButtonText: {
-      color: "#3b006b",
-      fontSize: 16,
+    secondaryButtonText: {
+      color: PURPLE,
+      fontSize: 15,
+      fontWeight: "900",
     },
   });
+};
 
 export default ClientChatList;
