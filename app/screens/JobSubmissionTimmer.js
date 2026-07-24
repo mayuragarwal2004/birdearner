@@ -43,7 +43,7 @@ const JobSubmissionTimmerScreen = ({ route, navigation }) => {
 
       let uploadedUrls = [];
 
-      for (let i = 0; i < formData.portfolioImages.length; i++) {
+      for (let i = 0; i < (formData.portfolioImages || []).length; i++) {
         const response = await apiService.uploadImage(
           formData.portfolioImages[i],
           "job_portfolios"

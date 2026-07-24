@@ -128,7 +128,7 @@ const JobDetailsScreen = ({ route, navigation }) => {
         <View style={styles.attachedFilesContainer}>
           <Text style={styles.attachedFilesTitle}>Attached Files</Text>
           <View style={styles.filePreviewContainer}>
-            {formData.portfolioImages.map((image, index) => (
+            {(formData.portfolioImages || []).map((image, index) => (
               <TouchableOpacity
                 key={index}
                 onPress={() => openImageModal(image)}

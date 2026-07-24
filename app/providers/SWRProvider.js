@@ -21,19 +21,30 @@ const swrConfig = {
   refreshInterval: 0, // Disable global refresh (we'll set per-hook)
   revalidateOnFocus: true,
   revalidateOnReconnect: true,
-  shouldRetryOnError: true,
+  shouldRetryOnError: (error) => {
+    // Don't retry expired sessions — user is being logged out
+    if (error?.isAuthError) return false;
+    const msg = (error?.message || "").toLowerCase();
+    if (msg.includes("authentication failed") || msg.includes("unauthorized")) {
+      return false;
+    }
+    return true;
+  },
   errorRetryCount: 3,
   errorRetryInterval: 5000,
   dedupingInterval: 2000,
   
   // Global error handler
   onError: (error, key) => {
-    console.error('SWR Error:', error, 'Key:', key);
-    
-    // Don't show toast for auth errors (handled by ApiService)
-    if (error.message?.includes('unauthorized') || error.message?.includes('authentication')) {
+    // Auth expiry is handled centrally in ApiService + AuthProvider
+    if (
+      error?.isAuthError ||
+      error?.message?.toLowerCase?.().includes("authentication failed") ||
+      error?.message?.toLowerCase?.().includes("unauthorized")
+    ) {
       return;
     }
+    console.error('SWR Error:', error, 'Key:', key);
   },
   
   // Global loading handler

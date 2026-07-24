@@ -59,6 +59,7 @@ import { StatusBar } from "expo-status-bar";
 import { ThemeProvider } from "./context/ThemeContext";
 import { KeyboardProvider, useKeyboard } from "./context/KeyboardContext";
 import { NavigationContainer } from "@react-navigation/native";
+import { navigationRef } from "./lib/navigationRef";
 import * as Linking from "expo-linking";
 import apiService from "./lib/apiService";
 
@@ -157,7 +158,7 @@ export default function MainApp() {
   }, []);
 
   return (
-    <NavigationContainer linking={linking}>
+    <NavigationContainer linking={linking} ref={navigationRef}>
       <ThemeProvider>
         <AuthProvider>
           <KeyboardProvider>

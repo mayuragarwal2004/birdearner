@@ -2,12 +2,32 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 
-// const DEV_API_BASE_URL = "https://inclusive-navigator-treated-burner.trycloudflare.com/api";
+// const DEV_API_BASE_URL = "https://closure-isbn-extent-midi.trycloudflare.com/api";
 const DEV_API_BASE_URL = "https://api.birdearner.com/api";
 
 const PROD_API_BASE_URL = "https://api.birdearner.com/api";
 
 const API_BASE_URL = __DEV__ ? DEV_API_BASE_URL : PROD_API_BASE_URL;
+
+// Endpoints where 401 means bad credentials / public auth flow — not an expired session
+const PUBLIC_AUTH_ENDPOINTS = [
+  "/auth/login",
+  "/auth/send-verification-otp",
+  "/auth/verify-email",
+  "/auth/forgot-password",
+  "/auth/reset-password",
+  "/auth/verify-otp",
+  "/check-email",
+  "/signup/client",
+  "/signup/freelancer",
+];
+
+const isPublicAuthEndpoint = (endpoint = "") => {
+  const path = endpoint.split("?")[0];
+  return PUBLIC_AUTH_ENDPOINTS.some(
+    (publicPath) => path === publicPath || path.startsWith(`${publicPath}/`)
+  );
+};
 
 // upload image categories are mentioned over here, above uploadImage function and in backend at /upload route
 /** @type {const} */
@@ -24,6 +44,35 @@ class ApiService {
   constructor() {
     this.baseURL = API_BASE_URL;
     this.token = null;
+    this.onUnauthorized = null;
+    this._handlingUnauthorized = false;
+  }
+
+  // Register a handler (from AuthProvider) for expired/invalid sessions
+  setUnauthorizedHandler(handler) {
+    this.onUnauthorized = typeof handler === "function" ? handler : null;
+  }
+
+  async handleUnauthorized(message) {
+    if (this._handlingUnauthorized) return;
+    this._handlingUnauthorized = true;
+
+    try {
+      // Clear token first so parallel 401s don't keep firing authenticated calls
+      await this.setAuthToken(null);
+      await AsyncStorage.multiRemove(["userData", "userProfile", "authToken"]);
+
+      if (this.onUnauthorized) {
+        await this.onUnauthorized(message);
+      }
+    } catch (handlerError) {
+      console.error("Unauthorized handler error:", handlerError);
+    } finally {
+      // Allow future session-expiry handling after the user logs in again
+      setTimeout(() => {
+        this._handlingUnauthorized = false;
+      }, 2500);
+    }
   }
 
   // Initialize token from storage
@@ -61,6 +110,21 @@ class ApiService {
   // Make authenticated requests
   async makeRequest(endpoint, options = {}) {
     const url = `${this.baseURL}${endpoint}`;
+    const isPublic = isPublicAuthEndpoint(endpoint) || options.skipAuth === true;
+
+    // If memory token is empty, try storage once (avoids stale in-memory clears)
+    if (!this.token && !isPublic) {
+      await this.init();
+    }
+
+    // Protected call with no session — clear stale UI session and fail fast
+    if (!this.token && !isPublic) {
+      await this.handleUnauthorized("No auth token");
+      const authError = new Error("Authentication failed: Unauthorized");
+      authError.status = 401;
+      authError.isAuthError = true;
+      throw authError;
+    }
 
     const config = {
       headers: {
@@ -68,6 +132,9 @@ class ApiService {
       },
       ...options,
     };
+
+    // Internal flag — don't forward to fetch
+    delete config.skipAuth;
 
     // Only set Content-Type if not FormData (let fetch handle multipart)
     if (!(config.body instanceof FormData)) {
@@ -78,21 +145,13 @@ class ApiService {
     }
 
     // Add auth token if available
+    const hadToken = !!this.token;
     if (this.token) {
       config.headers["Authorization"] = `Bearer ${this.token}`;
-    } else {
-      console.warn(`No auth token available for request to ${endpoint}`);
     }
 
     try {
-      // console.log(`API Request: ${config.method || "GET"} ${url}`);
-      // console.log(
-      //   `Auth header present: ${config.headers["Authorization"] ? "Yes" : "No"}`
-      // );
-      // console.log(`Content-Type: ${config.headers['Content-Type'] || 'multipart/form-data (auto)'}`);
-
       const response = await fetch(url, config);
-      // console.log(`API Response: ${response.status} ${url}`);
 
       const responseText = await response.text();
       let data;
@@ -105,16 +164,26 @@ class ApiService {
       }
 
       if (!response.ok) {
-        // Check for authentication errors specifically
+        // Expired / invalid JWT — force re-login once, don't crash callers
+        if (response.status === 401 && hadToken && !isPublic) {
+          const message = data.message || "Unauthorized";
+          await this.handleUnauthorized(message);
+
+          const authError = new Error(
+            `Authentication failed: ${message}`
+          );
+          authError.status = 401;
+          authError.isAuthError = true;
+          throw authError;
+        }
+
         if (response.status === 401 || response.status === 403) {
-          console.error(
-            "Authentication error:",
-            data.message || "Access denied"
+          const authError = new Error(
+            `Authentication failed: ${data.message || "Access denied, please login again"}`
           );
-          throw new Error(
-            `Authentication failed: ${data.message || "Access denied, please login again"
-            }`
-          );
+          authError.status = response.status;
+          authError.isAuthError = true;
+          throw authError;
         }
 
         throw new Error(
@@ -124,7 +193,10 @@ class ApiService {
 
       return data;
     } catch (error) {
-      console.error(`API Error for ${endpoint}:`, error);
+      // Avoid noisy duplicate logs once session expiry is already being handled
+      if (!error?.isAuthError) {
+        console.error(`API Error for ${endpoint}:`, error);
+      }
       throw error;
     }
   }
@@ -1054,6 +1126,10 @@ class ApiService {
       }
       return response;
     } catch (error) {
+      // Session expiry is handled globally — don't wrap/noise further
+      if (error?.isAuthError) {
+        throw error;
+      }
       console.error("Wallet info fetch error:", error);
       throw new Error(`Failed to fetch client wallet info: ${error.message}`);
     }
@@ -1068,6 +1144,9 @@ class ApiService {
       }
       return response;
     } catch (error) {
+      if (error?.isAuthError) {
+        throw error;
+      }
       throw new Error(
         `Failed to fetch freelancer wallet info: ${error.message}`
       );

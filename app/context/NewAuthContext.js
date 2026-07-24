@@ -16,6 +16,7 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import apiService from "../lib/apiService";
 import Toast from "react-native-toast-message";
+import { resetToLogin } from "../lib/navigationRef";
 
 const AuthContext = createContext();
 
@@ -169,11 +170,27 @@ export const AuthProvider = ({ children }) => {
           AsyncStorage.getItem("authToken"),
         ]);
 
-      if (storedUserData) {
+      // Half-session: profile cached but JWT missing — force a clean login
+      if (storedUserData && !storedAuthToken) {
+        console.warn("Session missing auth token; clearing stale session");
+        await AsyncStorage.multiRemove(["userData", "userProfile", "authToken"]);
+        await apiService.setAuthToken(null);
+        setUser(null);
+        setUserData(null);
+        setUserProfile(null);
+        setAuthToken(null);
+        setLoading(false);
+        return;
+      }
+
+      if (storedUserData && storedAuthToken) {
         const cachedUserData = JSON.parse(storedUserData);
         const cachedProfile = storedUserProfile
           ? JSON.parse(storedUserProfile)
           : null;
+
+        // Keep ApiService token in sync with storage (critical for authenticated calls)
+        await apiService.setAuthToken(storedAuthToken);
 
         setUser(cachedUserData);
         setUserData(cachedUserData);
@@ -214,6 +231,10 @@ export const AuthProvider = ({ children }) => {
 
           console.log(`Session restored with role: ${updatedUserData.role}`);
         } catch (error) {
+          if (error?.isAuthError) {
+            // Token rejected — unauthorized handler already clears session
+            return;
+          }
           if (
             error.message &&
             (error.message.includes("User not found") ||
@@ -227,6 +248,7 @@ export const AuthProvider = ({ children }) => {
               "userProfile",
               "authToken",
             ]);
+            await apiService.setAuthToken(null);
             setUser(null);
             setUserData(null);
             setUserProfile(null);
@@ -239,6 +261,7 @@ export const AuthProvider = ({ children }) => {
           );
         }
       } else {
+        await apiService.setAuthToken(null);
         setUser(null);
         setUserData(null);
         setUserProfile(null);
@@ -248,6 +271,7 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error("Error checking user session :", error);
       await AsyncStorage.multiRemove(["userData", "userProfile", "authToken"]);
+      await apiService.setAuthToken(null);
       setUser(null);
       setUserData(null);
       setUserProfile(null);
@@ -268,6 +292,9 @@ export const AuthProvider = ({ children }) => {
 
       if (loginResponse) {
         setUser(loginResponse);
+        if (loginResponse.token) {
+          setAuthToken(loginResponse.token);
+        }
 
         // Check for both freelancer and client profiles
         let freelancerProfile = null;
@@ -441,6 +468,7 @@ export const AuthProvider = ({ children }) => {
       setUser(null);
       setUserData(null);
       setUserProfile(null);
+      setAuthToken(null);
       setRoleOptions({ freelancerData: null, clientData: null });
     } catch (error) {
       console.error("Logout error:", error);
@@ -449,7 +477,35 @@ export const AuthProvider = ({ children }) => {
       setUser(null);
       setUserData(null);
       setUserProfile(null);
+      setAuthToken(null);
     }
+  }, []);
+
+  // When JWT expires / API returns 401, clear session and prompt re-login
+  useEffect(() => {
+    apiService.setUnauthorizedHandler(async () => {
+      Toast.show({
+        type: "error",
+        text1: "Session expired",
+        text2: "Please log in again to continue.",
+        visibilityTime: 3500,
+      });
+
+      setUser(null);
+      setUserData(null);
+      setUserProfile(null);
+      setAuthToken(null);
+      setRoleOptions({ freelancerData: null, clientData: null });
+
+      // Wait for guest navigator to mount, then land on Login
+      setTimeout(() => {
+        resetToLogin();
+      }, 150);
+    });
+
+    return () => {
+      apiService.setUnauthorizedHandler(null);
+    };
   }, []);
 
   // Create freelancer profile
