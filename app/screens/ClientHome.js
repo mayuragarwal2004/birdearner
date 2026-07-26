@@ -1,1061 +1,970 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
-  SafeAreaView,
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  TextInput,
-  FlatList,
-  Image,
-  ScrollView,
-  RefreshControl,
-  Alert,
-  Platform,
   ActivityIndicator,
+  Dimensions,
+  Image,
+  Platform,
+  RefreshControl,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { FontAwesome, MaterialIcons } from "@expo/vector-icons";
-import { household_service, freelance_service } from "../lib/roleData";
-import { useAuth } from "../context/NewAuthContext";
-import { differenceInDays } from "date-fns";
-import gifAnimation from "../assets/loading.gif";
-import { useTheme } from "../context/ThemeContext";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import {
+  Bell,
+  ChatCircleText,
+  MagnifyingGlass,
+  MapPin,
+  Sparkle,
+} from "phosphor-react-native";
+import { format, isValid } from "date-fns";
 import { useNavigation } from "@react-navigation/native";
+import { useAuth } from "../context/NewAuthContext";
+import { useTheme } from "../context/ThemeContext";
 import apiService from "../lib/apiService";
 import ClientHomeServiceFinder from "../components/ClientHomeServiceFinder";
+import AddressPickerModal from "../components/AddressPickerModal";
+import { useDeliveryAddress } from "../hooks/useDeliveryAddress";
 
+const PURPLE = "#7B2CFF";
+const DEEP_PURPLE = "#4B0082";
 const placeholderImageURL = "https://picsum.photos/seed/";
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const PROMO_WIDTH = SCREEN_WIDTH - 40;
+
+const PROMOS = [
+  {
+    id: "1",
+    title: "Get your AC ready for summer",
+    subtitle: "Up to 25% off on AC servicing",
+    cta: "Book now",
+    tone: "lavender",
+  },
+  {
+    id: "2",
+    title: "Need help around the house?",
+    subtitle: "Book trusted household pros in minutes",
+    cta: "Explore",
+    tone: "mint",
+  },
+  {
+    id: "3",
+    title: "Hire top freelancers",
+    subtitle: "Design, coding, writing & more",
+    cta: "Post a job",
+    tone: "peach",
+  },
+];
+
+const OFFERS = [
+  {
+    id: "insta",
+    title: "Insta Help",
+    badge: "10 mins",
+    description: "Quick support for urgent home tasks.",
+    cta: "Book now",
+    tone: "lavender",
+  },
+  {
+    id: "clean",
+    title: "Up to 40% off",
+    description: "on Cleaning Services",
+    tone: "mint",
+  },
+];
+
+const formatSchedule = (deadline) => {
+  if (!deadline) return "Schedule not set";
+  const date = new Date(deadline);
+  if (!isValid(date)) return "Schedule not set";
+  return `Due ${format(date, "d MMM, h:mm a")}`;
+};
+
+const getStatusMeta = (status, isDark) => {
+  const value = (status || "").toUpperCase();
+  if (value === "IN_PROGRESS" || value === "ASSIGNED" || value === "ACTIVE") {
+    return {
+      label: "In Progress",
+      color: isDark ? "#B794FF" : PURPLE,
+      bg: isDark ? "rgba(123,44,255,0.22)" : "#F3EAFF",
+    };
+  }
+  if (value === "OPEN" || value === "PENDING") {
+    return {
+      label: "Open",
+      color: isDark ? "#FBBF24" : "#D97706",
+      bg: isDark ? "rgba(245,158,11,0.2)" : "#FFF6DF",
+    };
+  }
+  if (value === "COMPLETED") {
+    return {
+      label: "Completed",
+      color: isDark ? "#4ADE80" : "#16A34A",
+      bg: isDark ? "rgba(34,197,94,0.18)" : "#EAF8EF",
+    };
+  }
+  return {
+    label: value || "Job",
+    color: isDark ? "#94A3B8" : "#64748B",
+    bg: isDark ? "rgba(148,163,184,0.18)" : "#F1F5F9",
+  };
+};
 
 const ClientHomeScreen = () => {
-  const [showGif, setShowGif] = useState(false);
-  const [loadingJobs, setLoadingJobs] = useState(false);
+  const [search, setSearch] = useState("");
+  const [ongoingJobs, setOngoingJobs] = useState([]);
   const [notifications, setNotifications] = useState([]);
-  const [loadingNotifications, setLoadingNotifications] = useState(false);
+  const [loadingJobs, setLoadingJobs] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [promoIndex, setPromoIndex] = useState(0);
+  const [profilePercentage, setProfilePercentage] = useState(20);
+  const [addressPickerOpen, setAddressPickerOpen] = useState(false);
 
   const servicesRef = useRef(null);
-
-  const [ongoingJobs, setOngoingJobs] = useState([]);
-  const [profilePercentage, setProfilePercentage] = useState(20);
-  const [refreshing, setRefreshing] = useState(false);
-  const [combinedData, setCombinedData] = useState([]);
   const { userData } = useAuth();
   const navigation = useNavigation();
-
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
+  const isDark = theme === "dark";
+  const styles = useMemo(
+    () => getStyles(currentTheme, isDark),
+    [currentTheme, isDark]
+  );
 
-  const styles = getStyles(currentTheme);
+  const client = userData?.client;
+  const {
+    addresses,
+    selectedAddress,
+    coords,
+    locating,
+    displayLabel,
+    displayAddress,
+    selectAddress,
+    addAddress,
+    removeAddress,
+    useCurrentLocationAsAddress,
+    refresh: refreshAddresses,
+  } = useDeliveryAddress(userData?.id, client);
 
-  const categorizeJobs = (jobs) => {
-    const today = new Date();
-
-    return jobs.map((job) => {
-      const deadline = new Date(job.deadline);
-      const daysRemaining = differenceInDays(deadline, today);
-
-      let color;
-
-      if (daysRemaining < 0) {
-        color = "#000";
-      } else if (daysRemaining <= 2) {
-        color = "#FF3B30";
-      } else if (daysRemaining <= 10) {
-        color = "#FFCC00";
-      } else {
-        color = "#34C759";
-      }
-
-      return {
-        ...job,
-        color,
-      };
-    });
-  };
+  const unreadCount = useMemo(
+    () => notifications.filter((n) => !n.isRead).length,
+    [notifications]
+  );
 
   useEffect(() => {
-    let percentage = 0;
-
-    if (userData.client?.fullName) percentage = 20;
-    if (userData.client?.country) percentage = 40;
-    if (userData.client?.profilePhoto) percentage = 70;
-    if (userData.client?.termsAccepted) percentage = 100;
-
+    let percentage = 20;
+    if (client?.fullName || userData?.fullName) percentage = 20;
+    if (client?.country) percentage = 40;
+    if (client?.profilePhoto) percentage = 70;
+    if (client?.termsAccepted) percentage = 100;
     setProfilePercentage(percentage);
-  }, [userData, refreshing]);
-
-  const sendTitle = (item) => {
-    const title = item.title;
-    const freelancerType = item.id;
-
-    navigation.navigate("Job Requirements", { title, freelancerType });
-  };
-
-  console.log({ ongoingJobs });
+  }, [client, userData, refreshing]);
 
   const fetchNotifications = async () => {
     try {
-      if (userData?.id) {
-        setLoadingNotifications(true);
-        const response = await apiService.getNotifications(userData.id, 1);
-        if (response && response.data) {
-          setNotifications(response.data.slice(0, 3)); // Show latest 3
-        }
+      if (!userData?.id) return;
+      const response = await apiService.getNotifications(userData.id, 1);
+      if (response?.data) {
+        setNotifications(response.data.slice(0, 5));
       }
     } catch (error) {
-      console.error("Error fetching notifications in ClientHome:", error);
+      if (!error?.isAuthError) {
+        console.error("Error fetching notifications in ClientHome:", error);
+      }
+    }
+  };
+
+  const fetchOngoingJobs = async () => {
+    try {
+      if (userData?.role !== "CLIENT" || !userData?.client?.id) {
+        setOngoingJobs([]);
+        return;
+      }
+      setLoadingJobs(true);
+      const ongoingJobsData = await apiService.getOngoingJobsByClientId(
+        userData.client.id
+      );
+      setOngoingJobs(Array.isArray(ongoingJobsData) ? ongoingJobsData : []);
+    } catch (error) {
+      if (!error?.isAuthError) {
+        console.error("Error fetching ongoing jobs:", error);
+      }
+      setOngoingJobs([]);
     } finally {
-      setLoadingNotifications(false);
+      setLoadingJobs(false);
     }
   };
 
   useEffect(() => {
-    const fetchOngoingJobs = async () => {
-      try {
-        if (userData?.role === "CLIENT" && userData?.id) {
-          setLoadingJobs(true); // Start loading
-          fetchNotifications(); // Also fetch notifications
-
-          // Fetch ongoing jobs from the new backend API
-          const ongoingJobsData = await apiService.getOngoingJobsByClientId(
-            userData.client.id
-          );
-
-          console.log({ ongoingJobsData });
-
-          if (ongoingJobsData && ongoingJobsData.length > 0) {
-            setOngoingJobs(ongoingJobsData);
-            setCombinedData(ongoingJobsData);
-          } else {
-            // If no ongoing jobs, show empty placeholders
-            const emptySlots = Array(3).fill({
-              jobDetails: null,
-              full_name: "?",
-              profile_photo: placeholderImageURL,
-              color: "#D3D3D3", // Placeholder for empty slots
-            });
-            setOngoingJobs([]);
-            setCombinedData(emptySlots);
-          }
-        } else {
-          // For non-client users or when profile is not loaded
-          const emptySlots = Array(3).fill({
-            jobDetails: null,
-            full_name: "?",
-            profile_photo: placeholderImageURL,
-            color: "#D3D3D3",
-          });
-          setOngoingJobs([]);
-          setCombinedData(emptySlots);
-        }
-      } catch (error) {
-        console.error("Error fetching ongoing jobs:", error);
-        Alert.alert("Error", "Failed to fetch ongoing jobs: " + error.message);
-
-        // Fallback to empty placeholders on error
-        const emptySlots = Array(3).fill({
-          jobDetails: null,
-          full_name: "?",
-          profile_photo: placeholderImageURL,
-          color: "#D3D3D3",
-        });
-        setOngoingJobs([]);
-        setCombinedData(emptySlots);
-      } finally {
-        setLoadingJobs(false); // Stop loading
-      }
-    };
-
     fetchOngoingJobs();
-  }, [refreshing, userData]);
+    fetchNotifications();
+  }, [userData?.client?.id, refreshing]);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    servicesRef.current?.refreshCard?.();
+    await Promise.all([
+      fetchOngoingJobs(),
+      fetchNotifications(),
+      refreshAddresses(),
+    ]);
+    setRefreshing(false);
+  };
+
+  const openInbox = () => {
+    navigation.navigate("ClientChatList");
+  };
+
+  const openJobDetails = (item) => {
+    const jobId = item?.jobDetails?.id || item?.jobDetails?.$id;
+    if (!jobId) {
+      navigation.navigate("Job Posted");
+      return;
+    }
+    navigation.navigate("ClientChatList", {
+      jobId,
+      receiverId: item?.jobDetails?.assigned_freelancer,
+      full_name: item?.full_name,
+      profileImage: item?.profile_photo,
+    });
+  };
 
   const handleCompleteProfile = () => {
-    if (userData) {
-      if (userData.role === "FREELANCER") {
-        navigation.navigate("FreelancerProfileSetup");
-      } else if (userData.role === "CLIENT") {
-        navigation.navigate("ClientProfileSetup");
-      }
+    if (userData?.role === "CLIENT") {
+      navigation.navigate("ClientSignup");
     }
   };
 
-  const openChat = (receiverId, full_name, profileImage, jobId) => {
-    console.log("Opening chat with:", {
-      receiverId,
-      full_name,
-      profileImage,
-      jobId,
-    });
-
-    navigation.navigate("ClientChatList", {
-      receiverId,
-      full_name,
-      profileImage,
-      jobId,
-    });
+  const onPromoScroll = (event) => {
+    const index = Math.round(event.nativeEvent.contentOffset.x / PROMO_WIDTH);
+    setPromoIndex(index);
   };
 
-  useEffect(() => {
-    const refreshUserData = async () => {
-      try {
-        if (userData?.id) {
-          // Fetch updated user data from the new backend API
-          const updatedUserData = await apiService.getUserProfile(userData.id);
+  const renderOngoingJob = (item, index) => {
+    const details = item.jobDetails;
+    if (!details) return null;
+    const status = getStatusMeta(details.jobStatus, isDark);
+    const serviceImage =
+      details.service?.imageUrl ||
+      details.attachedFiles?.[0] ||
+      null;
+    const title = details.jobTitle || details.service?.name || "Ongoing job";
 
-          if (updatedUserData) {
-            // Update the auth context with fresh data
-            console.log("Updated user data:", updatedUserData);
-            // Note: You might want to update the auth context here if needed
-          }
-        }
-      } catch (error) {
-        console.error("Error updating user data:", error);
-        // Don't show alert for this as it's background refresh
-      }
-    };
-
-    refreshUserData();
-  }, [refreshing, userData]);
-
-  const onRefresh = () => {
-    setRefreshing(true);
-
-    // Call child function
-    if (servicesRef.current?.refreshCard) {
-      servicesRef.current.refreshCard();
-    }
-    fetchNotifications();
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1000);
-  };
-
-  const handlePress = () => {
-    setShowGif(true);
-
-    setTimeout(() => {
-      setShowGif(false);
-      navigation.navigate("Offers");
-    }, 1000);
+    return (
+      <View key={details.id || index} style={styles.jobCard}>
+        <Image
+          source={{
+            uri: serviceImage
+              ? apiService.loadImageURI(serviceImage)
+              : `${placeholderImageURL}job-${index}/120/120`,
+          }}
+          style={styles.jobImage}
+        />
+        <View style={styles.jobContent}>
+          <View style={styles.jobTitleRow}>
+            <Text style={styles.jobTitle} numberOfLines={1}>
+              {title}
+            </Text>
+            <View style={[styles.statusPill, { backgroundColor: status.bg }]}>
+              <Text style={[styles.statusText, { color: status.color }]}>
+                {status.label}
+              </Text>
+            </View>
+          </View>
+          <Text style={styles.jobSchedule}>{formatSchedule(details.deadline)}</Text>
+          <View style={styles.freelancerRow}>
+            <Image
+              source={
+                item.profile_photo
+                  ? { uri: apiService.loadImageURI(item.profile_photo) }
+                  : require("../assets/profile.png")
+              }
+              style={styles.freelancerAvatar}
+            />
+            <Text style={styles.freelancerName} numberOfLines={1}>
+              {item.full_name || "Unassigned"}
+            </Text>
+          </View>
+        </View>
+        <TouchableOpacity
+          style={styles.viewDetailsBtn}
+          onPress={() => openJobDetails(item)}
+        >
+          <Text style={styles.viewDetailsText}>View Details</Text>
+        </TouchableOpacity>
+      </View>
+    );
   };
 
   return (
-    <SafeAreaView
-      style={styles.safeContainer}
-      showsVerticalScrollIndicator={true}
-    >
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.wraptext}>
-          <Text style={styles.welcome}>Welcome</Text>
-          <Text style={styles.how}>How's the day!</Text>
+    <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={isDark ? "#1B1028" : DEEP_PURPLE}
+      />
+      <View style={styles.headerBand}>
+        <View style={styles.headerTop}>
+          <TouchableOpacity
+            style={styles.locationBlock}
+            onPress={() => setAddressPickerOpen(true)}
+            activeOpacity={0.85}
+          >
+            <View style={styles.locationLabelRow}>
+              <MapPin size={16} color="#FFFFFF" weight="fill" />
+              <Text style={styles.locationEyebrow}>
+                {selectedAddress?.label
+                  ? `Delivering to ${selectedAddress.label}`
+                  : displayLabel}
+              </Text>
+              <Ionicons name="chevron-down" size={14} color="#FFFFFF" />
+            </View>
+            <Text style={styles.locationText} numberOfLines={1}>
+              {displayAddress}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.bellButton}
+            onPress={() => navigation.navigate("Notification")}
+          >
+            <Bell size={22} color="#FFFFFF" weight="fill" />
+            {unreadCount > 0 && <View style={styles.bellDot} />}
+          </TouchableOpacity>
         </View>
-        <View style={styles.headerRight}>
-          {showGif ? (
-            <Image source={gifAnimation} style={styles.gifStyle} />
-          ) : (
-            <TouchableOpacity
-              style={styles.notificationIcon}
-              onPress={() => navigation.navigate("Notification")}
-            >
-              <Image
-                source={
-                  userData.client?.profilePhoto
-                    ? {
-                      uri: apiService.loadImageURI(
-                        userData.client.profilePhoto
-                      ),
-                    }
-                    : require("../assets/profile.png")
-                }
-                style={styles.profileImage}
-              />
-            </TouchableOpacity>
-          )}
+
+        <View style={styles.searchRow}>
+          <View style={styles.searchBox}>
+            <MagnifyingGlass size={18} color="#94A3B8" />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search for services..."
+              placeholderTextColor="#94A3B8"
+              value={search}
+              onChangeText={setSearch}
+            />
+          </View>
+          <TouchableOpacity
+            style={styles.profileButton}
+            onPress={() => navigation.navigate("Profile")}
+          >
+            <Image
+              source={
+                client?.profilePhoto
+                  ? { uri: apiService.loadImageURI(client.profilePhoto) }
+                  : require("../assets/profile.png")
+              }
+              style={styles.profileImage}
+            />
+          </TouchableOpacity>
         </View>
       </View>
 
-      <View style={styles.line}></View>
       <ScrollView
+        style={styles.mainScroll}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={["#3b006b"]}
+            colors={[PURPLE]}
+            tintColor={PURPLE}
             progressBackgroundColor={currentTheme.cardBackground || "#fff"}
           />
         }
       >
-        <View style={styles.ongoingJobsContainer}>
-          <Text style={styles.ongoingTitle}>Your Ongoing Jobs</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.StoryContainer}
-          >
-            <TouchableOpacity
-              onPress={() => navigation.navigate("Job Requirements")}
+        {/* Promo carousel */}
+        <ScrollView
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onScroll={onPromoScroll}
+          scrollEventThrottle={16}
+          contentContainerStyle={styles.promoPager}
+          decelerationRate="fast"
+          snapToInterval={PROMO_WIDTH + 12}
+          snapToAlignment="start"
+        >
+          {PROMOS.map((promo) => (
+            <View
+              key={promo.id}
+              style={[
+                styles.promoCard,
+                promo.tone === "mint" && styles.promoMint,
+                promo.tone === "peach" && styles.promoPeach,
+                { width: PROMO_WIDTH },
+              ]}
             >
-              <View style={styles.addStory}>
-                <Text style={styles.addText}>+</Text>
-              </View>
-            </TouchableOpacity>
-
-            {combinedData.length > 0
-              ? combinedData.map((item, index) => {
-                console.log({ item });
-
-                const { jobDetails, full_name, profile_photo, color } = item;
-                const receiverId = jobDetails?.assigned_freelancer || null;
-                const jobId = jobDetails?.$id || null;
-
-                // Get the service for this job
-                const jobService = jobDetails?.service;
-
-                console.log({ jobService });
-
-                return (
-                  <TouchableOpacity
-                    key={index}
-                    onPress={() =>
-                      openChat(receiverId, full_name, profile_photo, jobId)
-                    }
-                    disabled={!jobDetails}
-                  >
-                    <View
-                      key={index}
-                      style={[
-                        styles.onGoItem,
-                        {
-                          borderWidth: 4,
-                          borderColor:
-                            jobDetails?.jobStatus === "COMPLETED"
-                              ? "#4CAF50"
-                              : jobDetails?.jobStatus === "IN_PROGRESS"
-                                ? "#2196F3"
-                                : jobDetails?.jobStatus === "OPEN"
-                                  ? "#FFCC00"
-                                  : "#aba8a6",
-                          borderRadius: 50,
-                          opacity: jobDetails ? 1 : 0.5,
-                        },
-                      ]}
-                    >
-                      {jobDetails ? (
-                        jobService && jobService.imageUrl ? (
-                          <Image
-                            source={{
-                              uri: apiService.loadImageURI(
-                                jobService.imageUrl
-                              ),
-                            }}
-                            style={styles.ongoingImage}
-                            onError={(e) => {
-                              console.log(
-                                "Service image load error:",
-                                e.nativeEvent.error
-                              );
-                            }}
-                          />
-                        ) : (
-                          // Fallback to attached files if no service image
-                          <Image
-                            source={{
-                              uri:
-                                apiService.loadImageURI(
-                                  jobDetails.attachedFiles?.[0]
-                                ) || `${placeholderImageURL}${index}/100/100`,
-                            }}
-                            style={styles.ongoingImage}
-                            onError={(e) => {
-                              console.log(
-                                "Fallback image load error:",
-                                e.nativeEvent.error
-                              );
-                            }}
-                          />
-                        )
-                      ) : (
-                        <Text style={styles.placeholderText}>?</Text>
-                      )}
-                    </View>
-                  </TouchableOpacity>
-                );
-              })
-              : [0, 1, 2].map((item, index) => {
-                return (
-                  <TouchableOpacity key={index} onPress={() => navigation.navigate("Job Requirements")}>
-                    <View
-                      key={index}
-                      style={[
-                        styles.onGoItem,
-                        {
-                          borderWidth: 4,
-                          borderColor: "#D3D3D3",
-                          borderRadius: 50,
-                          opacity: 0.5,
-                        },
-                      ]}
-                    >
-                      <Text style={styles.placeholderText}>?</Text>
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-          </ScrollView>
-        </View>
-
-        <ClientHomeServiceFinder ref={servicesRef} />
-
-        {/* Job Notifications */}
-        <View style={styles.sectionContainer}>
-          <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionTitle}>Job Notifications</Text>
-            <TouchableOpacity onPress={() => navigation.navigate("Notification")}>
-              <Text style={styles.viewAllText}>View All</Text>
-            </TouchableOpacity>
-          </View>
-          <View style={styles.notificationsContainer}>
-            {loadingNotifications ? (
-              <ActivityIndicator size="small" color="#3b006b" />
-            ) : notifications.length > 0 ? (
-              notifications.map((item, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={styles.notificationsBox}
-                  onPress={() => navigation.navigate("Notification")}
-                >
-                  <View
-                    style={[
-                      styles.notiItem,
-                      {
-                        borderWidth: 2,
-                        borderColor: item.isRead ? "#D3D3D3" : "#3b006b",
-                        borderRadius: 50,
-                      },
-                    ]}
-                  >
-                    <MaterialIcons
-                      name={item.type === 'CHAT' ? 'chat' : 'notifications'}
-                      size={24}
-                      color="#3b006b"
-                      style={{ padding: 10 }}
-                    />
-                  </View>
-                  <View style={styles.notiTextLay}>
-                    <Text
-                      style={styles.notiText}
-                      numberOfLines={2}
-                      ellipsizeMode="tail"
-                    >
-                      {item.message || item.title}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-              ))
-            ) : (
-              <View style={styles.notificationsBox}>
-                <Text style={styles.notiText}>No new notifications</Text>
-              </View>
-            )}
-          </View>
-        </View>
-
-        {!userData?.terms_accepted && profilePercentage !== 100 && (
-          <View style={styles.sectionContainer}>
-            <View style={styles.profileContainers}>
-              <Text style={styles.profileText}>Complete Your Profile</Text>
-              <Text style={{ fontSize: 16, color: currentTheme.subText || "#000", marginBottom: 12 }}>
-                Your profile is {profilePercentage}% complete
-              </Text>
-              <View style={styles.boxColor}>
-                <View
-                  style={
-                    profilePercentage >= 20 ? styles.redBox : styles.pBoxColor
-                  }
-                ></View>
-                <View
-                  style={
-                    profilePercentage >= 40 ? styles.redBox : styles.pBoxColor
-                  }
-                ></View>
-                <View
-                  style={
-                    profilePercentage >= 70
-                      ? styles.yellowBox
-                      : styles.pBoxColor
-                  }
-                ></View>
-                <View
-                  style={
-                    profilePercentage >= 70
-                      ? styles.yellowBox
-                      : styles.pBoxColor
-                  }
-                ></View>
-                <View
-                  style={
-                    profilePercentage === 100
-                      ? styles.greenBox
-                      : styles.pBoxColor
-                  }
-                ></View>
-                <View
-                  style={
-                    profilePercentage === 100
-                      ? styles.greenBox
-                      : styles.pBoxColor
-                  }
-                ></View>
-              </View>
+              <Text style={styles.promoTitle}>{promo.title}</Text>
+              <Text style={styles.promoSubtitle}>{promo.subtitle}</Text>
               <TouchableOpacity
-                style={styles.loginButton}
-                onPress={handleCompleteProfile}
+                style={styles.promoCta}
+                onPress={() => navigation.navigate("Job Requirements")}
               >
-                <Text style={styles.loginButtonText}>Complete Now</Text>
+                <Text style={styles.promoCtaText}>{promo.cta}</Text>
               </TouchableOpacity>
             </View>
+          ))}
+        </ScrollView>
+        <View style={styles.dotsRow}>
+          {PROMOS.map((promo, index) => (
+            <View
+              key={promo.id}
+              style={[styles.dot, index === promoIndex && styles.dotActive]}
+            />
+          ))}
+        </View>
+
+        {/* Service lists */}
+        <ClientHomeServiceFinder ref={servicesRef} search={search} />
+
+        {/* Ongoing jobs */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Your Ongoing Jobs</Text>
+            <TouchableOpacity onPress={() => navigation.navigate("Job Posted")}>
+              <Text style={styles.viewAll}>View all</Text>
+            </TouchableOpacity>
           </View>
-        )}
-        <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>What's New</Text>
-          <View style={styles.whatsNewContainer}>
-            <Text style={styles.whatsNewText}>No new updates</Text>
+
+          {loadingJobs ? (
+            <View style={styles.loadingBox}>
+              <ActivityIndicator color={PURPLE} />
+            </View>
+          ) : ongoingJobs.length > 0 ? (
+            ongoingJobs.slice(0, 3).map(renderOngoingJob)
+          ) : (
+            <View style={styles.emptyJobCard}>
+              <Sparkle size={28} color={PURPLE} weight="fill" />
+              <Text style={styles.emptyJobTitle}>No ongoing jobs</Text>
+              <Text style={styles.emptyJobText}>
+                Post a job to start working with freelancers.
+              </Text>
+              <TouchableOpacity
+                style={styles.emptyJobBtn}
+                onPress={() => navigation.navigate("Job Requirements")}
+              >
+                <Text style={styles.emptyJobBtnText}>Post a job</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+
+        {/* Offers */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Offers & Discounts</Text>
+            <TouchableOpacity onPress={() => navigation.navigate("Offers")}>
+              <Text style={styles.viewAll}>View all</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.offersRow}>
+            {OFFERS.map((offer) => (
+              <TouchableOpacity
+                key={offer.id}
+                style={[
+                  styles.offerCard,
+                  offer.tone === "mint" ? styles.offerMint : styles.offerLavender,
+                  offer.id === "insta" ? styles.offerWide : styles.offerNarrow,
+                ]}
+                onPress={() => navigation.navigate("Offers")}
+                activeOpacity={0.88}
+              >
+                <Text style={styles.offerTitle}>{offer.title}</Text>
+                {!!offer.badge && (
+                  <View style={styles.offerBadge}>
+                    <Text style={styles.offerBadgeText}>{offer.badge}</Text>
+                  </View>
+                )}
+                <Text style={styles.offerDesc}>{offer.description}</Text>
+                {!!offer.cta && (
+                  <View style={styles.offerCta}>
+                    <Text style={styles.offerCtaText}>{offer.cta}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            ))}
           </View>
         </View>
 
+        {/* Profile completion */}
+        {!client?.termsAccepted && profilePercentage !== 100 && (
+          <View style={styles.profileCard}>
+            <Text style={styles.profileTitle}>Complete Your Profile</Text>
+            <Text style={styles.profileSubtitle}>
+              Your profile is {profilePercentage}% complete
+            </Text>
+            <View style={styles.progressTrack}>
+              <View
+                style={[styles.progressFill, { width: `${profilePercentage}%` }]}
+              />
+            </View>
+            <TouchableOpacity
+              style={styles.profileCta}
+              onPress={handleCompleteProfile}
+            >
+              <Text style={styles.profileCtaText}>Complete Now</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </ScrollView>
-      <View style={styles.stickyButton}>
-        <TouchableOpacity
-          style={styles.chats}
-          onPress={() => {
-            openChat(
-              userData?.id,
-              userData?.full_name || "User",
-              userData?.profile_photo || placeholderImageURL,
-              null // Assuming no projectId for direct chat
-            );
-          }}
-        >
-          <FontAwesome name="comments" size={28} color="#fff" />
-        </TouchableOpacity>
-      </View>
+
+      <TouchableOpacity style={styles.fab} onPress={openInbox} activeOpacity={0.9}>
+        <ChatCircleText size={26} color="#FFFFFF" weight="fill" />
+      </TouchableOpacity>
+
+      <AddressPickerModal
+        visible={addressPickerOpen}
+        onClose={() => setAddressPickerOpen(false)}
+        addresses={addresses}
+        selectedAddress={selectedAddress}
+        coords={coords}
+        locating={locating}
+        onSelect={selectAddress}
+        onAdd={addAddress}
+        onUseCurrentLocation={useCurrentLocationAsAddress}
+        onDelete={removeAddress}
+      />
     </SafeAreaView>
   );
 };
 
-const getStyles = (currentTheme) =>
-  StyleSheet.create({
-    safeContainer: {
+const getStyles = (currentTheme, isDark) => {
+  const surface = currentTheme.background || "#FFFFFF";
+  const card = currentTheme.cardBackground || (isDark ? "#1A1A1A" : "#FFFFFF");
+  const text = currentTheme.text || "#101114";
+  const muted = currentTheme.subText || "#656B7A";
+  const border = currentTheme.border || "#E7E1EF";
+  const soft = isDark ? "#2A2034" : "#F3EAFF";
+  const softMint = isDark ? "#1F2A24" : "#EAF7F0";
+  const softPeach = isDark ? "#2A221C" : "#FFF1E8";
+
+  return StyleSheet.create({
+    safeArea: {
       flex: 1,
-      backgroundColor: currentTheme.background || "#ffffff",
-      // paddingHorizontal: 20,
-      paddingTop: 10,
-      // position: "relative"
+      // Match header so the status-bar / notch inset is purple, not white
+      backgroundColor: isDark ? "#1B1028" : DEEP_PURPLE,
     },
-    scrollContent: {
-      paddingBottom: Platform.OS === "ios" ? 150 : 130, // Increased bottom padding to prevent tab bar overlap
-    },
-    header: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      marginHorizontal: 20,
-      marginBottom: 10,
-      marginTop: 30,
-      // backgroundColor: "red",
-      padding: 4,
+    headerBand: {
+      backgroundColor: isDark ? "#1B1028" : DEEP_PURPLE,
       paddingHorizontal: 20,
-      alignItems: "center",
-      // gap: 140,
-      position: "static",
+      paddingBottom: 18,
+      borderBottomLeftRadius: 24,
+      borderBottomRightRadius: 24,
     },
-    headerRight: {
+    headerTop: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      justifyContent: "space-between",
+      paddingTop: 6,
+      marginBottom: 14,
+    },
+    locationBlock: {
+      flex: 1,
+      paddingRight: 12,
+    },
+    locationLabelRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
+    locationEyebrow: {
+      color: "rgba(255,255,255,0.85)",
+      fontSize: 12,
+      fontWeight: "700",
+    },
+    locationText: {
+      color: "#FFFFFF",
+      fontSize: 15,
+      fontWeight: "900",
+      marginTop: 4,
+    },
+    bellButton: {
+      width: 42,
+      height: 42,
+      borderRadius: 14,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: "rgba(255,255,255,0.16)",
+    },
+    bellDot: {
+      position: "absolute",
+      top: 10,
+      right: 11,
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: "#EF4444",
+      borderWidth: 1.5,
+      borderColor: DEEP_PURPLE,
+    },
+    searchRow: {
       flexDirection: "row",
       alignItems: "center",
       gap: 10,
     },
-    logoutButton: {
-      backgroundColor: "#d32f2f",
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-      borderRadius: 8,
-      shadowColor: currentTheme.shadow || "#000000",
-      shadowOffset: {
-        width: 0,
-        height: 2,
-      },
-      shadowOpacity: 0.1,
-      shadowRadius: 2,
-      elevation: 2,
-    },
-    gifStyle: {
-      // width: 10,
-      // height: 50,
-      resizeMode: "contain",
-      marginBottom: -5,
-      marginTop: -18,
-    },
-    welcome: {
-      fontFamily: "Poppins-Regular",
-      fontSize: 40,
-      fontWeight: "600",
-      color: currentTheme.text,
-    },
-    how: {
-      fontSize: 25,
-      fontWeight: "300",
-      color: currentTheme.subText,
-    },
-    squareBox: {
-      backgroundColor: "#5DE895",
-      padding: 14,
-    },
-    searchContainer: {
+    searchBox: {
+      flex: 1,
+      minHeight: 48,
+      borderRadius: 14,
+      backgroundColor: "#FFFFFF",
       flexDirection: "row",
       alignItems: "center",
-      marginHorizontal: 20,
-      shadowColor: currentTheme.shadow || "#000000",
-      shadowOffset: { width: 2, height: 4 },
-      shadowOpacity: 0.1,
-      shadowRadius: 5,
-      elevation: 5,
-      borderRadius: 12,
-      marginBottom: 24,
-      backgroundColor: currentTheme.background3 || "#ffffff",
-      borderColor: currentTheme.border || "#ddd",
-      borderWidth: 1,
-      paddingHorizontal: 12,
-      height: 45,
+      paddingHorizontal: 14,
+      gap: 10,
     },
     searchInput: {
       flex: 1,
-      color: currentTheme.subText,
-      fontSize: 16,
-      marginLeft: 10, // Ensures spacing between the icon and text
+      color: "#0F172A",
+      fontSize: 15,
+      fontWeight: "600",
+      paddingVertical: Platform.OS === "ios" ? 12 : 8,
     },
-    searchIcon: {
-      marginRight: 5, // Adjust to fine-tune icon positioning
-    },
-    carousel: {
-      marginBottom: 20,
-      paddingHorizontal: 20,
-    },
-    serviceCard: {
-      alignItems: "center",
-      marginHorizontal: 10,
-      marginVertical: 2,
-      // paddingHorizontal: 15,
-      flexDirection: "column",
-      borderRadius: 10,
-      // backgroundColor: currentTheme.background || "#ffffff",
-      width: 100,
-      flexWrap: "wrap",
-      gap: 5,
-    },
-    serviceTextlay: {
-      flex: 1,
-      justifyContent: "center",
-    },
-    serviceText: {
-      fontSize: 13,
-      fontWeight: "500",
-      textAlign: "center",
-      flexWrap: "wrap",
-      color: "#555",
+    profileButton: {
+      width: 48,
+      height: 48,
+      borderRadius: 14,
+      overflow: "hidden",
+      backgroundColor: "#FFFFFF",
+      borderWidth: 2,
+      borderColor: "rgba(255,255,255,0.5)",
     },
     profileImage: {
-      width: 60,
-      height: 60,
-      borderRadius: 45,
-      // shadowColor: "#000000", // Shadow color
-      // shadowOffset: { width: 2, height: 4 }, // Shadow position
-      // shadowOpacity: 0.2, // Shadow transparency (iOS)
-      // shadowRadius: 4, // Shadow blur (iOS)
-      // elevation: 3,
+      width: "100%",
+      height: "100%",
     },
-    serviceImage: {
-      width: 90,
-      height: 90,
-      shadowColor: currentTheme.shadow || "#000000", // Shadow color
-      shadowOffset: { width: 2, height: 4 }, // Shadow position
-      shadowOpacity: 0.2, // Shadow transparency (iOS)
-      shadowRadius: 4, // Shadow blur (iOS)
-      elevation: 3,
+    scrollContent: {
+      paddingBottom: Platform.OS === "ios" ? 140 : 120,
+      paddingTop: 18,
     },
-    notificationsContainer: {
-      backgroundColor: currentTheme.cardBackground || "#fff",
-      padding: 6,
-      // borderRadius: 10,
-      marginTop: 12,
-      marginHorizontal: 20,
-      shadowColor: currentTheme.shadow || "#000000",
-      shadowOffset: {
-        width: 0,
-        height: 3,
-      },
-      shadowOpacity: 0.17,
-      shadowRadius: 3.05,
-      elevation: 4,
-      borderBottomRightRadius: 20,
-      borderTopLeftRadius: 20,
-    },
-    notificationText: {
-      fontSize: 14,
-      marginBottom: 12,
-      // color: currentTheme.text
-    },
-    notificationsBox: {
+    mainScroll: {
       flex: 1,
-      justifyContent: "flex-start",
+      backgroundColor: surface,
+    },
+    promoPager: {
+      paddingHorizontal: 20,
+      gap: 12,
+    },
+    promoCard: {
+      borderRadius: 20,
+      padding: 20,
+      backgroundColor: soft,
+      minHeight: 150,
+      justifyContent: "center",
+    },
+    promoMint: {
+      backgroundColor: softMint,
+    },
+    promoPeach: {
+      backgroundColor: softPeach,
+    },
+    promoTitle: {
+      color: text,
+      fontSize: 22,
+      fontWeight: "900",
+      lineHeight: 28,
+      maxWidth: "85%",
+    },
+    promoSubtitle: {
+      color: muted,
+      fontSize: 14,
+      fontWeight: "600",
+      marginTop: 8,
+      marginBottom: 16,
+    },
+    promoCta: {
+      alignSelf: "flex-start",
+      backgroundColor: PURPLE,
+      borderRadius: 12,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+    },
+    promoCtaText: {
+      color: "#FFFFFF",
+      fontSize: 13,
+      fontWeight: "900",
+    },
+    dotsRow: {
+      flexDirection: "row",
+      justifyContent: "center",
+      gap: 6,
+      marginTop: 12,
+      marginBottom: 10,
+    },
+    dot: {
+      width: 7,
+      height: 7,
+      borderRadius: 4,
+      backgroundColor: isDark ? "#3F3F46" : "#D6D3DE",
+    },
+    dotActive: {
+      width: 18,
+      backgroundColor: PURPLE,
+    },
+    section: {
+      marginTop: 22,
+      paddingHorizontal: 20,
+    },
+    sectionHeader: {
+      flexDirection: "row",
       alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 12,
+    },
+    sectionTitle: {
+      color: text,
+      fontSize: 18,
+      fontWeight: "900",
+    },
+    viewAll: {
+      color: PURPLE,
+      fontSize: 13,
+      fontWeight: "800",
+    },
+    loadingBox: {
+      minHeight: 90,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    jobCard: {
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: border,
+      backgroundColor: card,
+      padding: 12,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+      marginBottom: 12,
+    },
+    jobImage: {
+      width: 64,
+      height: 64,
+      borderRadius: 14,
+      backgroundColor: soft,
+    },
+    jobContent: {
+      flex: 1,
+      minWidth: 0,
+    },
+    jobTitleRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    jobTitle: {
+      flexShrink: 1,
+      color: text,
+      fontSize: 15,
+      fontWeight: "900",
+    },
+    statusPill: {
+      borderRadius: 999,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+    },
+    statusText: {
+      fontSize: 10,
+      fontWeight: "900",
+    },
+    jobSchedule: {
+      color: muted,
+      fontSize: 12,
+      fontWeight: "600",
+      marginTop: 4,
+    },
+    freelancerRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      marginTop: 8,
+    },
+    freelancerAvatar: {
+      width: 22,
+      height: 22,
+      borderRadius: 11,
+      backgroundColor: soft,
+    },
+    freelancerName: {
+      flex: 1,
+      color: text,
+      fontSize: 12,
+      fontWeight: "700",
+    },
+    viewDetailsBtn: {
+      borderWidth: 1.5,
+      borderColor: PURPLE,
+      borderRadius: 12,
+      paddingHorizontal: 10,
+      paddingVertical: 10,
+      backgroundColor: isDark ? "transparent" : "#FFFFFF",
+    },
+    viewDetailsText: {
+      color: PURPLE,
+      fontSize: 11,
+      fontWeight: "900",
+    },
+    emptyJobCard: {
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: border,
+      backgroundColor: card,
+      padding: 20,
+      alignItems: "center",
+    },
+    emptyJobTitle: {
+      color: text,
+      fontSize: 16,
+      fontWeight: "900",
+      marginTop: 10,
+    },
+    emptyJobText: {
+      color: muted,
+      fontSize: 13,
+      textAlign: "center",
+      marginTop: 6,
+      lineHeight: 18,
+    },
+    emptyJobBtn: {
+      marginTop: 14,
+      backgroundColor: PURPLE,
+      borderRadius: 12,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+    },
+    emptyJobBtnText: {
+      color: "#FFFFFF",
+      fontSize: 13,
+      fontWeight: "900",
+    },
+    offersRow: {
       flexDirection: "row",
       gap: 12,
     },
-    notiText: {
-      fontSize: 15,
-      fontWeight: "500",
-      color: currentTheme.text || "#000000",
-      lineHeight: 25,
+    offerCard: {
+      borderRadius: 18,
+      padding: 16,
+      minHeight: 150,
     },
-    notiTextLay: {
+    offerWide: {
+      flex: 1.25,
+    },
+    offerNarrow: {
       flex: 1,
+      justifyContent: "center",
     },
-    sectionContainer: {
-      marginBottom: 20,
+    offerLavender: {
+      backgroundColor: soft,
     },
-    sectionTitle: {
+    offerMint: {
+      backgroundColor: softMint,
+    },
+    offerTitle: {
+      color: text,
       fontSize: 18,
-      fontWeight: "bold",
-      color: "#ffffff",
-      backgroundColor: currentTheme.primary || "#3b006b",
-      paddingVertical: 8,
+      fontWeight: "900",
+    },
+    offerBadge: {
+      alignSelf: "flex-start",
+      marginTop: 8,
+      backgroundColor: PURPLE,
+      borderRadius: 999,
       paddingHorizontal: 10,
-      borderBottomRightRadius: 20,
-      borderTopLeftRadius: 20,
-      textAlign: "center",
-      marginHorizontal: 20,
-      shadowColor: currentTheme.shadow || "#000000",
-      shadowOffset: {
-        width: 0,
-        height: 3,
-      },
-      shadowOpacity: 0.17,
-      shadowRadius: 3.05,
-      elevation: 4,
+      paddingVertical: 4,
     },
-    sectionHeaderRow: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
-      backgroundColor: currentTheme.primary || "#3b006b",
-      paddingVertical: 8,
-      paddingHorizontal: 15,
-      borderBottomRightRadius: 20,
-      borderTopLeftRadius: 20,
-      marginHorizontal: 20,
-      shadowColor: currentTheme.shadow || "#000000",
-      shadowOffset: {
-        width: 0,
-        height: 3,
-      },
-      shadowOpacity: 0.17,
-      shadowRadius: 3.05,
-      elevation: 4,
+    offerBadgeText: {
+      color: "#FFFFFF",
+      fontSize: 11,
+      fontWeight: "900",
     },
-    viewAllText: {
-      color: "#fff",
-      fontSize: 12,
+    offerDesc: {
+      color: muted,
+      fontSize: 13,
       fontWeight: "600",
-      textDecorationLine: "underline",
+      marginTop: 10,
+      lineHeight: 18,
     },
-    notiItem: {
-      justifyContent: "center",
-      alignItems: "center",
-    },
-
-    whatsNewContainer: {
-      backgroundColor: currentTheme.cardBackground || "#ffffff",
-      padding: 10,
-      marginTop: 12,
-      justifyContent: "space-between",
-      flexDirection: "row",
-      alignItems: "center",
-      borderBottomRightRadius: 20,
-      marginHorizontal: 20,
-      shadowColor: currentTheme.shadow || "#000000",
-      shadowOffset: {
-        width: 0,
-        height: 3,
-      },
-      shadowOpacity: 0.17,
-      shadowRadius: 3.05,
-      elevation: 4,
-      borderBottomRightRadius: 20,
-      borderTopLeftRadius: 20,
-    },
-    whatsNewText: {
-      fontSize: 16,
-      color: currentTheme.subText || "#000",
-    },
-    profileContainers: {
-      backgroundColor: currentTheme.cardBackground || "#ffffff",
-      padding: 10,
-      marginTop: 12,
-      // justifyContent: "space-between",
-      flexDirection: "column",
-      alignItems: "center",
-      borderBottomRightRadius: 20,
-      marginHorizontal: 20,
-      gap: 5,
-      shadowColor: currentTheme.shadow || "#000000",
-      shadowOffset: {
-        width: 0,
-        height: 3,
-      },
-      shadowOpacity: 0.17,
-      shadowRadius: 3.05,
-      elevation: 4,
-      borderBottomRightRadius: 20,
-      borderTopLeftRadius: 20,
-    },
-
-    stickyButton: {
-      width: 60,
-      height: 60,
-      borderRadius: 40,
-      backgroundColor: "#3b006b",
-      position: "absolute",
-      bottom: Platform.OS === "ios" ? 105 : 90, // Position above tab bar (85px + 20px buffer for iOS, 70px + 20px for Android)
-      right: 20,
-      // marginLeft: 310,
-      // marginBottom: 12,
-      shadowColor: currentTheme.shadow || "#000000",
-      shadowOffset: {
-        width: 0,
-        height: 3,
-      },
-      shadowOpacity: 0.17,
-      shadowRadius: 3.05,
-      elevation: 4,
-    },
-    chats: {
-      // backgroundColor: "#3b006b",
-      padding: 1,
-      flex: 1,
-      justifyContent: "center",
-      alignContent: "center",
-      alignItems: "center",
-    },
-    line: {
-      backgroundColor: currentTheme.line || "#5F5959",
-      width: "90%",
-      height: 1,
-      margin: "auto",
-    },
-
-    ongoingJobsContainer: {
-      marginVertical: 20,
-    },
-    ongoingTitle: {
-      fontSize: 16,
-      fontWeight: "480",
-      marginLeft: 44,
-      color: currentTheme.text,
-    },
-    storyItem: {
-      marginRight: 10,
-      marginVertical: 12,
-    },
-    StoryContainer: {
-      paddingLeft: 35,
-      paddingRight: 20,
-    },
-    storyImage: { width: 74, height: 74, borderRadius: 50 },
-    notiImage: { width: 55, height: 55, borderRadius: 50 },
-    ongoingImage: { width: 70, height: 70, borderRadius: 50 },
-    placeholderText: {
-      width: 70,
-      height: 70,
-      borderRadius: 50,
-      textAlign: "center",
-      // alignContent: "center",
-      fontSize: 36,
-      paddingTop: 10,
-      color: currentTheme.subText,
-    },
-    onGoItem: {
-      marginRight: 8,
-      marginTop: 15,
-    },
-    addStory: {
-      width: 80,
-      height: 80,
-      borderRadius: 50,
-      backgroundColor: currentTheme.background3 || "#D9D9D9",
-      justifyContent: "center",
-      alignItems: "center",
-      marginRight: 10,
-      marginVertical: 12,
-      shadowColor: currentTheme.shadow || "#000000",
-      shadowOffset: {
-        width: 0,
-        height: 3,
-      },
-      shadowOpacity: 0.17,
-      shadowRadius: 3.05,
-      elevation: 4,
-      alignContent: "center",
-    },
-    addText: { fontSize: 60, color: "#A39E9E" },
-    profileContainer: {
-      padding: 15,
-      backgroundColor: "#f9f9f9",
+    offerCta: {
+      marginTop: 14,
+      alignSelf: "flex-start",
+      backgroundColor: PURPLE,
       borderRadius: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
     },
-
-    profileText: {
-      fontSize: 24,
-      fontWeight: "500",
-      textAlign: "center",
-      color: currentTheme.text,
+    offerCtaText: {
+      color: "#FFFFFF",
+      fontSize: 12,
+      fontWeight: "900",
     },
-    boxColor: {
-      flex: 1,
-      flexDirection: "row",
-      gap: 5,
+    profileCard: {
+      marginTop: 22,
       marginHorizontal: 20,
-    },
-    pBoxColor: {
-      backgroundColor: currentTheme.text2 || "#CCD2CE",
-      height: 12,
-      width: 48,
-      borderRadius: 12,
-    },
-    redBox: {
-      backgroundColor: "#FF3131",
-      height: 12,
-      width: 48,
-      borderRadius: 12,
-    },
-    yellowBox: {
-      backgroundColor: "#CEBF1D",
-      height: 12,
-      width: 48,
-      borderRadius: 12,
-    },
-    greenBox: {
-      backgroundColor: "#00871E",
-      height: 12,
-      width: 48,
-      borderRadius: 12,
-    },
-    loginButton: {
-      width: "100%",
-      height: 50,
-      backgroundColor: currentTheme.primary || "#4B0082",
-      borderRadius: 12,
-      alignItems: "center",
-      justifyContent: "center",
-      marginBottom: 5,
-      marginTop: 12,
-    },
-    loginButtonText: {
-      color: "white",
-      fontSize: 18,
-      fontWeight: "bold",
-    },
-    headerRight: {
-      flexDirection: "row",
-      alignItems: "center",
-    },
-    logoutButton: {
-      marginRight: 10,
-      padding: 8,
-      borderRadius: 50,
-      backgroundColor: currentTheme.primary || "#4B0082",
-      justifyContent: "center",
-      alignItems: "center",
-      shadowColor: currentTheme.shadow || "#000000",
-      shadowOffset: {
-        width: 0,
-        height: 3,
-      },
-      shadowOpacity: 0.17,
-      shadowRadius: 3.05,
-      elevation: 4,
-    },
-    // Profile Setup Overlay Styles
-    profileSetupOverlay: {
-      position: "absolute",
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: "rgba(0, 0, 0, 0.8)",
-      zIndex: 1000,
-      justifyContent: "center",
-      alignItems: "center",
-    },
-    profileSetupContainer: {
-      backgroundColor: "white",
-      borderRadius: 16,
-      padding: 24,
-      margin: 20,
-      alignItems: "center",
-      shadowColor: "#000",
-      shadowOffset: {
-        width: 0,
-        height: 2,
-      },
-      shadowOpacity: 0.25,
-      shadowRadius: 4,
-      elevation: 5,
-    },
-    profileSetupTitle: {
-      fontSize: 24,
-      fontWeight: "bold",
-      marginBottom: 12,
-      color: "#333",
-      textAlign: "center",
-    },
-    profileSetupMessage: {
-      fontSize: 16,
-      textAlign: "center",
-      marginBottom: 24,
-      color: "#666",
-      lineHeight: 22,
-    },
-    profileSetupButton: {
-      backgroundColor: currentTheme.primary || "#3b006b",
-      paddingVertical: 12,
-      paddingHorizontal: 24,
-      borderRadius: 8,
-      marginVertical: 8,
-      minWidth: 200,
-    },
-    profileSetupButtonText: {
-      color: "white",
-      fontSize: 16,
-      fontWeight: "600",
-      textAlign: "center",
-    },
-    profileSetupSkipButton: {
-      backgroundColor: "transparent",
-      paddingVertical: 12,
-      paddingHorizontal: 24,
-      borderRadius: 8,
-      marginVertical: 8,
-      minWidth: 200,
+      borderRadius: 18,
       borderWidth: 1,
-      borderColor: currentTheme.primary || "#3b006b",
+      borderColor: border,
+      backgroundColor: card,
+      padding: 18,
     },
-    profileSetupSkipButtonText: {
-      color: currentTheme.primary || "#3b006b",
-      fontSize: 16,
+    profileTitle: {
+      color: text,
+      fontSize: 17,
+      fontWeight: "900",
+    },
+    profileSubtitle: {
+      color: muted,
+      fontSize: 13,
       fontWeight: "600",
-      textAlign: "center",
+      marginTop: 6,
+      marginBottom: 12,
+    },
+    progressTrack: {
+      height: 8,
+      borderRadius: 999,
+      backgroundColor: isDark ? "#2A2A2A" : "#EDE7F6",
+      overflow: "hidden",
+    },
+    progressFill: {
+      height: "100%",
+      backgroundColor: PURPLE,
+      borderRadius: 999,
+    },
+    profileCta: {
+      marginTop: 14,
+      alignSelf: "flex-start",
+      backgroundColor: PURPLE,
+      borderRadius: 12,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+    },
+    profileCtaText: {
+      color: "#FFFFFF",
+      fontSize: 13,
+      fontWeight: "900",
+    },
+    fab: {
+      position: "absolute",
+      right: 20,
+      bottom: Platform.OS === "ios" ? 100 : 86,
+      width: 58,
+      height: 58,
+      borderRadius: 29,
+      backgroundColor: DEEP_PURPLE,
+      alignItems: "center",
+      justifyContent: "center",
+      shadowColor: "#2C1B3F",
+      shadowOpacity: 0.25,
+      shadowRadius: 10,
+      shadowOffset: { width: 0, height: 6 },
+      elevation: 6,
+      zIndex: 20,
     },
   });
+};
 
 export default ClientHomeScreen;

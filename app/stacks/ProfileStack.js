@@ -20,6 +20,7 @@ import BlogsAndForumScreen from "../screens/BlogsAndForumScreen";
 import PortfolioScreen from "../screens/Portfolio";
 import DeleteAccountScreen from "../screens/DeleteAccount";
 import WalletFreelancerScreen from "../screens/WalletFreelancer";
+import ManageAddressesScreen from "../screens/ManageAddresses";
 
 const Stack = createStackNavigator();
 
@@ -123,6 +124,11 @@ const ProfileStack = () => (
     <Stack.Screen
       name="Portfolio"
       component={PortfolioScreen}
+      options={{ headerShown: false }}
+    />
+    <Stack.Screen
+      name="ManageAddresses"
+      component={ManageAddressesScreen}
       options={{ headerShown: false }}
     />
   </Stack.Navigator>

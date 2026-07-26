@@ -151,7 +151,7 @@ const SettingsScreen = ({ navigation }) => {
         {
           label: "Manage Addresses",
           icon: "location-outline",
-          onPress: handleEditProfile,
+          route: "ManageAddresses",
         },
         {
           label: "Security",

@@ -1410,11 +1410,13 @@ class ApiService {
       return uri; // Return remote URL as is
     } else if (uri.startsWith("/")) {
       return `${this.baseURL}${uri}`; // Convert relative path to absolute URL
-    } else if (uri.startsWith("file://")) {
-      // console.warn(
-      //   "File is being loaded from local storage, ensure this is intended."
-      // );
-      return uri; // Handle other cases (e.g., local paths)
+    } else if (
+      uri.startsWith("file://") ||
+      uri.startsWith("content://") ||
+      uri.startsWith("ph://") ||
+      uri.startsWith("assets-library://")
+    ) {
+      return uri; // Local / device media URIs
     } else {
       console.error("Invalid URI format:", uri);
       return null; // Return null for invalid URIs
@@ -1740,6 +1742,44 @@ class ApiService {
     } catch (error) {
       this.handleApiError(error);
     }
+  }
+
+  // ==================== DELIVERY ADDRESSES ====================
+
+  async getAddresses() {
+    const response = await this.makeRequest("/addresses");
+    return Array.isArray(response?.data) ? response.data : [];
+  }
+
+  async createAddress(data) {
+    const response = await this.makeRequest("/addresses", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+    return response?.data || null;
+  }
+
+  async updateAddress(addressId, data) {
+    const response = await this.makeRequest(`/addresses/${addressId}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+    return response?.data || null;
+  }
+
+  async deleteAddress(addressId) {
+    const response = await this.makeRequest(`/addresses/${addressId}`, {
+      method: "DELETE",
+    });
+    return response;
+  }
+
+  async markAddressUsed(addressId) {
+    const response = await this.makeRequest(`/addresses/${addressId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ markUsed: true }),
+    });
+    return response?.data || null;
   }
 }
 

@@ -25,9 +25,7 @@ import {
   FloppyDisk,
   Laptop,
   MapPin,
-  Microphone,
   PaperPlaneTilt,
-  Percent,
   ShieldCheck,
   Tag,
   User,
@@ -41,6 +39,11 @@ import { useFocusEffect } from "@react-navigation/native";
 import { format } from "date-fns";
 import apiService from "../lib/apiService";
 import { useTheme } from "../context/ThemeContext";
+import { useAuth } from "../context/NewAuthContext";
+import { useDeliveryAddress } from "../hooks/useDeliveryAddress";
+import AddressPickerModal from "../components/AddressPickerModal";
+import { formatAddressLine, formatShortAddress } from "../lib/addressStorage";
+import { getJobFormValidationError, JOB_VALIDATION } from "../lib/jobValidation";
 
 const { calculateBirdFee } = require("../utils/feeCalculator");
 
@@ -83,8 +86,6 @@ const JobRequirementsScreen = ({ navigation }) => {
   const [locationLoading, setLocationLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("PLATFORM");
   const [showMapModal, setShowMapModal] = useState(false);
-  const [couponCode, setCouponCode] = useState("");
-  const [couponMessage, setCouponMessage] = useState("");
   const [mapRegion, setMapRegion] = useState({
     latitude: 37.78825,
     longitude: -122.4324,
@@ -95,12 +96,68 @@ const JobRequirementsScreen = ({ navigation }) => {
     latitude: 37.78825,
     longitude: -122.4324,
   });
+  const [addressPickerOpen, setAddressPickerOpen] = useState(false);
+  const [selectedSavedAddressId, setSelectedSavedAddressId] = useState(null);
 
+  const { userData } = useAuth();
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
   const isDark = theme === "dark";
   const styles = useMemo(() => getStyles(currentTheme, isDark), [currentTheme, isDark]);
   const accent = isDark ? "#B794FF" : PURPLE;
+
+  const {
+    addresses,
+    selectedAddress,
+    coords,
+    locating,
+    selectAddress,
+    addAddress,
+    removeAddress,
+    useCurrentLocationAsAddress,
+  } = useDeliveryAddress(userData?.id, userData?.client);
+
+  const applySavedAddress = useCallback(
+    async (address, { markUsed = false } = {}) => {
+      if (!address) return;
+      const fullLine = formatAddressLine(address) || formatShortAddress(address);
+      setJobLocation(fullLine);
+      setSelectedSavedAddressId(address.id);
+
+      if (address.latitude != null && address.longitude != null) {
+        const lat = Number(address.latitude);
+        const lng = Number(address.longitude);
+        if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
+          setLatitude(lat);
+          setLongitude(lng);
+          setMapRegion({
+            latitude: lat,
+            longitude: lng,
+            latitudeDelta: 0.01,
+            longitudeDelta: 0.01,
+          });
+          setTempLocation({ latitude: lat, longitude: lng });
+        }
+      }
+
+      if (markUsed && address.id) {
+        await selectAddress(address.id);
+      }
+    },
+    [selectAddress]
+  );
+
+  // Stable chip order so selecting an address doesn't reshuffle the row
+  const addressChips = useMemo(() => {
+    return [...addresses]
+      .sort((a, b) => {
+        const aTime = Number(a.createdAt) || 0;
+        const bTime = Number(b.createdAt) || 0;
+        if (aTime !== bTime) return aTime - bTime;
+        return String(a.id).localeCompare(String(b.id));
+      })
+      .slice(0, 6);
+  }, [addresses]);
 
   useEffect(() => {
     validateBudget(budget);
@@ -176,9 +233,11 @@ const JobRequirementsScreen = ({ navigation }) => {
       if (draft.longitude != null) setLongitude(draft.longitude);
       if (draft.serviceId) setServiceId(draft.serviceId);
       if (draft.freelancerType) setFrelancerType(draft.freelancerType);
-      if (draft.couponCode) setCouponCode(draft.couponCode);
       if (draft.startDate) setStartDate(new Date(draft.startDate));
       if (draft.deadline) setDeadline(new Date(draft.deadline));
+      if (draft.selectedSavedAddressId) {
+        setSelectedSavedAddressId(draft.selectedSavedAddressId);
+      }
     } catch (error) {
       console.error("Failed to load draft:", error);
     }
@@ -250,33 +309,46 @@ const JobRequirementsScreen = ({ navigation }) => {
     setIsOnSite(onSite);
     if (onSite) {
       setJobType("On-site");
-      setJobLocation("");
-      setLatitude(null);
-      setLongitude(null);
+      // Prefer the same default address used on Client Home
+      if (selectedAddress) {
+        applySavedAddress(selectedAddress, { markUsed: false });
+      } else {
+        setJobLocation("");
+        setLatitude(null);
+        setLongitude(null);
+        setSelectedSavedAddressId(null);
+      }
     } else {
       setJobType("Remote");
       setJobLocation("Remote Work");
       setLatitude(0);
       setLongitude(0);
+      setSelectedSavedAddressId(null);
     }
   };
+
+  // When addresses finish loading and user is already on-site with empty location, auto-fill
+  useEffect(() => {
+    if (!isOnSite || !selectedAddress) return;
+    if (jobLocation && jobLocation.trim() && jobLocation !== "Remote Work") return;
+    applySavedAddress(selectedAddress, { markUsed: false });
+  }, [isOnSite, selectedAddress?.id]);
 
   const formData = {
     jobLocation,
     startDate: startDate?.toISOString?.() || new Date().toISOString(),
     deadline: deadline ? deadline.toISOString() : null,
     budget,
-    skills,
-    jobDes,
+    skills: skills.map((s) => String(s || "").trim()).filter(Boolean),
+    jobDes: jobDes.trim(),
     portfolioImages,
-    jobTitle,
+    jobTitle: jobTitle.trim(),
     freelancerType,
     jobType,
     latitude,
     longitude,
     serviceId,
     paymentMethod,
-    couponCode: couponCode.trim() || null,
     birdFeeAmount: calculatedBirdFee ? calculatedBirdFee.feeAmount : null,
   };
 
@@ -319,43 +391,80 @@ const JobRequirementsScreen = ({ navigation }) => {
     }
   };
 
-  const fetchCoordinates = async () => {
+  /** One action: geocode typed address, or use GPS if the field is empty. */
+  const detectLocation = async () => {
     const hasPermission = await requestPermission();
-    if (!hasPermission) return;
+    if (!hasPermission) return null;
     setLocationLoading(true);
     try {
-      const [result] = await Location.geocodeAsync(jobLocation);
-      if (result) {
-        setLatitude(parseFloat(result.latitude));
-        setLongitude(parseFloat(result.longitude));
+      const trimmed = jobLocation.trim();
+
+      if (trimmed) {
+        const [result] = await Location.geocodeAsync(trimmed);
+        if (!result) {
+          Alert.alert(
+            "Address not found",
+            "Could not locate that address. Clear the field to use GPS, or edit the text and try again."
+          );
+          return null;
+        }
+        const coords = {
+          latitude: parseFloat(result.latitude),
+          longitude: parseFloat(result.longitude),
+        };
+        setLatitude(coords.latitude);
+        setLongitude(coords.longitude);
         setMapRegion({
-          latitude: result.latitude,
-          longitude: result.longitude,
+          ...coords,
           latitudeDelta: 0.01,
           longitudeDelta: 0.01,
         });
-        setTempLocation({ latitude: result.latitude, longitude: result.longitude });
-      } else {
-        Alert.alert("Error", "Unable to fetch coordinates. Please try again.");
+        setTempLocation(coords);
+        return coords;
       }
+
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+      const coords = {
+        latitude: parseFloat(location.coords.latitude),
+        longitude: parseFloat(location.coords.longitude),
+      };
+      setLatitude(coords.latitude);
+      setLongitude(coords.longitude);
+      setMapRegion({
+        ...coords,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      });
+      setTempLocation(coords);
+
+      const addressResponse = await Location.reverseGeocodeAsync(coords);
+      if (addressResponse.length > 0) {
+        const address = addressResponse[0];
+        setJobLocation(
+          `${address.street || ""} ${address.city || ""} ${address.region || ""} ${address.country || ""}`.trim()
+        );
+      }
+      return coords;
     } catch (error) {
-      Alert.alert("Error", `Failed to fetch coordinates: ${error.message}`);
+      Alert.alert("Error", `Failed to detect location: ${error.message}`);
+      return null;
     } finally {
       setLocationLoading(false);
     }
   };
 
-  const getCurrentLocation = async () => {
-    const hasPermission = await requestPermission();
-    if (!hasPermission) return;
-    setLocationLoading(true);
-    try {
-      const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      });
-      const { latitude: lat, longitude: lng } = location.coords;
-      setLatitude(parseFloat(lat));
-      setLongitude(parseFloat(lng));
+  const openMapModal = async () => {
+    let lat = latitude;
+    let lng = longitude;
+    if (!(lat && lng) && jobLocation.trim()) {
+      const coords = await detectLocation();
+      if (!coords) return;
+      lat = coords.latitude;
+      lng = coords.longitude;
+    }
+    if (lat && lng) {
       const newRegion = {
         latitude: lat,
         longitude: lng,
@@ -364,34 +473,6 @@ const JobRequirementsScreen = ({ navigation }) => {
       };
       setMapRegion(newRegion);
       setTempLocation({ latitude: lat, longitude: lng });
-
-      const addressResponse = await Location.reverseGeocodeAsync({
-        latitude: lat,
-        longitude: lng,
-      });
-      if (addressResponse.length > 0) {
-        const address = addressResponse[0];
-        setJobLocation(
-          `${address.street || ""} ${address.city || ""} ${address.region || ""} ${address.country || ""}`.trim()
-        );
-      }
-    } catch (error) {
-      Alert.alert("Error", `Failed to get current location: ${error.message}`);
-    } finally {
-      setLocationLoading(false);
-    }
-  };
-
-  const openMapModal = () => {
-    if (latitude && longitude) {
-      const newRegion = {
-        latitude,
-        longitude,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
-      };
-      setMapRegion(newRegion);
-      setTempLocation({ latitude, longitude });
     }
     setShowMapModal(true);
   };
@@ -416,16 +497,14 @@ const JobRequirementsScreen = ({ navigation }) => {
           `${address.street || ""} ${address.city || ""} ${address.region || ""} ${address.country || ""}`.trim()
         );
       } else {
-        setJobLocation(`${lat.toFixed(6)}, ${lng.toFixed(6)}`);
+        setJobLocation("Selected map location");
       }
       setShowMapModal(false);
     } catch (error) {
       Alert.alert("Error", `Failed to get address: ${error.message}`);
       setLatitude(parseFloat(tempLocation.latitude));
       setLongitude(parseFloat(tempLocation.longitude));
-      setJobLocation(
-        `${tempLocation.latitude.toFixed(6)}, ${tempLocation.longitude.toFixed(6)}`
-      );
+      setJobLocation("Selected map location");
       setShowMapModal(false);
     } finally {
       setLocationLoading(false);
@@ -504,89 +583,48 @@ const JobRequirementsScreen = ({ navigation }) => {
     setPortfolioImages(portfolioImages.filter((_, i) => i !== index));
   };
 
-  const applyCoupon = () => {
-    const code = couponCode.trim();
-    if (!code) {
-      setCouponMessage("Enter a coupon code first.");
-      return;
-    }
-    setCouponMessage(`Coupon "${code.toUpperCase()}" will be verified on submit.`);
-  };
-
-  const handleVoiceInput = () => {
-    Alert.alert(
-      "Voice input",
-      "Voice-to-text will be available in a future update. Please type your description for now."
-    );
-  };
-
   const validateForm = () => {
-    if (!jobTitle) {
-      Alert.alert("Validation Error", "Please enter a job title.");
+    const error = getJobFormValidationError({
+      jobTitle,
+      jobDes,
+      freelancerType,
+      serviceId,
+      jobType,
+      deadline,
+      startDate,
+      budget,
+      budgetError,
+      skills,
+      jobLocation,
+      latitude,
+      longitude,
+      validateBudget,
+    });
+    if (error) {
+      Alert.alert("Validation Error", error);
       return false;
-    }
-    if (!freelancerType || !serviceId) {
-      Alert.alert("Validation Error", "Please select a freelancer type.");
-      return false;
-    }
-    if (!jobType) {
-      Alert.alert("Validation Error", "Please select a job type.");
-      return false;
-    }
-    if (!deadline) {
-      Alert.alert("Validation Error", "Please select an end date.");
-      return false;
-    }
-    if (deadline < new Date()) {
-      Alert.alert("Validation Error", "Deadline must be a future date.");
-      return false;
-    }
-    if (startDate && deadline < startDate) {
-      Alert.alert("Validation Error", "End date must be after the start date.");
-      return false;
-    }
-    if (!validateBudget(budget)) {
-      Alert.alert(
-        "Budget Validation Error",
-        budgetError || "Please enter a valid budget amount."
-      );
-      return false;
-    }
-    if (skills.some((skill) => skill === "")) {
-      Alert.alert("Validation Error", "Please enter all required skills.");
-      return false;
-    }
-    if (!jobDes) {
-      Alert.alert("Validation Error", "Please enter a job description.");
-      return false;
-    }
-    if (jobDes.length < 20) {
-      Alert.alert("Validation Error", "Job description must be at least 20 characters.");
-      return false;
-    }
-    if (jobType === "On-site") {
-      if (!jobLocation || jobLocation.trim() === "") {
-        Alert.alert("Validation Error", "Please enter a job location for on-site work.");
-        return false;
-      }
-      if (!latitude || !longitude) {
-        Alert.alert("Validation Error", "Please fetch coordinates for the job location.");
-        return false;
-      }
     }
     return true;
   };
 
   const handleSaveDraft = async () => {
     try {
+      const hasAttachments = portfolioImages.length > 0;
       await AsyncStorage.setItem(
         DRAFT_KEY,
         JSON.stringify({
           ...formData,
+          selectedSavedAddressId,
+          // Local file URIs are not reliable across app restarts
           portfolioImages: [],
         })
       );
-      Alert.alert("Draft saved", "Your job details were saved as a draft.");
+      Alert.alert(
+        "Draft saved",
+        hasAttachments
+          ? "Your job details were saved. Attachments are not stored in drafts — re-add them before submit if needed."
+          : "Your job details were saved as a draft."
+      );
     } catch (error) {
       Alert.alert("Error", `Failed to save draft: ${error.message}`);
     }
@@ -679,7 +717,69 @@ const JobRequirementsScreen = ({ navigation }) => {
         {/* On-site location */}
         {isOnSite && (
           <View style={styles.section}>
-            <Text style={styles.label}>Job Location</Text>
+            <View style={styles.locationHeaderRow}>
+              <Text style={[styles.label, styles.labelInline]}>Job Location</Text>
+              <TouchableOpacity onPress={() => setAddressPickerOpen(true)}>
+                <Text style={styles.savedAddressLink}>Saved addresses</Text>
+              </TouchableOpacity>
+            </View>
+
+            {addressChips.length > 0 && (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.savedAddressChips}
+              >
+                {addressChips.map((address) => {
+                  const active = selectedSavedAddressId === address.id;
+                  return (
+                    <TouchableOpacity
+                      key={address.id}
+                      style={[
+                        styles.savedAddressChip,
+                        active && styles.savedAddressChipActive,
+                      ]}
+                      onPress={() => applySavedAddress(address)}
+                      activeOpacity={0.85}
+                    >
+                      <MapPin
+                        size={14}
+                        color={active ? "#FFFFFF" : accent}
+                        weight="fill"
+                      />
+                      <View style={styles.savedAddressChipText}>
+                        <Text
+                          style={[
+                            styles.savedAddressChipLabel,
+                            active && styles.savedAddressChipLabelActive,
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {address.label || "Address"}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.savedAddressChipSub,
+                            active && styles.savedAddressChipSubActive,
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {formatShortAddress(address)}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+                <TouchableOpacity
+                  style={styles.addAddressChip}
+                  onPress={() => setAddressPickerOpen(true)}
+                >
+                  <Ionicons name="add" size={18} color={PURPLE} />
+                  <Text style={styles.addAddressChipText}>Add / manage</Text>
+                </TouchableOpacity>
+              </ScrollView>
+            )}
+
             <View style={styles.inputRow}>
               <MapPin size={18} color={accent} />
               <TextInput
@@ -687,39 +787,31 @@ const JobRequirementsScreen = ({ navigation }) => {
                 placeholder="Enter job address (e.g., 123 Main St, City, State)"
                 placeholderTextColor={styles.placeholder.color}
                 value={jobLocation}
-                onChangeText={setJobLocation}
+                onChangeText={(text) => {
+                  setJobLocation(text);
+                  setSelectedSavedAddressId(null);
+                }}
                 multiline
               />
-              <TouchableOpacity onPress={getCurrentLocation} disabled={locationLoading}>
+              <TouchableOpacity onPress={detectLocation} disabled={locationLoading}>
                 <Ionicons name="locate-outline" size={22} color={accent} />
               </TouchableOpacity>
             </View>
 
-            <View style={styles.locationButtonsRow}>
-              <TouchableOpacity
-                style={[styles.primaryLocationBtn, locationLoading && styles.disabledBtn]}
-                onPress={getCurrentLocation}
-                disabled={locationLoading}
-              >
-                <PaperPlaneTilt size={16} color="#fff" weight="fill" />
-                <Text style={styles.primaryLocationBtnText}>
-                  {locationLoading ? "Getting..." : "Use Current Location"}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.secondaryLocationBtn,
-                  (locationLoading || !jobLocation.trim()) && styles.disabledBtn,
-                ]}
-                onPress={fetchCoordinates}
-                disabled={locationLoading || !jobLocation.trim()}
-              >
-                <Ionicons name="map-outline" size={16} color={PURPLE} />
-                <Text style={styles.secondaryLocationBtnText}>
-                  {locationLoading ? "Loading..." : "Get Coordinates"}
-                </Text>
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity
+              style={[styles.primaryLocationBtn, locationLoading && styles.disabledBtn]}
+              onPress={detectLocation}
+              disabled={locationLoading}
+            >
+              <PaperPlaneTilt size={16} color="#fff" weight="fill" />
+              <Text style={styles.primaryLocationBtnText}>
+                {locationLoading
+                  ? "Detecting..."
+                  : jobLocation.trim()
+                    ? "Locate address"
+                    : "Use current location"}
+              </Text>
+            </TouchableOpacity>
 
             <View style={styles.mapPreview}>
               {hasCoordinates ? (
@@ -743,23 +835,21 @@ const JobRequirementsScreen = ({ navigation }) => {
                 </View>
               )}
               <TouchableOpacity
-                style={[styles.mapOverlayBtn, !hasCoordinates && styles.disabledBtn]}
+                style={[
+                  styles.mapOverlayBtn,
+                  !hasCoordinates && !jobLocation.trim() && styles.disabledBtn,
+                ]}
                 onPress={openMapModal}
-                disabled={!hasCoordinates}
+                disabled={!hasCoordinates && !jobLocation.trim()}
               >
                 <Ionicons name="scan-outline" size={16} color={PURPLE} />
                 <Text style={styles.mapOverlayBtnText}>View & Adjust on Map</Text>
               </TouchableOpacity>
             </View>
 
-            {hasCoordinates && (
-              <Text style={styles.coordsText}>
-                📍 {latitude.toFixed(6)}, {longitude.toFixed(6)}
-              </Text>
-            )}
             <View style={styles.tipBox}>
               <Text style={styles.tipText}>
-                💡 Tip: Use "Current Location" for your current position, or enter an address and tap "Get Coordinates".
+                Tip: Pick a saved address, tap Use current location, or type an address and tap Locate address.
               </Text>
             </View>
           </View>
@@ -770,9 +860,7 @@ const JobRequirementsScreen = ({ navigation }) => {
           <Text style={styles.label}>Freelancer Type</Text>
           {Array.isArray(services) ? (
             <View style={styles.pickerWrap}>
-              <View style={styles.pickerIcon}>
-                <User size={18} color={accent} />
-              </View>
+              <User size={18} color={accent} />
               <CustomPicker
                 items={services.map((service) => ({
                   label: service.name || service.role || service.title,
@@ -984,7 +1072,12 @@ const JobRequirementsScreen = ({ navigation }) => {
 
         {/* Job title */}
         <View style={styles.section}>
-          <Text style={styles.label}>Job Title</Text>
+          <Text style={styles.label}>
+            Job Title{" "}
+            <Text style={styles.helperInline}>
+              (min {JOB_VALIDATION.jobTitleMin} characters)
+            </Text>
+          </Text>
           <View style={styles.inputRow}>
             <Ionicons name="document-text-outline" size={18} color={accent} />
             <TextInput
@@ -1029,22 +1122,24 @@ const JobRequirementsScreen = ({ navigation }) => {
 
         {/* Description */}
         <View style={styles.section}>
-          <Text style={styles.label}>Job Description</Text>
+          <Text style={styles.label}>
+            Job Description{" "}
+            <Text style={styles.helperInline}>
+              (min {JOB_VALIDATION.jobDescriptionMin} characters)
+            </Text>
+          </Text>
           <View style={styles.textAreaWrap}>
-            <View style={styles.textAreaTop}>
+            <View style={styles.textAreaIcon}>
               <Ionicons name="document-text-outline" size={18} color={accent} />
-              <TextInput
-                style={styles.textArea}
-                placeholder="Describe your job in detail..."
-                placeholderTextColor={styles.placeholder.color}
-                value={jobDes}
-                multiline
-                onChangeText={setJobDes}
-              />
             </View>
-            <TouchableOpacity style={styles.micButton} onPress={handleVoiceInput}>
-              <Microphone size={18} color="#fff" weight="fill" />
-            </TouchableOpacity>
+            <TextInput
+              style={styles.textArea}
+              placeholder="Describe your job in detail..."
+              placeholderTextColor={styles.placeholder.color}
+              value={jobDes}
+              multiline
+              onChangeText={setJobDes}
+            />
           </View>
         </View>
 
@@ -1089,31 +1184,6 @@ const JobRequirementsScreen = ({ navigation }) => {
               ))}
             </View>
           )}
-        </View>
-
-        {/* Coupon */}
-        <View style={styles.section}>
-          <Text style={styles.label}>Coupon Code (Optional)</Text>
-          <View style={styles.couponRow}>
-            <View style={[styles.inputRow, styles.couponInput]}>
-              <Percent size={18} color={accent} />
-              <TextInput
-                style={styles.inputFlex}
-                placeholder="Enter coupon code"
-                placeholderTextColor={styles.placeholder.color}
-                value={couponCode}
-                autoCapitalize="characters"
-                onChangeText={(text) => {
-                  setCouponCode(text);
-                  setCouponMessage("");
-                }}
-              />
-            </View>
-            <TouchableOpacity style={styles.applyBtn} onPress={applyCoupon}>
-              <Text style={styles.applyBtnText}>Apply</Text>
-            </TouchableOpacity>
-          </View>
-          {!!couponMessage && <Text style={styles.couponMessage}>{couponMessage}</Text>}
         </View>
 
         {/* Actions */}
@@ -1172,15 +1242,38 @@ const JobRequirementsScreen = ({ navigation }) => {
 
           <View style={styles.mapModalFooter}>
             <Text style={styles.mapHelpText}>
-              📍 Tap anywhere on the map or drag the pin to set the exact job location
-            </Text>
-            <Text style={styles.coordsText}>
-              Coordinates: {tempLocation.latitude.toFixed(6)},{" "}
-              {tempLocation.longitude.toFixed(6)}
+              Tap anywhere on the map or drag the pin to set the exact job location
             </Text>
           </View>
         </SafeAreaView>
       </Modal>
+
+      <AddressPickerModal
+        visible={addressPickerOpen}
+        onClose={() => setAddressPickerOpen(false)}
+        addresses={addresses}
+        selectedAddress={
+          addresses.find((a) => a.id === selectedSavedAddressId) || selectedAddress
+        }
+        coords={coords}
+        locating={locating}
+        onSelect={async (id) => {
+          const address = addresses.find((item) => item.id === id);
+          if (address) await applySavedAddress(address);
+          else await selectAddress(id);
+        }}
+        onAdd={async (address) => {
+          const saved = await addAddress(address);
+          if (saved) await applySavedAddress(saved, { markUsed: false });
+          return saved;
+        }}
+        onUseCurrentLocation={async () => {
+          const saved = await useCurrentLocationAsAddress();
+          if (saved) await applySavedAddress(saved, { markUsed: false });
+          return saved;
+        }}
+        onDelete={removeAddress}
+      />
     </SafeAreaView>
   );
 };
@@ -1232,7 +1325,8 @@ const getStyles = (currentTheme, isDark) => {
     },
     scrollContent: {
       paddingHorizontal: 18,
-      paddingBottom: 40,
+      // Clear absolute tab bar (iOS ~85 / Android ~70) so action buttons stay tappable
+      paddingBottom: Platform.OS === "ios" ? 140 : 120,
     },
     segment: {
       flexDirection: "row",
@@ -1291,11 +1385,87 @@ const getStyles = (currentTheme, isDark) => {
     section: {
       marginTop: 18,
     },
+    locationHeaderRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 8,
+    },
+    savedAddressLink: {
+      color: PURPLE,
+      fontSize: 13,
+      fontWeight: "800",
+    },
+    savedAddressChips: {
+      gap: 8,
+      paddingBottom: 10,
+    },
+    savedAddressChip: {
+      maxWidth: 200,
+      minWidth: 140,
+      borderRadius: 14,
+      borderWidth: 1.5,
+      borderColor: border,
+      backgroundColor: card,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      marginRight: 8,
+    },
+    savedAddressChipActive: {
+      backgroundColor: PURPLE,
+      borderColor: PURPLE,
+    },
+    savedAddressChipText: {
+      flex: 1,
+      minWidth: 0,
+    },
+    savedAddressChipLabel: {
+      color: text,
+      fontSize: 13,
+      fontWeight: "900",
+    },
+    savedAddressChipLabelActive: {
+      color: "#FFFFFF",
+    },
+    savedAddressChipSub: {
+      color: muted,
+      fontSize: 11,
+      fontWeight: "600",
+      marginTop: 2,
+    },
+    savedAddressChipSubActive: {
+      color: "rgba(255,255,255,0.85)",
+    },
+    addAddressChip: {
+      borderRadius: 14,
+      borderWidth: 1.5,
+      borderColor: PURPLE,
+      borderStyle: "dashed",
+      backgroundColor: soft,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
+    addAddressChipText: {
+      color: PURPLE,
+      fontSize: 13,
+      fontWeight: "800",
+    },
     label: {
       color: text,
       fontSize: 15,
       fontWeight: "800",
       marginBottom: 8,
+    },
+    helperInline: {
+      color: muted,
+      fontSize: 12,
+      fontWeight: "600",
     },
     labelInline: {
       marginBottom: 0,
@@ -1333,25 +1503,29 @@ const getStyles = (currentTheme, isDark) => {
       color: muted,
     },
     pickerWrap: {
-      position: "relative",
-      justifyContent: "center",
-    },
-    pickerIcon: {
-      position: "absolute",
-      left: 14,
-      zIndex: 2,
-      top: 16,
-    },
-    pickerOuter: {
-      marginBottom: 0,
-    },
-    pickerInner: {
-      backgroundColor: inputBg,
+      minHeight: 50,
       borderRadius: 12,
       borderWidth: 1,
       borderColor: border,
+      backgroundColor: inputBg,
+      paddingLeft: 12,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      overflow: "hidden",
+    },
+    pickerOuter: {
+      flex: 1,
+      marginBottom: 0,
+      marginVertical: 0,
+    },
+    pickerInner: {
+      backgroundColor: "transparent",
+      borderRadius: 0,
+      borderWidth: 0,
       minHeight: 50,
-      paddingLeft: 36,
+      paddingLeft: 0,
+      paddingRight: 12,
     },
     helperText: {
       color: muted,
@@ -1544,34 +1718,27 @@ const getStyles = (currentTheme, isDark) => {
       borderColor: border,
       backgroundColor: inputBg,
       minHeight: 150,
-      padding: 12,
-      position: "relative",
-    },
-    textAreaTop: {
+      paddingHorizontal: 12,
+      paddingVertical: 12,
       flexDirection: "row",
       alignItems: "flex-start",
       gap: 10,
-      flex: 1,
+    },
+    textAreaIcon: {
+      height: 22,
+      justifyContent: "center",
+      marginTop: Platform.OS === "ios" ? 1 : 3,
     },
     textArea: {
       flex: 1,
-      minHeight: 120,
+      minHeight: 126,
       color: text,
       fontSize: 14,
       fontWeight: "600",
+      lineHeight: 20,
+      paddingTop: 0,
+      paddingBottom: 0,
       textAlignVertical: "top",
-      paddingRight: 44,
-    },
-    micButton: {
-      position: "absolute",
-      right: 12,
-      bottom: 12,
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      backgroundColor: PURPLE,
-      alignItems: "center",
-      justifyContent: "center",
     },
     uploadCard: {
       borderRadius: 14,
@@ -1644,36 +1811,6 @@ const getStyles = (currentTheme, isDark) => {
       fontSize: 10,
       fontWeight: "700",
     },
-    couponRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 10,
-    },
-    couponInput: {
-      flex: 1,
-      marginBottom: 0,
-    },
-    applyBtn: {
-      minHeight: 50,
-      paddingHorizontal: 18,
-      borderRadius: 12,
-      borderWidth: 1.5,
-      borderColor: PURPLE,
-      alignItems: "center",
-      justifyContent: "center",
-      backgroundColor: card,
-    },
-    applyBtnText: {
-      color: PURPLE,
-      fontSize: 14,
-      fontWeight: "900",
-    },
-    couponMessage: {
-      color: muted,
-      fontSize: 12,
-      marginTop: 8,
-      fontWeight: "600",
-    },
     actionRow: {
       flexDirection: "row",
       gap: 10,
@@ -1712,13 +1849,7 @@ const getStyles = (currentTheme, isDark) => {
       fontSize: 14,
       fontWeight: "900",
     },
-    locationButtonsRow: {
-      flexDirection: "row",
-      gap: 10,
-      marginBottom: 12,
-    },
     primaryLocationBtn: {
-      flex: 1.2,
       minHeight: 46,
       borderRadius: 12,
       backgroundColor: PURPLE,
@@ -1726,29 +1857,12 @@ const getStyles = (currentTheme, isDark) => {
       alignItems: "center",
       justifyContent: "center",
       gap: 6,
-      paddingHorizontal: 8,
+      paddingHorizontal: 12,
+      marginBottom: 12,
     },
     primaryLocationBtnText: {
       color: "#fff",
-      fontSize: 12,
-      fontWeight: "800",
-    },
-    secondaryLocationBtn: {
-      flex: 1,
-      minHeight: 46,
-      borderRadius: 12,
-      borderWidth: 1.5,
-      borderColor: PURPLE,
-      backgroundColor: card,
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 6,
-      paddingHorizontal: 8,
-    },
-    secondaryLocationBtnText: {
-      color: PURPLE,
-      fontSize: 12,
+      fontSize: 13,
       fontWeight: "800",
     },
     disabledBtn: {
@@ -1806,13 +1920,6 @@ const getStyles = (currentTheme, isDark) => {
       fontSize: 12,
       lineHeight: 17,
       fontWeight: "600",
-    },
-    coordsText: {
-      color: muted,
-      fontSize: 12,
-      fontWeight: "700",
-      textAlign: "center",
-      marginBottom: 6,
     },
     mapModalContainer: {
       flex: 1,

@@ -57,26 +57,39 @@ const JobSubmissionTimmerScreen = ({ route, navigation }) => {
         }
       }
 
-      // Create job data object
+      // Create job data object — field rules match api/app/api/jobs/_post.ts
       const jobData = {
-        jobTitle: formData.jobTitle,
-        jobDescription: formData.jobDes,
+        jobTitle: String(formData.jobTitle || "").trim(),
+        jobDescription: String(formData.jobDes || "").trim(),
         jobCategory: formData.freelancerType,
-        jobSubCategory: formData.freelancerType, // Using the same value for now
-        skillsRequired: formData.skills,
+        jobSubCategory: formData.freelancerType,
+        skillsRequired: (formData.skills || [])
+          .map((s) => String(s || "").trim())
+          .filter(Boolean),
         projectType: formData.jobType,
-        budgetType: "Fixed", // Default value
+        budgetType: "Fixed",
         budgetAmount: parseFloat(formData.budget),
-        deadlineDate: new Date(formData.deadline),
-        attachedFiles: uploadedUrls, // Send image URIs as is - backend will handle file upload
+        deadlineDate: formData.deadline
+          ? new Date(formData.deadline).toISOString()
+          : undefined,
+        attachedFiles: uploadedUrls,
         location: formData.jobLocation,
         latitude: formData.latitude,
         longitude: formData.longitude,
         serviceId: formData.serviceId,
-        paymentMethod: formData.paymentMethod || 'PLATFORM',
-        birdFeeAmount: parseFloat(formData.birdFeeAmount),
-        birdFeePaid: formData.paymentMethod === 'PLATFORM' // Set to true if using platform payment
+        paymentMethod: formData.paymentMethod || "PLATFORM",
+        birdFeeAmount: formData.birdFeeAmount != null
+          ? parseFloat(formData.birdFeeAmount)
+          : undefined,
+        birdFeePaid: formData.paymentMethod === "PLATFORM",
       };
+
+      if (jobData.jobTitle.length < 5) {
+        throw new Error("Job title must be at least 5 characters.");
+      }
+      if (jobData.jobDescription.length < 20) {
+        throw new Error("Job description must be at least 20 characters.");
+      }
 
       console.log("Debug - Using clientId:", userProfile.id);
       console.log("Debug - Job data being sent:", jobData);

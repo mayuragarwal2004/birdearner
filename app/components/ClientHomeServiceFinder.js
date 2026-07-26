@@ -1,74 +1,85 @@
 import React, {
   forwardRef,
-  useImperativeHandle,
   useEffect,
+  useImperativeHandle,
+  useMemo,
   useState,
 } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
   FlatList,
   Image,
+  StyleSheet,
+  Text,
   TouchableOpacity,
+  View,
 } from "react-native";
-import { FontAwesome } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useNavigation } from "@react-navigation/native";
 import apiService from "../lib/apiService";
 import { useTheme } from "../context/ThemeContext";
-import { useNavigation } from "@react-navigation/native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 
+const PURPLE = "#7B2CFF";
 const placeholderImageURL = "https://picsum.photos/seed/";
 
-const ClientHomeServiceFinder = forwardRef((props, ref) => {
+const getStartsAt = (service) => {
+  const min = service?.birdFee?.minimumBudget;
+  if (min == null || Number.isNaN(Number(min))) return null;
+  return `Starts at ₹${Number(min).toLocaleString("en-IN")}`;
+};
+
+const ClientHomeServiceFinder = forwardRef(({ search = "" }, ref) => {
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
-  const styles = getStyles(currentTheme);
+  const isDark = theme === "dark";
+  const styles = useMemo(
+    () => getStyles(currentTheme, isDark),
+    [currentTheme, isDark]
+  );
   const navigation = useNavigation();
 
-  const [search, setSearch] = useState("");
   const [freelanceServices, setFreelanceServices] = useState([]);
   const [householdServices, setHouseholdServices] = useState([]);
-
-  const [filteredFreelance, setFilteredFreelance] = useState([]);
-  const [filteredHousehold, setFilteredHousehold] = useState([]);
 
   const fetchServices = async () => {
     try {
       const services = await apiService.getAllServices();
-      const freelance = services.filter((s) => s.category === "FREELANCE");
-      const household = services.filter((s) => s.category === "HOUSEHOLD");
-
-      setFreelanceServices(freelance);
-      setHouseholdServices(household);
-      setFilteredFreelance(freelance);
-      setFilteredHousehold(household);
+      const list = Array.isArray(services) ? services : [];
+      setFreelanceServices(list.filter((s) => s.category === "FREELANCE"));
+      setHouseholdServices(list.filter((s) => s.category === "HOUSEHOLD"));
     } catch (error) {
-      console.error("Error fetching services:", error);
+      if (!error?.isAuthError) {
+        console.error("Error fetching services:", error);
+      }
     }
   };
+
   useEffect(() => {
     fetchServices();
   }, []);
 
-  useEffect(() => {
-    const lowerSearch = search.toLowerCase();
-    setFilteredFreelance(
-      freelanceServices.filter(
-        (s) =>
-          s.name.toLowerCase().includes(lowerSearch) ||
-          s.description?.toLowerCase().includes(lowerSearch)
-      )
+  useImperativeHandle(ref, () => ({
+    refreshCard: fetchServices,
+  }));
+
+  const lowerSearch = (search || "").trim().toLowerCase();
+
+  const filteredFreelance = useMemo(() => {
+    if (!lowerSearch) return freelanceServices;
+    return freelanceServices.filter(
+      (s) =>
+        s.name?.toLowerCase().includes(lowerSearch) ||
+        s.description?.toLowerCase().includes(lowerSearch)
     );
-    setFilteredHousehold(
-      householdServices.filter(
-        (s) =>
-          s.name.toLowerCase().includes(lowerSearch) ||
-          s.description?.toLowerCase().includes(lowerSearch)
-      )
+  }, [freelanceServices, lowerSearch]);
+
+  const filteredHousehold = useMemo(() => {
+    if (!lowerSearch) return householdServices;
+    return householdServices.filter(
+      (s) =>
+        s.name?.toLowerCase().includes(lowerSearch) ||
+        s.description?.toLowerCase().includes(lowerSearch)
     );
-  }, [search, freelanceServices, householdServices]);
+  }, [householdServices, lowerSearch]);
 
   const handleCardPress = async (id, name, category) => {
     try {
@@ -77,148 +88,148 @@ const ClientHomeServiceFinder = forwardRef((props, ref) => {
         JSON.stringify({
           serviceId: id,
           serviceName: name,
-          serviceType: category.toLowerCase(), // "freelance" or "household"
+          serviceType: category.toLowerCase(),
         })
       );
-
       navigation.navigate("Job Requirements");
     } catch (error) {
       console.error("Failed to save service selection:", error);
     }
   };
 
-  useImperativeHandle(ref, () => ({
-    refreshCard: fetchServices, // expose this method to parent
-  }));
-
-  const renderServiceCard = ({ item, borderRadius }) => (
-    <TouchableOpacity
-      onPress={() => handleCardPress(item.id, item.name, item.category)}
-      activeOpacity={0.7}
-    >
-      <View style={[styles.serviceCard, { borderRadius }]}>
+  const renderServiceCard = ({ item, rounded }) => {
+    const priceLabel = getStartsAt(item);
+    return (
+      <TouchableOpacity
+        onPress={() => handleCardPress(item.id, item.name, item.category)}
+        activeOpacity={0.85}
+        style={styles.serviceCard}
+      >
         <Image
           source={{
             uri: item.imageUrl
               ? apiService.loadImageURI(item.imageUrl)
-              : `${placeholderImageURL}${encodeURIComponent(
-                  item.name
-                )}/160/160`,
+              : `${placeholderImageURL}${encodeURIComponent(item.name)}/160/160`,
           }}
-          style={[styles.serviceImage, { borderRadius }]}
+          style={[styles.serviceImage, rounded && styles.serviceImageRound]}
         />
-        <Text style={styles.serviceText}>{item.name}</Text>
-      </View>
-    </TouchableOpacity>
-  );
+        <Text style={styles.serviceText} numberOfLines={2}>
+          {item.name}
+        </Text>
+        {!!priceLabel && <Text style={styles.servicePrice}>{priceLabel}</Text>}
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <View>
-      <View style={styles.searchContainer}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search"
-          placeholderTextColor="#c4c4c4"
-          value={search}
-          onChangeText={setSearch}
-        />
-        <FontAwesome
-          name="search"
-          size={20}
-          color={currentTheme.subText}
-          style={styles.searchIcon}
-        />
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Freelance Services</Text>
+        <TouchableOpacity onPress={() => navigation.navigate("Job Requirements")}>
+          <Text style={styles.viewAll}>View all</Text>
+        </TouchableOpacity>
       </View>
-
       <FlatList
         data={filteredFreelance}
-        renderItem={({ item }) => renderServiceCard({ item, borderRadius: 45 })}
+        renderItem={({ item }) => renderServiceCard({ item, rounded: true })}
         keyExtractor={(item) => item.id}
         horizontal
         showsHorizontalScrollIndicator={false}
-        style={styles.carousel}
+        contentContainerStyle={styles.carousel}
         ListEmptyComponent={
-          <Text style={styles.emptyText}>No Freelance Services</Text>
+          <Text style={styles.emptyText}>No freelance services found</Text>
         }
       />
 
+      <View style={[styles.sectionHeader, styles.sectionHeaderSpaced]}>
+        <Text style={styles.sectionTitle}>Household Services</Text>
+        <TouchableOpacity onPress={() => navigation.navigate("Job Requirements")}>
+          <Text style={styles.viewAll}>View all</Text>
+        </TouchableOpacity>
+      </View>
       <FlatList
         data={filteredHousehold}
-        renderItem={({ item }) => renderServiceCard({ item, borderRadius: 7 })}
+        renderItem={({ item }) => renderServiceCard({ item, rounded: false })}
         keyExtractor={(item) => item.id}
         horizontal
         showsHorizontalScrollIndicator={false}
-        style={styles.carousel}
+        contentContainerStyle={styles.carousel}
         ListEmptyComponent={
-          <Text style={styles.emptyText}>No Household Services</Text>
+          <Text style={styles.emptyText}>No household services found</Text>
         }
       />
     </View>
   );
 });
 
-const getStyles = (theme) =>
-  StyleSheet.create({
-    searchContainer: {
+const getStyles = (theme, isDark) => {
+  const text = theme.text || "#101114";
+  const muted = theme.subText || "#656B7A";
+  const border = theme.border || "#E7E1EF";
+  const soft = isDark ? "#2A2034" : "#F3EAFF";
+
+  return StyleSheet.create({
+    sectionHeader: {
+      marginTop: 8,
+      marginBottom: 12,
+      paddingHorizontal: 20,
       flexDirection: "row",
       alignItems: "center",
-      marginHorizontal: 20,
-      shadowColor: theme.shadow || "#000000",
-      shadowOffset: { width: 2, height: 4 },
-      shadowOpacity: 0.1,
-      shadowRadius: 5,
-      elevation: 5,
-      borderRadius: 12,
-      marginBottom: 24,
-      backgroundColor: theme.background3 || "#ffffff",
-      borderColor: theme.border || "#ddd",
-      borderWidth: 1,
-      paddingHorizontal: 12,
-      height: 45,
+      justifyContent: "space-between",
     },
-    searchInput: {
-      flex: 1,
-      color: theme.subText,
-      fontSize: 16,
-      marginLeft: 10,
+    sectionHeaderSpaced: {
+      marginTop: 22,
     },
-    searchIcon: {
-      marginRight: 5,
+    sectionTitle: {
+      color: text,
+      fontSize: 18,
+      fontWeight: "900",
+    },
+    viewAll: {
+      color: PURPLE,
+      fontSize: 13,
+      fontWeight: "800",
     },
     carousel: {
-      paddingHorizontal: 20,
+      paddingHorizontal: 16,
+      gap: 4,
     },
     serviceCard: {
-      alignItems: "center",
-      marginHorizontal: 10,
-      marginVertical: 2,
-      flexDirection: "column",
-      width: 100,
-      flexWrap: "wrap",
-      gap: 5,
+      width: 118,
+      marginHorizontal: 6,
+      alignItems: "flex-start",
     },
     serviceImage: {
-      width: 80,
-      height: 80,
-      borderRadius: 8,
-      backgroundColor: "#e0e0e0",
-      shadowColor: theme.shadow || "#000000",
-      shadowOffset: { width: 2, height: 4 },
-      shadowOpacity: 0.2,
-      shadowRadius: 4,
-      elevation: 3,
+      width: 118,
+      height: 118,
+      borderRadius: 16,
+      backgroundColor: soft,
+      borderWidth: 1,
+      borderColor: border,
+    },
+    serviceImageRound: {
+      borderRadius: 28,
     },
     serviceText: {
-      marginTop: 8,
-      textAlign: "center",
+      marginTop: 10,
       fontSize: 13,
-      color: theme.subText,
+      fontWeight: "800",
+      color: text,
+      lineHeight: 17,
+    },
+    servicePrice: {
+      marginTop: 4,
+      fontSize: 12,
+      fontWeight: "700",
+      color: muted,
     },
     emptyText: {
-      color: theme.subText,
-      paddingHorizontal: 20,
-      marginTop: 12,
+      color: muted,
+      paddingHorizontal: 8,
+      paddingVertical: 18,
+      fontWeight: "600",
     },
   });
+};
 
 export default ClientHomeServiceFinder;
