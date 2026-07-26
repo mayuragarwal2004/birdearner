@@ -1781,6 +1781,16 @@ class ApiService {
     });
     return response?.data || null;
   }
+
+  async getHomePromos() {
+    try {
+      const response = await this.makeRequest("/home-promos", { skipAuth: true });
+      return response?.data || { banners: [], offers: [], all: [] };
+    } catch (error) {
+      console.warn("Failed to fetch home promos:", error?.message);
+      return { banners: [], offers: [], all: [] };
+    }
+  }
 }
 
 // Create singleton instance

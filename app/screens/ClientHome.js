@@ -29,6 +29,7 @@ import { useTheme } from "../context/ThemeContext";
 import apiService from "../lib/apiService";
 import ClientHomeServiceFinder from "../components/ClientHomeServiceFinder";
 import AddressPickerModal from "../components/AddressPickerModal";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useDeliveryAddress } from "../hooks/useDeliveryAddress";
 
 const PURPLE = "#7B2CFF";
@@ -36,47 +37,6 @@ const DEEP_PURPLE = "#4B0082";
 const placeholderImageURL = "https://picsum.photos/seed/";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const PROMO_WIDTH = SCREEN_WIDTH - 40;
-
-const PROMOS = [
-  {
-    id: "1",
-    title: "Get your AC ready for summer",
-    subtitle: "Up to 25% off on AC servicing",
-    cta: "Book now",
-    tone: "lavender",
-  },
-  {
-    id: "2",
-    title: "Need help around the house?",
-    subtitle: "Book trusted household pros in minutes",
-    cta: "Explore",
-    tone: "mint",
-  },
-  {
-    id: "3",
-    title: "Hire top freelancers",
-    subtitle: "Design, coding, writing & more",
-    cta: "Post a job",
-    tone: "peach",
-  },
-];
-
-const OFFERS = [
-  {
-    id: "insta",
-    title: "Insta Help",
-    badge: "10 mins",
-    description: "Quick support for urgent home tasks.",
-    cta: "Book now",
-    tone: "lavender",
-  },
-  {
-    id: "clean",
-    title: "Up to 40% off",
-    description: "on Cleaning Services",
-    tone: "mint",
-  },
-];
 
 const formatSchedule = (deadline) => {
   if (!deadline) return "Schedule not set";
@@ -124,6 +84,9 @@ const ClientHomeScreen = () => {
   const [promoIndex, setPromoIndex] = useState(0);
   const [profilePercentage, setProfilePercentage] = useState(20);
   const [addressPickerOpen, setAddressPickerOpen] = useState(false);
+  const [banners, setBanners] = useState([]);
+  const [offerCards, setOfferCards] = useState([]);
+  const [loadingPromos, setLoadingPromos] = useState(true);
 
   const servicesRef = useRef(null);
   const { userData } = useAuth();
@@ -200,9 +163,25 @@ const ClientHomeScreen = () => {
     }
   };
 
+  const fetchHomePromos = async () => {
+    try {
+      setLoadingPromos(true);
+      const data = await apiService.getHomePromos();
+      setBanners(Array.isArray(data?.banners) ? data.banners : []);
+      setOfferCards(Array.isArray(data?.offers) ? data.offers : []);
+    } catch (error) {
+      console.warn("Home promos unavailable:", error?.message);
+      setBanners([]);
+      setOfferCards([]);
+    } finally {
+      setLoadingPromos(false);
+    }
+  };
+
   useEffect(() => {
     fetchOngoingJobs();
     fetchNotifications();
+    fetchHomePromos();
   }, [userData?.client?.id, refreshing]);
 
   const onRefresh = async () => {
@@ -212,8 +191,62 @@ const ClientHomeScreen = () => {
       fetchOngoingJobs(),
       fetchNotifications(),
       refreshAddresses(),
+      fetchHomePromos(),
     ]);
     setRefreshing(false);
+  };
+
+  const openJobRequirementsFromPromo = async (promo) => {
+    try {
+      const serviceType =
+        promo?.serviceType ||
+        (promo?.serviceCategory === "HOUSEHOLD"
+          ? "household"
+          : promo?.serviceCategory === "FREELANCE"
+            ? "freelance"
+            : null);
+
+      if (promo?.serviceId && serviceType) {
+        await AsyncStorage.setItem(
+          "selectedService",
+          JSON.stringify({
+            serviceId: promo.serviceId,
+            serviceName: promo.serviceName || promo.title,
+            serviceType,
+          })
+        );
+      }
+
+      const prefill = {
+        jobTitle: promo?.prefillJobTitle || "",
+        jobDes: promo?.prefillJobDescription || "",
+        budget: promo?.prefillBudget || "",
+        jobType: promo?.prefillJobType || "",
+        paymentMethod: promo?.prefillPaymentMethod || "",
+        skills: Array.isArray(promo?.prefillSkills)
+          ? promo.prefillSkills
+          : typeof promo?.prefillSkills === "string"
+            ? promo.prefillSkills.split(",").map((s) => s.trim()).filter(Boolean)
+            : [],
+        serviceId: promo?.serviceId || "",
+        freelancerType: promo?.serviceName || "",
+      };
+
+      const hasPrefill = Object.values(prefill).some((v) =>
+        Array.isArray(v) ? v.length > 0 : Boolean(v)
+      );
+      if (hasPrefill) {
+        await AsyncStorage.setItem(
+          "jobRequirementsPrefill",
+          JSON.stringify(prefill)
+        );
+      }
+
+      navigation.navigate("Job Requirements");
+    } catch (error) {
+      console.error("Failed to open job requirements from promo:", error);
+      navigation.navigate("Job Requirements");
+    }
   };
 
   const openInbox = () => {
@@ -349,16 +382,14 @@ const ClientHomeScreen = () => {
             />
           </View>
           <TouchableOpacity
-            style={styles.profileButton}
-            onPress={() => navigation.navigate("Profile")}
+            style={styles.eggButton}
+            onPress={() => navigation.navigate("Offers")}
+            activeOpacity={0.85}
           >
             <Image
-              source={
-                client?.profilePhoto
-                  ? { uri: apiService.loadImageURI(client.profilePhoto) }
-                  : require("../assets/profile.png")
-              }
-              style={styles.profileImage}
+              source={require("../assets/egg.png")}
+              style={styles.eggImage}
+              resizeMode="contain"
             />
           </TouchableOpacity>
         </View>
@@ -378,47 +409,87 @@ const ClientHomeScreen = () => {
           />
         }
       >
-        {/* Promo carousel */}
-        <ScrollView
-          horizontal
-          pagingEnabled
-          showsHorizontalScrollIndicator={false}
-          onScroll={onPromoScroll}
-          scrollEventThrottle={16}
-          contentContainerStyle={styles.promoPager}
-          decelerationRate="fast"
-          snapToInterval={PROMO_WIDTH + 12}
-          snapToAlignment="start"
-        >
-          {PROMOS.map((promo) => (
-            <View
-              key={promo.id}
-              style={[
-                styles.promoCard,
-                promo.tone === "mint" && styles.promoMint,
-                promo.tone === "peach" && styles.promoPeach,
-                { width: PROMO_WIDTH },
-              ]}
+        {/* Promo carousel — admin-configured banners */}
+        {loadingPromos && banners.length === 0 ? (
+          <ActivityIndicator color={PURPLE} style={{ marginVertical: 24 }} />
+        ) : banners.length > 0 ? (
+          <>
+            <ScrollView
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              onScroll={onPromoScroll}
+              scrollEventThrottle={16}
+              contentContainerStyle={styles.promoPager}
+              decelerationRate="fast"
+              snapToInterval={PROMO_WIDTH + 12}
+              snapToAlignment="start"
             >
-              <Text style={styles.promoTitle}>{promo.title}</Text>
-              <Text style={styles.promoSubtitle}>{promo.subtitle}</Text>
-              <TouchableOpacity
-                style={styles.promoCta}
-                onPress={() => navigation.navigate("Job Requirements")}
-              >
-                <Text style={styles.promoCtaText}>{promo.cta}</Text>
-              </TouchableOpacity>
+              {banners.map((promo) => (
+                <TouchableOpacity
+                  key={promo.id}
+                  activeOpacity={0.92}
+                  onPress={() => openJobRequirementsFromPromo(promo)}
+                  style={[
+                    styles.promoCard,
+                    {
+                      width: PROMO_WIDTH,
+                      backgroundColor: promo.backgroundColor || (isDark ? "#2A2034" : "#F3EAFF"),
+                    },
+                  ]}
+                >
+                  {promo.imageUrl ? (
+                    <Image
+                      source={{ uri: apiService.loadImageURI(promo.imageUrl) }}
+                      style={styles.promoImage}
+                      resizeMode="cover"
+                    />
+                  ) : null}
+                  <View style={styles.promoCopy}>
+                    <Text
+                      style={[
+                        styles.promoTitle,
+                        promo.textColor ? { color: promo.textColor } : null,
+                      ]}
+                    >
+                      {promo.title}
+                    </Text>
+                    {!!promo.subtitle && (
+                      <Text
+                        style={[
+                          styles.promoSubtitle,
+                          promo.textColor ? { color: promo.textColor, opacity: 0.85 } : null,
+                        ]}
+                      >
+                        {promo.subtitle}
+                      </Text>
+                    )}
+                    <View
+                      style={[
+                        styles.promoCta,
+                        promo.accentColor
+                          ? { backgroundColor: promo.accentColor }
+                          : null,
+                      ]}
+                    >
+                      <Text style={styles.promoCtaText}>
+                        {promo.ctaLabel || "Book now"}
+                      </Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <View style={styles.dotsRow}>
+              {banners.map((promo, index) => (
+                <View
+                  key={promo.id}
+                  style={[styles.dot, index === promoIndex && styles.dotActive]}
+                />
+              ))}
             </View>
-          ))}
-        </ScrollView>
-        <View style={styles.dotsRow}>
-          {PROMOS.map((promo, index) => (
-            <View
-              key={promo.id}
-              style={[styles.dot, index === promoIndex && styles.dotActive]}
-            />
-          ))}
-        </View>
+          </>
+        ) : null}
 
         {/* Service lists */}
         <ClientHomeServiceFinder ref={servicesRef} search={search} />
@@ -455,42 +526,83 @@ const ClientHomeScreen = () => {
           )}
         </View>
 
-        {/* Offers */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Offers & Discounts</Text>
-            <TouchableOpacity onPress={() => navigation.navigate("Offers")}>
-              <Text style={styles.viewAll}>View all</Text>
-            </TouchableOpacity>
+        {/* Offers & Discounts — admin-configured; tap opens Job Requirements */}
+        {offerCards.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Offers & Discounts</Text>
+            </View>
+            <View style={styles.offersRow}>
+              {offerCards.map((offer, index) => (
+                <TouchableOpacity
+                  key={offer.id}
+                  style={[
+                    styles.offerCard,
+                    index === 0 ? styles.offerWide : styles.offerNarrow,
+                    {
+                      backgroundColor:
+                        offer.backgroundColor ||
+                        (index === 0
+                          ? isDark
+                            ? "#2A2034"
+                            : "#F3EAFF"
+                          : isDark
+                            ? "#1F2A24"
+                            : "#EAF7F0"),
+                    },
+                  ]}
+                  onPress={() => openJobRequirementsFromPromo(offer)}
+                  activeOpacity={0.88}
+                >
+                  {offer.imageUrl ? (
+                    <Image
+                      source={{ uri: apiService.loadImageURI(offer.imageUrl) }}
+                      style={styles.offerImage}
+                      resizeMode="cover"
+                    />
+                  ) : null}
+                  <Text
+                    style={[
+                      styles.offerTitle,
+                      offer.textColor ? { color: offer.textColor } : null,
+                    ]}
+                  >
+                    {offer.title}
+                  </Text>
+                  {!!offer.badge && (
+                    <View
+                      style={[
+                        styles.offerBadge,
+                        offer.accentColor
+                          ? { backgroundColor: offer.accentColor }
+                          : null,
+                      ]}
+                    >
+                      <Text style={styles.offerBadgeText}>{offer.badge}</Text>
+                    </View>
+                  )}
+                  {!!offer.subtitle && (
+                    <Text
+                      style={[
+                        styles.offerDesc,
+                        offer.textColor
+                          ? { color: offer.textColor, opacity: 0.85 }
+                          : null,
+                      ]}
+                    >
+                      {offer.subtitle}
+                    </Text>
+                  )}
+                  {!!offer.ctaLabel && (
+                    <View style={styles.offerCta}>
+                      <Text style={styles.offerCtaText}>{offer.ctaLabel}</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
-          <View style={styles.offersRow}>
-            {OFFERS.map((offer) => (
-              <TouchableOpacity
-                key={offer.id}
-                style={[
-                  styles.offerCard,
-                  offer.tone === "mint" ? styles.offerMint : styles.offerLavender,
-                  offer.id === "insta" ? styles.offerWide : styles.offerNarrow,
-                ]}
-                onPress={() => navigation.navigate("Offers")}
-                activeOpacity={0.88}
-              >
-                <Text style={styles.offerTitle}>{offer.title}</Text>
-                {!!offer.badge && (
-                  <View style={styles.offerBadge}>
-                    <Text style={styles.offerBadgeText}>{offer.badge}</Text>
-                  </View>
-                )}
-                <Text style={styles.offerDesc}>{offer.description}</Text>
-                {!!offer.cta && (
-                  <View style={styles.offerCta}>
-                    <Text style={styles.offerCtaText}>{offer.cta}</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
+        )}
 
         {/* Profile completion */}
         {!client?.termsAccepted && profilePercentage !== 100 && (
@@ -625,18 +737,20 @@ const getStyles = (currentTheme, isDark) => {
       fontWeight: "600",
       paddingVertical: Platform.OS === "ios" ? 12 : 8,
     },
-    profileButton: {
+    eggButton: {
       width: 48,
       height: 48,
       borderRadius: 14,
       overflow: "hidden",
-      backgroundColor: "#FFFFFF",
+      backgroundColor: "rgba(255,255,255,0.18)",
       borderWidth: 2,
-      borderColor: "rgba(255,255,255,0.5)",
+      borderColor: "rgba(255,255,255,0.45)",
+      alignItems: "center",
+      justifyContent: "center",
     },
-    profileImage: {
-      width: "100%",
-      height: "100%",
+    eggImage: {
+      width: 30,
+      height: 30,
     },
     scrollContent: {
       paddingBottom: Platform.OS === "ios" ? 140 : 120,
@@ -652,23 +766,26 @@ const getStyles = (currentTheme, isDark) => {
     },
     promoCard: {
       borderRadius: 20,
-      padding: 20,
+      overflow: "hidden",
       backgroundColor: soft,
-      minHeight: 150,
+      minHeight: 168,
+    },
+    promoImage: {
+      ...StyleSheet.absoluteFillObject,
+      width: "100%",
+      height: "100%",
+    },
+    promoCopy: {
+      padding: 20,
+      minHeight: 168,
       justifyContent: "center",
-    },
-    promoMint: {
-      backgroundColor: softMint,
-    },
-    promoPeach: {
-      backgroundColor: softPeach,
     },
     promoTitle: {
       color: text,
       fontSize: 22,
       fontWeight: "900",
       lineHeight: 28,
-      maxWidth: "85%",
+      maxWidth: "90%",
     },
     promoSubtitle: {
       color: muted,
@@ -850,6 +967,16 @@ const getStyles = (currentTheme, isDark) => {
       borderRadius: 18,
       padding: 16,
       minHeight: 150,
+      overflow: "hidden",
+    },
+    offerImage: {
+      position: "absolute",
+      top: 0,
+      right: 0,
+      width: 72,
+      height: 72,
+      opacity: 0.35,
+      borderBottomLeftRadius: 18,
     },
     offerWide: {
       flex: 1.25,
@@ -857,12 +984,6 @@ const getStyles = (currentTheme, isDark) => {
     offerNarrow: {
       flex: 1,
       justifyContent: "center",
-    },
-    offerLavender: {
-      backgroundColor: soft,
-    },
-    offerMint: {
-      backgroundColor: softMint,
     },
     offerTitle: {
       color: text,

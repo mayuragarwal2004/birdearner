@@ -166,7 +166,7 @@ const JobRequirementsScreen = ({ navigation }) => {
 
   useFocusEffect(
     useCallback(() => {
-      const loadServiceInfo = async () => {
+      const loadPrefills = async () => {
         try {
           const stored = await AsyncStorage.getItem("selectedService");
           if (stored) {
@@ -184,11 +184,32 @@ const JobRequirementsScreen = ({ navigation }) => {
               await AsyncStorage.removeItem("selectedService");
             }
           }
+
+          const prefillRaw = await AsyncStorage.getItem("jobRequirementsPrefill");
+          if (prefillRaw) {
+            const prefill = JSON.parse(prefillRaw);
+            if (prefill.jobTitle) setJobTitle(prefill.jobTitle);
+            if (prefill.jobDes) setJobDes(prefill.jobDes);
+            if (prefill.budget) setBudget(String(prefill.budget));
+            if (Array.isArray(prefill.skills) && prefill.skills.length) {
+              setSkills(prefill.skills);
+            }
+            if (prefill.paymentMethod === "PLATFORM" || prefill.paymentMethod === "CASH") {
+              setPaymentMethod(prefill.paymentMethod);
+            }
+            if (prefill.jobType === "Remote" || prefill.jobType === "On-site") {
+              setJobType(prefill.jobType);
+              setIsOnSite(prefill.jobType === "On-site");
+            }
+            if (prefill.serviceId) setServiceId(prefill.serviceId);
+            if (prefill.freelancerType) setFrelancerType(prefill.freelancerType);
+            await AsyncStorage.removeItem("jobRequirementsPrefill");
+          }
         } catch (err) {
-          console.error("Failed to load service info:", err);
+          console.error("Failed to load job prefill:", err);
         }
       };
-      loadServiceInfo();
+      loadPrefills();
     }, [])
   );
 
