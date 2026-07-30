@@ -403,20 +403,35 @@ export const AuthProvider = ({ children }) => {
 
         console.log("Setting user state with:", authenticatedUser);
 
+        // Keep in-memory/session token in sync immediately after signup
+        if (authenticatedUser.token) {
+          setAuthToken(authenticatedUser.token);
+        }
+
+        // Normalize role/profile shape the same way login/session restore does
+        const normalizedRole = determineUserRole(
+          authenticatedUser,
+          authenticatedUser.role || userData.role
+        );
+        const completeUserData = {
+          ...authenticatedUser,
+          role: normalizedRole || authenticatedUser.role || userData.role,
+        };
+
         // Set states with the authenticated user data
-        setUser(authenticatedUser);
-        setUserData(authenticatedUser);
+        setUser(completeUserData);
+        setUserData(completeUserData);
 
         // Extract profile data from the response
         let profileData = null;
         if (
-          authenticatedUser.role === "FREELANCER" &&
+          completeUserData.role === "FREELANCER" &&
           authenticatedUser.freelancer
         ) {
           profileData = authenticatedUser.freelancer;
           console.log("Found freelancer profile:", profileData);
         } else if (
-          authenticatedUser.role === "CLIENT" &&
+          completeUserData.role === "CLIENT" &&
           authenticatedUser.client
         ) {
           profileData = authenticatedUser.client;
@@ -435,7 +450,7 @@ export const AuthProvider = ({ children }) => {
         // Store user data
         await AsyncStorage.setItem(
           "userData",
-          JSON.stringify(authenticatedUser)
+          JSON.stringify(completeUserData)
         );
 
         console.log("Registration and authentication completed successfully");

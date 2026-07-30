@@ -20,6 +20,7 @@ const PUBLIC_AUTH_ENDPOINTS = [
   "/check-email",
   "/signup/client",
   "/signup/freelancer",
+  "/services",
 ];
 
 const isPublicAuthEndpoint = (endpoint = "") => {
