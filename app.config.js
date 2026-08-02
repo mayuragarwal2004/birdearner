@@ -11,6 +11,8 @@ export default {
     orientation: "portrait",
     icon: "./assets/logo.png",
     userInterfaceStyle: "light",
+    // Keep the native root view branded while JS boots (avoids black flash)
+    backgroundColor: "#4B0082",
     splash: {
       image: "./assets/logo.png",
       resizeMode: "contain",
@@ -57,6 +59,14 @@ export default {
       "expo-router",
       "expo-font",
       "react-native-video",
+      [
+        "expo-splash-screen",
+        {
+          image: "./assets/logo.png",
+          resizeMode: "contain",
+          backgroundColor: "#4B0082",
+        },
+      ],
       [
         "expo-build-properties",
         {

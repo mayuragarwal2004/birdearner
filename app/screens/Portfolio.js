@@ -11,16 +11,12 @@ import {
 import * as ImagePicker from "expo-image-picker";
 import Checkbox from "expo-checkbox";
 import Toast from "react-native-toast-message";
-// import { useAppwrite } from "../context/AppwriteContext";
-// import { Query } from "react-native-appwrite";
 import { useAuth } from "../context/NewAuthContext";
 
 const PortfolioScreen = ({ navigation, route }) => {
-  // const { appwriteConfig, databases, uploadFile, account } = useAppwrite();
   const [portfolioImages, setPortfolioImages] = useState([]);
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [agreeTnC, setAgreeTnC] = useState(false);
-  // const { checkUserSession } = useAuth();
   const { role } = route.params;
 
   const showToast = (type, title, message) => {

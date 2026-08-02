@@ -1,60 +1,21 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createStackNavigator } from "@react-navigation/stack";
-import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { View, StyleSheet, Platform, Text } from "react-native";
 import { Briefcase, ChartColumn, ClipboardPen, House, Bird as LucideBird, Plus } from "lucide-react-native";
 
-// Import custom SVG files as React components
+// Lightweight assets needed for the tab bar (keep these eager)
 import BirdEarnerSvg from "./assets/BirdEarnerSvg";
 import MarketplaceSvg from "./assets/MarketplaceSvg";
 import UserSvg from "./assets/UserSvg";
-import { useAuth } from "./context/NewAuthContext";
+import { useAuth, AuthProvider } from "./context/NewAuthContext";
 
-// Authentication Screens
-import LoginScreen from "./screens/Login";
-import Signup from "./screens/Signup";
-import ForgotPasswordScreen from "./screens/ForgotPassword";
-import ResetPasswordScreen from "./screens/ResetPassword";
-import Role from "./screens/Role";
-
-// SWR Provider
-import { SWRProvider } from "./providers/SWRProvider";
-
-// Main App Components
-import LeaderboardScreen from "./screens/Leaderboard";
-import ProfileStack from "./stacks/ProfileStack";
+// Only the first-paint screen is eager — everything else loads on demand
 import IntroScreen from "./screens/Intro";
-import HomeStack from "./stacks/HomeStack";
-import Bird from "./screens/Bird";
-import JobRequirementStack from "./stacks/JobRequirementStack";
-import MarketPlaceStack from "./stacks/MarketPlaceStack";
-import JobStack from "./stacks/JobStack";
-import ClientHomeStack from "./stacks/ClientHomeStack";
 
-// Individual Screens (for stack navigation)
-import PortfolioScreen from "./screens/Portfolio";
-import Chat from "./screens/Chat";
-import Inbox from "./screens/Inbox";
-import JobDetailsChatScreen from "./screens/JobDetailsChat";
-import ReviewGive from "./screens/ReviewGive";
-import PortfolioComScreen from "./screens/PortfolioCom";
-import ChatList from "./screens/ChatList";
-import OffersScreen from "./screens/Offers";
-import ProfileScreen from "./screens/ProfileScreen";
-import ReviewsScreen from "./screens/ReviewsScreen";
-import SubmitSolutionScreen from "./screens/SubmitSolutionScreen";
-import ViewSolutionsScreen from "./screens/ViewSolutionsScreen";
-import UpdateJobDetailsScreen from "./screens/UpdateJobDetailsScreen";
-import TermsAndConditionsScreen from "./screens/TermsAndConditionsScreen";
-import PrivacyPolicyScreen from "./screens/PrivacyPolicyScreen";
-import ClientSignupScreen from "./screens/ClientSignup";
-import FreelancerSignupScreen from "./screens/FreelancerSignup";
-import OtpVerificationScreen from "./screens/OtpVerification";
-
+import { SWRProvider } from "./providers/SWRProvider";
 import Toast from "react-native-toast-message";
-import { AuthProvider } from "./context/NewAuthContext";
 import { StatusBar } from "expo-status-bar";
 import { ThemeProvider } from "./context/ThemeContext";
 import { KeyboardProvider, useKeyboard } from "./context/KeyboardContext";
@@ -62,6 +23,39 @@ import { NavigationContainer } from "@react-navigation/native";
 import { navigationRef } from "./lib/navigationRef";
 import * as Linking from "expo-linking";
 import apiService from "./lib/apiService";
+
+// Lazy getters — React Navigation only requires these when the screen opens
+const getLoginScreen = () => require("./screens/Login").default;
+const getSignupScreen = () => require("./screens/Signup").default;
+const getForgotPasswordScreen = () => require("./screens/ForgotPassword").default;
+const getResetPasswordScreen = () => require("./screens/ResetPassword").default;
+const getRoleScreen = () => require("./screens/Role").default;
+const getLeaderboardScreen = () => require("./screens/Leaderboard").default;
+const getProfileStack = () => require("./stacks/ProfileStack").default;
+const getHomeStack = () => require("./stacks/HomeStack").default;
+const getBirdScreen = () => require("./screens/Bird").default;
+const getJobRequirementStack = () => require("./stacks/JobRequirementStack").default;
+const getMarketPlaceStack = () => require("./stacks/MarketPlaceStack").default;
+const getJobStack = () => require("./stacks/JobStack").default;
+const getClientHomeStack = () => require("./stacks/ClientHomeStack").default;
+const getPortfolioScreen = () => require("./screens/Portfolio").default;
+const getChatScreen = () => require("./screens/Chat").default;
+const getInboxScreen = () => require("./screens/Inbox").default;
+const getJobDetailsChatScreen = () => require("./screens/JobDetailsChat").default;
+const getReviewGiveScreen = () => require("./screens/ReviewGive").default;
+const getPortfolioComScreen = () => require("./screens/PortfolioCom").default;
+const getChatListScreen = () => require("./screens/ChatList").default;
+const getOffersScreen = () => require("./screens/Offers").default;
+const getProfileScreen = () => require("./screens/ProfileScreen").default;
+const getReviewsScreen = () => require("./screens/ReviewsScreen").default;
+const getSubmitSolutionScreen = () => require("./screens/SubmitSolutionScreen").default;
+const getViewSolutionsScreen = () => require("./screens/ViewSolutionsScreen").default;
+const getUpdateJobDetailsScreen = () => require("./screens/UpdateJobDetailsScreen").default;
+const getTermsAndConditionsScreen = () => require("./screens/TermsAndConditionsScreen").default;
+const getPrivacyPolicyScreen = () => require("./screens/PrivacyPolicyScreen").default;
+const getClientSignupScreen = () => require("./screens/ClientSignup").default;
+const getFreelancerSignupScreen = () => require("./screens/FreelancerSignup").default;
+const getOtpVerificationScreen = () => require("./screens/OtpVerification").default;
 
 // Toast Configuration
 const toastConfig = {
@@ -185,18 +179,18 @@ function MainTabs() {
 
   const tabScreens = isClient
     ? [
-      { name: "Home", component: ClientHomeStack },
-      { name: "Job Posted", component: JobStack },
-      { name: "Job Requirements", component: JobRequirementStack },
-      { name: "AI Bird", component: Bird },
-      { name: "Profile", component: ProfileStack },
+      { name: "Home", getComponent: getClientHomeStack },
+      { name: "Job Posted", getComponent: getJobStack },
+      { name: "Job Requirements", getComponent: getJobRequirementStack },
+      { name: "AI Bird", getComponent: getBirdScreen },
+      { name: "Profile", getComponent: getProfileStack },
     ]
     : [
-      { name: "Home", component: HomeStack },
-      { name: "Leaderboard", component: LeaderboardScreen },
-      { name: "Marketplace", component: MarketPlaceStack },
-      { name: "AI Bird", component: Bird },
-      { name: "Profile", component: ProfileStack },
+      { name: "Home", getComponent: getHomeStack },
+      { name: "Leaderboard", getComponent: getLeaderboardScreen },
+      { name: "Marketplace", getComponent: getMarketPlaceStack },
+      { name: "AI Bird", getComponent: getBirdScreen },
+      { name: "Profile", getComponent: getProfileStack },
     ];
 
   return (
@@ -234,7 +228,7 @@ function MainTabs() {
         <Tab.Screen
           key={index}
           name={screen.name}
-          component={screen.component}
+          getComponent={screen.getComponent}
         />
       ))}
     </Tab.Navigator>
@@ -251,11 +245,9 @@ function RoleDashboardRouter() {
 
   // Route directly to role-specific dashboard
   // The dashboard will handle profile setup internally
-  if (userData.role === "CLIENT") {
-    return <ClientHomeStack />;
-  } else {
-    return <HomeStack />;
-  }
+  const DashboardStack =
+    userData.role === "CLIENT" ? getClientHomeStack() : getHomeStack();
+  return <DashboardStack />;
 }
 
 // Function to render tab icons
@@ -522,82 +514,82 @@ export function App() {
           <Stack.Screen name="Dashboard" component={RoleDashboardRouter} />
 
           {/* Profile Setup Screens - Available for navigation */}
-          <Stack.Screen name="Role" component={Role} />
-          <Stack.Screen name="Portfolio" component={PortfolioScreen} />
+          <Stack.Screen name="Role" getComponent={getRoleScreen} />
+          <Stack.Screen name="Portfolio" getComponent={getPortfolioScreen} />
 
           {/* Additional authenticated screens available for navigation */}
-          <Stack.Screen name="Chat" component={Chat} />
-          <Stack.Screen name="Inbox" component={Inbox} />
-          <Stack.Screen name="Chatlist" component={ChatList} />
+          <Stack.Screen name="Chat" getComponent={getChatScreen} />
+          <Stack.Screen name="Inbox" getComponent={getInboxScreen} />
+          <Stack.Screen name="Chatlist" getComponent={getChatListScreen} />
           <Stack.Screen
             name="JobDetailsChat"
-            component={JobDetailsChatScreen}
+            getComponent={getJobDetailsChatScreen}
           />
-          <Stack.Screen name="PortfolioCom" component={PortfolioComScreen} />
+          <Stack.Screen name="PortfolioCom" getComponent={getPortfolioComScreen} />
           <Stack.Screen
             name="ProfileScreen"
-            component={ProfileScreen}
+            getComponent={getProfileScreen}
             options={options}
           />
           <Stack.Screen
             name="Offers"
-            component={OffersScreen}
+            getComponent={getOffersScreen}
             options={options}
           />
-          <Stack.Screen name="ReviewGive" component={ReviewGive} />
+          <Stack.Screen name="ReviewGive" getComponent={getReviewGiveScreen} />
           <Stack.Screen
             name="ReviewsScreen"
-            component={ReviewsScreen}
+            getComponent={getReviewsScreen}
             options={options}
           />
           <Stack.Screen
             name="SubmitSolution"
-            component={SubmitSolutionScreen}
+            getComponent={getSubmitSolutionScreen}
           />
-          <Stack.Screen name="ViewSolutions" component={ViewSolutionsScreen} />
+          <Stack.Screen name="ViewSolutions" getComponent={getViewSolutionsScreen} />
           <Stack.Screen
             name="UpdateJobDetailsScreen"
-            component={UpdateJobDetailsScreen}
+            getComponent={getUpdateJobDetailsScreen}
           />
           <Stack.Screen
             name="TermsAndConditions"
-            component={TermsAndConditionsScreen}
+            getComponent={getTermsAndConditionsScreen}
           />
-          <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
-          <Stack.Screen name="ClientSignup" component={ClientSignupScreen} />
+          <Stack.Screen name="PrivacyPolicy" getComponent={getPrivacyPolicyScreen} />
+          <Stack.Screen name="ClientSignup" getComponent={getClientSignupScreen} />
           <Stack.Screen
             name="FreelancerSignup"
-            component={FreelancerSignupScreen}
+            getComponent={getFreelancerSignupScreen}
           />
         </>
       ) : (
         // Non-Authenticated Stack - Login/Signup flow
         <>
-          <Stack.Screen name="Login" component={LoginScreen} />
-          <Stack.Screen name="Signup" component={Signup} />
+          <Stack.Screen name="Login" getComponent={getLoginScreen} />
+          <Stack.Screen name="Signup" getComponent={getSignupScreen} />
           <Stack.Screen
             name="ForgotPassword"
-            component={ForgotPasswordScreen}
+            getComponent={getForgotPasswordScreen}
           />
           <Stack.Screen
             name="ResetPassword"
-            component={ResetPasswordScreen}
+            getComponent={getResetPasswordScreen}
           />
-          <Stack.Screen name="Role" component={Role} />
-          <Stack.Screen name="ClientSignup" component={ClientSignupScreen} />
+          <Stack.Screen name="Role" getComponent={getRoleScreen} />
+          <Stack.Screen name="ClientSignup" getComponent={getClientSignupScreen} />
           <Stack.Screen
             name="FreelancerSignup"
-            component={FreelancerSignupScreen}
+            getComponent={getFreelancerSignupScreen}
           />
           <Stack.Screen
             name="OtpVerification"
-            component={OtpVerificationScreen}
+            getComponent={getOtpVerificationScreen}
           />
           <Stack.Screen
             name="TermsAndConditions"
-            component={TermsAndConditionsScreen}
+            getComponent={getTermsAndConditionsScreen}
           />
-          <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
+          <Stack.Screen name="PrivacyPolicy" getComponent={getPrivacyPolicyScreen} />
         </>
       )}
     </Stack.Navigator>

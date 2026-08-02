@@ -1,44 +1,36 @@
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
-import MarketplaceRefactored from '../screens/MarketplaceRefactored';
-import JobPriority from '../screens/JobPriority';
-import JobDescriptionScreen from '../screens/JobDescription';
-import Chat from '../screens/Chat';
-import ClientChat from '../screens/ClientChat';
-import FreelancerChat from '../screens/FreelancerChat';
-
 
 const Stack = createStackNavigator();
 
-const MarketPlaceStack = () => 
-   (
-    <Stack.Navigator>
-      <Stack.Screen
-        name="MarketplaceScreen"
-        component={MarketplaceRefactored}
-        options={{headerShown: false}}
-      />
-      <Stack.Screen
-        name="JobPriority"
-        component={JobPriority}
-        options={{headerShown: false}}
-      />
-      <Stack.Screen
-        name="JobDescription"
-        component={JobDescriptionScreen}
-        options={{headerShown: false}}
-      />
-      <Stack.Screen
-        name="ClientChat"
-        component={ClientChat}
-        options={{headerShown: false}}
-      />
-      <Stack.Screen
-        name="FreelancerChat"
-        component={FreelancerChat}
-        options={{headerShown: false}}
-      />
-    </Stack.Navigator>
-  );
+const MarketPlaceStack = () => (
+  <Stack.Navigator>
+    <Stack.Screen
+      name="MarketplaceScreen"
+      getComponent={() => require('../screens/MarketplaceRefactored').default}
+      options={{ headerShown: false }}
+    />
+    <Stack.Screen
+      name="JobPriority"
+      getComponent={() => require('../screens/JobPriority').default}
+      options={{ headerShown: false }}
+    />
+    <Stack.Screen
+      name="JobDescription"
+      getComponent={() => require('../screens/JobDescription').default}
+      options={{ headerShown: false }}
+    />
+    <Stack.Screen
+      name="ClientChat"
+      getComponent={() => require('../screens/ClientChat').default}
+      options={{ headerShown: false }}
+    />
+    <Stack.Screen
+      name="FreelancerChat"
+      getComponent={() => require('../screens/FreelancerChat').default}
+      options={{ headerShown: false }}
+    />
+  </Stack.Navigator>
+);
 
-  export default MarketPlaceStack;
+export default MarketPlaceStack;

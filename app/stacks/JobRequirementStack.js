@@ -1,44 +1,36 @@
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
-import JobRequirementsScreen from '../screens/JobRequirements';
-import JobDetailsScreen from '../screens/JobDetails';
-import JobSubmissionTimmerScreen from '../screens/JobSubmissionTimmer';
-import WalletClientScreen from '../screens/WalletClient';
-import PaymentScreen from '../screens/PaymentScreen';
-
 
 const Stack = createStackNavigator();
 
-const JobRequirementStack = () =>
-(
+const JobRequirementStack = () => (
   <Stack.Navigator>
     <Stack.Screen
       name="JobRequirements"
-      component={JobRequirementsScreen}
+      getComponent={() => require('../screens/JobRequirements').default}
       options={{ headerShown: false }}
     />
     <Stack.Screen
       name="JobDetails"
-      component={JobDetailsScreen}
+      getComponent={() => require('../screens/JobDetails').default}
       options={{ headerShown: false }}
     />
     <Stack.Screen
       name="JobSubmissionTimmer"
-      component={JobSubmissionTimmerScreen}
+      getComponent={() => require('../screens/JobSubmissionTimmer').default}
       options={{ headerShown: false }}
     />
     <Stack.Screen
       name="WalletClient"
-      component={WalletClientScreen}
+      getComponent={() => require('../screens/WalletClient').default}
       options={{ headerShown: false }}
     />
     <Stack.Screen
       name="Payment"
-      component={PaymentScreen}
+      getComponent={() => require('../screens/PaymentScreen').default}
       options={{ headerShown: false }}
     />
   </Stack.Navigator>
 );
 
-
-export default JobRequirementStack
+export default JobRequirementStack;

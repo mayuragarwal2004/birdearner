@@ -1,33 +1,23 @@
 import React from "react";
 import { createStackNavigator } from "@react-navigation/stack";
-import NotificationScreen from "../screens/Notification";
-import HomeScreen from "../screens/Home";
-import FreelancerChatList from "../screens/FreelancerChatList";
-import FreelancerChat from "../screens/FreelancerChat";
-import Inbox from "../screens/Inbox";
-import SettleBalanceScreen from "../screens/SettleBalance";
-import EarningsOverview from "../screens/EarningsOverview";
-import OrdersOverview from "../screens/OrdersOverview";
-import ProfileOverview from "../screens/ProfileOverview";
-import WithdrawalEarningScreen from "../screens/WithdrawalEarning";
+
 const Stack = createStackNavigator();
 
-const HomeStack = () =>
-(
+const HomeStack = () => (
   <Stack.Navigator>
     <Stack.Screen
       name="HomeScreen"
-      component={HomeScreen}
+      getComponent={() => require("../screens/Home").default}
       options={{ headerShown: false }}
     />
     <Stack.Screen
       name="Notification"
-      component={NotificationScreen}
+      getComponent={() => require("../screens/Notification").default}
       options={{ headerShown: false }}
     />
     <Stack.Screen
       name="Inbox"
-      component={Inbox}
+      getComponent={() => require("../screens/Inbox").default}
       options={{
         headerShown: false,
         tabBarStyle: { display: "block" },
@@ -35,37 +25,37 @@ const HomeStack = () =>
     />
     <Stack.Screen
       name="FreelancerChatList"
-      component={FreelancerChatList}
+      getComponent={() => require("../screens/FreelancerChatList").default}
       options={{ headerShown: false }}
     />
     <Stack.Screen
       name="FreelancerChat"
-      component={FreelancerChat}
+      getComponent={() => require("../screens/FreelancerChat").default}
       options={{ headerShown: false }}
     />
     <Stack.Screen
       name="SettleBalance"
-      component={SettleBalanceScreen}
+      getComponent={() => require("../screens/SettleBalance").default}
       options={{ headerShown: false }}
     />
     <Stack.Screen
       name="EarningsOverview"
-      component={EarningsOverview}
+      getComponent={() => require("../screens/EarningsOverview").default}
       options={{ headerShown: false }}
     />
     <Stack.Screen
       name="OrdersOverview"
-      component={OrdersOverview}
+      getComponent={() => require("../screens/OrdersOverview").default}
       options={{ headerShown: false }}
     />
     <Stack.Screen
       name="ProfileOverview"
-      component={ProfileOverview}
+      getComponent={() => require("../screens/ProfileOverview").default}
       options={{ headerShown: false }}
     />
     <Stack.Screen
       name="WithdrawalEarning"
-      component={WithdrawalEarningScreen}
+      getComponent={() => require("../screens/WithdrawalEarning").default}
       options={{ headerShown: false }}
     />
   </Stack.Navigator>

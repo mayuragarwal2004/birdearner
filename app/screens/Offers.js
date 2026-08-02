@@ -89,7 +89,6 @@ function wait(ms) {
 }
 
 const OffersScreen = ({ navigation }) => {
-  // const { appwriteConfig, databases } = useAppwrite();
   const [eggStatus, setEggStatus] = useState([
     true,
     false,

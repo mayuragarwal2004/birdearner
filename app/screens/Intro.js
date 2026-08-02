@@ -8,12 +8,18 @@ import {
   TouchableOpacity,
   ActivityIndicator 
 } from 'react-native';
+import * as SplashScreen from 'expo-splash-screen';
 import { useAuth } from '../context/NewAuthContext';
 import { InstagramLogoIcon, XLogoIcon } from "phosphor-react-native";
 import { Linking, Alert } from "react-native"; 
 
 const Intro = ({ navigation }) => {
   const { user, loading } = useAuth();
+
+  // Hide native splash once Intro has painted (replaces the black gap)
+  useEffect(() => {
+    SplashScreen.hideAsync().catch(() => {});
+  }, []);
 
   const navigateToNextScreen = () => {
     if (user) {

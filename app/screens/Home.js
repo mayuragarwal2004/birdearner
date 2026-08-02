@@ -66,7 +66,6 @@ const getFreelancerProfileCompletion = (userData, userProfile) => {
 };
 
 const HomeScreen = () => {
-  // const { appwriteConfig, databases } = useAppwrite();
   const { userData, userProfile, logout } = useAuth();
   const [profilePercentage, setProfilePercentage] = useState(20);
   const [flagsCount, setFlagsCount] = useState(0);

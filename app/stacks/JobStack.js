@@ -1,29 +1,23 @@
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
-import JobsPostedScreen from '../screens/JobsPosted';
-import AppliersScreen from '../screens/Appliers';
-import Chat from '../screens/Chat';
-import ClientChat from '../screens/ClientChat';
-
 
 const Stack = createStackNavigator();
 
-const JobStack = () =>
-(
+const JobStack = () => (
   <Stack.Navigator>
     <Stack.Screen
       name="JobsPostedScreen"
-      component={JobsPostedScreen}
+      getComponent={() => require('../screens/JobsPosted').default}
       options={{ headerShown: false }}
     />
     <Stack.Screen
       name="AppliersScreen"
-      component={AppliersScreen}
+      getComponent={() => require('../screens/Appliers').default}
       options={{ headerShown: false }}
     />
     <Stack.Screen
       name="ClientChat"
-      component={ClientChat}
+      getComponent={() => require('../screens/ClientChat').default}
       options={{ headerShown: false }}
     />
   </Stack.Navigator>

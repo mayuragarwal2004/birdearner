@@ -1,26 +1,5 @@
 import React from "react";
 import { createStackNavigator } from "@react-navigation/stack";
-import MyProfileScreen from "../screens/MyProfile";
-import MyReviewScreen from "../screens/MyReview";
-import AvailabilityScreen from "../screens/Availability";
-import SettingsScreen from "../screens/Settings";
-import PasswordUpdateScreen from "../screens/PasswordUpdate";
-import EmailUpdateScreen from "../screens/EmailUpdate";
-import WithdrawalEarningScreen from "../screens/WithdrawalEarning";
-import BankAccountdetailsScreen from "../screens/BankAccountdetails";
-import NotificationsSettingScreen from "../screens/NotificationsSetting";
-import AppearanceScreen from "../screens/Appearance";
-import PaymentScreen from "../screens/PaymentScreen";
-import WalletClientScreen from "../screens/WalletClient";
-import SecurityScreen from "../screens/SecurityScreen";
-import TermsAndConditionsScreen from "../screens/TermsAndConditionsScreen";
-import FeedbackScreen from "../screens/FeedbackScreen";
-import PrivacyPolicyScreen from "../screens/PrivacyPolicyScreen";
-import BlogsAndForumScreen from "../screens/BlogsAndForumScreen";
-import PortfolioScreen from "../screens/Portfolio";
-import DeleteAccountScreen from "../screens/DeleteAccount";
-import WalletFreelancerScreen from "../screens/WalletFreelancer";
-import ManageAddressesScreen from "../screens/ManageAddresses";
 
 const Stack = createStackNavigator();
 
@@ -28,107 +7,107 @@ const ProfileStack = () => (
   <Stack.Navigator>
     <Stack.Screen
       name="MyProfile"
-      component={MyProfileScreen}
+      getComponent={() => require("../screens/MyProfile").default}
       options={{ headerShown: false }}
     />
     <Stack.Screen
       name="MyReview"
-      component={MyReviewScreen}
+      getComponent={() => require("../screens/MyReview").default}
       options={{ headerShown: false }}
     />
     <Stack.Screen
       name="Settings"
-      component={SettingsScreen}
+      getComponent={() => require("../screens/Settings").default}
       options={{ headerShown: false }}
     />
     <Stack.Screen
       name="Availability"
-      component={AvailabilityScreen}
+      getComponent={() => require("../screens/Availability").default}
       options={{ headerShown: false }}
     />
     <Stack.Screen
       name="Password update"
-      component={PasswordUpdateScreen}
+      getComponent={() => require("../screens/PasswordUpdate").default}
       options={{ headerShown: false }}
     />
     <Stack.Screen
       name="Email update"
-      component={EmailUpdateScreen}
+      getComponent={() => require("../screens/EmailUpdate").default}
       options={{ headerShown: false }}
     />
     <Stack.Screen
       name="Withdrawal Earning"
-      component={WithdrawalEarningScreen}
+      getComponent={() => require("../screens/WithdrawalEarning").default}
       options={{ headerShown: false }}
     />
     <Stack.Screen
       name="Bank Account details"
-      component={BankAccountdetailsScreen}
+      getComponent={() => require("../screens/BankAccountdetails").default}
       options={{ headerShown: false }}
     />
     <Stack.Screen
       name="Notifications Setting"
-      component={NotificationsSettingScreen}
+      getComponent={() => require("../screens/NotificationsSetting").default}
       options={{ headerShown: false }}
     />
     <Stack.Screen
       name="Appearance"
-      component={AppearanceScreen}
+      getComponent={() => require("../screens/Appearance").default}
       options={{ headerShown: false }}
     />
     <Stack.Screen
       name="WalletFreelancer"
-      component={WalletFreelancerScreen}
+      getComponent={() => require("../screens/WalletFreelancer").default}
       options={{ headerShown: false }}
     />
     <Stack.Screen
       name="WalletClient"
-      component={WalletClientScreen}
+      getComponent={() => require("../screens/WalletClient").default}
       options={{ headerShown: false }}
     />
     <Stack.Screen
       name="Payment"
-      component={PaymentScreen}
+      getComponent={() => require("../screens/PaymentScreen").default}
       options={{ headerShown: false }}
     />
     <Stack.Screen
       name="DeleteAccount"
-      component={DeleteAccountScreen}
+      getComponent={() => require("../screens/DeleteAccount").default}
       options={{ headerShown: false }}
     />
     <Stack.Screen
       name="Security"
-      component={SecurityScreen}
+      getComponent={() => require("../screens/SecurityScreen").default}
       options={{ headerShown: false }}
     />
     <Stack.Screen
       name="TermsAndConditions"
-      component={TermsAndConditionsScreen}
+      getComponent={() => require("../screens/TermsAndConditionsScreen").default}
       options={{ headerShown: false }}
     />
     <Stack.Screen
       name="Feedback"
-      component={FeedbackScreen}
+      getComponent={() => require("../screens/FeedbackScreen").default}
       options={{ headerShown: false }}
     />
     <Stack.Screen
       name="PrivacyPolicy"
-      component={PrivacyPolicyScreen}
+      getComponent={() => require("../screens/PrivacyPolicyScreen").default}
       options={{ headerShown: false }}
     />
     <Stack.Screen
       name="BlogsAndForum"
-      component={BlogsAndForumScreen}
+      getComponent={() => require("../screens/BlogsAndForumScreen").default}
       options={{ headerShown: false }}
     />
     <Stack.Screen
       name="Portfolio"
-      component={PortfolioScreen}
+      getComponent={() => require("../screens/Portfolio").default}
       options={{ headerShown: false }}
     />
     <Stack.Screen
       name="ManageAddresses"
-      component={ManageAddressesScreen}
+      getComponent={() => require("../screens/ManageAddresses").default}
       options={{ headerShown: false }}
     />
   </Stack.Navigator>

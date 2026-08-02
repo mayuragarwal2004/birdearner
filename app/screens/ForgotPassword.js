@@ -9,8 +9,6 @@ import {
 import { useAuth } from "../context/NewAuthContext";
 import Toast from "react-native-toast-message";
 import apiService from "../lib/apiService";
-// import { useAppwrite } from "../context/AppwriteContext";
-
 
 const ForgetPasswordScreen = ({ navigation }) => {
   const [email, setEmail] = useState("");
