@@ -369,9 +369,15 @@ class ApiService {
 
   // Freelancer endpoints
   async createFreelancerProfile(freelancerData) {
+    const payload = { ...freelancerData };
+    if (!payload.userId) {
+      const stored = await AsyncStorage.getItem("userData");
+      const user = stored ? JSON.parse(stored) : null;
+      if (user?.id) payload.userId = user.id;
+    }
     const response = await this.makeRequest("/freelancers", {
       method: "POST",
-      body: JSON.stringify(freelancerData),
+      body: JSON.stringify(payload),
     });
     return response.data;
   }
@@ -453,9 +459,15 @@ class ApiService {
 
   // Client endpoints
   async createClientProfile(clientData) {
+    const payload = { ...clientData };
+    if (!payload.userId) {
+      const stored = await AsyncStorage.getItem("userData");
+      const user = stored ? JSON.parse(stored) : null;
+      if (user?.id) payload.userId = user.id;
+    }
     const response = await this.makeRequest("/clients", {
       method: "POST",
-      body: JSON.stringify(clientData),
+      body: JSON.stringify(payload),
     });
     return response.data;
   }
@@ -1476,50 +1488,6 @@ class ApiService {
         success: false,
         error: err.message,
       };
-    }
-  }
-
-  // Create additional client profile for existing user
-  async createClientProfile(profileData) {
-    try {
-      const response = await this.makeRequest("/profile/client", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(profileData),
-      });
-
-      if (response.success) {
-        return response.data;
-      } else {
-        throw new Error(response.message || "Failed to create client profile");
-      }
-    } catch (error) {
-      console.error("Create client profile error:", error);
-      throw error;
-    }
-  }
-
-  // Create additional freelancer profile for existing user
-  async createFreelancerProfile(profileData) {
-    try {
-      const response = await this.makeRequest("/profile/freelancer", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(profileData),
-      });
-
-      if (response.success) {
-        return response.data;
-      } else {
-        throw new Error(response.message || "Failed to create freelancer profile");
-      }
-    } catch (error) {
-      console.error("Create freelancer profile error:", error);
-      throw error;
     }
   }
 

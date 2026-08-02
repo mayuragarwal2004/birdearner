@@ -724,6 +724,7 @@ const FreelancerSignup = ({ navigation, route }) => {
 
         // Filter and map form data to freelancer model fields only
         const freelancerCreateData = {
+          userId: user?.id,
           // Map form fields to freelancer model fields
           selectedServices: cleanedForm.selectedServices,
           highestQualification: cleanedForm.qualification,
