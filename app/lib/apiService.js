@@ -2,8 +2,8 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 
-const DEV_API_BASE_URL = "https://wendy-gdp-scoop-careful.trycloudflare.com/api";
-// const DEV_API_BASE_URL = "https://api.birdearner.com/api";
+// const DEV_API_BASE_URL = "https://wendy-gdp-scoop-careful.trycloudflare.com/api"; 
+const DEV_API_BASE_URL = "https://api.birdearner.com/api";
 
 const PROD_API_BASE_URL = "https://api.birdearner.com/api";
 
@@ -1482,7 +1482,7 @@ class ApiService {
   // Create additional client profile for existing user
   async createClientProfile(profileData) {
     try {
-      const response = await this.makeRequest("/profile/client", {
+      const response = await this.makeRequest("/clients", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1504,7 +1504,7 @@ class ApiService {
   // Create additional freelancer profile for existing user
   async createFreelancerProfile(profileData) {
     try {
-      const response = await this.makeRequest("/profile/freelancer", {
+      const response = await this.makeRequest("/freelancers", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -495,6 +495,8 @@ const ClientSignup = ({ navigation, route }) => {
 
         // Filter and map form data to client model fields only
         const clientCreateData = {
+          userId: user?.id,
+          email: user?.email,
           // Map form fields to client model fields
           organizationType: cleanedForm.designation,
           companyName: cleanedForm.heading,
