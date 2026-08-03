@@ -98,7 +98,7 @@ const createSchema = (mode) => {
     country: z.string().optional(),
     bio: z.string().optional(),
     gender: z.string().optional(),
-    dob: z.date().optional(),
+    dob: z.union([z.date(), z.string()]).optional().nullable(),
     socialLinks: z.array(z.string()).optional(),
     profileImage: z.any().optional(),
     coverImage: z.any().optional(),
@@ -228,6 +228,7 @@ const ClientSignup = ({ navigation, route }) => {
     coverImage: user?.client?.coverPhoto
       ? { uri: user.client.coverPhoto, isExisting: true }
       : null,
+    dob: null,
   });
 
   // Track deleted images for update mode
@@ -413,6 +414,11 @@ const ClientSignup = ({ navigation, route }) => {
     const cleanedForm = {
       ...form,
       socialLinks: form.socialLinks.filter((link) => link.trim() !== ""),
+      dob: form.dob
+        ? typeof form.dob === "object" && form.dob?.toISOString
+          ? form.dob.toISOString()
+          : form.dob
+        : null,
     };
 
     console.log("Cleaned form data:", cleanedForm);
@@ -633,10 +639,10 @@ const ClientSignup = ({ navigation, route }) => {
     <SafeAreaView style={{ flex: 1, backgroundColor: "#4B0082" }}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior={Platform.OS === "ios" ? "padding" : "padding"}
         keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}
       >
-        <ScrollView contentContainerStyle={styles.container}>
+        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
           <Text style={styles.heading}>{getHeading()}</Text>
           {/* Step 1: Basic Signup Info with Email Check (only for signup mode) */}
           {step === 1 && mode === "signup" && (
