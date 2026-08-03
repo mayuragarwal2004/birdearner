@@ -109,8 +109,8 @@ const createSchema = (mode) => {
       .object({
         full_name: z.string().min(1, "Full name is required"),
         email: z.string().email("Valid email is required"),
-        password: z.string().min(8, "Password must be at least 8 characters"),
-        confirmPassword: z.string().min(8, "Confirm password is required"),
+        password: z.string().min(6, "Password must be at least 6 characters"),
+        confirmPassword: z.string().min(6, "Confirm password is required"),
         termsAccepted: z.boolean().refine((val) => val === true, {
           message: "You must accept the Terms and Conditions.",
         }),
@@ -322,6 +322,33 @@ const ClientSignup = ({ navigation, route }) => {
 
       if (!form.password) {
         showToast("error", "Password Required", "Please enter your password");
+        return;
+      }
+
+      if (form.password.length < 6) {
+        showToast(
+          "error",
+          "Weak Password",
+          "Password must be at least 6 characters."
+        );
+        return;
+      }
+
+      if (!form.confirmPassword) {
+        showToast(
+          "error",
+          "Confirm Password Required",
+          "Please confirm your password."
+        );
+        return;
+      }
+
+      if (form.confirmPassword.length < 6) {
+        showToast(
+          "error",
+          "Weak Password",
+          "Confirm password must be at least 6 characters."
+        );
         return;
       }
 

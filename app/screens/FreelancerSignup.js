@@ -106,8 +106,8 @@ const createSchema = (mode) => {
       .object({
         full_name: z.string().min(1, "Full name is required"),
         email: z.string().email("Valid email is required"),
-        password: z.string().min(8, "Password must be at least 8 characters"),
-        confirmPassword: z.string().min(8, "Confirm password is required"),
+        password: z.string().min(6, "Password must be at least 6 characters"),
+        confirmPassword: z.string().min(6, "Confirm password is required"),
         termsAccepted: z.boolean().refine((val) => val === true, {
           message: "You must accept the Terms and Conditions.",
         }),
@@ -509,6 +509,33 @@ const FreelancerSignup = ({ navigation, route }) => {
 
       if (!form.password) {
         showToast("error", "Password Required", "Please enter your password");
+        return;
+      }
+
+      if (form.password.length < 6) {
+        showToast(
+          "error",
+          "Weak Password",
+          "Password must be at least 6 characters."
+        );
+        return;
+      }
+
+      if (!form.confirmPassword) {
+        showToast(
+          "error",
+          "Confirm Password Required",
+          "Please confirm your password."
+        );
+        return;
+      }
+
+      if (form.confirmPassword.length < 6) {
+        showToast(
+          "error",
+          "Weak Password",
+          "Confirm password must be at least 6 characters."
+        );
         return;
       }
 
@@ -918,6 +945,11 @@ const FreelancerSignup = ({ navigation, route }) => {
                 onChangeText={(v) => setForm({ ...form, password: v })}
                 secureTextEntry
               />
+              {form.password.length > 0 && form.password.length < 6 && (
+                <Text style={styles.errorText}>
+                  Password must be at least 6 characters.
+                </Text>
+              )}
               <Text style={styles.label}>Confirm Password</Text>
               <TextInput
                 placeholderTextColor="#c4c4c4"
@@ -927,6 +959,16 @@ const FreelancerSignup = ({ navigation, route }) => {
                 onChangeText={(v) => setForm({ ...form, confirmPassword: v })}
                 secureTextEntry
               />
+              {form.confirmPassword.length > 0 && form.confirmPassword.length < 6 && (
+                <Text style={styles.errorText}>
+                  Confirm password must be at least 6 characters.
+                </Text>
+              )}
+              {form.confirmPassword.length >= 6 && form.password !== form.confirmPassword && (
+                <Text style={styles.errorText}>
+                  Passwords do not match.
+                </Text>
+              )},
               <View style={styles.checkboxContainer}>
                 <Checkbox
                   value={form.termsAccepted}
