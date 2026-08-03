@@ -369,9 +369,15 @@ class ApiService {
 
   // Freelancer endpoints
   async createFreelancerProfile(freelancerData) {
+    const payload = { ...freelancerData };
+    if (!payload.userId) {
+      const stored = await AsyncStorage.getItem("userData");
+      const user = stored ? JSON.parse(stored) : null;
+      if (user?.id) payload.userId = user.id;
+    }
     const response = await this.makeRequest("/freelancers", {
       method: "POST",
-      body: JSON.stringify(freelancerData),
+      body: JSON.stringify(payload),
     });
     return response.data;
   }
@@ -453,9 +459,15 @@ class ApiService {
 
   // Client endpoints
   async createClientProfile(clientData) {
+    const payload = { ...clientData };
+    if (!payload.userId) {
+      const stored = await AsyncStorage.getItem("userData");
+      const user = stored ? JSON.parse(stored) : null;
+      if (user?.id) payload.userId = user.id;
+    }
     const response = await this.makeRequest("/clients", {
       method: "POST",
-      body: JSON.stringify(clientData),
+      body: JSON.stringify(payload),
     });
     return response.data;
   }
