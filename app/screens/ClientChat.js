@@ -637,6 +637,7 @@ const ClientChat = ({ route, navigation }) => {
 
     try {
       await api.init();
+      
       const res = await api.makeRequest(`/jobs/${jobId}/reject-freelancer`, {
         method: "POST",
         body: JSON.stringify({
@@ -644,6 +645,7 @@ const ClientChat = ({ route, navigation }) => {
           threadId,
         }),
       });
+      console.log('Client reject freelancer response:', res);
 
       if (res.success) {
         Toast.show({
