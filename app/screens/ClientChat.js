@@ -398,6 +398,7 @@ const ClientChat = ({ route, navigation }) => {
     handleJobCancel: swrHandleJobCancel,
     mutateMessages,
     mutateJob,
+    mutateThread,
   } = useChatData("client", route.params);
 
   console.log({ messages });
@@ -621,13 +622,26 @@ const ClientChat = ({ route, navigation }) => {
   };
 
   const handleReject = async () => {
+    const jobId = route.params.jobId || route.params.projectId;
+    const freelancerId = route.params.freelancer?.id || route.params.freelancer?.userId;
+    const threadId = route.params.threadId || thread?.id;
+
+    if (!jobId || !freelancerId) {
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: "Missing job or freelancer information",
+      });
+      return;
+    }
+
     try {
       await api.init();
-      const res = await api.makeRequest(`/jobs/${route.params.jobId || route.params.projectId}/reject-freelancer`, {
+      const res = await api.makeRequest(`/jobs/${jobId}/reject-freelancer`, {
         method: "POST",
         body: JSON.stringify({
-          freelancerId: route.params.freelancer.id,
-          threadId: thread?.id,
+          freelancerId,
+          threadId,
         }),
       });
 
@@ -638,9 +652,15 @@ const ClientChat = ({ route, navigation }) => {
           text2: "Freelancer rejected successfully",
         });
         mutateJob();
-        mutateThread();
+        mutateThread?.();
         mutateMessages();
         navigation.goBack();
+      } else {
+        Toast.show({
+          type: "error",
+          text1: "Error",
+          text2: res.message || "Failed to reject freelancer",
+        });
       }
     } catch (err) {
       console.error("Rejection error:", err);
@@ -660,10 +680,6 @@ const ClientChat = ({ route, navigation }) => {
         method: "PATCH",
         body: JSON.stringify({
           freelancerId: route.params.freelancer.id,
-          jobStatus: "IN_PROGRESS",
-          deadlineDate: new Date(
-            Date.now() + parseInt(job.deadlineDate) * 24 * 60 * 60 * 1000
-          ),
         }),
       });
 
@@ -675,7 +691,7 @@ const ClientChat = ({ route, navigation }) => {
         });
         // Mutate job and messages immediately to update UI
         mutateJob();
-        mutateThread();
+        mutateThread?.();
         mutateMessages();
       }
     } catch (err) {
@@ -827,7 +843,7 @@ const ClientChat = ({ route, navigation }) => {
         // Refresh messages to show the new completion request using SWR
         mutateMessages();
         mutateJob();
-        mutateThread();
+        mutateThread?.();
       }
     } catch (error) {
       console.error('Error sending completion request:', error);
