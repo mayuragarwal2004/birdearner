@@ -19,30 +19,42 @@ export const calculateBirdFee = (budget, birdFee) => {
     };
   }
 
-  // Validate budget against min/max constraints only if they exist
-  if (birdFee.minimumBudget !== undefined && birdFee.maximumBudget !== undefined) {
-    if (budget < birdFee.minimumBudget || budget > birdFee.maximumBudget) {
-      return {
-        feeAmount: 0,
-        applicableRule: null,
-        isValid: false,
-        error: `Budget must be between ₹${birdFee.minimumBudget} and ₹${birdFee.maximumBudget}`
-      };
-    }
-  }
+  // Interpret a maximumBudget of 0 as no upper bound.
+  const minBudget = birdFee.minimumBudget != null ? birdFee.minimumBudget : 0;
+  const maxBudget = birdFee.maximumBudget > 0 ? birdFee.maximumBudget : Infinity;
 
-  // Find the applicable fee rule
-  const applicableRule = birdFee.feeStructure.find(
-    rule => budget >= rule.minAmount && budget <= rule.maxAmount
-  );
+  if (budget < minBudget || budget > maxBudget) {
+    const errorText =
+      maxBudget === Infinity
+        ? `Budget must be at least ₹${minBudget}`
+        : minBudget === 0
+        ? `Budget must be ₹${maxBudget} or less`
+        : `Budget must be between ₹${minBudget} and ₹${maxBudget}`;
 
-  if (!applicableRule) {
     return {
       feeAmount: 0,
       applicableRule: null,
       isValid: false,
-      error: 'No applicable fee rule found for this budget'
+      error: errorText
     };
+  }
+
+  // Find the applicable fee rule
+  // Interpret bracket maxAmount <= 0 as no upper bound and minAmount undefined as 0
+  let applicableRule = null;
+  for (const rule of birdFee.feeStructure) {
+    const min = rule.minAmount != null ? rule.minAmount : 0;
+    const max = rule.maxAmount > 0 ? rule.maxAmount : Infinity;
+    if (budget >= min && budget <= max) {
+      applicableRule = rule;
+      break;
+    }
+  }
+
+  // If no rule matched, fallback to the last bracket (consistent with server behavior)
+  if (!applicableRule) {
+    const last = birdFee.feeStructure[birdFee.feeStructure.length - 1];
+    applicableRule = last;
   }
 
   // Calculate fee based on type

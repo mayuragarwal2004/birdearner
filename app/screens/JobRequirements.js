@@ -277,13 +277,18 @@ const JobRequirementsScreen = ({ navigation }) => {
 
     if (selected) {
       const { birdFee } = selected;
-      const minBudget = birdFee?.minimumBudget || 0;
-      const maxBudget = birdFee?.maximumBudget || Infinity;
+      const minBudget = birdFee?.minimumBudget != null ? birdFee.minimumBudget : 0;
+      const maxBudget = birdFee?.maximumBudget > 0 ? birdFee.maximumBudget : Infinity;
 
       if (budgetNum < minBudget || budgetNum > maxBudget) {
-        setBudgetError(
-          `Budget must be between ₹${minBudget.toFixed(2)} and ₹${maxBudget.toFixed(2)}`
-        );
+        const rangeMessage =
+          maxBudget === Infinity
+            ? `Budget must be at least ₹${minBudget.toFixed(2)}`
+            : minBudget === 0
+            ? `Budget must be ₹${maxBudget.toFixed(2)} or less`
+            : `Budget must be between ₹${minBudget.toFixed(2)} and ₹${maxBudget.toFixed(2)}`;
+
+        setBudgetError(rangeMessage);
         return false;
       }
 
