@@ -37,7 +37,7 @@ const CompletionRequestMessage = ({ message, onUpdate, currentUserId, userRole }
       const api = ApiService;
       await api.init();
       
-      const res = await api.makeRequest(`/chat/message/completion-request/confirm`, {
+      const res = await api.makeRequest(`/chats/message/completion-request/confirm`, {
         method: 'POST',
         body: JSON.stringify({
           messageId: message.id,

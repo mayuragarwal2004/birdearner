@@ -177,7 +177,11 @@ const WalletFreelancerScreen = ({ navigation }) => {
               {walletData?.withdrawableBalance < 0 && (
                 <TouchableOpacity
                   style={styles.settleButton}
-                  onPress={() => navigation.navigate("SettleBalance")}
+                  onPress={() =>
+                    (navigation.getParent?.()?.navigate
+                      ? navigation.getParent()?.navigate("Home", { screen: "SettleBalance" })
+                      : navigation.navigate("SettleBalance"))
+                  }
                 >
                   <Text style={styles.settleButtonText}>Settle Outstanding Balance</Text>
                 </TouchableOpacity>

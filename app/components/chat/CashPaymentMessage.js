@@ -47,7 +47,7 @@ const CashPaymentMessage = ({ message, onUpdate, currentUserId, userRole }) => {
       const api = ApiService;
       await api.init();
       
-      const res = await api.makeRequest(`/chat/message/cash-payment/client-confirm`, {
+      const res = await api.makeRequest(`/chats/message/cash-payment/client-confirm`, {
         method: 'POST',
         body: JSON.stringify({
           messageId: message.id,
@@ -82,7 +82,7 @@ const CashPaymentMessage = ({ message, onUpdate, currentUserId, userRole }) => {
       const api = ApiService;
       await api.init();
       
-      const res = await api.makeRequest(`/chat/message/cash-payment/freelancer-confirm`, {
+      const res = await api.makeRequest(`/chats/message/cash-payment/freelancer-confirm`, {
         method: 'POST',
         body: JSON.stringify({
           messageId: message.id,

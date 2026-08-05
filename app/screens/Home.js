@@ -448,9 +448,13 @@ const HomeScreen = () => {
                 You have an outstanding balance of ₹{Math.abs(userProfile.withdrawableAmount).toFixed(2)}.
                 Please settle it to continue applying for new jobs.
               </Text>
-              <TouchableOpacity
+                <TouchableOpacity
                 style={[styles.loginButton, { backgroundColor: "#FF3B30", marginTop: 15 }]}
-                onPress={() => navigation.navigate("SettleBalance")}
+                onPress={() =>
+                  (navigation.getParent?.()?.navigate
+                    ? navigation.getParent()?.navigate("Home", { screen: "SettleBalance" })
+                    : navigation.navigate("SettleBalance"))
+                }
               >
                 <Text style={styles.loginButtonText}>Settle Now</Text>
               </TouchableOpacity>
