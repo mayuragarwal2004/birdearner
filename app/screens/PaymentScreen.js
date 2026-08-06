@@ -20,6 +20,7 @@ import Constants from 'expo-constants';
 
 const expoConfig = Constants.expoConfig;
 const extra = expoConfig.extra;
+const DEV_MODE = typeof __DEV__ !== "undefined" ? __DEV__ : false;
 
 const PaymentScreen = ({ navigation }) => {
   const [paymentSuccess, setPaymentSuccess] = useState(false);
