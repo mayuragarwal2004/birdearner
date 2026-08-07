@@ -1,42 +1,76 @@
-import { Image, StyleSheet, Text, View } from "react-native";
 import React from "react";
+import {
+  Image,
+  StyleSheet,
+  Text,
+  View,
+  Dimensions,
+  TouchableOpacity,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { TouchableOpacity } from "react-native";
 
-const Role = ({navigation}) => {
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const PURPLE = "#5B1F96";
+const CIRCLE_SIZE = Math.min(SCREEN_WIDTH * 0.38, 165);
 
-    const navigateToSignup = (role) => {
-      if (role === "CLIENT") {
-        navigation.navigate("OtpVerification", { role: "CLIENT" });
-      } else {
-        navigation.navigate("OtpVerification", { role: "FREELANCER" });
-      }
-    };
+const Role = ({ navigation }) => {
+  const navigateToSignup = (role) => {
+    navigation.navigate("OtpVerification", { role });
+  };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.main}>
-        <Text style={styles.text}>You are a</Text>
-        <View style={styles.roleBox}>
-          <View style={styles.box}>
-            <TouchableOpacity style={styles.logoBox} onPress={() => {
-                navigateToSignup("CLIENT")
-            }}>
-              <Image source={require("../assets/client.png")} style={styles.logo} />
-            </TouchableOpacity>
-            <Text style={styles.roleText}>Client</Text>
+    <View style={styles.container}>
+      {/* Background Split: Left Purple, Right White */}
+      <View style={styles.backgroundSplit}>
+        <View style={styles.leftBackground} />
+        <View style={styles.rightBackground} />
+      </View>
+
+      <SafeAreaView style={styles.contentContainer}>
+        {/* Header Title: "You" (White) on Purple side | "are a" (Black) on White side */}
+        <View style={styles.titleRow}>
+          <View style={styles.titleHalfLeft}>
+            <Text style={styles.titleTextLeft}>You</Text>
           </View>
-          <View style={styles.box}>
-            <TouchableOpacity style={styles.logoBox} onPress={() => {
-                navigateToSignup("FREELANCER")
-            }}>
-              <Image source={require("../assets/freelancer.png")} style={styles.logo} />
-            </TouchableOpacity>
-            <Text style={styles.roleText}>Freelancer</Text>
+          <View style={styles.titleHalfRight}>
+            <Text style={styles.titleTextRight}>are a</Text>
           </View>
         </View>
-      </View>
-    </SafeAreaView>
+
+        {/* Role Options Row */}
+        <View style={styles.rolesRow}>
+          {/* Client Option */}
+          <TouchableOpacity
+            style={styles.roleColumn}
+            onPress={() => navigateToSignup("CLIENT")}
+            activeOpacity={0.85}
+          >
+            <View style={styles.clientCircle}>
+              <Image
+                source={require("../assets/client1.jpg")}
+                style={styles.clientImage}
+              />
+            </View>
+            <Text style={styles.roleText}>Client</Text>
+          </TouchableOpacity>
+
+          {/* Freelancer Option */}
+          <TouchableOpacity
+            style={styles.roleColumn}
+            onPress={() => navigateToSignup("FREELANCER")}
+            activeOpacity={0.85}
+          >
+            <View style={styles.freelancerCircle}>
+              <Image
+                source={require("../assets/freelancer1.jpg")}
+                style={styles.freelancerImage}
+              />
+            </View>
+            <Text style={styles.roleText}>Freelancer</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    </View>
   );
 };
 
@@ -46,44 +80,98 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#fff",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 20,
+    position: "relative",
   },
-  main: {
-    display: "flex",
-    alignItems: "center",
-    // justifyContent: "center",
-    padding: 20,
-    gap: 30
-  },
-  text: {
-    fontSize: 32,
-    fontWeight: "600",
-  },
-  roleBox: {
-    display: "flex",
+  backgroundSplit: {
+    ...StyleSheet.absoluteFillObject,
     flexDirection: "row",
-    gap: 40
   },
-  box: {
-    display: "flex",
+  leftBackground: {
+    flex: 1,
+    backgroundColor: PURPLE,
+  },
+  rightBackground: {
+    flex: 1,
+    backgroundColor: "#fff",
+  },
+  contentContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  titleRow: {
+    flexDirection: "row",
+    width: "100%",
+    marginBottom: 44,
+    alignItems: "baseline",
+  },
+  titleHalfLeft: {
+    flex: 1,
+    alignItems: "flex-end",
+    paddingRight: 4,
+  },
+  titleHalfRight: {
+    flex: 1,
+    alignItems: "flex-start",
+    paddingLeft: 4,
+  },
+  titleTextLeft: {
+    fontSize: 30,
+    fontWeight: "bold",
+    color: "#FFFFFF",
+  },
+  titleTextRight: {
+    fontSize: 30,
+    fontWeight: "bold",
+    color: "#000000",
+  },
+  rolesRow: {
+    flexDirection: "row",
+    width: "100%",
+    justifyContent: "space-around",
+    alignItems: "center",
+  },
+  roleColumn: {
+    flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    gap: 20
   },
-  logoBox: {
-    backgroundColor: "#4B0082",
-    width: 130,
-    height: 130,
-    borderRadius: 100,
-    display: "flex",
+  clientCircle: {
+    width: CIRCLE_SIZE,
+    height: CIRCLE_SIZE,
+    borderRadius: CIRCLE_SIZE / 2,
+    backgroundColor: "#FFFFFF",
+    overflow: "hidden",
     justifyContent: "center",
-    alignItems: "center"
+    alignItems: "center",
   },
-  
+  clientImage: {
+    width: CIRCLE_SIZE,
+    height: CIRCLE_SIZE,
+    resizeMode: "cover",
+    transform: [{ scale: 1.25 }],
+  },
+  freelancerCircle: {
+    width: CIRCLE_SIZE,
+    height: CIRCLE_SIZE,
+    borderRadius: CIRCLE_SIZE / 2,
+    backgroundColor: PURPLE,
+    overflow: "hidden",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  freelancerImage: {
+    width: CIRCLE_SIZE,
+    height: CIRCLE_SIZE,
+    resizeMode: "cover",
+    transform: [{ scale: 1.28 }],
+  },
   roleText: {
-    fontSize: 24,
-    fontWeight: "600"
-  }
+    fontSize: 22,
+    fontWeight: "bold",
+    color: "#000000",
+    marginTop: 20,
+    textAlign: "center",
+  },
 });
+
