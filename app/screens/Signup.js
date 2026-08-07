@@ -10,16 +10,15 @@ import {
   SafeAreaView,
 } from "react-native";
 import Toast from "react-native-toast-message";
-import Checkbox from "expo-checkbox";
 import { useTheme } from "../context/ThemeContext";
 
-const validateEmail = (email) => {
-  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return re.test(String(email).toLowerCase());
+const validateMobile = (mobile) => {
+  const re = /^\+?[0-9]{10,15}$/;
+  return re.test(String(mobile));
 };
 
 const Signup = ({ navigation, route }) => {
-  const [email, setEmail] = useState("");
+  const [mobile, setMobile] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
@@ -29,28 +28,25 @@ const Signup = ({ navigation, route }) => {
     Toast.show({ type, text1, text2, position: "top" });
   };
 
-  const handleCheckEmail = async () => {
-    // Validate email
-    if (!email) {
-      showToast("info", "Warning", "Email is required.");
+  const handleSendOtp = async () => {
+    if (!mobile) {
+      showToast("info", "Warning", "Mobile number is required.");
       return;
     }
-    if (!validateEmail(email)) {
-      showToast("error", "Error", "Please enter a valid email address.");
+    if (!validateMobile(mobile)) {
+      showToast("error", "Error", "Please enter a valid mobile number.");
       return;
     }
 
     setIsLoading(true);
     try {
       const apiService = require('../lib/apiService').default;
-      const data = await apiService.sendVerificationOTP(email);
-      console.log({data});
+      const data = await apiService.sendVerificationOTP(mobile);
       
       if (!data.success) {
         showToast("error", "Error", data.message || "Failed to send OTP.");
       } else {
-        // Navigate to OTP verification screen with email and role
-        navigation.navigate("OtpVerification", { email, role });
+        navigation.navigate("OtpVerification", { mobile, role });
       }
     } catch (error) {
       showToast("error", "Error", error.message || "Network error. Please try again.");
@@ -63,45 +59,41 @@ const Signup = ({ navigation, route }) => {
     <SafeAreaView style={[styles.safeArea, { backgroundColor: currentTheme.background || "#4B0082" }]}> 
       <ScrollView contentContainerStyle={styles.scrollContainer}> 
         <View style={[styles.container, { backgroundColor: currentTheme.background || "#4B0082" }]}> 
-          <Text style={[styles.heading, { color: currentTheme.text || "white" }]}>Check Email Availability</Text>
+          <Text style={[styles.heading, { color: currentTheme.text || "white" }]}>Verify Your Mobile Number</Text>
 
-          {/* Email Input */}
-          <Text style={[styles.label, { color: currentTheme.text || "white" }]}>Email</Text>
+          <Text style={[styles.label, { color: currentTheme.text || "white" }]}>Mobile Number</Text>
           <TextInput
             style={[styles.input, { 
               backgroundColor: currentTheme.cardBackground || "#fff",
               color: currentTheme.text || "#000",
               borderColor: currentTheme.border || "transparent"
             }]}
-            placeholder="Enter your email"
+            placeholder="Enter your mobile number"
             placeholderTextColor={currentTheme.placeholderText || "#999"}
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
+            value={mobile}
+            onChangeText={setMobile}
+            keyboardType="phone-pad"
             autoCapitalize="none"
             autoCorrect={false}
           />
 
-          {/* Check Email Button */}
           <TouchableOpacity
             style={[
               styles.signupButton,
               isLoading && styles.disabledButton
             ]}
-            onPress={handleCheckEmail}
+            onPress={handleSendOtp}
             disabled={isLoading}
           >
             {isLoading ? (
               <ActivityIndicator color="white" size="small" />
             ) : (
-              <Text style={styles.signupButtonText}>Send Verification Code</Text>
+              <Text style={styles.signupButtonText}>Send OTP</Text>
             )}
           </TouchableOpacity>
 
-          {/* Toast Notification Component */}
           <Toast />
 
-          {/* Links */}
           <View style={styles.linksWrapper}> 
             <TouchableOpacity onPress={() => navigation.navigate("Login")}> 
               <Text style={[styles.linkText, { color: currentTheme.text || "white" }]}> 
@@ -134,10 +126,6 @@ const styles = StyleSheet.create({
     marginBottom: 32,
     textAlign: "center",
   },
-  link: {
-    color: "#aa42f5",
-    textDecorationLine: "underline",
-  },
   label: {
     fontSize: 18,
     color: "white",
@@ -153,32 +141,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginBottom: 20,
     fontSize: 16,
-  },
-  passwordContainer: {
-    width: "100%",
-    height: 44,
-    borderRadius: 10,
-    marginBottom: 20,
-    borderWidth: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 20,
-  },
-  passwordInput: {
-    flex: 1,
-    fontSize: 16,
-  },
-  eyeIcon: {
-    padding: 5,
-  },
-  checkboxContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  checkboxLabel: {
-    color: "white",
-    marginLeft: 10,
   },
   signupButton: {
     height: 50,
@@ -204,7 +166,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   linksWrapper: {
-    alignItems: "center", // centers horizontally
+    alignItems: "center",
     marginTop: 20,
   },
 });

@@ -2,7 +2,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 
-const DEV_API_BASE_URL = "https://peterson-explaining-styles-conference.trycloudflare.com/api";
+const DEV_API_BASE_URL = "https://explanation-got-eastern-organ.trycloudflare.com/api";
 // const DEV_API_BASE_URL = "https://api.birdearner.com/api";
 
 const PROD_API_BASE_URL = "https://api.birdearner.com/api";
@@ -211,20 +211,20 @@ class ApiService {
     return response;
   }
 
-  // Send verification OTP
-  async sendVerificationOTP(email) {
+  // Send verification OTP via SMS
+  async sendVerificationOTP(mobile) {
     const response = await this.makeRequest("/auth/send-verification-otp", {
       method: "POST",
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ mobile }),
     });
     return response;
   }
 
-  // Verify email with OTP
-  async verifyEmail(email, otp) {
+  // Verify mobile number with OTP
+  async verifyMobile(mobile, otp) {
     const response = await this.makeRequest("/auth/verify-email", {
       method: "POST",
-      body: JSON.stringify({ email, otp }),
+      body: JSON.stringify({ mobile, otp }),
     });
     return response;
   }

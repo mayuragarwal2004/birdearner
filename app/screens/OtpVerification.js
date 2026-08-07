@@ -12,14 +12,14 @@ import {
 } from "react-native";
 import Toast from "react-native-toast-message";
 
-const validateEmail = (email) => {
-  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return re.test(String(email).toLowerCase());
+const validateMobile = (mobile) => {
+  const re = /^\+?[0-9]{10,15}$/;
+  return re.test(String(mobile));
 };
 
 const OtpVerification = ({ navigation, route }) => {
-  const { email: initialEmail, role } = route.params || {};
-  const [email, setEmail] = useState(initialEmail || "");
+  const { mobile: initialMobile, role } = route.params || {};
+  const [mobile, setMobile] = useState(initialMobile || "");
   const [otp, setOtp] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isOtpSent, setIsOtpSent] = useState(false);
@@ -29,23 +29,23 @@ const OtpVerification = ({ navigation, route }) => {
   };
 
   const handleSendOtp = async () => {
-    if (!email) {
-      showToast("error", "Error", "Email is required.");
+    if (!mobile) {
+      showToast("error", "Error", "Mobile number is required.");
       return;
     }
-    if (!validateEmail(email)) {
-      showToast("error", "Error", "Please enter a valid email address.");
+    if (!validateMobile(mobile)) {
+      showToast("error", "Error", "Please enter a valid mobile number.");
       return;
     }
 
     setIsLoading(true);
     try {
       const apiService = require('../lib/apiService').default;
-      const data = await apiService.sendVerificationOTP(email);
+      const data = await apiService.sendVerificationOTP(mobile);
       
       if (data.success) {
         setIsOtpSent(true);
-        showToast("success", "Success", "OTP sent to your email");
+        showToast("success", "Success", "OTP sent to your mobile number");
       } else {
         showToast("error", "Error", data.message || "Failed to send OTP");
       }
@@ -69,15 +69,15 @@ const OtpVerification = ({ navigation, route }) => {
     setIsLoading(true);
     try {
       const apiService = require('../lib/apiService').default;
-      const data = await apiService.verifyEmail(email, otp);
+      const data = await apiService.verifyMobile(mobile, otp);
       
       if (data.success) {
-        showToast("success", "Success", "Email verified successfully");
+        showToast("success", "Success", "Mobile number verified successfully");
         
         if (role === "CLIENT") {
-          navigation.replace("ClientSignup", { email, isVerified: true });
+          navigation.replace("ClientSignup", { mobile, isVerified: true });
         } else {
-          navigation.replace("FreelancerSignup", { email, isVerified: true });
+          navigation.replace("FreelancerSignup", { mobile, isVerified: true });
         }
       } else {
         showToast("error", "Error", data.message || "Invalid OTP");
@@ -93,10 +93,10 @@ const OtpVerification = ({ navigation, route }) => {
     setIsLoading(true);
     try {
       const apiService = require('../lib/apiService').default;
-      const data = await apiService.sendVerificationOTP(email);
+      const data = await apiService.sendVerificationOTP(mobile);
       
       if (data.success) {
-        showToast("success", "Success", "OTP resent to your email");
+        showToast("success", "Success", "OTP resent to your mobile number");
       } else {
         showToast("error", "Error", data.message || "Failed to resend OTP");
       }
@@ -115,21 +115,21 @@ const OtpVerification = ({ navigation, route }) => {
         keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}
       >
         <View style={styles.container}>
-          <Text style={styles.heading}>Verify Your Email</Text>
+          <Text style={styles.heading}>Verify Your Mobile Number</Text>
           
           <View style={styles.card}>
             {!isOtpSent ? (
               <>
-                <Text style={styles.label}>Email</Text>
+                <Text style={styles.label}>Mobile Number</Text>
                 <TextInput
                   style={styles.input}
                   placeholderTextColor="#c4c4c4"
-                  placeholder="Enter your email"
-                  value={email}
-                  onChangeText={setEmail}
-                  keyboardType="email-address"
+                  placeholder="Enter your mobile number"
+                  value={mobile}
+                  onChangeText={setMobile}
+                  keyboardType="phone-pad"
                   autoCapitalize="none"
-                  editable={!initialEmail}
+                  editable={!initialMobile}
                 />
 
                 <TouchableOpacity

@@ -203,6 +203,7 @@ const FreelancerSignup = ({ navigation, route }) => {
 
   // Extract route params to determine mode and data
   const {
+    mobile: initialMobile,
     email: initialEmail,
     mode = "signup", // 'signup', 'create', 'update'
     profileData,
@@ -233,6 +234,7 @@ const FreelancerSignup = ({ navigation, route }) => {
 
   const [form, setForm] = useState({
     full_name: user?.fullName || "",
+    mobile: initialMobile || "",
     email: initialEmail || user?.email || "",
     password: "",
     confirmPassword: "",
@@ -729,6 +731,7 @@ const FreelancerSignup = ({ navigation, route }) => {
         // Use the register function from AuthContext which handles both signup and login
         result = await register({
           ...cleanedForm,
+          mobile: form.mobile,
           role: "FREELANCER",
         });
 
@@ -925,6 +928,14 @@ const FreelancerSignup = ({ navigation, route }) => {
                 onChangeText={(v) => setForm({ ...form, full_name: v })}
                 autoCapitalize="words"
               />
+              <Text style={styles.label}>Mobile Number</Text>
+              <TextInput
+                placeholderTextColor="#c4c4c4"
+                style={styles.input}
+                placeholder="Mobile number verified via OTP"
+                value={form.mobile}
+                editable={false}
+              />
               <Text style={styles.label}>Email</Text>
               <TextInput
                 placeholderTextColor="#c4c4c4"
@@ -934,7 +945,6 @@ const FreelancerSignup = ({ navigation, route }) => {
                 onChangeText={(v) => setForm({ ...form, email: v })}
                 keyboardType="email-address"
                 autoCapitalize="none"
-                editable={!initialEmail}
               />
               <Text style={styles.label}>Password</Text>
               <TextInput
