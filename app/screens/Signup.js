@@ -8,9 +8,13 @@ import {
   ActivityIndicator,
   ScrollView,
   SafeAreaView,
+  Platform,
+  StatusBar,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { Phone, ShieldCheck } from "lucide-react-native";
 import Toast from "react-native-toast-message";
-import { useTheme } from "../context/ThemeContext";
+import apiService from "../lib/apiService";
 
 const validateMobile = (mobile) => {
   const re = /^\+?[0-9]{10,15}$/;
@@ -20,8 +24,6 @@ const validateMobile = (mobile) => {
 const Signup = ({ navigation, route }) => {
   const [mobile, setMobile] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const { theme, themeStyles } = useTheme();
-  const currentTheme = themeStyles[theme];
   const { role } = route.params || {};
 
   const showToast = (type, text1, text2) => {
@@ -40,135 +42,229 @@ const Signup = ({ navigation, route }) => {
 
     setIsLoading(true);
     try {
-      const apiService = require('../lib/apiService').default;
       const data = await apiService.sendVerificationOTP(mobile);
-      
+
       if (!data.success) {
         showToast("error", "Error", data.message || "Failed to send OTP.");
       } else {
         navigation.navigate("OtpVerification", { mobile, role });
       }
     } catch (error) {
-      showToast("error", "Error", error.message || "Network error. Please try again.");
+      showToast(
+        "error",
+        "Error",
+        error.message || "Network error. Please try again."
+      );
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: currentTheme.background || "#4B0082" }]}> 
-      <ScrollView contentContainerStyle={styles.scrollContainer}> 
-        <View style={[styles.container, { backgroundColor: currentTheme.background || "#4B0082" }]}> 
-          <Text style={[styles.heading, { color: currentTheme.text || "white" }]}>Verify Your Mobile Number</Text>
-
-          <Text style={[styles.label, { color: currentTheme.text || "white" }]}>Mobile Number</Text>
-          <TextInput
-            style={[styles.input, { 
-              backgroundColor: currentTheme.cardBackground || "#fff",
-              color: currentTheme.text || "#000",
-              borderColor: currentTheme.border || "transparent"
-            }]}
-            placeholder="Enter your mobile number"
-            placeholderTextColor={currentTheme.placeholderText || "#999"}
-            value={mobile}
-            onChangeText={setMobile}
-            keyboardType="phone-pad"
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-
-          <TouchableOpacity
-            style={[
-              styles.signupButton,
-              isLoading && styles.disabledButton
-            ]}
-            onPress={handleSendOtp}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <ActivityIndicator color="white" size="small" />
-            ) : (
-              <Text style={styles.signupButtonText}>Send OTP</Text>
-            )}
-          </TouchableOpacity>
-
-          <Toast />
-
-          <View style={styles.linksWrapper}> 
-            <TouchableOpacity onPress={() => navigation.navigate("Login")}> 
-              <Text style={[styles.linkText, { color: currentTheme.text || "white" }]}> 
-                Already have an account?
-              </Text>
-            </TouchableOpacity>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#2E0854" }}>
+      <LinearGradient
+        colors={["#2E0854", "#3E0A70", "#1C0338"]}
+        style={{ flex: 1 }}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContainer}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Header Badge */}
+          <View style={styles.headerBadgeContainer}>
+            <View style={styles.headerBadge}>
+              <ShieldCheck size={36} color="#6D28D9" />
+            </View>
           </View>
-        </View>
-      </ScrollView>
+
+          <Text style={styles.heading}>Verify Your Mobile Number</Text>
+          <Text style={styles.subtitle}>
+            Enter your mobile number to receive a 6-digit verification code
+          </Text>
+
+          <View style={styles.card}>
+            <Text style={styles.fieldLabel}>Mobile Number</Text>
+            <View style={styles.inputContainer}>
+              <View style={styles.iconBox}>
+                <Phone size={20} color="#7C3AED" />
+              </View>
+              <View style={styles.countryCodeBox}>
+                <Text style={styles.countryFlag}>🇮🇳</Text>
+                <Text style={styles.countryCodeText}>+91</Text>
+              </View>
+              <TextInput
+                style={styles.textInput}
+                placeholder="Enter your mobile number"
+                placeholderTextColor="#A098AE"
+                value={mobile}
+                onChangeText={setMobile}
+                keyboardType="phone-pad"
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+            </View>
+
+            <TouchableOpacity
+              style={[styles.primaryButton, isLoading && styles.disabledButton]}
+              onPress={handleSendOtp}
+              disabled={isLoading}
+              activeOpacity={0.85}
+            >
+              {isLoading ? (
+                <ActivityIndicator color="white" size="small" />
+              ) : (
+                <Text style={styles.primaryButtonText}>Send OTP</Text>
+              )}
+            </TouchableOpacity>
+
+            <View style={styles.linksWrapper}>
+              <TouchableOpacity onPress={() => navigation.navigate("Login")}>
+                <Text style={styles.linkText}>
+                  Already have an account? <Text style={styles.boldLink}>Log in</Text>
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </ScrollView>
+      </LinearGradient>
+      <Toast />
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-  },
   scrollContainer: {
     flexGrow: 1,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: "#4B0082",
-    paddingHorizontal: 40,
+    paddingHorizontal: 20,
+    paddingTop: 40,
+    paddingBottom: 40,
     justifyContent: "center",
+  },
+  headerBadgeContainer: {
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  headerBadge: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    backgroundColor: "#FFFFFF",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 6,
   },
   heading: {
-    fontSize: 28,
-    color: "white",
-    marginBottom: 32,
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#FFFFFF",
     textAlign: "center",
+    marginBottom: 6,
   },
-  label: {
-    fontSize: 18,
-    color: "white",
+  subtitle: {
+    fontSize: 14,
+    color: "#D4C5ED",
+    textAlign: "center",
+    marginBottom: 24,
+    paddingHorizontal: 16,
+    lineHeight: 20,
+  },
+  card: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 24,
+    padding: 24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  fieldLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#1F1D2B",
     marginBottom: 8,
-    marginLeft: 8,
-    fontWeight: "bold",
   },
-  input: {
-    width: "100%",
-    height: 44,
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    paddingHorizontal: 20,
-    marginBottom: 20,
-    fontSize: 16,
-  },
-  signupButton: {
-    height: 50,
-    backgroundColor: "#6A0DAD",
-    borderRadius: 10,
+  inputContainer: {
+    flexDirection: "row",
     alignItems: "center",
+    backgroundColor: "#FAFAFC",
+    borderWidth: 1,
+    borderColor: "#E9E3F4",
+    borderRadius: 14,
+    paddingHorizontal: 8,
+    minHeight: 52,
+    marginBottom: 20,
+  },
+  iconBox: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: "#F3E8FF",
     justifyContent: "center",
-    marginTop: 20,
+    alignItems: "center",
+    marginRight: 8,
+  },
+  countryCodeBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingRight: 8,
+    marginRight: 8,
+    borderRightWidth: 1,
+    borderRightColor: "#E9E3F4",
+  },
+  countryFlag: {
+    fontSize: 16,
+    marginRight: 4,
+  },
+  countryCodeText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#1F1D2B",
+  },
+  textInput: {
+    flex: 1,
+    fontSize: 14,
+    color: "#1F1D2B",
+    paddingVertical: 10,
+  },
+  primaryButton: {
+    height: 52,
+    backgroundColor: "#6D28D9",
+    borderRadius: 14,
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 4,
+    shadowColor: "#6D28D9",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  primaryButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "600",
   },
   disabledButton: {
-    backgroundColor: "#9E9E9E",
     opacity: 0.6,
-  },
-  linkText: {
-    color: "white",
-    marginVertical: 10,
-    fontSize: 14,
-    textDecorationLine: "underline",
-  },
-  signupButtonText: {
-    color: "white",
-    fontSize: 20,
-    fontWeight: "bold",
   },
   linksWrapper: {
     alignItems: "center",
     marginTop: 20,
   },
+  linkText: {
+    color: "#6E6B7B",
+    fontSize: 14,
+  },
+  boldLink: {
+    color: "#6D28D9",
+    fontWeight: "700",
+  },
 });
 
 export default Signup;
+

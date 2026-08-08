@@ -9,16 +9,40 @@ import {
   ScrollView,
   SafeAreaView,
   Image,
-  Alert,
   KeyboardAvoidingView,
   Platform,
+  StatusBar,
 } from "react-native";
-import { Picker } from "@react-native-picker/picker";
+import { LinearGradient } from "expo-linear-gradient";
 import Checkbox from "expo-checkbox";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import Toast from "react-native-toast-message";
 import * as ImagePicker from "expo-image-picker";
 import { z } from "zod";
+import {
+  User,
+  UserCheck,
+  Phone,
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  ShieldCheck,
+  Calendar,
+  MapPin,
+  Building,
+  Globe,
+  FileText,
+  Map,
+  Edit3,
+  Camera,
+  ArrowLeft,
+  Plus,
+  Trash2,
+  Briefcase,
+  Link,
+  ChevronDown,
+} from "lucide-react-native";
 import apiService from "../lib/apiService";
 import { useAuth } from "../context/NewAuthContext";
 import PickerModal from "../components/CustomPicker";
@@ -85,11 +109,9 @@ const indianStates = [
   { label: "West Bengal", value: "West Bengal" },
 ];
 
-
 // Create conditional schema based on mode
 const createSchema = (mode) => {
   const baseSchema = {
-    // Make optional fields truly optional
     designation: z.string().optional(),
     heading: z.string().optional(),
     city: z.string().optional(),
@@ -121,71 +143,18 @@ const createSchema = (mode) => {
         path: ["confirmPassword"],
       });
   } else {
-    // For profile creation and update modes, we don't need password/email/terms
     return z.object(baseSchema);
   }
 };
 
 const ClientSignup = ({ navigation, route }) => {
-  const { register, user, userProfile, refreshUserData } = useAuth(); // Get auth functions from AuthContext
+  const { register, user, refreshUserData } = useAuth();
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [fetchingLocation, setFetchingLocation] = useState(false);
-
-  // Function to validate Indian pincode
-  const isValidIndianPincode = (pincode) => {
-    // Indian pincodes are 6 digits and start with numbers 1-9
-    const indianPincodeRegex = /^[1-9][0-9]{5}$/;
-    return indianPincodeRegex.test(pincode);
-  };
-
-  // Function to fetch location details from pincode
-  const fetchLocationFromPincode = async (pincode) => {
-    if (!pincode || pincode.length !== 6) return;
-
-    if (!isValidIndianPincode(pincode)) {
-      showToast("error", "Invalid Pincode", "Please enter a valid Indian pincode");
-      setForm(prev => ({
-        ...prev,
-        zipCode: "",
-        city: "",
-        state: "",
-        autoFilledLocation: false
-      }));
-      return;
-    }
-
-    try {
-      setFetchingLocation(true);
-      const response = await fetch(`https://api.postalpincode.in/pincode/${pincode}`);
-      const data = await response.json();
-
-      if (data[0].Status === "Success" && data[0].PostOffice && data[0].PostOffice.length > 0) {
-        const location = data[0].PostOffice[0];
-        setForm(prev => ({
-          ...prev,
-          city: location.District,
-          state: location.State,
-          autoFilledLocation: true
-        }));
-      } else {
-        showToast("error", "Invalid Pincode", "This pincode is not valid for India");
-        setForm(prev => ({
-          ...prev,
-          zipCode: "",
-          city: "",
-          state: "",
-          autoFilledLocation: false
-        }));
-      }
-    } catch (error) {
-      console.error('Error fetching location:', error);
-      showToast("error", "Error", "Could not fetch location details");
-    } finally {
-      setFetchingLocation(false);
-    }
-  };
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Extract route params to determine mode and data
   const {
@@ -196,13 +165,12 @@ const ClientSignup = ({ navigation, route }) => {
     title,
   } = route.params || {};
 
-  // Determine the schema and initial step based on mode
   const schema = createSchema(mode);
 
   useEffect(() => {
-    const initialStep = mode === "signup" ? 1 : 2; // Skip login step for profile creation/update
+    const initialStep = mode === "signup" ? 1 : 2;
     setStep(initialStep);
-  }, [mode]); // Use mode as dependency instead of initialStep
+  }, [mode]);
 
   const [form, setForm] = useState({
     full_name: user?.fullName || "",
@@ -219,8 +187,8 @@ const ClientSignup = ({ navigation, route }) => {
     country: user?.client?.country || "India",
     bio: user?.client?.profileDescription || "",
     autoFilledLocation: false,
-    gender: "", // Not available in client object
-    dob: new Date(), // Not available in client object
+    gender: "",
+    dob: null,
     socialLinks: user?.client?.socialMediaLinks?.length
       ? user.client.socialMediaLinks
       : [""],
@@ -230,13 +198,20 @@ const ClientSignup = ({ navigation, route }) => {
     coverImage: user?.client?.coverPhoto
       ? { uri: user.client.coverPhoto, isExisting: true }
       : null,
-    dob: null,
   });
 
-  // Track deleted images for update mode
   const [deletedImages, setDeletedImages] = useState([]);
 
-  // Only update form data when user data actually changes and we're in update mode
+  useEffect(() => {
+    if (initialMobile || initialEmail) {
+      setForm((prev) => ({
+        ...prev,
+        mobile: initialMobile || prev.mobile,
+        email: initialEmail || prev.email,
+      }));
+    }
+  }, [initialMobile, initialEmail]);
+
   useEffect(() => {
     const dataSource = profileData || user?.client;
     if (mode === "update" && dataSource) {
@@ -263,16 +238,74 @@ const ClientSignup = ({ navigation, route }) => {
           : prevForm.coverImage,
       }));
     }
-  }, [mode, user?.id, profileData]); // Trigger when mode, profileData or user ID changes
+  }, [mode, user?.id, profileData]);
 
-  console.log({ form, mode, user });
+  const formatDateOfBirth = (dob) => {
+    if (!dob) return "DD / MM / YYYY";
+    try {
+      const dateObj = typeof dob === "object" && dob instanceof Date ? dob : new Date(dob);
+      if (isNaN(dateObj.getTime())) return "DD / MM / YYYY";
+      return dateObj.toLocaleDateString("en-GB");
+    } catch (e) {
+      return "DD / MM / YYYY";
+    }
+  };
 
-  // Toast helper
+  const isValidIndianPincode = (pincode) => {
+    const indianPincodeRegex = /^[1-9][0-9]{5}$/;
+    return indianPincodeRegex.test(pincode);
+  };
+
+  const fetchLocationFromPincode = async (pincode) => {
+    if (!pincode || pincode.length !== 6) return;
+
+    if (!isValidIndianPincode(pincode)) {
+      showToast("error", "Invalid Pincode", "Please enter a valid Indian pincode");
+      setForm((prev) => ({
+        ...prev,
+        zipCode: "",
+        city: "",
+        state: "",
+        autoFilledLocation: false,
+      }));
+      return;
+    }
+
+    try {
+      setFetchingLocation(true);
+      const response = await fetch(`https://api.postalpincode.in/pincode/${pincode}`);
+      const data = await response.json();
+
+      if (data[0].Status === "Success" && data[0].PostOffice && data[0].PostOffice.length > 0) {
+        const location = data[0].PostOffice[0];
+        setForm((prev) => ({
+          ...prev,
+          city: location.District,
+          state: location.State,
+          autoFilledLocation: true,
+        }));
+      } else {
+        showToast("error", "Invalid Pincode", "This pincode is not valid for India");
+        setForm((prev) => ({
+          ...prev,
+          zipCode: "",
+          city: "",
+          state: "",
+          autoFilledLocation: false,
+        }));
+      }
+    } catch (error) {
+      console.error("Error fetching location:", error);
+      showToast("error", "Error", "Could not fetch location details");
+    } finally {
+      setFetchingLocation(false);
+    }
+  };
+
   const showToast = (type, text1, text2) => {
     Toast.show({ type, text1, text2, position: "top" });
   };
 
-  // Image upload
   const handleImageUpload = async (type) => {
     try {
       const permissionResult =
@@ -291,7 +324,6 @@ const ClientSignup = ({ navigation, route }) => {
         const fieldName = type === "profile" ? "profileImage" : "coverImage";
         const existingImage = form[fieldName];
 
-        // If replacing an existing image in update mode, track it for deletion
         if (existingImage && existingImage.isExisting && mode === "update") {
           setDeletedImages([...deletedImages, existingImage.uri]);
         }
@@ -300,7 +332,7 @@ const ClientSignup = ({ navigation, route }) => {
           ...form,
           [fieldName]: {
             ...pickerResult.assets[0],
-            isExisting: false, // Mark new image as not existing
+            isExisting: false,
           },
         });
       }
@@ -309,24 +341,23 @@ const ClientSignup = ({ navigation, route }) => {
     }
   };
 
-  // Social links
   const addSocialLink = () =>
     setForm({ ...form, socialLinks: [...form.socialLinks, ""] });
 
-  // Step navigation with email check (only for signup mode)
   const nextStep = async () => {
     if (step === 1 && mode === "signup") {
-      // Check email before proceeding
+      if (!form.full_name) {
+        showToast("error", "Full Name Required", "Please enter your full name");
+        return;
+      }
       if (!form.email) {
         showToast("error", "Email Required", "Please enter your email");
         return;
       }
-
       if (!form.password) {
         showToast("error", "Password Required", "Please enter your password");
         return;
       }
-
       if (form.password.length < 6) {
         showToast(
           "error",
@@ -335,7 +366,6 @@ const ClientSignup = ({ navigation, route }) => {
         );
         return;
       }
-
       if (!form.confirmPassword) {
         showToast(
           "error",
@@ -344,30 +374,11 @@ const ClientSignup = ({ navigation, route }) => {
         );
         return;
       }
-
-      if (form.confirmPassword.length < 6) {
-        showToast(
-          "error",
-          "Weak Password",
-          "Confirm password must be at least 6 characters."
-        );
-        return;
-      }
-
       if (form.password !== form.confirmPassword) {
         showToast(
           "error",
           "Password Mismatch",
           "Passwords do not match. Please try again."
-        );
-        return;
-      }
-
-      if (!form.termsAccepted) {
-        showToast(
-          "error",
-          "Terms Required",
-          "You must accept the Terms and Conditions."
         );
         return;
       }
@@ -384,9 +395,8 @@ const ClientSignup = ({ navigation, route }) => {
           setIsLoading(false);
           return;
         }
-        showToast("success", "Email Available", "You can proceed with signup");
         setIsLoading(false);
-        setStep(step + 1);
+        setStep(2);
         return;
       } catch (error) {
         showToast(
@@ -401,28 +411,34 @@ const ClientSignup = ({ navigation, route }) => {
       setStep(step + 1);
     }
   };
+
   const prevStep = () => {
-    // If we're on step 2 and in create/update mode, go back to previous screen
-    // since step 1 (login) is skipped for these modes
     if (step === 2 && (mode === "create" || mode === "update")) {
       navigation.goBack();
-    } else {
+    } else if (step > 1) {
       setStep(step - 1);
+    } else {
+      navigation.goBack();
     }
   };
 
-  // Final API call - handles signup, profile creation, and profile update
   const handleSubmit = async () => {
     console.log("Triggered handleSubmit with mode:", mode);
-
     setIsLoading(true);
-    console.log("Submitting form:", form);
+
+    if (mode === "signup" && !form.termsAccepted) {
+      showToast(
+        "error",
+        "Terms Required",
+        "You must confirm and accept the Terms and Conditions."
+      );
+      setIsLoading(false);
+      return;
+    }
 
     try {
-      // Validate with Zod
       const result = schema.safeParse(form);
       if (!result.success) {
-        console.log("Validation failed:", result?.error?.errors);
         showToast(
           "error",
           "Validation Error",
@@ -432,14 +448,11 @@ const ClientSignup = ({ navigation, route }) => {
         return;
       }
     } catch (error) {
-      console.log("Validation failed:", error);
       showToast("error", "Validation Error");
       setIsLoading(false);
+      return;
     }
 
-    console.log("Form data is valid:", form);
-
-    // Clean up the form data - remove empty strings and arrays
     const cleanedForm = {
       ...form,
       socialLinks: form.socialLinks.filter((link) => link.trim() !== ""),
@@ -450,20 +463,14 @@ const ClientSignup = ({ navigation, route }) => {
         : null,
     };
 
-    console.log("Cleaned form data:", cleanedForm);
-
-    // upload profile photo (only if it's a new image, not an existing URL)
     if (cleanedForm?.profileImage && cleanedForm?.profileImage?.uri) {
       if (cleanedForm.profileImage.isExisting) {
-        // Keep existing image URL as is
         cleanedForm.profileImage = cleanedForm.profileImage.uri;
       } else if (!cleanedForm.profileImage.uri.startsWith("http")) {
-        // Upload new image
         const result = await apiService.uploadImage(
           cleanedForm.profileImage,
           "client_profile_photos"
         );
-        console.log("Profile photo uploaded:", result);
         if (result.success) {
           cleanedForm.profileImage = result.url;
         } else {
@@ -476,18 +483,14 @@ const ClientSignup = ({ navigation, route }) => {
       cleanedForm.profileImage = null;
     }
 
-    // upload cover photo (only if it's a new image, not an existing URL)
     if (cleanedForm?.coverImage && cleanedForm?.coverImage?.uri) {
       if (cleanedForm.coverImage.isExisting) {
-        // Keep existing image URL as is
         cleanedForm.coverImage = cleanedForm.coverImage.uri;
       } else if (!cleanedForm.coverImage.uri.startsWith("http")) {
-        // Upload new image
         const result = await apiService.uploadImage(
           cleanedForm.coverImage,
           "client_cover_photos"
         );
-        console.log("Cover photo uploaded:", result);
         if (result.success) {
           cleanedForm.coverImage = result.url;
         } else {
@@ -504,19 +507,14 @@ const ClientSignup = ({ navigation, route }) => {
       let result;
 
       if (mode === "signup") {
-        console.log("About to call register function from AuthContext");
-        // Use the register function from AuthContext which handles both signup and login
         result = await register({
           ...cleanedForm,
           mobile: form.mobile,
           role: "CLIENT",
         });
 
-        console.log("Registration successful:", result);
-
         if (result) {
           showToast("success", "Signup Complete", "Welcome to BirdEarner!");
-          // The AuthContext will automatically handle navigation by setting user state
           navigation.replace("MainTabs");
         } else {
           showToast(
@@ -526,14 +524,9 @@ const ClientSignup = ({ navigation, route }) => {
           );
         }
       } else if (mode === "create") {
-        // Create additional client profile for existing user
-        console.log("Creating client profile for existing user");
-
-        // Filter and map form data to client model fields only
         const clientCreateData = {
           userId: user?.id,
           email: user?.email,
-          // Map form fields to client model fields
           organizationType: cleanedForm.designation,
           companyName: cleanedForm.heading,
           city: cleanedForm.city,
@@ -543,11 +536,9 @@ const ClientSignup = ({ navigation, route }) => {
           profileDescription: cleanedForm.bio,
           profilePhoto: cleanedForm.profileImage,
           coverPhoto: cleanedForm.coverImage,
-          // Handle fullName separately for user table update
           fullName: cleanedForm.full_name,
         };
 
-        // Remove null/undefined/empty values
         Object.keys(clientCreateData).forEach((key) => {
           if (
             clientCreateData[key] === null ||
@@ -560,9 +551,6 @@ const ClientSignup = ({ navigation, route }) => {
 
         result = await apiService.createClientProfile(clientCreateData);
 
-        console.log("Client profile created:", result);
-
-        // Refresh user profile data
         if (refreshUserData) {
           await refreshUserData();
         }
@@ -574,12 +562,7 @@ const ClientSignup = ({ navigation, route }) => {
         );
         navigation.goBack();
       } else if (mode === "update") {
-        // Update existing client profile
-        console.log("Updating client profile:", user?.client?.id);
-
-        // Filter and map form data to client model fields only
         const clientUpdateData = {
-          // Map form fields to client model fields
           organizationType: cleanedForm.designation,
           companyName: cleanedForm.heading,
           city: cleanedForm.city,
@@ -589,13 +572,10 @@ const ClientSignup = ({ navigation, route }) => {
           profileDescription: cleanedForm.bio,
           profilePhoto: cleanedForm.profileImage,
           coverPhoto: cleanedForm.coverImage,
-          // Handle fullName separately for user table update
           fullName: cleanedForm.full_name,
-          // Include deleted images information for backend processing
-          deletedImages: deletedImages, // Send list of deleted image URLs
+          deletedImages: deletedImages,
         };
 
-        // Remove null/undefined/empty values
         Object.keys(clientUpdateData).forEach((key) => {
           if (
             clientUpdateData[key] === null ||
@@ -611,9 +591,6 @@ const ClientSignup = ({ navigation, route }) => {
           clientUpdateData
         );
 
-        console.log("Client profile updated:", result);
-
-        // Refresh user profile data
         if (refreshUserData) {
           await refreshUserData();
         }
@@ -626,625 +603,901 @@ const ClientSignup = ({ navigation, route }) => {
         navigation.goBack();
       }
     } catch (error) {
-      console.log("Operation error caught:", error);
-      console.log("Error details:", {
-        message: error.message,
-        stack: error.stack,
-        name: error.name,
-      });
-
-      const errorMessages = {
-        signup: "Registration failed",
-        create: "Profile creation failed",
-        update: "Profile update failed",
-      };
-
       showToast(
         "error",
         `${mode.charAt(0).toUpperCase() + mode.slice(1)} Failed`,
-        error.message || errorMessages[mode]
+        error.message || "An error occurred during submission."
       );
     } finally {
-      console.log("Setting loading to false");
       setIsLoading(false);
     }
   };
 
-  // Determine heading based on mode
-  const getHeading = () => {
-    switch (mode) {
-      case "signup":
-        return "Client Signup";
-      case "create":
-        return title || "Create Client Profile";
-      case "update":
-        return title || "Update Client Profile";
-      default:
-        return "Client Profile";
-    }
-  };
-
-  // UI for each step
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#4B0082" }}>
-      <KeyboardAvoidingView
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#2E0854" }}>
+      <LinearGradient
+        colors={["#2E0854", "#3E0A70", "#1C0338"]}
         style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : "padding"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}
       >
-        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-          <Text style={styles.heading}>{getHeading()}</Text>
-          {/* Step 1: Basic Signup Info with Email Check (only for signup mode) */}
-          {step === 1 && mode === "signup" && (
-            <View style={styles.card}>
-              <Text style={styles.label}>Full Name</Text>
-              <TextInput
-                style={styles.input}
-                placeholderTextColor="#c4c4c4"
-                placeholder="Enter your full name"
-                value={form.full_name}
-                onChangeText={(v) => setForm({ ...form, full_name: v })}
-                autoCapitalize="words"
-              />
-              <Text style={styles.label}>Mobile Number</Text>
-              <TextInput
-                style={styles.input}
-                placeholderTextColor="#c4c4c4"
-                placeholder="Mobile number verified via OTP"
-                value={form.mobile}
-                editable={false}
-              />
-              <Text style={styles.label}>Email</Text>
-              <TextInput
-                style={styles.input}
-                placeholderTextColor="#c4c4c4"
-                placeholder="Enter your email"
-                value={form.email}
-                onChangeText={(v) => setForm({ ...form, email: v })}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-              <Text style={styles.label}>Password</Text>
-              <TextInput
-                style={styles.input}
-                placeholderTextColor="#c4c4c4"
-                placeholder="Enter your password"
-                value={form.password}
-                onChangeText={(v) => setForm({ ...form, password: v })}
-                secureTextEntry
-              />
-              <Text style={styles.label}>Confirm Password</Text>
-              <TextInput
-                style={styles.input}
-                placeholderTextColor="#c4c4c4"
-                placeholder="Confirm your password"
-                value={form.confirmPassword}
-                onChangeText={(v) => setForm({ ...form, confirmPassword: v })}
-                secureTextEntry
-              />
-              <View style={styles.checkboxContainer}>
-                <Checkbox
-                  value={form.termsAccepted}
-                  onValueChange={(v) => setForm({ ...form, termsAccepted: v })}
-                  color={form.termsAccepted ? "#6A0DAD" : undefined}
-                />
-                <Text style={styles.checkboxLabel}>
-                  I agree to the{" "}
-                  <Text style={styles.link}>Terms and Conditions</Text> and{" "}
-                  <Text style={styles.link}>Privacy Policy</Text>
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}
+        >
+          <ScrollView
+            contentContainerStyle={styles.scrollContainer}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* Header for Step 1 (Screen 1 Reference) */}
+            {step === 1 && mode === "signup" && (
+              <View style={styles.headerSection}>
+                <View style={styles.avatarHeaderBadge}>
+                  <UserCheck size={36} color="#6D28D9" />
+                </View>
+                <Text style={styles.headerTitle}>Complete Your Profile</Text>
+                <Text style={styles.headerSubtitle}>
+                  Please fill in the details below to get started
                 </Text>
               </View>
-              <TouchableOpacity
-                style={styles.nextButton}
-                onPress={nextStep}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <ActivityIndicator color="white" size="small" />
-                ) : (
-                  <Text style={styles.nextButtonText}>Continue</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          )}
-          {/* Step 2: Client Details */}
-          {step === 2 && (
-            <View style={styles.card}>
-              <Text style={styles.label}>Type of your organisation</Text>
-              <PickerModal
-                items={DESIGNATION_OPTIONS}
-                value={form.designation}
-                onValueChange={(v) => setForm({ ...form, designation: v })}
-                placeholder="Select Organization Type"
-                innerStyle={{ backgroundColor: "#f5f5f5" }}
-              />
-              <Text style={styles.label}>Company Name (Optional)</Text>
-              <TextInput
-                style={styles.input}
-                placeholderTextColor="#c4c4c4"
-                placeholder="Company name"
-                value={form.heading}
-                onChangeText={(v) => setForm({ ...form, heading: v })}
-              />
-              <View style={styles.row}>
-                <View style={styles.inputContainer}>
-                  <Text style={styles.label}>Zip Code</Text>
-                  <TextInput
-                    style={styles.input}
-                    keyboardType="numeric"
-                    maxLength={6}
-                    value={form.zipCode}
-                    onChangeText={(text) => {
-                      setForm({ ...form, zipCode: text });
-                      if (text.length === 6) {
-                        fetchLocationFromPincode(text);
-                      }
-                    }}
-                    placeholder="Enter 6-digit Indian pincode"
-                    placeholderTextColor="#c4c4c4"
-                  />
-                </View>
-                <View style={styles.dropdownContainer}>
-                  <Text style={styles.label}>Country</Text>
-                  <PickerModal
-                    items={COUNTRY_OPTIONS}
-                    value={form.country}
-                    onValueChange={(v) => setForm({ ...form, country: v })}
-                    placeholder="Select Country"
-                    innerStyle={{ backgroundColor: "#f5f5f5" }}
-                    style={{ marginVertical: 0 }}
-                    disabled={true}
-                  />
-                </View>
-              </View>
-              <View style={styles.row}>
-                <View style={styles.inputContainer}>
-                  <Text style={styles.label}>City</Text>
-                  <TextInput
-                    style={[styles.input, fetchingLocation && { backgroundColor: '#f0f0f0' }]}
-                    value={form.city}
-                    onChangeText={(text) => setForm({ ...form, city: text, autoFilledLocation: false })}
-                    placeholder={fetchingLocation ? "Fetching city..." : "Enter city"}
-                    placeholderTextColor="#c4c4c4"
-                    editable={!fetchingLocation}
-                  />
-                </View>
-                <View style={styles.dropdownContainer}>
-                  <Text style={styles.label}>State</Text>
-                  <PickerModal
-                    items={indianStates}
-                    value={form.state}
-                    onValueChange={(value) => setForm({ ...form, state: value, autoFilledLocation: false })}
-                    placeholder={fetchingLocation ? "Fetching state..." : "Select State"}
-                    innerStyle={{ backgroundColor: "#f5f5f5" }}
-                    style={{ marginVertical: 0 }}
-                    disabled={fetchingLocation}
-                  />
-                </View>
-              </View>
-              <Text style={styles.label}>Describe yourself</Text>
-              <TextInput
-                style={styles.textArea}
-                placeholderTextColor="#c4c4c4"
-                placeholder="Describe yourself"
-                value={form.bio}
-                multiline
-                onChangeText={(v) =>
-                  v.length <= 255 && setForm({ ...form, bio: v })
-                }
-              />
-              <Text style={styles.charCount}>{form.bio.length}/255</Text>
-              <View style={styles.buttonRow}>
+            )}
+
+            {/* Header for Step 2 / Profile Mode (Screen 2 Reference) */}
+            {(step >= 2 || mode !== "signup") && (
+              <View style={styles.headerNavSection}>
                 <TouchableOpacity
-                  style={styles.backButton}
+                  style={styles.backIconButton}
                   onPress={prevStep}
-                  disabled={mode === "signup"}
                 >
-                  <Text
-                    style={[
-                      styles.backButtonText,
-                      mode === "signup" && styles.disabledText,
-                    ]}
-                  >
-                    Back
-                  </Text>
+                  <ArrowLeft size={24} color="#FFFFFF" />
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.nextButton} onPress={nextStep}>
-                  <Text style={styles.nextButtonText}>Next</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
-          {/* Step 3: Personal Details */}
-          {step === 3 && (
-            <View style={styles.card}>
-              <Text style={styles.label}>Gender</Text>
-              <PickerModal
-                items={GENDER_OPTIONS}
-                value={form.gender}
-                onValueChange={(v) => setForm({ ...form, gender: v })}
-                placeholder="Select Gender"
-                innerStyle={{ backgroundColor: "#f5f5f5" }}
-                style={{ marginVertical: 0, marginBottom: 20 }}
-              />
-              <Text style={styles.label}>Date of Birth</Text>
-              <TouchableOpacity
-                style={styles.input}
-                onPress={() => setShowDatePicker(true)}
-              >
-                <Text
-                  style={{ color: form.dob ? "#000" : "#999", paddingTop: 12 }}
-                >
-                  {form.dob ? form.dob.toDateString() : "Select Date of Birth"}
+                <Text style={styles.headerTitle}>
+                  {mode === "update"
+                    ? title || "Update Your Profile"
+                    : "Complete Your Profile"}
                 </Text>
-              </TouchableOpacity>
-              {showDatePicker && (
-                <DateTimePicker
-                  value={form.dob || new Date()}
-                  mode="date"
-                  display="default"
-                  onChange={(event, selectedDate) => {
-                    setShowDatePicker(false);
-                    if (selectedDate) {
-                      setForm({ ...form, dob: selectedDate });
-                    }
-                  }}
-                  maximumDate={new Date()}
-                />
-              )}
-              <Text style={styles.label}>Your Social Media Links</Text>
-              {form.socialLinks.map((link, i) => (
-                <View key={i} style={styles.socialRow}>
+                <Text style={styles.headerSubtitle}>
+                  Tell us a bit more about yourself
+                </Text>
+              </View>
+            )}
+
+            {/* Step 1: Basic Account Info (Screen 1 Reference) */}
+            {step === 1 && mode === "signup" && (
+              <View style={styles.card}>
+                {/* Full Name */}
+                <Text style={styles.fieldLabel}>Full Name</Text>
+                <View style={styles.inputContainer}>
+                  <View style={styles.iconBox}>
+                    <User size={20} color="#7C3AED" />
+                  </View>
                   <TextInput
-                    style={[styles.input, styles.socialInput]}
-                    placeholderTextColor="#c4c4c4"
-                    placeholder="www.instagram.com/xyz"
-                    value={link}
-                    onChangeText={(v) =>
-                      setForm({
-                        ...form,
-                        socialLinks: form.socialLinks.map((l, idx) =>
-                          idx === i ? v : l
-                        ),
-                      })
-                    }
+                    style={styles.textInput}
+                    placeholderTextColor="#A098AE"
+                    placeholder="Enter your full name"
+                    value={form.full_name}
+                    onChangeText={(v) => setForm({ ...form, full_name: v })}
+                    autoCapitalize="words"
                   />
                 </View>
-              ))}
-              <TouchableOpacity onPress={addSocialLink}>
-                <Text style={styles.addMore}>
-                  + Add more social media links
-                </Text>
-              </TouchableOpacity>
-              <Text style={styles.label}>Add your profile picture</Text>
-              <View style={styles.profileUploadContainer}>
-                <TouchableOpacity
-                  onPress={() => handleImageUpload("profile")}
-                  style={styles.uploadButton}
-                >
-                  <Text style={{ color: "#fff" }}>Click here to upload</Text>
-                </TouchableOpacity>
-                {form.profileImage && (
-                  <View style={styles.imagePreviewContainer}>
-                    <Image
-                      source={{ uri: form.profileImage.uri }}
-                      style={styles.profileImage}
-                    />
-                    {form.profileImage.isExisting && mode === "update" && (
-                      <View
-                        style={[styles.existingImageBadge, { top: 2, left: 2 }]}
-                      >
-                        <Text style={styles.existingImageText}>Existing</Text>
-                      </View>
+
+                {/* Mobile Number */}
+                <Text style={styles.fieldLabel}>Mobile Number</Text>
+                <View style={styles.inputContainer}>
+                  <View style={styles.iconBox}>
+                    <Phone size={20} color="#7C3AED" />
+                  </View>
+                  <View style={styles.countryCodeBox}>
+                    <Text style={styles.countryFlag}>🇮🇳</Text>
+                    <Text style={styles.countryCodeText}>+91</Text>
+                  </View>
+                  <TextInput
+                    style={styles.textInput}
+                    placeholderTextColor="#A098AE"
+                    placeholder="Mobile number verified via OTP"
+                    value={form.mobile}
+                    editable={false}
+                  />
+                </View>
+
+                {/* Email ID */}
+                <Text style={styles.fieldLabel}>Email ID</Text>
+                <View style={styles.inputContainer}>
+                  <View style={styles.iconBox}>
+                    <Mail size={20} color="#7C3AED" />
+                  </View>
+                  <TextInput
+                    style={styles.textInput}
+                    placeholderTextColor="#A098AE"
+                    placeholder="Enter your email address"
+                    value={form.email}
+                    onChangeText={(v) => setForm({ ...form, email: v })}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                  />
+                </View>
+
+                {/* Password */}
+                <Text style={styles.fieldLabel}>Create a Password</Text>
+                <View style={styles.inputContainer}>
+                  <View style={styles.iconBox}>
+                    <Lock size={20} color="#7C3AED" />
+                  </View>
+                  <TextInput
+                    style={styles.textInput}
+                    placeholderTextColor="#A098AE"
+                    placeholder="Enter your password"
+                    value={form.password}
+                    onChangeText={(v) => setForm({ ...form, password: v })}
+                    secureTextEntry={!showPassword}
+                  />
+                  <TouchableOpacity
+                    onPress={() => setShowPassword(!showPassword)}
+                    style={styles.eyeIconButton}
+                  >
+                    {showPassword ? (
+                      <EyeOff size={20} color="#A098AE" />
+                    ) : (
+                      <Eye size={20} color="#A098AE" />
                     )}
+                  </TouchableOpacity>
+                </View>
+
+                {/* Confirm Password */}
+                <Text style={styles.fieldLabel}>Confirm Password</Text>
+                <View style={styles.inputContainer}>
+                  <View style={styles.iconBox}>
+                    <Lock size={20} color="#7C3AED" />
+                  </View>
+                  <TextInput
+                    style={styles.textInput}
+                    placeholderTextColor="#A098AE"
+                    placeholder="Confirm your password"
+                    value={form.confirmPassword}
+                    onChangeText={(v) => setForm({ ...form, confirmPassword: v })}
+                    secureTextEntry={!showConfirmPassword}
+                  />
+                  <TouchableOpacity
+                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                    style={styles.eyeIconButton}
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff size={20} color="#A098AE" />
+                    ) : (
+                      <Eye size={20} color="#A098AE" />
+                    )}
+                  </TouchableOpacity>
+                </View>
+
+                {/* Next Button */}
+                <TouchableOpacity
+                  style={[styles.primaryButton, isLoading && styles.disabledButton]}
+                  onPress={nextStep}
+                  disabled={isLoading}
+                  activeOpacity={0.85}
+                >
+                  {isLoading ? (
+                    <ActivityIndicator color="white" size="small" />
+                  ) : (
+                    <Text style={styles.primaryButtonText}>Next</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* Step 2: Personal & Details Info (Screen 2 Reference) */}
+            {step >= 2 && (
+              <View style={styles.card}>
+                {/* 1. Add Your Profile Picture */}
+                <Text style={styles.sectionNumberTitle}>
+                  1. Add Your Profile Picture
+                </Text>
+                <View style={styles.avatarSection}>
+                  <TouchableOpacity
+                    style={styles.avatarCircle}
+                    onPress={() => handleImageUpload("profile")}
+                    activeOpacity={0.8}
+                  >
+                    {form.profileImage && form.profileImage.uri ? (
+                      <Image
+                        source={{ uri: form.profileImage.uri }}
+                        style={styles.avatarImage}
+                      />
+                    ) : (
+                      <User size={36} color="#8B5CF6" />
+                    )}
+                    <View style={styles.cameraBadge}>
+                      <Camera size={14} color="#FFFFFF" />
+                    </View>
+                  </TouchableOpacity>
+                  <Text style={styles.avatarSubtext}>JPG, PNG up to 5MB</Text>
+                  {form.profileImage && (
                     <TouchableOpacity
-                      style={[styles.removeButton, { top: 2, right: 2 }]}
+                      style={styles.removeImageLink}
                       onPress={() => {
                         if (form.profileImage.isExisting && mode === "update") {
-                          setDeletedImages([
-                            ...deletedImages,
-                            form.profileImage.uri,
-                          ]);
+                          setDeletedImages([...deletedImages, form.profileImage.uri]);
                         }
                         setForm({ ...form, profileImage: null });
                       }}
                     >
-                      <Text style={styles.removeButtonText}>✕</Text>
+                      <Text style={styles.removeImageLinkText}>
+                        Remove profile photo
+                      </Text>
                     </TouchableOpacity>
-                  </View>
-                )}
-              </View>
-              <Text style={styles.label}>Add your cover picture</Text>
-              <View style={styles.profileUploadContainer}>
+                  )}
+                </View>
+
+                {/* 2. Date of Birth */}
+                <Text style={styles.sectionNumberTitle}>
+                  2. Date of Birth <Text style={styles.optionalText}>(Optional)</Text>
+                </Text>
                 <TouchableOpacity
-                  onPress={() => handleImageUpload("cover")}
-                  style={styles.uploadButton}
+                  style={styles.inputContainer}
+                  onPress={() => setShowDatePicker(true)}
+                  activeOpacity={0.8}
                 >
-                  <Text style={{ color: "#fff" }}>Click here to upload</Text>
+                  <View style={styles.iconBox}>
+                    <Calendar size={20} color="#7C3AED" />
+                  </View>
+                  <Text
+                    style={[
+                      styles.textInput,
+                      !form.dob && { color: "#A098AE" },
+                      { paddingTop: 14 },
+                    ]}
+                  >
+                    {formatDateOfBirth(form.dob)}
+                  </Text>
                 </TouchableOpacity>
-                {form.coverImage && (
-                  <View style={styles.imagePreviewContainer}>
-                    <Image
-                      source={{ uri: form.coverImage.uri }}
-                      style={styles.coverImage}
-                    />
-                    {form.coverImage.isExisting && mode === "update" && (
-                      <View
-                        style={[styles.existingImageBadge, { top: 2, left: 2 }]}
-                      >
-                        <Text style={styles.existingImageText}>Existing</Text>
-                      </View>
-                    )}
+
+                {showDatePicker && (
+                  <DateTimePicker
+                    value={
+                      form.dob
+                        ? typeof form.dob === "object" && form.dob instanceof Date
+                          ? form.dob
+                          : isNaN(new Date(form.dob).getTime())
+                            ? new Date()
+                            : new Date(form.dob)
+                        : new Date()
+                    }
+                    mode="date"
+                    display="default"
+                    onChange={(event, selectedDate) => {
+                      setShowDatePicker(false);
+                      if (selectedDate) {
+                        setForm({ ...form, dob: selectedDate });
+                      }
+                    }}
+                    maximumDate={new Date()}
+                  />
+                )}
+
+                {/* 3. Gender */}
+                <Text style={styles.sectionNumberTitle}>3. Gender</Text>
+                <View style={styles.radioGroupRow}>
+                  {["Male", "Female", "Other"].map((g) => (
                     <TouchableOpacity
-                      style={[styles.removeButton, { top: 2, right: 2 }]}
-                      onPress={() => {
-                        if (form.coverImage.isExisting && mode === "update") {
-                          setDeletedImages([
-                            ...deletedImages,
-                            form.coverImage.uri,
-                          ]);
-                        }
-                        setForm({ ...form, coverImage: null });
-                      }}
+                      key={g}
+                      style={styles.radioOption}
+                      onPress={() => setForm({ ...form, gender: g })}
+                      activeOpacity={0.8}
                     >
-                      <Text style={styles.removeButtonText}>✕</Text>
+                      <View
+                        style={[
+                          styles.radioCircle,
+                          form.gender === g && styles.radioCircleSelected,
+                        ]}
+                      >
+                        {form.gender === g && (
+                          <View style={styles.radioInnerDot} />
+                        )}
+                      </View>
+                      <Text style={styles.radioLabelText}>{g}</Text>
                     </TouchableOpacity>
+                  ))}
+                </View>
+
+                {/* 4. Full Address */}
+                <Text style={styles.sectionNumberTitle}>4. Full Address</Text>
+                <View style={styles.gridRow}>
+                  <View style={styles.gridCol}>
+                    <View style={styles.inputContainer}>
+                      <View style={styles.iconBox}>
+                        <MapPin size={20} color="#7C3AED" />
+                      </View>
+                      <TextInput
+                        style={styles.textInput}
+                        placeholderTextColor="#A098AE"
+                        placeholder="Address"
+                        value={form.city}
+                        onChangeText={(v) =>
+                          setForm({ ...form, city: v, autoFilledLocation: false })
+                        }
+                      />
+                    </View>
+                  </View>
+                  <View style={styles.gridCol}>
+                    <View style={styles.inputContainer}>
+                      <View style={styles.iconBox}>
+                        <Building size={20} color="#7C3AED" />
+                      </View>
+                      <TextInput
+                        style={styles.textInput}
+                        placeholderTextColor="#A098AE"
+                        placeholder="Address Line 2 / Company"
+                        value={form.heading}
+                        onChangeText={(v) => setForm({ ...form, heading: v })}
+                      />
+                    </View>
+                  </View>
+                </View>
+
+                <View style={styles.gridRow}>
+                  <View style={styles.gridCol}>
+                    <View style={styles.inputContainer}>
+                      <View style={styles.iconBox}>
+                        <FileText size={20} color="#7C3AED" />
+                      </View>
+                      <TextInput
+                        style={styles.textInput}
+                        keyboardType="numeric"
+                        maxLength={6}
+                        value={form.zipCode}
+                        onChangeText={(text) => {
+                          setForm({ ...form, zipCode: text });
+                          if (text.length === 6) {
+                            fetchLocationFromPincode(text);
+                          }
+                        }}
+                        placeholder="Pin Code"
+                        placeholderTextColor="#A098AE"
+                      />
+                    </View>
+                  </View>
+                  <View style={styles.gridCol}>
+                    <PickerModal
+                      items={indianStates}
+                      value={form.state}
+                      onValueChange={(value) =>
+                        setForm({ ...form, state: value, autoFilledLocation: false })
+                      }
+                      placeholder={
+                        fetchingLocation ? "Fetching..." : "State"
+                      }
+                      leftIcon={<Map size={20} color="#7C3AED" />}
+                      disabled={fetchingLocation}
+                      style={{ marginVertical: 0 }}
+                    />
+                  </View>
+                </View>
+
+                {/* Country Dropdown */}
+                <PickerModal
+                  items={COUNTRY_OPTIONS}
+                  value={form.country}
+                  onValueChange={(v) => setForm({ ...form, country: v })}
+                  placeholder="Country"
+                  leftIcon={<Globe size={20} color="#7C3AED" />}
+                  disabled={true}
+                  style={{ marginVertical: 4, marginBottom: 16 }}
+                />
+
+                {/* 5. Write Something about Yourself */}
+                <Text style={styles.sectionNumberTitle}>
+                  5. Write Something about Yourself
+                </Text>
+                <View style={styles.textAreaContainer}>
+                  <View style={styles.textAreaIconBox}>
+                    <Edit3 size={20} color="#7C3AED" />
+                  </View>
+                  <TextInput
+                    style={styles.textAreaInput}
+                    placeholderTextColor="#A098AE"
+                    placeholder="Tell us something about yourself..."
+                    value={form.bio}
+                    multiline
+                    onChangeText={(v) =>
+                      v.length <= 255 && setForm({ ...form, bio: v })
+                    }
+                  />
+                  <Text style={styles.charCountText}>
+                    {form.bio ? form.bio.length : 0} / 255
+                  </Text>
+                </View>
+
+                {/* Social Links */}
+                <Text style={styles.subFieldLabel}>Social Media Links</Text>
+                {form.socialLinks.map((link, i) => (
+                  <View key={i} style={styles.inputContainer}>
+                    <View style={styles.iconBox}>
+                      <Link size={20} color="#7C3AED" />
+                    </View>
+                    <TextInput
+                      style={styles.textInput}
+                      placeholderTextColor="#A098AE"
+                      placeholder="www.instagram.com/xyz"
+                      value={link}
+                      onChangeText={(v) =>
+                        setForm({
+                          ...form,
+                          socialLinks: form.socialLinks.map((l, idx) =>
+                            idx === i ? v : l
+                          ),
+                        })
+                      }
+                    />
+                  </View>
+                ))}
+                <TouchableOpacity
+                  onPress={addSocialLink}
+                  style={styles.addSocialButton}
+                >
+                  <Plus size={16} color="#6D28D9" style={{ marginRight: 6 }} />
+                  <Text style={styles.addSocialText}>
+                    Add more social media links
+                  </Text>
+                </TouchableOpacity>
+
+                {/* Terms Checkbox (Signup mode) */}
+                {mode === "signup" && (
+                  <View style={styles.checkboxContainer}>
+                    <Checkbox
+                      value={form.termsAccepted}
+                      onValueChange={(v) => setForm({ ...form, termsAccepted: v })}
+                      color={form.termsAccepted ? "#6D28D9" : undefined}
+                      style={styles.checkbox}
+                    />
+                    <Text style={styles.checkboxLabel}>
+                      I confirm that the information provided is true and filled by
+                      me. I have read and agree to the{" "}
+                      <Text style={styles.linkText}>terms & conditions</Text> and{" "}
+                      <Text style={styles.linkText}>policies</Text>.
+                    </Text>
                   </View>
                 )}
+
+                {/* Action Buttons: Back & Submit */}
+                <View style={styles.buttonRow}>
+                  <TouchableOpacity
+                    style={styles.outlinedButton}
+                    onPress={prevStep}
+                    disabled={isLoading}
+                    activeOpacity={0.85}
+                  >
+                    <ArrowLeft size={18} color="#6D28D9" style={{ marginRight: 6 }} />
+                    <Text style={styles.outlinedButtonText}>Back</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.primaryHalfButton, isLoading && styles.disabledButton]}
+                    onPress={handleSubmit}
+                    disabled={isLoading}
+                    activeOpacity={0.85}
+                  >
+                    {isLoading ? (
+                      <ActivityIndicator color="white" size="small" />
+                    ) : (
+                      <Text style={styles.primaryButtonText}>Submit</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
               </View>
-              <View style={styles.buttonRow}>
-                <TouchableOpacity style={styles.backButton} onPress={prevStep}>
-                  <Text style={styles.backButtonText}>Back</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.nextButton} onPress={nextStep}>
-                  <Text style={styles.nextButtonText}>Next</Text>
-                </TouchableOpacity>
+            )}
+
+            {/* Bottom Security Banner */}
+            {step === 1 && mode === "signup" && (
+              <View style={styles.securityBanner}>
+                <ShieldCheck size={18} color="#BDB4FE" style={{ marginRight: 8 }} />
+                <Text style={styles.securityText}>
+                  Your information is safe and secure with us.
+                </Text>
               </View>
-            </View>
-          )}
-          {/* Step 4: Review & Submit */}
-          {step === 4 && (
-            <View style={styles.card}>
-              <Text style={styles.cardHeading}>Review & Submit</Text>
-              <Text style={styles.label}>
-                Please review your details before submitting.
-              </Text>
-              {/* Show summary here if desired */}
-              <View style={styles.buttonRow}>
-                <TouchableOpacity
-                  style={styles.backButton}
-                  onPress={prevStep}
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <ActivityIndicator color="white" size="small" />
-                  ) : (
-                    <Text style={styles.backButtonText}>Back</Text>
-                  )}
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.nextButton}
-                  onPress={handleSubmit}
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <ActivityIndicator color="white" size="small" />
-                  ) : (
-                    <Text style={styles.nextButtonText}>Submit</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
-          <Toast />
-        </ScrollView>
-      </KeyboardAvoidingView>
+            )}
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </LinearGradient>
+      <Toast />
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  scrollContainer: {
     flexGrow: 1,
-    padding: 20,
-    backgroundColor: "#4B0082",
-    justifyContent: "center",
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 40,
   },
-  heading: {
-    fontSize: 28,
-    color: "white",
-    marginBottom: 32,
+  headerSection: {
+    alignItems: "center",
+    marginBottom: 20,
+    marginTop: Platform.OS === "android" ? (StatusBar.currentHeight || 24) + 16 : 24,
+  },
+  headerNavSection: {
+    alignItems: "center",
+    marginBottom: 20,
+    marginTop: Platform.OS === "android" ? (StatusBar.currentHeight || 24) + 16 : 24,
+    position: "relative",
+    paddingHorizontal: 36,
+  },
+  backIconButton: {
+    position: "absolute",
+    left: 0,
+    top: 2,
+    padding: 6,
+  },
+  avatarHeaderBadge: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    backgroundColor: "#FFFFFF",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#FFFFFF",
     textAlign: "center",
-    fontWeight: "bold",
+    marginBottom: 4,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: "#D4C5ED",
+    textAlign: "center",
+    lineHeight: 20,
   },
   card: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 24,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 24,
+    padding: 24,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 8,
+    marginBottom: 16,
+  },
+  fieldLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#1F1D2B",
+    marginBottom: 6,
+  },
+  subFieldLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#1F1D2B",
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  optionalText: {
+    fontSize: 12,
+    fontWeight: "400",
+    color: "#8E8EA9",
+  },
+  inputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FAFAFC",
+    borderWidth: 1,
+    borderColor: "#E9E3F4",
+    borderRadius: 14,
+    paddingHorizontal: 8,
+    minHeight: 52,
+    marginBottom: 16,
+  },
+  iconBox: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: "#F3E8FF",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 10,
+  },
+  countryCodeBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingRight: 8,
+    marginRight: 8,
+    borderRightWidth: 1,
+    borderRightColor: "#E9E3F4",
+  },
+  countryFlag: {
+    fontSize: 16,
+    marginRight: 4,
+  },
+  countryCodeText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#1F1D2B",
+  },
+  textInput: {
+    flex: 1,
+    fontSize: 14,
+    color: "#1F1D2B",
+    paddingVertical: 10,
+  },
+  eyeIconButton: {
+    padding: 8,
+  },
+  primaryButton: {
+    height: 52,
+    backgroundColor: "#6D28D9",
+    borderRadius: 14,
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 8,
+    shadowColor: "#6D28D9",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
     shadowRadius: 8,
     elevation: 4,
   },
-  cardHeading: {
-    fontSize: 24,
-    color: "#4B0082",
-    marginBottom: 16,
-    fontWeight: "bold",
-  },
-  label: {
-    fontSize: 18,
-    color: "#4B0082",
-    marginBottom: 8,
-    fontWeight: "bold",
-  },
-  input: {
-    width: "100%",
-    height: 44,
-    backgroundColor: "#f5f5f5",
-    borderRadius: 10,
-    paddingHorizontal: 20,
-    marginBottom: 20,
+  primaryButtonText: {
+    color: "#FFFFFF",
     fontSize: 16,
+    fontWeight: "600",
+  },
+  disabledButton: {
+    opacity: 0.6,
+  },
+  sectionNumberTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#1F1D2B",
+    marginTop: 12,
+    marginBottom: 12,
+  },
+  avatarSection: {
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  avatarCircle: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    borderStyle: "dashed",
+    borderWidth: 1.5,
+    borderColor: "#8B5CF6",
+    backgroundColor: "#F5F0FF",
+    justifyContent: "center",
+    alignItems: "center",
+    position: "relative",
+  },
+  avatarImage: {
+    width: 86,
+    height: 86,
+    borderRadius: 43,
+  },
+  cameraBadge: {
+    position: "absolute",
+    bottom: 2,
+    right: 2,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#6D28D9",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: "#FFFFFF",
+  },
+  avatarSubtext: {
+    fontSize: 12,
+    color: "#8E8EA9",
+    marginTop: 8,
+  },
+  removeImageLink: {
+    marginTop: 4,
+    paddingVertical: 4,
+  },
+  removeImageLinkText: {
+    fontSize: 12,
+    color: "#DC2626",
+    fontWeight: "500",
+  },
+  coverSection: {
+    marginBottom: 16,
+  },
+  coverUploadBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    height: 48,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#e0e0e0",
-    color: "black",
+    borderColor: "#E9E3F4",
+    borderStyle: "dashed",
+    backgroundColor: "#FAFAFC",
+    gap: 8,
   },
-  socialInput: {
-    marginTop: 1,
-    marginBottom: 1,
+  coverUploadText: {
+    fontSize: 13,
+    color: "#6D28D9",
+    fontWeight: "600",
   },
-  textArea: {
+  coverPreviewContainer: {
+    position: "relative",
+    borderRadius: 14,
+    overflow: "hidden",
+    marginTop: 4,
+  },
+  coverPreviewImage: {
+    width: "100%",
     height: 100,
-    borderColor: "#e0e0e0",
-    borderWidth: 1,
+    borderRadius: 14,
+  },
+  removeCoverBadge: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    padding: 6,
+    borderRadius: 12,
+  },
+  radioGroupRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 20,
+    marginBottom: 16,
+  },
+  radioOption: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  radioCircle: {
+    width: 20,
+    height: 20,
     borderRadius: 10,
-    paddingHorizontal: 20,
-    backgroundColor: "#f5f5f5",
-    color: "#000",
+    borderWidth: 2,
+    borderColor: "#C4B5FD",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 6,
+  },
+  radioCircleSelected: {
+    borderColor: "#6D28D9",
+  },
+  radioInnerDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: "#6D28D9",
+  },
+  radioLabelText: {
+    fontSize: 14,
+    color: "#1F1D2B",
+    fontWeight: "500",
+  },
+  gridRow: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  gridCol: {
+    flex: 1,
+  },
+  textAreaContainer: {
+    backgroundColor: "#FAFAFC",
+    borderWidth: 1,
+    borderColor: "#E9E3F4",
+    borderRadius: 14,
+    padding: 12,
+    minHeight: 110,
+    position: "relative",
+    marginBottom: 16,
+  },
+  textAreaIconBox: {
+    position: "absolute",
+    top: 12,
+    left: 12,
+    zIndex: 1,
+  },
+  textAreaInput: {
+    fontSize: 14,
+    color: "#1F1D2B",
+    paddingLeft: 30,
+    paddingTop: 0,
+    height: 70,
     textAlignVertical: "top",
-    marginBottom: 10,
   },
-  charCount: {
-    color: "#4B0082",
-    marginBottom: 10,
+  charCountText: {
+    fontSize: 11,
+    color: "#8E8EA9",
     textAlign: "right",
+    marginTop: 4,
   },
-  checkboxContainer: {
+  addSocialButton: {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 20,
+    marginTop: 2,
+  },
+  addSocialText: {
+    fontSize: 13,
+    color: "#6D28D9",
+    fontWeight: "600",
+  },
+  checkboxContainer: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 20,
+    marginTop: 4,
+  },
+  checkbox: {
+    borderRadius: 4,
+    marginTop: 2,
+    marginRight: 10,
+    width: 18,
+    height: 18,
   },
   checkboxLabel: {
-    color: "#4B0082",
-    marginLeft: 10,
-    fontSize: 16,
+    flex: 1,
+    fontSize: 12,
+    color: "#6E6B7B",
+    lineHeight: 18,
   },
-  link: {
-    color: "#aa42f5",
+  linkText: {
+    color: "#6D28D9",
+    fontWeight: "600",
     textDecorationLine: "underline",
-  },
-  dropdown: {
-    backgroundColor: "#f5f5f5",
-    borderRadius: 10,
-    marginBottom: 20,
-    height: 44,
-    borderWidth: 1,
-    borderColor: "#e0e0e0",
-    justifyContent: "center",
-    color: "black",
-  },
-  row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 20,
-  },
-  inputContainer: {
-    flex: 1,
-    marginRight: 10,
-  },
-  dropdownContainer: {
-    flex: 1,
   },
   buttonRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginTop: 10,
+    gap: 12,
+    marginTop: 8,
   },
-  nextButton: {
-    width: "48%",
-    height: 50,
-    backgroundColor: "#6A0DAD",
-    borderRadius: 10,
-    alignItems: "center",
+  outlinedButton: {
+    flex: 1,
+    height: 52,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1.5,
+    borderColor: "#6D28D9",
+    borderRadius: 14,
+    flexDirection: "row",
     justifyContent: "center",
-    marginTop: 10,
-  },
-  nextButtonText: {
-    color: "white",
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  backButton: {
-    width: "48%",
-    height: 50,
-    backgroundColor: "#f0f0f0",
-    borderRadius: 10,
     alignItems: "center",
+  },
+  outlinedButtonText: {
+    color: "#6D28D9",
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  primaryHalfButton: {
+    flex: 1,
+    height: 52,
+    backgroundColor: "#6D28D9",
+    borderRadius: 14,
     justifyContent: "center",
-    marginTop: 10,
+    alignItems: "center",
+    shadowColor: "#6D28D9",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  backButtonText: {
-    color: "#333",
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  addMore: {
-    color: "#6A0DAD",
-    marginBottom: 20,
-    fontWeight: "bold",
-  },
-  socialRow: {
-    marginBottom: 10,
-  },
-  profileUploadContainer: {
+  securityBanner: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 20,
+    justifyContent: "center",
+    marginTop: 12,
     marginBottom: 10,
   },
-  uploadButton: {
-    padding: 15,
-    backgroundColor: "#6A0DAD",
-    borderRadius: 10,
-    color: "#fff",
-  },
-  profileImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    marginLeft: 20,
-  },
-  coverImage: {
-    width: 100,
-    height: 67,
-  },
-  imagePreviewContainer: {
-    position: "relative",
-    marginLeft: 20,
-  },
-  existingImageBadge: {
-    position: "absolute",
-    top: 2,
-    left: 2,
-    backgroundColor: "#28a745",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    zIndex: 1,
-  },
-  existingImageText: {
-    color: "#ffffff",
-    fontSize: 8,
-    fontWeight: "600",
-  },
-  removeButton: {
-    position: "absolute",
-    backgroundColor: "#3b006b",
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-    borderRadius: 8,
-  },
-  removeButtonText: {
-    color: "#ffffff",
-    fontSize: 10,
-    fontWeight: "600",
-  },
-  disabledText: {
-    color: "#888",
+  securityText: {
+    fontSize: 12,
+    color: "#D4C5ED",
+    fontWeight: "500",
   },
 });
 
 export default ClientSignup;
+

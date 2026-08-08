@@ -13,15 +13,16 @@ export default function PickerModal({
   innerStyle = {},
   textStyle = {},
   disabled = false,
+  leftIcon = null,
 }) {
   const [modalVisible, setModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   
-  const filteredItems = items.filter(item => 
-    item.label.toLowerCase().includes(searchQuery ? searchQuery.toLowerCase() : '')
+  const filteredItems = (items || []).filter(item => 
+    item && item.label && item.label.toLowerCase().includes(searchQuery ? searchQuery.toLowerCase() : '')
   );
 
-  const selectedLabel = items.find((item) => item.value === value)?.label;
+  const selectedLabel = (items || []).find((item) => item && item.value === value)?.label;
 
   return (
     <View style={[styles.wrapper, style]}>
@@ -31,18 +32,21 @@ export default function PickerModal({
         onPress={() => !disabled && setModalVisible(true)}
         disabled={disabled}
       >
-        <Text style={[
-          styles.selectedText, 
-          !value && styles.placeholderText, 
-          disabled && styles.disabledText,
-          textStyle
-        ]}>
-          {selectedLabel || placeholder}
-        </Text>
+        <View style={styles.leftContent}>
+          {leftIcon ? <View style={styles.leftIconContainer}>{leftIcon}</View> : null}
+          <Text style={[
+            styles.selectedText, 
+            !value && styles.placeholderText, 
+            disabled && styles.disabledText,
+            textStyle
+          ]}>
+            {selectedLabel || placeholder}
+          </Text>
+        </View>
         <AntDesign 
           name="down" 
           size={16} 
-          color={disabled ? "#ccc" : "#555"} 
+          color={disabled ? "#ccc" : "#7C3AED"} 
         />
       </TouchableOpacity>
 
@@ -71,7 +75,7 @@ export default function PickerModal({
             </View>
             <FlatList
               data={filteredItems}
-              keyExtractor={(item) => item.value.toString()}
+              keyExtractor={(item, index) => (item && item.value !== undefined ? `${item.value}-${index}` : index.toString())}
               ListEmptyComponent={() => (
                 <View style={styles.emptyContainer}>
                   <Text style={styles.emptyText}>No matches found</Text>
@@ -137,28 +141,40 @@ const styles = StyleSheet.create({
   },
   inputBox: {
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 12,
-    backgroundColor: '#fff',
+    borderColor: '#E9E3F4',
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: '#FAFAFC',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    minHeight: 52,
+  },
+  leftContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  leftIconContainer: {
+    marginRight: 10,
   },
   disabledBox: {
-    backgroundColor: '#f5f5f5',
-    borderColor: '#e0e0e0',
-    opacity: 0.6,
+    backgroundColor: '#F3F0F8',
+    borderColor: '#E2DBEC',
+    opacity: 0.7,
   },
   selectedText: {
-    fontSize: 16,
-    color: '#000',
+    fontSize: 14,
+    color: '#1F1D2B',
+    fontWeight: '500',
+    flex: 1,
   },
   disabledText: {
-    color: '#999',
+    color: '#8E8EA9',
   },
   placeholderText: {
-    color: '#888',
+    color: '#A098AE',
   },
   backdrop: {
     flex: 1,
