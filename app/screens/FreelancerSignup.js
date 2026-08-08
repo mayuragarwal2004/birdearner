@@ -11,13 +11,49 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
+  StatusBar,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import Checkbox from "expo-checkbox";
 import Toast from "react-native-toast-message";
 import * as ImagePicker from "expo-image-picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { z } from "zod";
-import { X } from "lucide-react-native";
+import {
+  User,
+  UserCheck,
+  Phone,
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  Calendar,
+  MapPin,
+  Building,
+  Map,
+  Globe,
+  FileText,
+  Edit3,
+  Camera,
+  Trash2,
+  Plus,
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  Search,
+  Award,
+  BookOpen,
+  Briefcase,
+  Bookmark,
+  Sparkles,
+  Laptop,
+  Info,
+  ShieldCheck,
+  X,
+  Link as LinkIcon,
+  GraduationCap,
+  Clock,
+} from "lucide-react-native";
 import apiService from "../lib/apiService";
 import { useAuth } from "../context/NewAuthContext";
 import PickerModal from "../components/CustomPicker";
@@ -32,6 +68,21 @@ const GENDER_OPTIONS = [
 const COUNTRY_OPTIONS = [
   { label: "Select Country", value: "" },
   { label: "India", value: "India" },
+];
+
+const FREELANCER_TYPE_OPTIONS = [
+  { label: "Select your freelancer type", value: "" },
+  { label: "Individual Freelancer", value: "Individual" },
+  { label: "Agency / Team", value: "Agency" },
+  { label: "Consultant / Advisor", value: "Consultant" },
+];
+
+const PROFICIENCY_LEVELS = [
+  { label: "Select level", value: "" },
+  { label: "Native", value: "Native" },
+  { label: "Fluent", value: "Fluent" },
+  { label: "Conversational", value: "Conversational" },
+  { label: "Basic", value: "Basic" },
 ];
 
 const indianStates = [
@@ -82,7 +133,6 @@ const createSchema = (mode) => {
     selectedServices: z
       .array(z.string())
       .min(1, "You must select at least one service"),
-    // Make optional fields truly optional
     qualification: z.string().optional(),
     experience: z.string().optional(),
     heading: z.string().optional(),
@@ -92,7 +142,7 @@ const createSchema = (mode) => {
     country: z.string().optional(),
     bio: z.string().optional(),
     gender: z.string().optional(),
-    dob: z.date().optional(),
+    dob: z.union([z.date(), z.string()]).optional().nullable(),
     certifications: z.array(z.string()).optional(),
     socialLinks: z.array(z.string()).optional(),
     profileImage: z.any().optional(),
@@ -118,36 +168,169 @@ const createSchema = (mode) => {
         path: ["confirmPassword"],
       });
   } else {
-    // For profile creation and update modes, we don't need password/email/terms
     return z.object(baseSchema);
   }
 };
 
 const FreelancerSignup = ({ navigation, route }) => {
-  const { register, user, userProfile, refreshUserData } = useAuth(); // Get auth functions from AuthContext
+  const { register, user, refreshUserData } = useAuth();
   const [step, setStep] = useState(2);
   const [isLoading, setIsLoading] = useState(false);
-  const [emailChecked, setEmailChecked] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [fetchingLocation, setFetchingLocation] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // Function to validate Indian pincode
+  // Extract route params
+  const {
+    mobile: initialMobile,
+    email: initialEmail,
+    mode = "signup", // 'signup', 'create', 'update'
+    profileData,
+    title,
+  } = route.params || {};
+
+  const schema = createSchema(mode);
+
+  useEffect(() => {
+    const initialStep = mode === "signup" ? 1 : 2;
+    setStep(initialStep);
+  }, [mode]);
+
+  const [availableServices, setAvailableServices] = useState([]);
+  const [selectedServices, setSelectedServices] = useState(
+    user?.freelancer?.selectedServices || []
+  );
+  const [servicesLoading, setServicesLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filteredServices, setFilteredServices] = useState([]);
+
+  // Languages & Freelancer mode state extensions
+  const [workType, setWorkType] = useState("remote"); // 'remote' or 'onsite'
+  const [freelancerCategory, setFreelancerCategory] = useState("");
+  const [languageInput, setLanguageInput] = useState("");
+  const [selectedProficiency, setSelectedProficiency] = useState("");
+  const [languageList, setLanguageList] = useState([
+    { name: "English", level: "Fluent" },
+    { name: "Hindi", level: "Native" },
+  ]);
+
+  const [form, setForm] = useState({
+    full_name: user?.fullName || "",
+    mobile: initialMobile || "",
+    email: initialEmail || user?.email || "",
+    password: "",
+    confirmPassword: "",
+    termsAccepted: false,
+    qualification: user?.freelancer?.highestQualification || "",
+    experience: user?.freelancer?.experience
+      ? user.freelancer.experience.toString()
+      : "",
+    heading: user?.freelancer?.profileHeading || "",
+    zipCode: user?.freelancer?.zipcode
+      ? user.freelancer.zipcode.toString()
+      : "",
+    city: user?.freelancer?.city || "",
+    state: user?.freelancer?.state || "",
+    country: user?.freelancer?.country || "India",
+    bio: user?.freelancer?.profileDescription || "",
+    autoFilledLocation: false,
+    gender: user?.freelancer?.gender || "",
+    dob: user?.freelancer?.dob ? new Date(user.freelancer.dob) : null,
+    certifications: user?.freelancer?.certifications?.length
+      ? user.freelancer.certifications
+      : [""],
+    socialLinks: user?.freelancer?.socialMediaLinks?.length
+      ? user.freelancer.socialMediaLinks
+      : [""],
+    profileImage: user?.freelancer?.profilePhoto
+      ? { uri: user.freelancer.profilePhoto, isExisting: true }
+      : null,
+    coverImage: user?.freelancer?.coverPhoto
+      ? { uri: user.freelancer.coverPhoto, isExisting: true }
+      : null,
+    portfolioImages: user?.freelancer?.portfolioImages?.length
+      ? user.freelancer.portfolioImages.map((img) => ({
+          uri: img,
+          isExisting: true,
+        }))
+      : [],
+    agreePortfolioTerms: user?.freelancer?.termsAccepted || false,
+    selectedServices: user?.freelancer?.selectedServices || [],
+  });
+
+  const [deletedImages, setDeletedImages] = useState([]);
+
+  useEffect(() => {
+    if (initialMobile || initialEmail) {
+      setForm((prev) => ({
+        ...prev,
+        mobile: initialMobile || prev.mobile,
+        email: initialEmail || prev.email,
+      }));
+    }
+  }, [initialMobile, initialEmail]);
+
+  useEffect(() => {
+    const dataSource = profileData || user?.freelancer;
+    if (mode === "update" && dataSource) {
+      setForm((prevForm) => ({
+        ...prevForm,
+        full_name: user?.fullName || prevForm.full_name,
+        qualification: dataSource.highestQualification || prevForm.qualification,
+        experience: dataSource.experience
+          ? dataSource.experience.toString()
+          : prevForm.experience,
+        heading: dataSource.profileHeading || prevForm.heading,
+        city: dataSource.city || prevForm.city,
+        state: dataSource.state || prevForm.state,
+        zipCode: dataSource.zipcode
+          ? dataSource.zipcode.toString()
+          : prevForm.zipCode,
+        country: dataSource.country || prevForm.country,
+        bio: dataSource.profileDescription || prevForm.bio,
+        gender: dataSource.gender || prevForm.gender,
+        dob: dataSource.dob ? new Date(dataSource.dob) : prevForm.dob,
+        certifications: dataSource.certifications?.length
+          ? dataSource.certifications
+          : prevForm.certifications,
+        socialLinks: dataSource.socialMediaLinks?.length
+          ? dataSource.socialMediaLinks
+          : prevForm.socialLinks,
+        profileImage: dataSource.profilePhoto
+          ? { uri: dataSource.profilePhoto, isExisting: true }
+          : prevForm.profileImage,
+        coverImage: dataSource.coverPhoto
+          ? { uri: dataSource.coverPhoto, isExisting: true }
+          : prevForm.coverImage,
+        portfolioImages: dataSource.portfolioImages?.length
+          ? dataSource.portfolioImages.map((img) => ({
+              uri: img,
+              isExisting: true,
+            }))
+          : prevForm.portfolioImages,
+        agreePortfolioTerms:
+          dataSource.termsAccepted || prevForm.agreePortfolioTerms,
+        selectedServices:
+          dataSource.selectedServices || prevForm.selectedServices,
+      }));
+
+      if (dataSource.selectedServices) {
+        setSelectedServices(dataSource.selectedServices);
+      }
+    }
+  }, [mode, user?.id, profileData]);
+
   const isValidIndianPincode = (pincode) => {
-    // Indian pincodes are 6 digits and start with numbers 1-9
     const indianPincodeRegex = /^[1-9][0-9]{5}$/;
     return indianPincodeRegex.test(pincode);
   };
 
-  // Function to fetch location details from pincode
   const fetchLocationFromPincode = async (pincode) => {
     if (!pincode || pincode.length !== 6) return;
 
     if (!isValidIndianPincode(pincode)) {
-      showToast(
-        "error",
-        "Invalid Pincode",
-        "Please enter a valid Indian pincode"
-      );
+      showToast("error", "Invalid Pincode", "Please enter a valid Indian pincode");
       setForm((prev) => ({
         ...prev,
         zipCode: "",
@@ -171,8 +354,6 @@ const FreelancerSignup = ({ navigation, route }) => {
         data[0].PostOffice.length > 0
       ) {
         const location = data[0].PostOffice[0];
-        console.log({ location });
-
         setForm((prev) => ({
           ...prev,
           city: location.District,
@@ -180,11 +361,7 @@ const FreelancerSignup = ({ navigation, route }) => {
           autoFilledLocation: true,
         }));
       } else {
-        showToast(
-          "error",
-          "Invalid Pincode",
-          "This pincode is not valid for India"
-        );
+        showToast("error", "Invalid Pincode", "This pincode is not valid for India");
         setForm((prev) => ({
           ...prev,
           zipCode: "",
@@ -194,153 +371,16 @@ const FreelancerSignup = ({ navigation, route }) => {
         }));
       }
     } catch (error) {
-      console.error("Error fetching location:", error);
       showToast("error", "Error", "Could not fetch location details");
     } finally {
       setFetchingLocation(false);
     }
   };
 
-  // Extract route params to determine mode and data
-  const {
-    mobile: initialMobile,
-    email: initialEmail,
-    mode = "signup", // 'signup', 'create', 'update'
-    profileData,
-    title,
-  } = route.params || {};
-
-  // Determine the schema and initial step based on mode
-  const schema = createSchema(mode);
-
-  useEffect(() => {
-    const initialStep = mode === "signup" ? 1 : 2;
-    if (step !== initialStep) {
-      setStep(initialStep);
-    }
-  }, []);
-
-  const [uploadingPortfolioImages, setUploadingPortfolioImages] =
-    useState(false);
-
-  // Services state
-  const [availableServices, setAvailableServices] = useState([]);
-  const [selectedServices, setSelectedServices] = useState(
-    user?.freelancer?.selectedServices || []
-  );
-  const [servicesLoading, setServicesLoading] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [filteredServices, setFilteredServices] = useState([]);
-
-  const [form, setForm] = useState({
-    full_name: user?.fullName || "",
-    mobile: initialMobile || "",
-    email: initialEmail || user?.email || "",
-    password: "",
-    confirmPassword: "",
-    termsAccepted: false,
-    qualification: user?.freelancer?.highestQualification || "",
-    experience: user?.freelancer?.experience
-      ? user.freelancer.experience.toString()
-      : "",
-    heading: user?.freelancer?.profileHeading || "",
-    zipCode: user?.freelancer?.zipcode
-      ? user.freelancer.zipcode.toString()
-      : "",
-    city: user?.freelancer?.city || "",
-    state: user?.freelancer?.state || "",
-    country: user?.freelancer?.country || "India",
-    bio: user?.freelancer?.profileDescription || "",
-
-    // Track if city/state were auto-filled
-    autoFilledLocation: false,
-    gender: user?.freelancer?.gender || "",
-    dob: user?.freelancer?.dob ? new Date(user.freelancer.dob) : new Date(),
-    certifications: user?.freelancer?.certifications?.length
-      ? user.freelancer.certifications
-      : [""],
-    socialLinks: user?.freelancer?.socialMediaLinks?.length
-      ? user.freelancer.socialMediaLinks
-      : [""],
-    profileImage: user?.freelancer?.profilePhoto
-      ? { uri: user.freelancer.profilePhoto, isExisting: true }
-      : null,
-    coverImage: user?.freelancer?.coverPhoto
-      ? { uri: user.freelancer.coverPhoto, isExisting: true }
-      : null,
-    portfolioImages: user?.freelancer?.portfolioImages?.length
-      ? user.freelancer.portfolioImages.map((img) => ({
-        uri: img,
-        isExisting: true,
-      }))
-      : [],
-    agreePortfolioTerms: user?.freelancer?.termsAccepted || false,
-    selectedServices: user?.freelancer?.selectedServices || [], // Add selectedServices to form state
-  });
-
-  // Track deleted images for update mode
-  const [deletedImages, setDeletedImages] = useState([]);
-
-  // Only update form data when user data actually changes and we're in update mode
-  useEffect(() => {
-    const dataSource = profileData || user?.freelancer;
-    if (mode === "update" && dataSource) {
-      setForm((prevForm) => ({
-        ...prevForm,
-        full_name: user?.fullName || prevForm.full_name,
-        qualification: dataSource.highestQualification || prevForm.qualification,
-        experience: dataSource.experience
-          ? dataSource.experience.toString()
-          : prevForm.experience,
-        heading: dataSource.profileHeading || prevForm.heading,
-        city: dataSource.city || prevForm.city,
-        state: dataSource.state || prevForm.state,
-        zipCode: dataSource.zipcode
-          ? dataSource.zipcode.toString()
-          : prevForm.zipCode,
-        country: dataSource.country || prevForm.country,
-        bio: dataSource.profileDescription || prevForm.bio,
-        gender: dataSource.gender || prevForm.gender,
-        dob: dataSource.dob
-          ? new Date(dataSource.dob)
-          : prevForm.dob,
-        certifications: dataSource.certifications?.length
-          ? dataSource.certifications
-          : prevForm.certifications,
-        socialLinks: dataSource.socialMediaLinks?.length
-          ? dataSource.socialMediaLinks
-          : prevForm.socialLinks,
-        profileImage: dataSource.profilePhoto
-          ? { uri: dataSource.profilePhoto, isExisting: true }
-          : prevForm.profileImage,
-        coverImage: dataSource.coverPhoto
-          ? { uri: dataSource.coverPhoto, isExisting: true }
-          : prevForm.coverImage,
-        portfolioImages: dataSource.portfolioImages?.length
-          ? dataSource.portfolioImages.map((img) => ({
-            uri: img,
-            isExisting: true,
-          }))
-          : prevForm.portfolioImages,
-        agreePortfolioTerms: dataSource.termsAccepted || prevForm.agreePortfolioTerms,
-        selectedServices: dataSource.selectedServices || prevForm.selectedServices,
-      }));
-
-      // Keep selectedServices local state in sync
-      if (dataSource.selectedServices) {
-        setSelectedServices(dataSource.selectedServices);
-      }
-    }
-  }, [mode, user?.id, profileData]); // Trigger when mode, explicit profile data, or user ID changes
-
-  console.log({ form, mode, user });
-
-  // Toast helper
   const showToast = (type, text1, text2) => {
     Toast.show({ type, text1, text2, position: "top" });
   };
 
-  // Image upload
   const handleImageUpload = async (type) => {
     try {
       const permissionResult =
@@ -355,11 +395,10 @@ const FreelancerSignup = ({ navigation, route }) => {
         aspect,
         quality: 1,
       });
-      if (!pickerResult.canceled) {
+      if (!pickerResult.canceled && pickerResult.assets?.length > 0) {
         const fieldName = type === "profile" ? "profileImage" : "coverImage";
         const existingImage = form[fieldName];
 
-        // If replacing an existing image in update mode, track it for deletion
         if (existingImage && existingImage.isExisting && mode === "update") {
           setDeletedImages([...deletedImages, existingImage.uri]);
         }
@@ -368,7 +407,7 @@ const FreelancerSignup = ({ navigation, route }) => {
           ...form,
           [fieldName]: {
             ...pickerResult.assets[0],
-            isExisting: false, // Mark new image as not existing
+            isExisting: false,
           },
         });
       }
@@ -377,7 +416,6 @@ const FreelancerSignup = ({ navigation, route }) => {
     }
   };
 
-  // Portfolio image upload
   const uploadPortfolioImages = async () => {
     try {
       const permissionResult =
@@ -391,10 +429,10 @@ const FreelancerSignup = ({ navigation, route }) => {
         quality: 1,
         allowsMultipleSelection: true,
       });
-      if (!pickerResult.canceled) {
+      if (!pickerResult.canceled && pickerResult.assets?.length > 0) {
         const newImages = pickerResult.assets.map((asset) => ({
           ...asset,
-          isExisting: false, // Mark new images as not existing
+          isExisting: false,
         }));
         setForm({
           ...form,
@@ -408,9 +446,7 @@ const FreelancerSignup = ({ navigation, route }) => {
 
   const removePortfolioImage = (index) => {
     const imageToRemove = form.portfolioImages[index];
-
-    // If it's an existing image (from server), track it for deletion
-    if (imageToRemove.isExisting && mode === "update") {
+    if (imageToRemove && imageToRemove.isExisting && mode === "update") {
       setDeletedImages([...deletedImages, imageToRemove.uri]);
     }
 
@@ -420,42 +456,51 @@ const FreelancerSignup = ({ navigation, route }) => {
     });
   };
 
-  // Social/certification links
   const addSocialLink = () =>
     setForm({ ...form, socialLinks: [...form.socialLinks, ""] });
   const addCertification = () =>
     setForm({ ...form, certifications: [...form.certifications, ""] });
 
-  // Load available services on component mount
+  const addLanguage = () => {
+    if (!languageInput.trim()) {
+      showToast("error", "Language Required", "Please enter a language");
+      return;
+    }
+    setLanguageList([
+      ...languageList,
+      { name: languageInput.trim(), level: selectedProficiency || "Fluent" },
+    ]);
+    setLanguageInput("");
+    setSelectedProficiency("");
+  };
+
+  const removeLanguage = (index) => {
+    setLanguageList(languageList.filter((_, i) => i !== index));
+  };
+
   useEffect(() => {
     const loadServices = async () => {
       try {
         setServicesLoading(true);
         await apiService.init();
         const services = await apiService.getAllServices();
-        console.log(JSON.stringify(services, null, 2));
-
         setAvailableServices(services);
-        setFilteredServices([]); // Start with empty filtered services
+        setFilteredServices([]);
       } catch (error) {
-        console.error("Error loading services:", error);
         showToast("error", "Error", "Failed to load services");
       } finally {
         setServicesLoading(false);
       }
     };
-
     loadServices();
   }, []);
 
-  // Initialize selected services from user data in update mode
   useEffect(() => {
     if (mode === "update" && user?.freelancer?.selectedServices) {
       setSelectedServices(user.freelancer.selectedServices);
     }
-  }, [mode, user?.freelancer?.selectedServices]); // Use specific property instead of entire user object
+  }, [mode, user?.freelancer?.selectedServices]);
 
-  // Filter services based on search query
   useEffect(() => {
     if (searchQuery.trim() === "") {
       setFilteredServices([]);
@@ -472,18 +517,15 @@ const FreelancerSignup = ({ navigation, route }) => {
     }
   }, [searchQuery, availableServices]);
 
-  // Service selection handlers
   const toggleServiceSelection = (service) => {
     const serviceId = service.id;
     const currentlySelected = selectedServices.includes(serviceId);
 
     if (currentlySelected) {
-      // Remove service
       const newSelected = selectedServices.filter((id) => id !== serviceId);
       setSelectedServices(newSelected);
       setForm({ ...form, selectedServices: newSelected });
     } else {
-      // Add service (max 5)
       if (selectedServices.length < 5) {
         const newSelected = [...selectedServices, serviceId];
         setSelectedServices(newSelected);
@@ -494,68 +536,51 @@ const FreelancerSignup = ({ navigation, route }) => {
     }
   };
 
-  // Get service name by ID for display
   const getServiceNameById = (serviceId) => {
     const service = availableServices.find((s) => s.id === serviceId);
     return service ? service.name : "Unknown Service";
   };
 
-  // Step navigation
+  const formatDateOfBirth = (dob) => {
+    if (!dob) return "DD / MM / YYYY";
+    try {
+      const dateObj =
+        typeof dob === "object" && dob instanceof Date ? dob : new Date(dob);
+      if (isNaN(dateObj.getTime())) return "DD / MM / YYYY";
+      return dateObj.toLocaleDateString("en-GB");
+    } catch (e) {
+      return "DD / MM / YYYY";
+    }
+  };
+
   const nextStep = async () => {
     if (step === 1 && mode === "signup") {
-      // Check email before proceeding (only for signup mode)
+      if (!form.full_name) {
+        showToast("error", "Full Name Required", "Please enter your full name");
+        return;
+      }
       if (!form.email) {
         showToast("error", "Email Required", "Please enter your email");
         return;
       }
-
       if (!form.password) {
         showToast("error", "Password Required", "Please enter your password");
         return;
       }
-
       if (form.password.length < 6) {
-        showToast(
-          "error",
-          "Weak Password",
-          "Password must be at least 6 characters."
-        );
+        showToast("error", "Weak Password", "Password must be at least 6 characters.");
         return;
       }
-
       if (!form.confirmPassword) {
-        showToast(
-          "error",
-          "Confirm Password Required",
-          "Please confirm your password."
-        );
+        showToast("error", "Confirm Password Required", "Please confirm your password.");
         return;
       }
-
-      if (form.confirmPassword.length < 6) {
-        showToast(
-          "error",
-          "Weak Password",
-          "Confirm password must be at least 6 characters."
-        );
-        return;
-      }
-
       if (form.password !== form.confirmPassword) {
-        showToast(
-          "error",
-          "Password Mismatch",
-          "Passwords do not match. Please try again."
-        );
+        showToast("error", "Password Mismatch", "Passwords do not match.");
         return;
       }
-
       if (!form.termsAccepted) {
-        showToast(
-          "error",
-          "Terms Required",
-          "You must accept the Terms and Conditions."
-        );
+        showToast("error", "Terms Required", "You must accept the Terms and Conditions.");
         return;
       }
 
@@ -571,21 +596,15 @@ const FreelancerSignup = ({ navigation, route }) => {
           setIsLoading(false);
           return;
         }
-        showToast("success", "Email Available", "You can proceed with signup");
         setIsLoading(false);
-        setStep(step + 1);
+        setStep(2);
         return;
       } catch (error) {
-        showToast(
-          "error",
-          "Check Failed",
-          error.message || "Unable to verify email"
-        );
+        showToast("error", "Check Failed", error.message || "Unable to verify email");
         setIsLoading(false);
         return;
       }
     } else if (step === 2) {
-      // Validate service selection
       if (selectedServices.length === 0) {
         showToast(
           "error",
@@ -594,61 +613,46 @@ const FreelancerSignup = ({ navigation, route }) => {
         );
         return;
       }
-      setStep(step + 1);
+      setStep(3);
     } else {
       setStep(step + 1);
     }
   };
+
   const prevStep = () => {
-    // If we're on step 2 and in create/update mode, go back to previous screen
-    // since step 1 (login) is skipped for these modes
     if (step === 2 && (mode === "create" || mode === "update")) {
       navigation.goBack();
-    } else {
+    } else if (step > 1) {
       setStep(step - 1);
+    } else {
+      navigation.goBack();
     }
   };
 
-  // Final API call - handles signup, profile creation, and profile update
   const handleSubmit = async () => {
-    console.log("Triggered handleSubmit with mode:", mode);
-
     setIsLoading(true);
-    console.log("Submitting form:", form);
 
-    // Validate with Zod
     const result = schema.safeParse(form);
-    console.log({ result });
     if (!result.success) {
       setIsLoading(false);
-      console.log("Validation failed:", result.error.errors);
       showToast("error", "Validation Error", result.error.errors[0].message);
       return;
     }
 
-    console.log("Form data is valid:", form);
-
-    // Clean up the form data - remove empty strings and arrays
     const cleanedForm = {
       ...form,
       certifications: form.certifications.filter((cert) => cert.trim() !== ""),
       socialLinks: form.socialLinks.filter((link) => link.trim() !== ""),
     };
 
-    console.log("Cleaned form data:", cleanedForm);
-
-    // upload profile photo (only if it's a new image, not an existing URL)
     if (cleanedForm.profileImage && cleanedForm.profileImage.uri) {
       if (cleanedForm.profileImage.isExisting) {
-        // Keep existing image URL as is
         cleanedForm.profileImage = cleanedForm.profileImage.uri;
       } else if (!cleanedForm.profileImage.uri.startsWith("http")) {
-        // Upload new image
         const result = await apiService.uploadImage(
           cleanedForm.profileImage,
           "freelancer_profile_photos"
         );
-        console.log("Profile photo uploaded:", result);
         if (result.success) {
           cleanedForm.profileImage = result.url;
         } else {
@@ -661,18 +665,14 @@ const FreelancerSignup = ({ navigation, route }) => {
       cleanedForm.profileImage = null;
     }
 
-    // upload cover photo (only if it's a new image, not an existing URL)
     if (cleanedForm.coverImage && cleanedForm.coverImage.uri) {
       if (cleanedForm.coverImage.isExisting) {
-        // Keep existing image URL as is
         cleanedForm.coverImage = cleanedForm.coverImage.uri;
       } else if (!cleanedForm.coverImage.uri.startsWith("http")) {
-        // Upload new image
         const result = await apiService.uploadImage(
           cleanedForm.coverImage,
           "freelancer_cover_photos"
         );
-        console.log("Cover photo uploaded:", result);
         if (result.success) {
           cleanedForm.coverImage = result.url;
         } else {
@@ -685,34 +685,26 @@ const FreelancerSignup = ({ navigation, route }) => {
       cleanedForm.coverImage = null;
     }
 
-    // upload portfolio images (handle both new and existing images)
     if (cleanedForm.portfolioImages && cleanedForm.portfolioImages.length > 0) {
       let uploadedImages = [];
       for (let i = 0; i < cleanedForm.portfolioImages.length; i++) {
         const portfolioImage = cleanedForm.portfolioImages[i];
 
         if (portfolioImage.isExisting) {
-          // Keep existing images as is (whether they're full URLs or relative paths)
           uploadedImages.push(portfolioImage.uri);
         } else if (
           portfolioImage.uri &&
           !portfolioImage.uri.startsWith("http") &&
           !portfolioImage.uri.startsWith("/uploads")
         ) {
-          // Upload new images (exclude existing images with relative paths)
           const result = await apiService.uploadImage(
             portfolioImage,
             "freelancer_portfolios"
           );
-          console.log("Portfolio image uploaded:", result);
           if (result.success) {
             uploadedImages.push(result.url);
           } else {
-            showToast(
-              "error",
-              "Error Uploading Portfolio Image",
-              result.message
-            );
+            showToast("error", "Error Uploading Portfolio Image", result.message);
             setIsLoading(false);
             return;
           }
@@ -727,35 +719,21 @@ const FreelancerSignup = ({ navigation, route }) => {
       let result;
 
       if (mode === "signup") {
-        console.log("About to call register function from AuthContext");
-        // Use the register function from AuthContext which handles both signup and login
         result = await register({
           ...cleanedForm,
           mobile: form.mobile,
           role: "FREELANCER",
         });
 
-        console.log("Registration successful:", result);
-
         if (result) {
           showToast("success", "Signup Complete", "Welcome to BirdEarner!");
-          // The AuthContext will automatically handle navigation by setting user state
           navigation.replace("MainTabs");
         } else {
-          showToast(
-            "error",
-            "Signup Failed",
-            "Registration failed. Please try again."
-          );
+          showToast("error", "Signup Failed", "Registration failed. Please try again.");
         }
       } else if (mode === "create") {
-        // Create additional freelancer profile for existing user
-        console.log("Creating freelancer profile for existing user");
-
-        // Filter and map form data to freelancer model fields only
         const freelancerCreateData = {
           userId: user?.id,
-          // Map form fields to freelancer model fields
           selectedServices: cleanedForm.selectedServices,
           highestQualification: cleanedForm.qualification,
           experience: cleanedForm.experience
@@ -775,11 +753,9 @@ const FreelancerSignup = ({ navigation, route }) => {
           coverPhoto: cleanedForm.coverImage,
           portfolioImages: cleanedForm.portfolioImages,
           termsAccepted: cleanedForm.agreePortfolioTerms,
-          // Handle fullName separately for user table update
           fullName: cleanedForm.full_name,
         };
 
-        // Remove null/undefined/empty values
         Object.keys(freelancerCreateData).forEach((key) => {
           if (
             freelancerCreateData[key] === null ||
@@ -792,26 +768,14 @@ const FreelancerSignup = ({ navigation, route }) => {
 
         result = await apiService.createFreelancerProfile(freelancerCreateData);
 
-        console.log("Freelancer profile created:", result);
-
-        // Refresh user profile data
         if (refreshUserData) {
           await refreshUserData();
         }
 
-        showToast(
-          "success",
-          "Profile Created",
-          "Freelancer profile created successfully!"
-        );
+        showToast("success", "Profile Created", "Freelancer profile created successfully!");
         navigation.goBack();
       } else if (mode === "update") {
-        // Update existing freelancer profile
-        console.log("Updating freelancer profile:", user?.freelancer?.id);
-
-        // Filter and map form data to freelancer model fields only
         const freelancerUpdateData = {
-          // Map form fields to freelancer model fields
           selectedServices: cleanedForm.selectedServices,
           highestQualification: cleanedForm.qualification,
           experience: cleanedForm.experience
@@ -831,13 +795,10 @@ const FreelancerSignup = ({ navigation, route }) => {
           coverPhoto: cleanedForm.coverImage,
           portfolioImages: cleanedForm.portfolioImages,
           termsAccepted: cleanedForm.agreePortfolioTerms,
-          // Handle fullName separately for user table update
           fullName: cleanedForm.full_name,
-          // Include deleted images information for backend processing
-          deletedImages: deletedImages, // Send list of deleted image URLs
+          deletedImages: deletedImages,
         };
 
-        // Remove null/undefined/empty values
         Object.keys(freelancerUpdateData).forEach((key) => {
           if (
             freelancerUpdateData[key] === null ||
@@ -853,1200 +814,1767 @@ const FreelancerSignup = ({ navigation, route }) => {
           freelancerUpdateData
         );
 
-        console.log("Freelancer profile updated:", result);
-
-        // Refresh user profile data
         if (refreshUserData) {
           await refreshUserData();
         }
 
-        showToast(
-          "success",
-          "Profile Updated",
-          "Freelancer profile updated successfully!"
-        );
+        showToast("success", "Profile Updated", "Freelancer profile updated successfully!");
         navigation.goBack();
       }
     } catch (error) {
-      console.log("Operation error caught:", error);
-      console.log("Error details:", {
-        message: error.message,
-        stack: error.stack,
-        name: error.name,
-      });
-
-      const errorMessages = {
-        signup: "Registration failed",
-        create: "Profile creation failed",
-        update: "Profile update failed",
-      };
-
       showToast(
         "error",
         `${mode.charAt(0).toUpperCase() + mode.slice(1)} Failed`,
-        error.message || errorMessages[mode]
+        error.message || "An error occurred during submission."
       );
     } finally {
-      console.log("Setting loading to false");
       setIsLoading(false);
     }
   };
 
-  // Determine heading based on mode
   const getHeading = () => {
-    switch (mode) {
-      case "signup":
-        return "Freelancer Signup";
-      case "create":
-        return title || "Create Freelancer Profile";
-      case "update":
-        return title || "Update Freelancer Profile";
-      default:
-        return "Freelancer Profile";
-    }
+    if (step === 1 && mode === "signup") return "Complete Your Profile";
+    if (step === 2) return "Add Your Services";
+    if (step === 3) return "Complete Your Freelancer Profile";
+    if (step === 4) return "Personal & Work Details";
+    if (step === 5) return "Add Your Portfolio";
+    if (step === 6) return "Review & Submit";
+    return title || "Freelancer Profile";
   };
 
-  // UI for each step
+  const getHeaderSubtitle = () => {
+    if (step === 1) return "Please fill in the details below to get started";
+    if (step === 2) return "Add up to 20 services (minimum 1 required)";
+    if (step === 3) return "Tell us more about yourself and your work";
+    if (step === 4) return "Add your skills, languages, and qualifications";
+    if (step === 5) return "Upload images of your work to showcase your skills and experience to clients";
+    if (step === 6) return "Review your details before submitting";
+    return "Fill in your profile details below";
+  };
+
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#4B0082" }}>
-      <KeyboardAvoidingView
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#2E0854" }}>
+      <LinearGradient
+        colors={["#2E0854", "#3E0A70", "#1C0338"]}
         style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : "padding"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}
       >
-        <ScrollView contentContainerStyle={styles.container}>
-          <Text style={styles.heading}>{getHeading()}</Text>
-          {/* Step 1: Basic Signup Info (only for signup mode) */}
-          {step === 1 && mode === "signup" && (
-            <View style={styles.card}>
-              <Text style={styles.label}>Full Name</Text>
-              <TextInput
-                placeholderTextColor="#c4c4c4"
-                style={styles.input}
-                placeholder="Enter your full name"
-                value={form.full_name}
-                onChangeText={(v) => setForm({ ...form, full_name: v })}
-                autoCapitalize="words"
-              />
-              <Text style={styles.label}>Mobile Number</Text>
-              <TextInput
-                placeholderTextColor="#c4c4c4"
-                style={styles.input}
-                placeholder="Mobile number verified via OTP"
-                value={form.mobile}
-                editable={false}
-              />
-              <Text style={styles.label}>Email</Text>
-              <TextInput
-                placeholderTextColor="#c4c4c4"
-                style={styles.input}
-                placeholder="Enter your email"
-                value={form.email}
-                onChangeText={(v) => setForm({ ...form, email: v })}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-              <Text style={styles.label}>Password</Text>
-              <TextInput
-                placeholderTextColor="#c4c4c4"
-                style={styles.input}
-                placeholder="Enter your password"
-                value={form.password}
-                onChangeText={(v) => setForm({ ...form, password: v })}
-                secureTextEntry
-              />
-              {form.password.length > 0 && form.password.length < 6 && (
-                <Text style={styles.errorText}>
-                  Password must be at least 6 characters.
-                </Text>
-              )}
-              <Text style={styles.label}>Confirm Password</Text>
-              <TextInput
-                placeholderTextColor="#c4c4c4"
-                style={styles.input}
-                placeholder="Confirm your password"
-                value={form.confirmPassword}
-                onChangeText={(v) => setForm({ ...form, confirmPassword: v })}
-                secureTextEntry
-              />
-              {form.confirmPassword.length > 0 && form.confirmPassword.length < 6 && (
-                <Text style={styles.errorText}>
-                  Confirm password must be at least 6 characters.
-                </Text>
-              )}
-              {form.confirmPassword.length >= 6 && form.password !== form.confirmPassword && (
-                <Text style={styles.errorText}>
-                  Passwords do not match.
-                </Text>
-              )},
-              <View style={styles.checkboxContainer}>
-                <Checkbox
-                  value={form.termsAccepted}
-                  onValueChange={(v) => setForm({ ...form, termsAccepted: v })}
-                  color={form.termsAccepted ? "#6A0DAD" : undefined}
-                />
-                <Text style={styles.checkboxLabel}>
-                  I agree to the{" "}
-                  <Text style={styles.link}>Terms and Conditions</Text> and{" "}
-                  <Text style={styles.link}>Privacy Policy</Text>
-                </Text>
-              </View>
-              <TouchableOpacity
-                style={styles.nextButton}
-                onPress={nextStep}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <ActivityIndicator color="white" size="small" />
-                ) : (
-                  <Text style={styles.nextButtonText}>Continue</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          )}
-          {/* Step 2: Service Selection */}
-          {step === 2 && (
-            <View style={styles.card}>
-              <Text style={styles.cardHeading}>Select Your Services</Text>
-              <Text style={styles.label}>
-                Choose up to 5 services you want to offer (minimum 1 required):
-              </Text>
-
-              {/* Search Input */}
-              <View style={styles.searchContainer}>
-                <TextInput
-                  placeholderTextColor="#c4c4c4"
-                  style={styles.searchInput}
-                  placeholder="Search for services (e.g., graphic design, web developer)..."
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
-              </View>
-
-              {/* Show selected services summary */}
-              {selectedServices.length > 0 && (
-                <View style={styles.selectedServicesInfo}>
-                  <Text style={styles.selectedCount}>
-                    Selected: {selectedServices.length}/5
-                  </Text>
-                  <View style={styles.selectedServicesList}>
-                    {selectedServices.map((serviceId) => (
-                      <View key={serviceId} style={styles.selectedServiceTag}>
-                        <Text style={styles.selectedServiceText}>
-                          {getServiceNameById(serviceId)}
-                        </Text>
-                        <TouchableOpacity
-                          onPress={() => {
-                            const service = availableServices.find(
-                              (s) => s.id === serviceId
-                            );
-                            if (service) toggleServiceSelection(service);
-                          }}
-                          style={styles.removeServiceButton}
-                        >
-                          <Text style={styles.removeServiceText}>×</Text>
-                        </TouchableOpacity>
-                      </View>
-                    ))}
-                  </View>
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}
+        >
+          <ScrollView
+            contentContainerStyle={styles.scrollContainer}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* Header for Step 1 (Screen 1 Reference) */}
+            {step === 1 && mode === "signup" && (
+              <View style={styles.headerSection}>
+                <View style={styles.avatarHeaderBadge}>
+                  <UserCheck size={36} color="#6D28D9" />
                 </View>
-              )}
+                <Text style={styles.headerTitle}>{getHeading()}</Text>
+                <Text style={styles.headerSubtitle}>{getHeaderSubtitle()}</Text>
+              </View>
+            )}
 
-              {servicesLoading ? (
-                <ActivityIndicator
-                  size="large"
-                  color="#6A0DAD"
-                  style={{ marginVertical: 20 }}
-                />
-              ) : (
-                <ScrollView
-                  style={styles.servicesContainer}
-                  nestedScrollEnabled={true}
-                  showsVerticalScrollIndicator={true}
+            {/* Header for Steps >= 2 (Screen 2 / Profile Reference) */}
+            {(step >= 2 || mode !== "signup") && (
+              <View style={styles.headerNavSection}>
+                <TouchableOpacity
+                  style={styles.backIconButton}
+                  onPress={prevStep}
+                  activeOpacity={0.7}
                 >
-                  {searchQuery.trim() === "" ? (
-                    <View style={styles.searchPrompt}>
-                      <Text style={styles.searchPromptText}>
-                        💡 Start typing to search for services you want to offer
-                      </Text>
-                      <Text style={styles.searchHintText}>
-                        Try: "graphic", "web", "writer", "designer", "marketing"
-                      </Text>
-                    </View>
+                  <ArrowLeft size={24} color="#FFFFFF" />
+                </TouchableOpacity>
+                <Text style={styles.headerTitle}>{getHeading()}</Text>
+                <Text style={styles.headerSubtitle}>{getHeaderSubtitle()}</Text>
+              </View>
+            )}
+
+            {/* Step 1: Basic Signup Account Info */}
+            {step === 1 && mode === "signup" && (
+              <View style={styles.card}>
+                <Text style={styles.fieldLabel}>Full Name</Text>
+                <View style={styles.inputContainer}>
+                  <View style={styles.iconBox}>
+                    <User size={20} color="#7C3AED" />
+                  </View>
+                  <TextInput
+                    style={styles.textInput}
+                    placeholderTextColor="#A098AE"
+                    placeholder="Enter your full name"
+                    value={form.full_name}
+                    onChangeText={(v) => setForm({ ...form, full_name: v })}
+                    autoCapitalize="words"
+                  />
+                </View>
+
+                <Text style={styles.fieldLabel}>Mobile Number</Text>
+                <View style={styles.inputContainer}>
+                  <View style={styles.iconBox}>
+                    <Phone size={20} color="#7C3AED" />
+                  </View>
+                  <View style={styles.countryCodeBox}>
+                    <Text style={styles.countryFlag}>🇮🇳</Text>
+                    <Text style={styles.countryCodeText}>+91</Text>
+                  </View>
+                  <TextInput
+                    style={styles.textInput}
+                    placeholderTextColor="#A098AE"
+                    placeholder="Mobile number verified via OTP"
+                    value={form.mobile}
+                    editable={false}
+                  />
+                </View>
+
+                <Text style={styles.fieldLabel}>Email ID</Text>
+                <View style={styles.inputContainer}>
+                  <View style={styles.iconBox}>
+                    <Mail size={20} color="#7C3AED" />
+                  </View>
+                  <TextInput
+                    style={styles.textInput}
+                    placeholderTextColor="#A098AE"
+                    placeholder="Enter your email address"
+                    value={form.email}
+                    onChangeText={(v) => setForm({ ...form, email: v })}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                  />
+                </View>
+
+                <Text style={styles.fieldLabel}>Create a Password</Text>
+                <View style={styles.inputContainer}>
+                  <View style={styles.iconBox}>
+                    <Lock size={20} color="#7C3AED" />
+                  </View>
+                  <TextInput
+                    style={styles.textInput}
+                    placeholderTextColor="#A098AE"
+                    placeholder="Enter your password"
+                    value={form.password}
+                    onChangeText={(v) => setForm({ ...form, password: v })}
+                    secureTextEntry={!showPassword}
+                  />
+                  <TouchableOpacity
+                    onPress={() => setShowPassword(!showPassword)}
+                    style={styles.eyeIconButton}
+                  >
+                    {showPassword ? (
+                      <EyeOff size={20} color="#A098AE" />
+                    ) : (
+                      <Eye size={20} color="#A098AE" />
+                    )}
+                  </TouchableOpacity>
+                </View>
+
+                <Text style={styles.fieldLabel}>Confirm Password</Text>
+                <View style={styles.inputContainer}>
+                  <View style={styles.iconBox}>
+                    <Lock size={20} color="#7C3AED" />
+                  </View>
+                  <TextInput
+                    style={styles.textInput}
+                    placeholderTextColor="#A098AE"
+                    placeholder="Confirm your password"
+                    value={form.confirmPassword}
+                    onChangeText={(v) => setForm({ ...form, confirmPassword: v })}
+                    secureTextEntry={!showConfirmPassword}
+                  />
+                  <TouchableOpacity
+                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                    style={styles.eyeIconButton}
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff size={20} color="#A098AE" />
+                    ) : (
+                      <Eye size={20} color="#A098AE" />
+                    )}
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.checkboxRow}>
+                  <Checkbox
+                    value={form.termsAccepted}
+                    onValueChange={(v) => setForm({ ...form, termsAccepted: v })}
+                    color={form.termsAccepted ? "#6D28D9" : undefined}
+                    style={styles.checkboxBox}
+                  />
+                  <Text style={styles.checkboxText}>
+                    I agree to the{" "}
+                    <Text style={styles.purpleLinkText}>Terms and Conditions</Text> and{" "}
+                    <Text style={styles.purpleLinkText}>Privacy Policy</Text>
+                  </Text>
+                </View>
+
+                <TouchableOpacity
+                  style={[styles.primaryButton, isLoading && styles.disabledButton]}
+                  onPress={nextStep}
+                  disabled={isLoading}
+                  activeOpacity={0.85}
+                >
+                  {isLoading ? (
+                    <ActivityIndicator color="white" size="small" />
                   ) : (
-                    <>
-                      {filteredServices.length === 0 ? (
-                        <View style={styles.noResultsContainer}>
-                          <Text style={styles.noResultsText}>
-                            No services found for "{searchQuery}"
+                    <Text style={styles.primaryButtonText}>Next</Text>
+                  )}
+                </TouchableOpacity>
+
+                <View style={styles.securityBanner}>
+                  <ShieldCheck size={16} color="#7C3AED" style={{ marginRight: 6 }} />
+                  <Text style={styles.securityBannerText}>
+                    Your information is safe and secure with us.
+                  </Text>
+                </View>
+              </View>
+            )}
+
+            {/* Step 2: Add Your Services (Matching input_file_2.png) */}
+            {step === 2 && (
+              <View style={styles.card}>
+                <Text style={styles.subFieldLabel}>
+                  Choose up to 5 services you want to offer (minimum 1 required):
+                </Text>
+
+                <View style={styles.inputContainer}>
+                  <View style={styles.iconBox}>
+                    <Search size={20} color="#7C3AED" />
+                  </View>
+                  <TextInput
+                    placeholderTextColor="#A098AE"
+                    style={styles.textInput}
+                    placeholder="Search services (e.g. Graphic Design, Web Dev)..."
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    autoCapitalize="none"
+                  />
+                </View>
+
+                {selectedServices.length > 0 && (
+                  <View style={styles.selectedServicesContainer}>
+                    <Text style={styles.selectedServicesTitle}>
+                      Selected Services ({selectedServices.length}/5)
+                    </Text>
+                    <View style={styles.tagsWrapper}>
+                      {selectedServices.map((serviceId) => (
+                        <View key={serviceId} style={styles.purpleTagBadge}>
+                          <Text style={styles.purpleTagText}>
+                            {getServiceNameById(serviceId)}
                           </Text>
-                          <Text style={styles.noResultsHint}>
-                            Try different keywords or check spelling
-                          </Text>
+                          <TouchableOpacity
+                            onPress={() => {
+                              const service = availableServices.find(
+                                (s) => s.id === serviceId
+                              );
+                              if (service) toggleServiceSelection(service);
+                            }}
+                            style={styles.tagRemoveBtn}
+                          >
+                            <X size={12} color="#FFFFFF" />
+                          </TouchableOpacity>
                         </View>
-                      ) : (
-                        <>
-                          <Text style={styles.searchResultsHeader}>
-                            Found {filteredServices.length} service
-                            {filteredServices.length !== 1 ? "s" : ""}:
-                          </Text>
-                          {filteredServices.map((service) => (
-                            <TouchableOpacity
-                              key={service.id}
-                              style={[
-                                styles.serviceItem,
-                                selectedServices.includes(service.id) &&
-                                styles.serviceItemSelected,
-                              ]}
-                              onPress={() => toggleServiceSelection(service)}
-                              activeOpacity={0.7}
-                            >
-                              <View style={styles.serviceContent}>
-                                <Text
-                                  style={[
-                                    styles.serviceName,
-                                    selectedServices.includes(service.id) &&
-                                    styles.serviceNameSelected,
-                                  ]}
-                                >
-                                  {service.name}
-                                </Text>
-                                {service.description && (
+                      ))}
+                    </View>
+                  </View>
+                )}
+
+                {servicesLoading ? (
+                  <ActivityIndicator
+                    size="medium"
+                    color="#6D28D9"
+                    style={{ marginVertical: 20 }}
+                  />
+                ) : (
+                  <ScrollView
+                    style={{ maxHeight: 320, marginVertical: 10 }}
+                    nestedScrollEnabled={true}
+                    showsVerticalScrollIndicator={true}
+                  >
+                    {searchQuery.trim() === "" ? (
+                      <View style={styles.infoBannerBox}>
+                        <Info size={18} color="#7C3AED" style={{ marginRight: 8 }} />
+                        <Text style={styles.infoBannerText}>
+                          Type keywords to search and add services to your profile.
+                        </Text>
+                      </View>
+                    ) : (
+                      <>
+                        {filteredServices.length === 0 ? (
+                          <View style={styles.noResultsBox}>
+                            <Text style={styles.noResultsTitle}>
+                              No services found for "{searchQuery}"
+                            </Text>
+                          </View>
+                        ) : (
+                          filteredServices.map((service) => {
+                            const isSelected = selectedServices.includes(service.id);
+                            return (
+                              <TouchableOpacity
+                                key={service.id}
+                                style={[
+                                  styles.serviceCardItem,
+                                  isSelected && styles.serviceCardItemSelected,
+                                ]}
+                                onPress={() => toggleServiceSelection(service)}
+                                activeOpacity={0.7}
+                              >
+                                <View style={{ flex: 1, marginRight: 10 }}>
                                   <Text
                                     style={[
-                                      styles.serviceDescription,
-                                      selectedServices.includes(service.id) &&
-                                      styles.serviceDescriptionSelected,
+                                      styles.serviceItemName,
+                                      isSelected && styles.purpleTextBold,
                                     ]}
                                   >
-                                    {service.description}
+                                    {service.name}
                                   </Text>
-                                )}
-                              </View>
-                              <View
-                                style={[
-                                  styles.serviceCheckbox,
-                                  selectedServices.includes(service.id) &&
-                                  styles.serviceCheckboxSelected,
-                                ]}
-                              >
-                                {selectedServices.includes(service.id) && (
-                                  <Text style={styles.checkmark}>✓</Text>
-                                )}
-                              </View>
-                            </TouchableOpacity>
-                          ))}
-                        </>
-                      )}
-                    </>
-                  )}
-                </ScrollView>
-              )}
-
-              <View style={styles.buttonRow}>
-                <TouchableOpacity
-                  style={styles.backButton}
-                  onPress={prevStep}
-                  disabled={mode === "signup"}
-                >
-                  <Text
-                    style={[
-                      styles.backButtonText,
-                      mode === "signup" && styles.disabledText,
-                    ]}
-                  >
-                    Back
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.nextButton,
-                    selectedServices.length === 0 && styles.disabledButton,
-                  ]}
-                  onPress={nextStep}
-                  disabled={selectedServices.length === 0}
-                >
-                  <Text style={styles.nextButtonText}>Next</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
-
-          {/* Step 3: Freelancer Details */}
-          {step === 3 && (
-            <View style={styles.card}>
-              <Text style={styles.label}>Highest Qualification</Text>
-              <TextInput
-                placeholderTextColor="#c4c4c4"
-                style={styles.input}
-                placeholder="E.g. Bachelor's Degree"
-                value={form.qualification}
-                onChangeText={(v) => setForm({ ...form, qualification: v })}
-              />
-              <Text style={styles.label}>Experience (In months)</Text>
-              <TextInput
-                placeholderTextColor="#c4c4c4"
-                style={styles.input}
-                keyboardType="numeric"
-                placeholder="E.g. 24"
-                value={form.experience}
-                onChangeText={(v) => setForm({ ...form, experience: v })}
-              />
-              <Text style={styles.label}>Heading on your profile</Text>
-              <TextInput
-                placeholderTextColor="#c4c4c4"
-                style={styles.input}
-                placeholder="E.g. I am a designer"
-                value={form.heading}
-                onChangeText={(v) => setForm({ ...form, heading: v })}
-              />
-              <View style={styles.row}>
-                <View style={styles.inputContainer}>
-                  <Text style={styles.label}>Zip Code</Text>
-                  <TextInput
-                    placeholderTextColor="#c4c4c4"
-                    placeholder="Enter 6-digit Indian pincode"
-                    style={styles.input}
-                    keyboardType="numeric"
-                    maxLength={6}
-                    value={form.zipCode}
-                    onChangeText={(text) => {
-                      setForm({ ...form, zipCode: text });
-                      if (text.length === 6) {
-                        fetchLocationFromPincode(text);
-                      }
-                    }}
-                  />
-                </View>
-                <View style={styles.dropdownContainer}>
-                  <Text style={styles.label}>Country</Text>
-                  <PickerModal
-                    items={COUNTRY_OPTIONS}
-                    value={form.country}
-                    onValueChange={(v) => setForm({ ...form, country: v })}
-                    placeholder="Select Country"
-                    innerStyle={{ backgroundColor: "#f5f5f5" }}
-                    style={{ marginVertical: 0 }}
-                    disabled={true}
-                  />
-                </View>
-              </View>
-              <View style={styles.row}>
-                <View style={styles.inputContainer}>
-                  <Text style={styles.label}>City</Text>
-                  <TextInput
-                    placeholderTextColor="#c4c4c4"
-                    placeholder={
-                      fetchingLocation ? "Fetching city..." : "Enter city"
-                    }
-                    style={[
-                      styles.input,
-                      fetchingLocation && { backgroundColor: "#f0f0f0" },
-                    ]}
-                    value={form.city}
-                    onChangeText={(text) =>
-                      setForm({
-                        ...form,
-                        city: text,
-                        autoFilledLocation: false,
-                      })
-                    }
-                    editable={!fetchingLocation}
-                  />
-                </View>
-                <View style={styles.dropdownContainer}>
-                  <Text style={styles.label}>State</Text>
-                  <PickerModal
-                    items={indianStates}
-                    value={form.state}
-                    onValueChange={(value) =>
-                      setForm({
-                        ...form,
-                        state: value,
-                        autoFilledLocation: false,
-                      })
-                    }
-                    placeholder={
-                      fetchingLocation ? "Fetching state..." : "Select State"
-                    }
-                    innerStyle={{ backgroundColor: "#f5f5f5" }}
-                    style={{ marginVertical: 0 }}
-                    disabled={fetchingLocation}
-                  />
-                </View>
-              </View>
-              <Text style={styles.label}>Describe yourself</Text>
-              <TextInput
-                placeholderTextColor="#c4c4c4"
-                style={styles.textArea}
-                placeholder="Describe yourself"
-                value={form.bio}
-                multiline
-                onChangeText={(v) =>
-                  v.length <= 255 && setForm({ ...form, bio: v })
-                }
-              />
-              <Text style={styles.charCount}>{form.bio.length}/255</Text>
-              <View style={styles.buttonRow}>
-                <TouchableOpacity style={styles.backButton} onPress={prevStep}>
-                  <Text style={styles.backButtonText}>Back</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.nextButton} onPress={nextStep}>
-                  <Text style={styles.nextButtonText}>Next</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
-          {/* Step 4: Personal Details */}
-          {step === 4 && (
-            <View style={styles.card}>
-              <Text style={styles.label}>Gender</Text>
-              <PickerModal
-                items={GENDER_OPTIONS}
-                value={form.gender}
-                onValueChange={(v) => setForm({ ...form, gender: v })}
-                placeholder="Select Gender"
-                innerStyle={{ backgroundColor: "#f5f5f5" }}
-                style={{ marginVertical: 0, marginBottom: 20 }}
-              />
-              <Text style={styles.label}>Date of Birth</Text>
-              <TouchableOpacity
-                style={styles.input}
-                onPress={() => setShowDatePicker(true)}
-              >
-                <Text
-                  style={{ color: form.dob ? "#000" : "#999", paddingTop: 12 }}
-                >
-                  {form.dob ? form.dob.toDateString() : "Select Date of Birth"}
-                </Text>
-              </TouchableOpacity>
-              {showDatePicker && (
-                <DateTimePicker
-                  value={form.dob || new Date()}
-                  mode="date"
-                  display="default"
-                  onChange={(event, selectedDate) => {
-                    setShowDatePicker(false);
-                    if (selectedDate) {
-                      setForm({ ...form, dob: selectedDate });
-                    }
-                  }}
-                  maximumDate={new Date()}
-                />
-              )}
-              <Text style={styles.label}>Certifications</Text>
-              {form.certifications.map((cert, i) => (
-                <View key={i} style={styles.socialRow}>
-                  <TextInput
-                    placeholderTextColor="#c4c4c4"
-                    style={[styles.input, styles.socialRowInput]}
-                    placeholder="Certification"
-                    value={cert}
-                    onChangeText={(v) =>
-                      setForm({
-                        ...form,
-                        certifications: form.certifications.map((c, idx) =>
-                          idx === i ? v : c
-                        ),
-                      })
-                    }
-                  />
-                  {form.certifications.length > 1 && (
-                    <TouchableOpacity
-                      style={styles.deleteButton}
-                      onPress={() => {
-                        setForm({
-                          ...form,
-                          certifications: form.certifications.filter(
-                            (_, idx) => idx !== i
-                          ),
-                        });
-                      }}
-                    >
-                      <X size={18} color="#fff" strokeWidth={2.5} />
-                    </TouchableOpacity>
-                  )}
-                </View>
-              ))}
-              <TouchableOpacity onPress={addCertification}>
-                <Text style={styles.addMore}>+ Add more certifications</Text>
-              </TouchableOpacity>
-              <Text style={styles.label}>Your Social Media Links</Text>
-              {form.socialLinks.map((link, i) => (
-                <View key={i} style={styles.socialRow}>
-                  <TextInput
-                    placeholderTextColor="#c4c4c4"
-                    style={[styles.input, styles.socialRowInput]}
-                    placeholder="www.instagram.com/xyz"
-                    value={link}
-                    onChangeText={(v) =>
-                      setForm({
-                        ...form,
-                        socialLinks: form.socialLinks.map((l, idx) =>
-                          idx === i ? v : l
-                        ),
-                      })
-                    }
-                  />
-                  {form.socialLinks.length > 1 && (
-                    <TouchableOpacity
-                      style={styles.deleteButton}
-                      onPress={() => {
-                        setForm({
-                          ...form,
-                          socialLinks: form.socialLinks.filter(
-                            (_, idx) => idx !== i
-                          ),
-                        });
-                      }}
-                    >
-                      <X size={18} color="#fff" strokeWidth={2.5} />
-                    </TouchableOpacity>
-                  )}
-                </View>
-              ))}
-              <TouchableOpacity onPress={addSocialLink}>
-                <Text style={styles.addMore}>
-                  + Add more social media links
-                </Text>
-              </TouchableOpacity>
-              <Text style={styles.label}>Add your profile picture</Text>
-              <View style={styles.profileUploadContainer}>
-                <TouchableOpacity
-                  onPress={() => handleImageUpload("profile")}
-                  style={styles.uploadButton}
-                >
-                  <Text style={{ color: "#fff" }}>Click here to upload</Text>
-                </TouchableOpacity>
-                {form.profileImage && (
-                  <View style={styles.imagePreviewContainer}>
-                    <Image
-                      source={{ uri: form.profileImage.uri }}
-                      style={styles.profileImage}
-                    />
-                    {form.profileImage.isExisting && mode === "update" && (
-                      <View
-                        style={[styles.existingImageBadge, { top: 2, left: 2 }]}
-                      >
-                        <Text style={styles.existingImageText}>Existing</Text>
-                      </View>
+                                  {service.description && (
+                                    <Text
+                                      style={styles.serviceItemDesc}
+                                      numberOfLines={2}
+                                    >
+                                      {service.description}
+                                    </Text>
+                                  )}
+                                </View>
+                                <View
+                                  style={[
+                                    styles.checkboxCircle,
+                                    isSelected && styles.checkboxCircleSelected,
+                                  ]}
+                                >
+                                  {isSelected && <Check size={14} color="#FFFFFF" />}
+                                </View>
+                              </TouchableOpacity>
+                            );
+                          })
+                        )}
+                      </>
                     )}
+                  </ScrollView>
+                )}
+
+                <View style={styles.buttonRow}>
+                  <TouchableOpacity
+                    style={styles.secondaryHalfButton}
+                    onPress={prevStep}
+                    disabled={mode === "signup"}
+                  >
+                    <ArrowLeft size={18} color="#6D28D9" style={{ marginRight: 6 }} />
+                    <Text style={styles.secondaryHalfButtonText}>Back</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.primaryHalfButton,
+                      selectedServices.length === 0 && styles.disabledButton,
+                    ]}
+                    onPress={nextStep}
+                    disabled={selectedServices.length === 0}
+                  >
+                    <Text style={styles.primaryHalfButtonText}>Next</Text>
+                    <ArrowRight size={18} color="#FFFFFF" style={{ marginLeft: 6 }} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+
+            {/* Step 3: Complete Your Freelancer Profile (Matching input_file_0.png) */}
+            {step === 3 && (
+              <View style={styles.card}>
+                {/* 1. Add Your Profile Picture */}
+                <Text style={styles.sectionNumberTitle}>1. Add Your Profile</Text>
+                <View style={styles.avatarSection}>
+                  <TouchableOpacity
+                    style={styles.avatarCircle}
+                    onPress={() => handleImageUpload("profile")}
+                    activeOpacity={0.8}
+                  >
+                    {form.profileImage && form.profileImage.uri ? (
+                      <Image
+                        source={{ uri: form.profileImage.uri }}
+                        style={styles.avatarImage}
+                      />
+                    ) : (
+                      <User size={36} color="#8B5CF6" />
+                    )}
+                    <View style={styles.cameraBadge}>
+                      <Camera size={14} color="#FFFFFF" />
+                    </View>
+                  </TouchableOpacity>
+                  <Text style={styles.avatarSubtext}>JPG, PNG up to 5MB</Text>
+                  {form.profileImage && (
                     <TouchableOpacity
-                      style={[styles.removeButton, { top: 2, right: 2 }]}
+                      style={styles.removeImageLink}
                       onPress={() => {
                         if (form.profileImage.isExisting && mode === "update") {
-                          setDeletedImages([
-                            ...deletedImages,
-                            form.profileImage.uri,
-                          ]);
+                          setDeletedImages([...deletedImages, form.profileImage.uri]);
                         }
                         setForm({ ...form, profileImage: null });
                       }}
                     >
-                      <Text style={styles.removeButtonText}>✕</Text>
+                      <Text style={styles.removeImageLinkText}>
+                        Remove profile photo
+                      </Text>
                     </TouchableOpacity>
-                  </View>
-                )}
-              </View>
-              <Text style={styles.label}>Add your cover picture</Text>
-              <View style={styles.profileUploadContainer}>
-                <TouchableOpacity
-                  onPress={() => handleImageUpload("cover")}
-                  style={styles.uploadButton}
-                >
-                  <Text style={{ color: "#fff" }}>Click here to upload</Text>
-                </TouchableOpacity>
-                {form.coverImage && (
-                  <View style={styles.imagePreviewContainer}>
-                    <Image
-                      source={{ uri: form.coverImage.uri }}
-                      style={styles.coverImage}
-                    />
-                    {form.coverImage.isExisting && mode === "update" && (
-                      <View
-                        style={[styles.existingImageBadge, { top: 2, left: 2 }]}
-                      >
-                        <Text style={styles.existingImageText}>Existing</Text>
-                      </View>
-                    )}
-                    <TouchableOpacity
-                      style={[styles.removeButton, { top: 2, right: 2 }]}
-                      onPress={() => {
-                        if (form.coverImage.isExisting && mode === "update") {
-                          setDeletedImages([
-                            ...deletedImages,
-                            form.coverImage.uri,
-                          ]);
-                        }
-                        setForm({ ...form, coverImage: null });
-                      }}
+                  )}
+                </View>
+
+                {/* 2. Choose Freelancer Type */}
+                <Text style={styles.sectionNumberTitle}>2. Choose Freelancer Type</Text>
+                <View style={styles.gridRow}>
+                  <TouchableOpacity
+                    style={[
+                      styles.freelancerTypeCard,
+                      workType === "remote" && styles.freelancerTypeCardSelected,
+                    ]}
+                    onPress={() => setWorkType("remote")}
+                    activeOpacity={0.8}
+                  >
+                    <View style={styles.typeIconBox}>
+                      <Laptop size={20} color="#7C3AED" />
+                    </View>
+                    <View style={{ flex: 1, paddingRight: 4 }}>
+                      <Text style={styles.typeCardTitle}>Remote</Text>
+                      <Text style={styles.typeCardSubtext}>Work from anywhere</Text>
+                    </View>
+                    <View
+                      style={[
+                        styles.radioCircle,
+                        workType === "remote" && styles.radioCircleSelected,
+                      ]}
                     >
-                      <Text style={styles.removeButtonText}>✕</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-              </View>
-              <View style={styles.buttonRow}>
-                <TouchableOpacity style={styles.backButton} onPress={prevStep}>
-                  <Text style={styles.backButtonText}>Back</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.nextButton} onPress={nextStep}>
-                  <Text style={styles.nextButtonText}>Next</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
-          {/* Step 5: Portfolio Upload */}
-          {step === 5 && (
-            <View style={styles.card}>
-              <Text style={styles.cardHeading}>Portfolio</Text>
-              <TouchableOpacity
-                style={styles.imageUploadButton}
-                onPress={uploadPortfolioImages}
-              >
-                <Text style={styles.imageUploadButtonText}>
-                  Upload Portfolio Images
+                      {workType === "remote" && <View style={styles.radioInnerDot} />}
+                    </View>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.freelancerTypeCard,
+                      workType === "onsite" && styles.freelancerTypeCardSelected,
+                    ]}
+                    onPress={() => setWorkType("onsite")}
+                    activeOpacity={0.8}
+                  >
+                    <View style={styles.typeIconBox}>
+                      <MapPin size={20} color="#7C3AED" />
+                    </View>
+                    <View style={{ flex: 1, paddingRight: 4 }}>
+                      <Text style={styles.typeCardTitle}>On-site</Text>
+                      <Text style={styles.typeCardSubtext}>Specific location</Text>
+                    </View>
+                    <View
+                      style={[
+                        styles.radioCircle,
+                        workType === "onsite" && styles.radioCircleSelected,
+                      ]}
+                    >
+                      {workType === "onsite" && <View style={styles.radioInnerDot} />}
+                    </View>
+                  </TouchableOpacity>
+                </View>
+
+                {/* 3. Select Your Freelancer Type */}
+                <Text style={styles.sectionNumberTitle}>
+                  3. Select Your Freelancer Type
                 </Text>
-              </TouchableOpacity>
-              <View style={styles.uploadedImages}>
-                {form.portfolioImages.map((image, i) => (
-                  <View key={i} style={styles.imagePreviewContainer}>
-                    <Image
-                      source={{ uri: apiService.loadImageURI(image.uri) }}
-                      style={styles.uploadedImage}
-                    />
-                    {image.isExisting && mode === "update" && (
-                      <View style={styles.existingImageBadge}>
-                        <Text style={styles.existingImageText}>Existing</Text>
+                <PickerModal
+                  items={FREELANCER_TYPE_OPTIONS}
+                  value={freelancerCategory}
+                  onValueChange={(v) => setFreelancerCategory(v)}
+                  placeholder="Select your freelancer type"
+                  leftIcon={<Briefcase size={20} color="#7C3AED" />}
+                  style={{ marginVertical: 4, marginBottom: 4 }}
+                />
+                <Text style={styles.fieldHelperText}>
+                  Options will change based on your freelancer type selection.
+                </Text>
+
+                {/* 4. Write About Yourself */}
+                <Text style={styles.sectionNumberTitle}>4. Write About Yourself</Text>
+                <View style={styles.textareaContainer}>
+                  <View style={styles.textareaHeader}>
+                    <Edit3 size={18} color="#7C3AED" style={{ marginRight: 6 }} />
+                    <Text style={styles.textareaHeaderLabel}>Short Bio</Text>
+                  </View>
+                  <TextInput
+                    style={styles.textareaInput}
+                    placeholderTextColor="#A098AE"
+                    placeholder="Write a short bio about yourself, your background and what you do..."
+                    value={form.bio}
+                    multiline
+                    maxLength={500}
+                    onChangeText={(v) => setForm({ ...form, bio: v })}
+                  />
+                  <Text style={styles.textareaCharCounter}>
+                    {form.bio.length} / 500
+                  </Text>
+                </View>
+
+                {/* 5. Experience (in months) */}
+                <Text style={styles.sectionNumberTitle}>5. Experience (in months)</Text>
+                <View style={styles.inputContainer}>
+                  <View style={styles.iconBox}>
+                    <Clock size={20} color="#7C3AED" />
+                  </View>
+                  <TextInput
+                    style={styles.textInput}
+                    placeholderTextColor="#A098AE"
+                    placeholder="Enter your total experience in months (e.g. 24)"
+                    keyboardType="numeric"
+                    value={form.experience}
+                    onChangeText={(v) => setForm({ ...form, experience: v })}
+                  />
+                </View>
+
+                {/* 6. Your Location */}
+                <Text style={styles.sectionNumberTitle}>6. Your Location</Text>
+                <View style={styles.gridRow}>
+                  <View style={styles.gridCol}>
+                    <View style={styles.inputContainer}>
+                      <View style={styles.iconBox}>
+                        <MapPin size={20} color="#7C3AED" />
                       </View>
+                      <TextInput
+                        style={styles.textInput}
+                        placeholderTextColor="#A098AE"
+                        placeholder="City"
+                        value={form.city}
+                        onChangeText={(v) =>
+                          setForm({ ...form, city: v, autoFilledLocation: false })
+                        }
+                      />
+                    </View>
+                  </View>
+                  <View style={styles.gridCol}>
+                    <PickerModal
+                      items={indianStates}
+                      value={form.state}
+                      onValueChange={(value) =>
+                        setForm({ ...form, state: value, autoFilledLocation: false })
+                      }
+                      placeholder={fetchingLocation ? "Fetching..." : "State"}
+                      leftIcon={<Map size={20} color="#7C3AED" />}
+                      disabled={fetchingLocation}
+                      style={{ marginVertical: 0 }}
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.gridRow}>
+                  <View style={styles.gridCol}>
+                    <View style={styles.inputContainer}>
+                      <View style={styles.iconBox}>
+                        <FileText size={20} color="#7C3AED" />
+                      </View>
+                      <TextInput
+                        style={styles.textInput}
+                        keyboardType="numeric"
+                        maxLength={6}
+                        value={form.zipCode}
+                        onChangeText={(text) => {
+                          setForm({ ...form, zipCode: text });
+                          if (text.length === 6) {
+                            fetchLocationFromPincode(text);
+                          }
+                        }}
+                        placeholder="Pin Code"
+                        placeholderTextColor="#A098AE"
+                      />
+                    </View>
+                  </View>
+                  <View style={styles.gridCol}>
+                    <PickerModal
+                      items={COUNTRY_OPTIONS}
+                      value={form.country}
+                      onValueChange={(v) => setForm({ ...form, country: v })}
+                      placeholder="Country"
+                      leftIcon={<Globe size={20} color="#7C3AED" />}
+                      disabled={true}
+                      style={{ marginVertical: 0 }}
+                    />
+                  </View>
+                </View>
+
+                {/* Additional Qualification & Heading */}
+                <Text style={styles.subFieldLabel}>Highest Qualification</Text>
+                <View style={styles.inputContainer}>
+                  <View style={styles.iconBox}>
+                    <GraduationCap size={20} color="#7C3AED" />
+                  </View>
+                  <TextInput
+                    style={styles.textInput}
+                    placeholderTextColor="#A098AE"
+                    placeholder="E.g. Bachelor's Degree"
+                    value={form.qualification}
+                    onChangeText={(v) => setForm({ ...form, qualification: v })}
+                  />
+                </View>
+
+                <Text style={styles.subFieldLabel}>Profile Heading</Text>
+                <View style={styles.inputContainer}>
+                  <View style={styles.iconBox}>
+                    <Sparkles size={20} color="#7C3AED" />
+                  </View>
+                  <TextInput
+                    style={styles.textInput}
+                    placeholderTextColor="#A098AE"
+                    placeholder="E.g. I am a UI/UX Designer & Developer"
+                    value={form.heading}
+                    onChangeText={(v) => setForm({ ...form, heading: v })}
+                  />
+                </View>
+
+                {/* Footer Action Buttons */}
+                <View style={styles.buttonRow}>
+                  <TouchableOpacity
+                    style={styles.secondaryHalfButton}
+                    onPress={prevStep}
+                  >
+                    <ArrowLeft size={18} color="#6D28D9" style={{ marginRight: 6 }} />
+                    <Text style={styles.secondaryHalfButtonText}>Back</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.primaryHalfButton}
+                    onPress={nextStep}
+                  >
+                    <Text style={styles.primaryHalfButtonText}>Next</Text>
+                    <ArrowRight size={18} color="#FFFFFF" style={{ marginLeft: 6 }} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+
+            {/* Step 4: Languages, Skills, Certifications & Personal Details */}
+            {step === 4 && (
+              <View style={styles.card}>
+                {/* 7. Languages You Speak */}
+                <Text style={styles.sectionNumberTitle}>7. Languages You Speak</Text>
+                <View style={styles.gridRow}>
+                  <View style={[styles.gridCol, { flex: 1.2 }]}>
+                    <View style={styles.inputContainer}>
+                      <View style={styles.iconBox}>
+                        <Globe size={20} color="#7C3AED" />
+                      </View>
+                      <TextInput
+                        style={styles.textInput}
+                        placeholderTextColor="#A098AE"
+                        placeholder="Language (e.g. English)"
+                        value={languageInput}
+                        onChangeText={setLanguageInput}
+                      />
+                    </View>
+                  </View>
+                  <View style={[styles.gridCol, { flex: 1 }]}>
+                    <PickerModal
+                      items={PROFICIENCY_LEVELS}
+                      value={selectedProficiency}
+                      onValueChange={(v) => setSelectedProficiency(v)}
+                      placeholder="Level"
+                      style={{ marginVertical: 0 }}
+                    />
+                  </View>
+                  <TouchableOpacity
+                    style={styles.smallAddButton}
+                    onPress={addLanguage}
+                    activeOpacity={0.85}
+                  >
+                    <Plus size={16} color="#FFFFFF" />
+                    <Text style={styles.smallAddButtonText}>Add</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Added languages list */}
+                <View style={styles.tagsWrapper}>
+                  {languageList.map((lang, idx) => (
+                    <View key={idx} style={styles.langTagBadge}>
+                      <Text style={styles.langTagTitle}>{lang.name}</Text>
+                      <View style={styles.langTagLevelBox}>
+                        <Text style={styles.langTagLevelText}>{lang.level}</Text>
+                      </View>
+                      <TouchableOpacity
+                        onPress={() => removeLanguage(idx)}
+                        style={styles.tagRemoveBtn}
+                      >
+                        <X size={12} color="#6D28D9" />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+
+                {/* 8. Skills */}
+                <Text style={styles.sectionNumberTitle}>8. Skills</Text>
+                <View style={styles.inputContainer}>
+                  <View style={styles.iconBox}>
+                    <Search size={20} color="#7C3AED" />
+                  </View>
+                  <TextInput
+                    style={styles.textInput}
+                    placeholderTextColor="#A098AE"
+                    placeholder="Search or add your skills..."
+                  />
+                </View>
+                <Text style={styles.fieldHelperText}>
+                  Add multiple skills that describe your expertise.
+                </Text>
+
+                {/* 9. Certifications */}
+                <Text style={styles.sectionNumberTitle}>9. Certifications</Text>
+                {form.certifications.map((cert, i) => (
+                  <View key={i} style={styles.certRow}>
+                    <View style={[styles.inputContainer, { flex: 1 }]}>
+                      <View style={styles.iconBox}>
+                        <Award size={20} color="#7C3AED" />
+                      </View>
+                      <TextInput
+                        placeholderTextColor="#A098AE"
+                        style={styles.textInput}
+                        placeholder="Certificate name"
+                        value={cert}
+                        onChangeText={(v) =>
+                          setForm({
+                            ...form,
+                            certifications: form.certifications.map((c, idx) =>
+                              idx === i ? v : c
+                            ),
+                          })
+                        }
+                      />
+                    </View>
+
+                    {form.certifications.length > 1 && (
+                      <TouchableOpacity
+                        style={styles.trashIconButton}
+                        onPress={() => {
+                          setForm({
+                            ...form,
+                            certifications: form.certifications.filter(
+                              (_, idx) => idx !== i
+                            ),
+                          });
+                        }}
+                      >
+                        <Trash2 size={18} color="#EF4444" />
+                      </TouchableOpacity>
                     )}
-                    <TouchableOpacity
-                      style={styles.removeButton}
-                      onPress={() => removePortfolioImage(i)}
-                    >
-                      <Text style={styles.removeButtonText}>✕</Text>
-                    </TouchableOpacity>
                   </View>
                 ))}
-              </View>
-              <View style={styles.checkboxContainer}>
-                <Checkbox
-                  value={form.agreePortfolioTerms}
-                  onValueChange={(v) =>
-                    setForm({ ...form, agreePortfolioTerms: v })
-                  }
-                  color={form.agreePortfolioTerms ? "#ff9800" : undefined}
-                />
-                <Text style={styles.checkboxLabel}>
-                  I accept that all the work uploaded on BirdEARNER by me is
-                  authentic and belongs to me.
+
+                <TouchableOpacity
+                  style={styles.addDashedButton}
+                  onPress={addCertification}
+                  activeOpacity={0.8}
+                >
+                  <Plus size={18} color="#6D28D9" style={{ marginRight: 6 }} />
+                  <Text style={styles.addDashedButtonText}>
+                    Add Another Certificate
+                  </Text>
+                </TouchableOpacity>
+
+                {/* Gender */}
+                <Text style={styles.sectionNumberTitle}>Gender</Text>
+                <View style={styles.radioGroupRow}>
+                  {["Male", "Female", "Other"].map((g) => (
+                    <TouchableOpacity
+                      key={g}
+                      style={styles.radioOption}
+                      onPress={() => setForm({ ...form, gender: g })}
+                      activeOpacity={0.8}
+                    >
+                      <View
+                        style={[
+                          styles.radioCircle,
+                          form.gender === g && styles.radioCircleSelected,
+                        ]}
+                      >
+                        {form.gender === g && (
+                          <View style={styles.radioInnerDot} />
+                        )}
+                      </View>
+                      <Text style={styles.radioLabelText}>{g}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                {/* Date of Birth */}
+                <Text style={styles.sectionNumberTitle}>
+                  Date of Birth <Text style={styles.optionalText}>(Optional)</Text>
                 </Text>
+                <TouchableOpacity
+                  style={styles.inputContainer}
+                  onPress={() => setShowDatePicker(true)}
+                  activeOpacity={0.8}
+                >
+                  <View style={styles.iconBox}>
+                    <Calendar size={20} color="#7C3AED" />
+                  </View>
+                  <Text
+                    style={[
+                      styles.textInput,
+                      !form.dob && { color: "#A098AE" },
+                      { paddingTop: 14 },
+                    ]}
+                  >
+                    {formatDateOfBirth(form.dob)}
+                  </Text>
+                </TouchableOpacity>
+
+                {showDatePicker && (
+                  <DateTimePicker
+                    value={
+                      form.dob
+                        ? typeof form.dob === "object" && form.dob instanceof Date
+                          ? form.dob
+                          : isNaN(new Date(form.dob).getTime())
+                          ? new Date()
+                          : new Date(form.dob)
+                        : new Date()
+                    }
+                    mode="date"
+                    display="default"
+                    onChange={(event, selectedDate) => {
+                      setShowDatePicker(false);
+                      if (selectedDate) {
+                        setForm({ ...form, dob: selectedDate });
+                      }
+                    }}
+                    maximumDate={new Date()}
+                  />
+                )}
+
+                {/* Social Media Links */}
+                <Text style={styles.sectionNumberTitle}>Your Social Media Links</Text>
+                {form.socialLinks.map((link, i) => (
+                  <View key={i} style={styles.certRow}>
+                    <View style={[styles.inputContainer, { flex: 1 }]}>
+                      <View style={styles.iconBox}>
+                        <LinkIcon size={20} color="#7C3AED" />
+                      </View>
+                      <TextInput
+                        placeholderTextColor="#A098AE"
+                        style={styles.textInput}
+                        placeholder="www.instagram.com/xyz"
+                        value={link}
+                        onChangeText={(v) =>
+                          setForm({
+                            ...form,
+                            socialLinks: form.socialLinks.map((l, idx) =>
+                              idx === i ? v : l
+                            ),
+                          })
+                        }
+                      />
+                    </View>
+                    {form.socialLinks.length > 1 && (
+                      <TouchableOpacity
+                        style={styles.trashIconButton}
+                        onPress={() => {
+                          setForm({
+                            ...form,
+                            socialLinks: form.socialLinks.filter(
+                              (_, idx) => idx !== i
+                            ),
+                          });
+                        }}
+                      >
+                        <Trash2 size={18} color="#EF4444" />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                ))}
+
+                <TouchableOpacity
+                  style={styles.addLinkRowButton}
+                  onPress={addSocialLink}
+                >
+                  <Plus size={16} color="#6D28D9" style={{ marginRight: 6 }} />
+                  <Text style={styles.addLinkRowButtonText}>
+                    Add more social media links
+                  </Text>
+                </TouchableOpacity>
+
+                <View style={styles.buttonRow}>
+                  <TouchableOpacity
+                    style={styles.secondaryHalfButton}
+                    onPress={prevStep}
+                  >
+                    <ArrowLeft size={18} color="#6D28D9" style={{ marginRight: 6 }} />
+                    <Text style={styles.secondaryHalfButtonText}>Back</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.primaryHalfButton}
+                    onPress={nextStep}
+                  >
+                    <Text style={styles.primaryHalfButtonText}>Next</Text>
+                    <ArrowRight size={18} color="#FFFFFF" style={{ marginLeft: 6 }} />
+                  </TouchableOpacity>
+                </View>
               </View>
-              <View style={styles.buttonRow}>
-                <TouchableOpacity
-                  style={[
-                    styles.backButton,
-                    form.portfolioImages.length > 0 && !form.agreePortfolioTerms
-                      ? styles.disabledButton
-                      : styles.enabledButton,
-                  ]}
-                  onPress={prevStep}
-                  disabled={
-                    form.portfolioImages.length > 0 && !form.agreePortfolioTerms
-                  }
-                >
-                  <Text style={styles.backButtonText}>Back</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.nextButton,
-                    form.portfolioImages.length > 0 && !form.agreePortfolioTerms
-                      ? styles.disabledButton
-                      : styles.enabledButton,
-                  ]}
-                  onPress={nextStep}
-                  disabled={
-                    form.portfolioImages.length > 0 && !form.agreePortfolioTerms
-                  }
-                >
-                  <Text style={styles.nextButtonText}>Next</Text>
-                </TouchableOpacity>
+            )}
+
+            {/* Step 5: Add Your Portfolio (Matching input_file_1.png) */}
+            {step === 5 && (
+              <View style={styles.card}>
+                <View style={styles.portfolioGridWrapper}>
+                  <TouchableOpacity
+                    style={styles.portfolioBigUploadBox}
+                    onPress={uploadPortfolioImages}
+                    activeOpacity={0.8}
+                  >
+                    <Plus size={28} color="#7C3AED" />
+                    <Text style={styles.portfolioUploadBoxTitle}>
+                      Upload Image
+                    </Text>
+                    <Text style={styles.portfolioUploadBoxSubtext}>
+                      (Optional)
+                    </Text>
+                  </TouchableOpacity>
+
+                  <View style={styles.portfolioRightCol}>
+                    <TouchableOpacity
+                      style={styles.portfolioSmallUploadBox}
+                      onPress={uploadPortfolioImages}
+                      activeOpacity={0.8}
+                    >
+                      <Plus size={20} color="#7C3AED" />
+                      <Text style={styles.portfolioSmallBoxTitle}>
+                        Upload Image
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.portfolioSmallUploadBox}
+                      onPress={uploadPortfolioImages}
+                      activeOpacity={0.8}
+                    >
+                      <Plus size={20} color="#7C3AED" />
+                      <Text style={styles.portfolioSmallBoxTitle}>
+                        Upload Image
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* Uploaded Portfolio Previews */}
+                {form.portfolioImages.length > 0 && (
+                  <View style={styles.uploadedImagesGrid}>
+                    {form.portfolioImages.map((image, i) => (
+                      <View key={i} style={styles.portfolioPreviewBox}>
+                        <Image
+                          source={{ uri: apiService.loadImageURI(image.uri) }}
+                          style={styles.portfolioPreviewImg}
+                        />
+                        {image.isExisting && mode === "update" && (
+                          <View style={styles.existingImageTag}>
+                            <Text style={styles.existingImageTagText}>
+                              Existing
+                            </Text>
+                          </View>
+                        )}
+                        <TouchableOpacity
+                          style={styles.removeImageBadge}
+                          onPress={() => removePortfolioImage(i)}
+                        >
+                          <Trash2 size={14} color="#FFFFFF" />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </View>
+                )}
+
+                {/* Info Banner */}
+                <View style={styles.infoBannerBox}>
+                  <Info size={20} color="#7C3AED" style={{ marginRight: 10 }} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.infoBannerTitle}>
+                      You can upload up to 10 images.
+                    </Text>
+                    <Text style={styles.infoBannerText}>
+                      Supported formats: JPG, PNG, WebP (Max 5MB each)
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Terms Checkbox */}
+                <View style={styles.checkboxRow}>
+                  <Checkbox
+                    value={form.agreePortfolioTerms}
+                    onValueChange={(v) =>
+                      setForm({ ...form, agreePortfolioTerms: v })
+                    }
+                    color={form.agreePortfolioTerms ? "#6D28D9" : undefined}
+                    style={styles.checkboxBox}
+                  />
+                  <Text style={styles.checkboxText}>
+                    I accept that all the work uploaded on BirdEARNER by me is
+                    authentic and belongs to me.
+                  </Text>
+                </View>
+
+                {/* Action Buttons */}
+                <View style={styles.buttonRow}>
+                  <TouchableOpacity
+                    style={styles.secondaryHalfButton}
+                    onPress={prevStep}
+                  >
+                    <ArrowLeft size={18} color="#6D28D9" style={{ marginRight: 6 }} />
+                    <Text style={styles.secondaryHalfButtonText}>Back</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.saveDraftButton}
+                    onPress={handleSubmit}
+                    disabled={isLoading}
+                  >
+                    <Bookmark size={18} color="#6D28D9" style={{ marginRight: 6 }} />
+                    <Text style={styles.saveDraftButtonText}>Save</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.primaryHalfButton,
+                      isLoading && styles.disabledButton,
+                    ]}
+                    onPress={handleSubmit}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <ActivityIndicator color="white" size="small" />
+                    ) : (
+                      <>
+                        <Text style={styles.primaryHalfButtonText}>Finish</Text>
+                        <ArrowRight
+                          size={18}
+                          color="#FFFFFF"
+                          style={{ marginLeft: 6 }}
+                        />
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </View>
               </View>
-            </View>
-          )}
-          {/* Step 6: Review & Submit */}
-          {step === 6 && (
-            <View style={styles.card}>
-              <Text style={styles.cardHeading}>Review & Submit</Text>
-              <Text style={styles.label}>
-                Please review your details before submitting.
-              </Text>
-              {/* Show summary here if desired */}
-              <View style={styles.buttonRow}>
-                <TouchableOpacity
-                  style={styles.backButton}
-                  disabled={isLoading}
-                  onPress={prevStep}
-                >
-                  {isLoading ? (
-                    <ActivityIndicator color="white" size="small" />
-                  ) : (
-                    <Text style={styles.backButtonText}>Back</Text>
-                  )}
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.nextButton}
-                  onPress={handleSubmit}
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <ActivityIndicator color="white" size="small" />
-                  ) : (
-                    <Text style={styles.nextButtonText}>Submit</Text>
-                  )}
-                </TouchableOpacity>
+            )}
+
+            {/* Step 6: Review & Submit */}
+            {step === 6 && (
+              <View style={styles.card}>
+                <Text style={styles.subFieldLabel}>
+                  Please review your details before final submission.
+                </Text>
+
+                <View style={styles.buttonRow}>
+                  <TouchableOpacity
+                    style={styles.secondaryHalfButton}
+                    disabled={isLoading}
+                    onPress={prevStep}
+                  >
+                    <ArrowLeft size={18} color="#6D28D9" style={{ marginRight: 6 }} />
+                    <Text style={styles.secondaryHalfButtonText}>Back</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.primaryHalfButton, isLoading && styles.disabledButton]}
+                    onPress={handleSubmit}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <ActivityIndicator color="white" size="small" />
+                    ) : (
+                      <>
+                        <Text style={styles.primaryHalfButtonText}>Submit</Text>
+                        <ArrowRight size={18} color="#FFFFFF" style={{ marginLeft: 6 }} />
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </View>
               </View>
-            </View>
-          )}
-        </ScrollView>
-        <Toast />
-      </KeyboardAvoidingView>
+            )}
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </LinearGradient>
+      <Toast />
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  scrollContainer: {
     flexGrow: 1,
-    padding: 20,
-    backgroundColor: "#4B0082",
-    justifyContent: "center",
-  },
-  heading: {
-    fontSize: 28,
-    color: "white",
-    marginBottom: 32,
-    textAlign: "center",
-    fontWeight: "bold",
-  },
-  card: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 24,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  cardHeading: {
-    fontSize: 24,
-    color: "#4B0082",
-    marginBottom: 16,
-    fontWeight: "bold",
-  },
-  label: {
-    fontSize: 18,
-    color: "#4B0082",
-    marginBottom: 8,
-    fontWeight: "bold",
-  },
-  input: {
-    width: "100%",
-    height: 44,
-    backgroundColor: "#f5f5f5",
-    borderRadius: 10,
     paddingHorizontal: 20,
-    marginBottom: 20,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: "#e0e0e0",
-    color: "#000",
+    paddingTop: 16,
+    paddingBottom: 40,
   },
-  textArea: {
-    height: 100,
-    borderColor: "#e0e0e0",
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 20,
-    backgroundColor: "#f5f5f5",
-    color: "#000",
-    textAlignVertical: "top",
-    marginBottom: 10,
-  },
-  charCount: {
-    color: "#4B0082",
-    marginBottom: 10,
-    textAlign: "right",
-  },
-  checkboxContainer: {
-    flexDirection: "row",
+  headerSection: {
     alignItems: "center",
     marginBottom: 20,
+    marginTop: Platform.OS === "android" ? (StatusBar.currentHeight || 24) + 16 : 24,
   },
-  checkboxLabel: {
-    color: "#4B0082",
-    marginLeft: 10,
-    fontSize: 16,
-  },
-  link: {
-    color: "#aa42f5",
-    textDecorationLine: "underline",
-  },
-  dropdown: {
-    backgroundColor: "#f5f5f5",
-    borderRadius: 10,
+  headerNavSection: {
+    alignItems: "center",
     marginBottom: 20,
-    height: 44,
-    borderWidth: 1,
-    borderColor: "#e0e0e0",
-    justifyContent: "center",
-  },
-  row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 20,
-  },
-  inputContainer: {
-    flex: 1,
-    marginRight: 10,
-  },
-  dropdownContainer: {
-    flex: 1,
-  },
-  buttonRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 10,
-  },
-  nextButton: {
-    width: "48%",
-    height: 50,
-    backgroundColor: "#6A0DAD",
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 10,
-  },
-  nextButtonText: {
-    color: "white",
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  backButton: {
-    width: "48%",
-    height: 50,
-    backgroundColor: "#f0f0f0",
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 10,
-  },
-  backButtonText: {
-    color: "#333",
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  addMore: {
-    color: "#6A0DAD",
-    marginBottom: 10,
-    fontWeight: "bold",
-  },
-  socialRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 1,
-    marginBottom: 8,
-    paddingHorizontal: 4,
-  },
-  socialRowInput: {
-    flex: 1,
-    marginBottom: 10,
-  },
-  profileUploadContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 20,
-    marginBottom: 10,
-  },
-  uploadButton: {
-    padding: 15,
-    backgroundColor: "#6A0DAD",
-    borderRadius: 10,
-  },
-  profileImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    marginLeft: 20,
-  },
-  coverImage: {
-    width: 150,
-    height: 90,
-    borderRadius: 0,
-    marginLeft: 20,
-  },
-  imageUploadButton: {
-    backgroundColor: "#ff9800",
-    paddingHorizontal: 10,
-    paddingVertical: 14,
-    borderRadius: 10,
-    alignItems: "center",
-    marginTop: 25,
-  },
-  imageUploadButtonText: {
-    color: "#ffffff",
-    fontWeight: "bold",
-    fontSize: 18,
-  },
-  uploadedImages: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    marginTop: 20,
-  },
-  imagePreviewContainer: {
+    marginTop: Platform.OS === "android" ? (StatusBar.currentHeight || 24) + 16 : 24,
     position: "relative",
-    width: 100,
-    height: 100,
-    margin: 5,
+    paddingHorizontal: 36,
   },
-  uploadedImage: {
-    width: "100%",
-    height: "100%",
-    borderRadius: 8,
-  },
-  removeButton: {
+  backIconButton: {
     position: "absolute",
-    top: 5,
-    right: 5,
-    backgroundColor: "#3b006b",
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-    borderRadius: 8,
+    left: 0,
+    top: 2,
+    padding: 6,
+    zIndex: 10,
   },
-  removeButtonText: {
-    color: "#ffffff",
-    fontSize: 10,
-    fontWeight: "600",
-  },
-  existingImageBadge: {
-    position: "absolute",
-    top: 5,
-    left: 5,
-    backgroundColor: "#28a745",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  existingImageText: {
-    color: "#ffffff",
-    fontSize: 8,
-    fontWeight: "600",
-  },
-  // Service selection styles
-  searchContainer: {
-    marginVertical: 15,
-  },
-  searchInput: {
-    width: "100%",
-    height: 50,
-    backgroundColor: "#f8f9fa",
-    borderRadius: 12,
-    paddingHorizontal: 20,
-    fontSize: 16,
-    borderWidth: 2,
-    borderColor: "#e9ecef",
-  },
-  searchPrompt: {
-    padding: 20,
-    backgroundColor: "#f8f9fa",
-    borderRadius: 12,
+  avatarHeaderBadge: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    backgroundColor: "#FFFFFF",
+    justifyContent: "center",
     alignItems: "center",
-    marginVertical: 10,
+    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 6,
   },
-  searchPromptText: {
-    fontSize: 16,
-    color: "#6A0DAD",
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#FFFFFF",
     textAlign: "center",
-    marginBottom: 8,
-    fontWeight: "500",
-  },
-  searchHintText: {
-    fontSize: 14,
-    color: "#666",
-    textAlign: "center",
-  },
-  searchResultsHeader: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#4B0082",
-    marginBottom: 15,
-  },
-  noResultsContainer: {
-    padding: 20,
-    alignItems: "center",
-  },
-  noResultsText: {
-    fontSize: 16,
-    color: "#666",
-    marginBottom: 8,
-    textAlign: "center",
-  },
-  noResultsHint: {
-    fontSize: 14,
-    color: "#999",
-    textAlign: "center",
-  },
-  servicesContainer: {
-    marginVertical: 10,
-    maxHeight: 400, // Limit height for scrolling
-  },
-  serviceItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#f5f5f5",
-    borderRadius: 12,
-    padding: 15,
-    marginBottom: 10,
-    borderWidth: 2,
-    borderColor: "#e0e0e0",
-  },
-  serviceItemSelected: {
-    backgroundColor: "#e8d5ff",
-    borderColor: "#6A0DAD",
-  },
-  serviceContent: {
-    flex: 1,
-    marginRight: 10,
-  },
-  serviceName: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#333",
     marginBottom: 4,
   },
-  serviceNameSelected: {
-    color: "#6A0DAD",
-  },
-  serviceDescription: {
+  headerSubtitle: {
     fontSize: 14,
-    color: "#666",
+    color: "#D4C5ED",
+    textAlign: "center",
     lineHeight: 20,
   },
-  serviceDescriptionSelected: {
-    color: "#8A2BE2",
+  card: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 24,
+    padding: 24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 8,
+    marginBottom: 16,
   },
-  serviceCheckbox: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: "#fff",
-    borderWidth: 2,
-    borderColor: "#e0e0e0",
+  fieldLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#1F1D2B",
+    marginBottom: 6,
+  },
+  subFieldLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#1F1D2B",
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  fieldHelperText: {
+    fontSize: 12,
+    color: "#8E8EA9",
+    marginTop: 4,
+    marginBottom: 12,
+  },
+  optionalText: {
+    fontSize: 12,
+    color: "#8E8EA9",
+    fontWeight: "400",
+  },
+  sectionNumberTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#1F1D2B",
+    marginTop: 16,
+    marginBottom: 12,
+  },
+  inputContainer: {
+    flexDirection: "row",
     alignItems: "center",
+    backgroundColor: "#FAFAFC",
+    borderWidth: 1,
+    borderColor: "#E9E3F4",
+    borderRadius: 14,
+    paddingHorizontal: 8,
+    minHeight: 52,
+    marginBottom: 16,
+  },
+  iconBox: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: "#F3E8FF",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 10,
+  },
+  countryCodeBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingRight: 8,
+    marginRight: 8,
+    borderRightWidth: 1,
+    borderRightColor: "#E9E3F4",
+  },
+  countryFlag: {
+    fontSize: 16,
+    marginRight: 4,
+  },
+  countryCodeText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#1F1D2B",
+  },
+  textInput: {
+    flex: 1,
+    fontSize: 14,
+    color: "#1F1D2B",
+    paddingVertical: 10,
+  },
+  eyeIconButton: {
+    padding: 8,
+  },
+  checkboxRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: 12,
+  },
+  checkboxBox: {
+    borderRadius: 6,
+    width: 20,
+    height: 20,
+    marginRight: 10,
+  },
+  checkboxText: {
+    fontSize: 13,
+    color: "#6E6B7B",
+    flex: 1,
+    lineHeight: 18,
+  },
+  purpleLinkText: {
+    color: "#6D28D9",
+    fontWeight: "600",
+  },
+  avatarSection: {
+    alignItems: "center",
+    marginVertical: 12,
+  },
+  avatarCircle: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    borderWidth: 2,
+    borderColor: "#8B5CF6",
+    borderStyle: "dashed",
+    backgroundColor: "#F5F0FF",
+    justifyContent: "center",
+    alignItems: "center",
+    position: "relative",
+    marginBottom: 8,
+  },
+  avatarImage: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 45,
+  },
+  cameraBadge: {
+    position: "absolute",
+    bottom: 0,
+    right: 0,
+    backgroundColor: "#6D28D9",
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: "#FFFFFF",
+  },
+  avatarSubtext: {
+    fontSize: 12,
+    color: "#8E8EA9",
+  },
+  removeImageLink: {
+    marginTop: 6,
+  },
+  removeImageLinkText: {
+    fontSize: 12,
+    color: "#EF4444",
+    fontWeight: "600",
+  },
+  gridRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 8,
+  },
+  gridCol: {
+    flex: 1,
+  },
+  freelancerTypeCard: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FAFAFC",
+    borderWidth: 1.5,
+    borderColor: "#E9E3F4",
+    borderRadius: 16,
+    padding: 12,
+    minHeight: 70,
+  },
+  freelancerTypeCardSelected: {
+    borderColor: "#6D28D9",
+    backgroundColor: "#F5F0FF",
+  },
+  typeIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: "#F3E8FF",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 8,
+  },
+  typeCardTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#1F1D2B",
+  },
+  typeCardSubtext: {
+    fontSize: 11,
+    color: "#8E8EA9",
+  },
+  radioGroupRow: {
+    flexDirection: "row",
+    gap: 16,
+    marginVertical: 8,
+    marginBottom: 16,
+  },
+  radioOption: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  radioCircle: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: "#D4C5ED",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 6,
+  },
+  radioCircleSelected: {
+    borderColor: "#6D28D9",
+  },
+  radioInnerDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: "#6D28D9",
+  },
+  radioLabelText: {
+    fontSize: 14,
+    color: "#1F1D2B",
+    fontWeight: "500",
+  },
+  textareaContainer: {
+    backgroundColor: "#FAFAFC",
+    borderWidth: 1,
+    borderColor: "#E9E3F4",
+    borderRadius: 16,
+    padding: 12,
+    marginBottom: 16,
+  },
+  textareaHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 6,
+  },
+  textareaHeaderLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#7C3AED",
+  },
+  textareaInput: {
+    minHeight: 90,
+    textAlignVertical: "top",
+    fontSize: 14,
+    color: "#1F1D2B",
+  },
+  textareaCharCounter: {
+    fontSize: 12,
+    color: "#A098AE",
+    textAlign: "right",
+    marginTop: 4,
+  },
+  smallAddButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#6D28D9",
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    height: 52,
     justifyContent: "center",
   },
-  serviceCheckboxSelected: {
-    backgroundColor: "#6A0DAD",
-    borderColor: "#6A0DAD",
+  smallAddButtonText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "600",
+    marginLeft: 4,
   },
-  checkmark: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  selectedServicesInfo: {
-    marginVertical: 15,
-    padding: 15,
-    backgroundColor: "#e8f4f8",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#bee5eb",
-  },
-  selectedCount: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#0c5460",
-    marginBottom: 10,
-  },
-  selectedServicesList: {
+  tagsWrapper: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
+    marginVertical: 8,
+    marginBottom: 16,
   },
-  selectedServiceTag: {
+  langTagBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#6A0DAD",
+    backgroundColor: "#F3E8FF",
     borderRadius: 20,
     paddingVertical: 6,
     paddingHorizontal: 12,
-    marginRight: 8,
-    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: "#E9E3F4",
   },
-  selectedServiceText: {
+  langTagTitle: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#1F1D2B",
+    marginRight: 6,
+  },
+  langTagLevelBox: {
+    backgroundColor: "#D8B4FE",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    marginRight: 6,
+  },
+  langTagLevelText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#5B21B6",
+  },
+  tagRemoveBtn: {
+    padding: 2,
+  },
+  certRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  trashIconButton: {
+    width: 44,
+    height: 52,
+    borderRadius: 14,
+    backgroundColor: "#FEE2E2",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  addDashedButton: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1.5,
+    borderColor: "#8B5CF6",
+    borderStyle: "dashed",
+    backgroundColor: "#F5F0FF",
+    borderRadius: 14,
+    height: 48,
+    marginVertical: 8,
+    marginBottom: 16,
+  },
+  addDashedButtonText: {
     fontSize: 14,
-    color: "#fff",
+    fontWeight: "600",
+    color: "#6D28D9",
+  },
+  addLinkRowButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: 8,
+    marginBottom: 16,
+  },
+  addLinkRowButtonText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#6D28D9",
+  },
+  portfolioGridWrapper: {
+    flexDirection: "row",
+    gap: 12,
+    marginVertical: 8,
+    marginBottom: 16,
+  },
+  portfolioBigUploadBox: {
+    flex: 1.5,
+    height: 180,
+    borderWidth: 1.5,
+    borderColor: "#C4B5FD",
+    borderStyle: "dashed",
+    backgroundColor: "#FAFAFC",
+    borderRadius: 16,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  portfolioUploadBoxTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#6D28D9",
+    marginTop: 6,
+  },
+  portfolioUploadBoxSubtext: {
+    fontSize: 11,
+    color: "#8E8EA9",
+  },
+  portfolioRightCol: {
+    flex: 1,
+    gap: 12,
+  },
+  portfolioSmallUploadBox: {
+    height: 84,
+    borderWidth: 1.5,
+    borderColor: "#C4B5FD",
+    borderStyle: "dashed",
+    backgroundColor: "#FAFAFC",
+    borderRadius: 16,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  portfolioSmallBoxTitle: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#6D28D9",
+    marginTop: 4,
+  },
+  uploadedImagesGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    marginBottom: 16,
+  },
+  portfolioPreviewBox: {
+    width: 90,
+    height: 90,
+    borderRadius: 12,
+    position: "relative",
+  },
+  portfolioPreviewImg: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 12,
+  },
+  existingImageTag: {
+    position: "absolute",
+    bottom: 4,
+    left: 4,
+    backgroundColor: "#10B981",
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  existingImageTagText: {
+    color: "#FFFFFF",
+    fontSize: 9,
+    fontWeight: "700",
+  },
+  removeImageBadge: {
+    position: "absolute",
+    top: 4,
+    right: 4,
+    backgroundColor: "#EF4444",
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  infoBannerBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F3E8FF",
+    borderRadius: 14,
+    padding: 14,
+    marginVertical: 12,
+  },
+  infoBannerTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#5B21B6",
+  },
+  infoBannerText: {
+    fontSize: 12,
+    color: "#6D28D9",
+    marginTop: 2,
+  },
+  selectedServicesContainer: {
+    marginVertical: 10,
+  },
+  selectedServicesTitle: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#1F1D2B",
+    marginBottom: 6,
+  },
+  purpleTagBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#6D28D9",
+    borderRadius: 20,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  purpleTagText: {
+    fontSize: 13,
+    color: "#FFFFFF",
     fontWeight: "500",
     marginRight: 6,
   },
-  removeServiceButton: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: "rgba(255, 255, 255, 0.3)",
+  serviceCardItem: {
+    flexDirection: "row",
     alignItems: "center",
+    backgroundColor: "#FAFAFC",
+    borderWidth: 1,
+    borderColor: "#E9E3F4",
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 8,
+  },
+  serviceCardItemSelected: {
+    borderColor: "#6D28D9",
+    backgroundColor: "#F5F0FF",
+  },
+  serviceItemName: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#1F1D2B",
+  },
+  purpleTextBold: {
+    color: "#6D28D9",
+    fontWeight: "700",
+  },
+  serviceItemDesc: {
+    fontSize: 12,
+    color: "#8E8EA9",
+    marginTop: 2,
+  },
+  checkboxCircle: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1.5,
+    borderColor: "#D4C5ED",
     justifyContent: "center",
+    alignItems: "center",
   },
-  removeServiceText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "bold",
-    lineHeight: 18,
+  checkboxCircleSelected: {
+    backgroundColor: "#6D28D9",
+    borderColor: "#6D28D9",
   },
-  selectedServiceItem: {
+  noResultsBox: {
+    padding: 20,
+    alignItems: "center",
+  },
+  noResultsTitle: {
     fontSize: 14,
-    color: "#333",
-    marginBottom: 5,
+    color: "#8E8EA9",
+  },
+  primaryButton: {
+    height: 52,
+    backgroundColor: "#6D28D9",
+    borderRadius: 14,
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 4,
+    shadowColor: "#6D28D9",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  primaryButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  buttonRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 16,
+  },
+  primaryHalfButton: {
+    flex: 1,
+    height: 52,
+    backgroundColor: "#6D28D9",
+    borderRadius: 14,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#6D28D9",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  primaryHalfButtonText: {
+    color: "#FFFFFF",
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  secondaryHalfButton: {
+    flex: 1,
+    height: 52,
+    borderWidth: 1.5,
+    borderColor: "#6D28D9",
+    borderRadius: 14,
+    backgroundColor: "transparent",
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  secondaryHalfButtonText: {
+    color: "#6D28D9",
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  saveDraftButton: {
+    flex: 1,
+    height: 52,
+    borderWidth: 1.5,
+    borderColor: "#6D28D9",
+    borderRadius: 14,
+    backgroundColor: "#F5F0FF",
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  saveDraftButtonText: {
+    color: "#6D28D9",
+    fontSize: 15,
+    fontWeight: "600",
   },
   disabledButton: {
-    backgroundColor: "#ccc",
-    opacity: 0.5,
+    opacity: 0.6,
   },
-  coverImage: {
-    width: 100,
-    height: 67,
-  },
-  disabledText: {
-    color: "#888",
-  },
-  deleteButton: {
-    marginLeft: 12,
-    backgroundColor: "#ff4757",
-    borderRadius: 20,
-    width: 32,
-    height: 32,
+  securityBanner: {
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#ff4757",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-    borderWidth: 1,
-    borderColor: "#ff3742",
+    marginTop: 16,
   },
-  deleteButtonText: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: 16,
-    lineHeight: 20,
+  securityBannerText: {
+    fontSize: 12,
+    color: "#8E8EA9",
   },
 });
 

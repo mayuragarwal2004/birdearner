@@ -768,6 +768,21 @@ const ClientSignup = ({ navigation, route }) => {
                   </TouchableOpacity>
                 </View>
 
+                {/* Terms and Conditions Checkbox */}
+                <View style={styles.checkboxRow}>
+                  <Checkbox
+                    value={form.termsAccepted}
+                    onValueChange={(v) => setForm({ ...form, termsAccepted: v })}
+                    color={form.termsAccepted ? "#6D28D9" : undefined}
+                    style={styles.checkboxBox}
+                  />
+                  <Text style={styles.checkboxText}>
+                    I agree to the{" "}
+                    <Text style={styles.purpleLinkText}>Terms and Conditions</Text> and{" "}
+                    <Text style={styles.purpleLinkText}>Privacy Policy</Text>
+                  </Text>
+                </View>
+
                 {/* Next Button */}
                 <TouchableOpacity
                   style={[styles.primaryButton, isLoading && styles.disabledButton]}
@@ -1006,57 +1021,6 @@ const ClientSignup = ({ navigation, route }) => {
                   </Text>
                 </View>
 
-                {/* Social Links */}
-                <Text style={styles.subFieldLabel}>Social Media Links</Text>
-                {form.socialLinks.map((link, i) => (
-                  <View key={i} style={styles.inputContainer}>
-                    <View style={styles.iconBox}>
-                      <Link size={20} color="#7C3AED" />
-                    </View>
-                    <TextInput
-                      style={styles.textInput}
-                      placeholderTextColor="#A098AE"
-                      placeholder="www.instagram.com/xyz"
-                      value={link}
-                      onChangeText={(v) =>
-                        setForm({
-                          ...form,
-                          socialLinks: form.socialLinks.map((l, idx) =>
-                            idx === i ? v : l
-                          ),
-                        })
-                      }
-                    />
-                  </View>
-                ))}
-                <TouchableOpacity
-                  onPress={addSocialLink}
-                  style={styles.addSocialButton}
-                >
-                  <Plus size={16} color="#6D28D9" style={{ marginRight: 6 }} />
-                  <Text style={styles.addSocialText}>
-                    Add more social media links
-                  </Text>
-                </TouchableOpacity>
-
-                {/* Terms Checkbox (Signup mode) */}
-                {mode === "signup" && (
-                  <View style={styles.checkboxContainer}>
-                    <Checkbox
-                      value={form.termsAccepted}
-                      onValueChange={(v) => setForm({ ...form, termsAccepted: v })}
-                      color={form.termsAccepted ? "#6D28D9" : undefined}
-                      style={styles.checkbox}
-                    />
-                    <Text style={styles.checkboxLabel}>
-                      I confirm that the information provided is true and filled by
-                      me. I have read and agree to the{" "}
-                      <Text style={styles.linkText}>terms & conditions</Text> and{" "}
-                      <Text style={styles.linkText}>policies</Text>.
-                    </Text>
-                  </View>
-                )}
-
                 {/* Action Buttons: Back & Submit */}
                 <View style={styles.buttonRow}>
                   <TouchableOpacity
@@ -1249,6 +1213,27 @@ const styles = StyleSheet.create({
   },
   disabledButton: {
     opacity: 0.6,
+  },
+  checkboxRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: 12,
+  },
+  checkboxBox: {
+    borderRadius: 6,
+    width: 20,
+    height: 20,
+    marginRight: 10,
+  },
+  checkboxText: {
+    fontSize: 13,
+    color: "#6E6B7B",
+    flex: 1,
+    lineHeight: 18,
+  },
+  purpleLinkText: {
+    color: "#6D28D9",
+    fontWeight: "600",
   },
   sectionNumberTitle: {
     fontSize: 14,
