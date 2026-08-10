@@ -10,7 +10,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const PURPLE = "#5B1F96";
+const PURPLE = "#2E0854";
 const CIRCLE_SIZE = Math.min(SCREEN_WIDTH * 0.38, 165);
 
 const Role = ({ navigation }) => {

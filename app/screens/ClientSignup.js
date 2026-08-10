@@ -133,9 +133,6 @@ const createSchema = (mode) => {
         email: z.string().email("Valid email is required"),
         password: z.string().min(6, "Password must be at least 6 characters"),
         confirmPassword: z.string().min(6, "Confirm password is required"),
-        termsAccepted: z.boolean().refine((val) => val === true, {
-          message: "You must accept the Terms and Conditions.",
-        }),
         ...baseSchema,
       })
       .refine((data) => data.password === data.confirmPassword, {
@@ -425,16 +422,6 @@ const ClientSignup = ({ navigation, route }) => {
   const handleSubmit = async () => {
     console.log("Triggered handleSubmit with mode:", mode);
     setIsLoading(true);
-
-    if (mode === "signup" && !form.termsAccepted) {
-      showToast(
-        "error",
-        "Terms Required",
-        "You must confirm and accept the Terms and Conditions."
-      );
-      setIsLoading(false);
-      return;
-    }
 
     try {
       const result = schema.safeParse(form);
@@ -779,21 +766,6 @@ const ClientSignup = ({ navigation, route }) => {
                       <Eye size={20} color="#A098AE" />
                     )}
                   </TouchableOpacity>
-                </View>
-
-                {/* Terms and Conditions Checkbox */}
-                <View style={styles.checkboxRow}>
-                  <Checkbox
-                    value={form.termsAccepted}
-                    onValueChange={(v) => setForm({ ...form, termsAccepted: v })}
-                    color={form.termsAccepted ? "#6D28D9" : undefined}
-                    style={styles.checkboxBox}
-                  />
-                  <Text style={styles.checkboxText}>
-                    I agree to the{" "}
-                    <Text style={styles.purpleLinkText}>Terms and Conditions</Text> and{" "}
-                    <Text style={styles.purpleLinkText}>Privacy Policy</Text>
-                  </Text>
                 </View>
 
                 {/* Next Button */}

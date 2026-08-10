@@ -150,6 +150,9 @@ const createSchema = (mode) => {
     coverImage: z.any().optional(),
     portfolioImages: z.array(assetSchema).optional(),
     agreePortfolioTerms: z.boolean().optional(),
+    termsAndConditions: z.boolean().refine((val) => val === true, {
+      message: "You must accept the Terms and Conditions.",
+    }),
   };
 
   if (mode === "signup") {
@@ -159,9 +162,6 @@ const createSchema = (mode) => {
         email: z.string().email("Valid email is required"),
         password: z.string().min(6, "Password must be at least 6 characters"),
         confirmPassword: z.string().min(6, "Confirm password is required"),
-        termsAccepted: z.boolean().refine((val) => val === true, {
-          message: "You must accept the Terms and Conditions.",
-        }),
         ...baseSchema,
       })
       .refine((data) => data.password === data.confirmPassword, {
@@ -252,11 +252,12 @@ const FreelancerSignup = ({ navigation, route }) => {
       : null,
     portfolioImages: user?.freelancer?.portfolioImages?.length
       ? user.freelancer.portfolioImages.map((img) => ({
-          uri: img,
-          isExisting: true,
-        }))
+        uri: img,
+        isExisting: true,
+      }))
       : [],
     agreePortfolioTerms: user?.freelancer?.termsAccepted || false,
+    termsAndConditions: false,
     selectedServices: user?.freelancer?.selectedServices || [],
   });
 
@@ -306,9 +307,9 @@ const FreelancerSignup = ({ navigation, route }) => {
           : prevForm.coverImage,
         portfolioImages: dataSource.portfolioImages?.length
           ? dataSource.portfolioImages.map((img) => ({
-              uri: img,
-              isExisting: true,
-            }))
+            uri: img,
+            isExisting: true,
+          }))
           : prevForm.portfolioImages,
         agreePortfolioTerms:
           dataSource.termsAccepted || prevForm.agreePortfolioTerms,
@@ -580,10 +581,6 @@ const FreelancerSignup = ({ navigation, route }) => {
         showToast("error", "Password Mismatch", "Passwords do not match.");
         return;
       }
-      if (!form.termsAccepted) {
-        showToast("error", "Terms Required", "You must accept the Terms and Conditions.");
-        return;
-      }
 
       setIsLoading(true);
       try {
@@ -615,6 +612,8 @@ const FreelancerSignup = ({ navigation, route }) => {
         return;
       }
       setStep(3);
+    } else if (step === 3) {
+      setStep(5);
     } else {
       setStep(step + 1);
     }
@@ -623,6 +622,8 @@ const FreelancerSignup = ({ navigation, route }) => {
   const prevStep = () => {
     if (step === 2 && (mode === "create" || mode === "update")) {
       navigation.goBack();
+    } else if (step === 5) {
+      setStep(3);
     } else if (step > 1) {
       setStep(step - 1);
     } else {
@@ -753,7 +754,7 @@ const FreelancerSignup = ({ navigation, route }) => {
           profilePhoto: cleanedForm.profileImage,
           coverPhoto: cleanedForm.coverImage,
           portfolioImages: cleanedForm.portfolioImages,
-          termsAccepted: cleanedForm.agreePortfolioTerms,
+          termsAccepted: cleanedForm.termsAndConditions,
           fullName: cleanedForm.full_name,
         };
 
@@ -795,7 +796,7 @@ const FreelancerSignup = ({ navigation, route }) => {
           profilePhoto: cleanedForm.profileImage,
           coverPhoto: cleanedForm.coverImage,
           portfolioImages: cleanedForm.portfolioImages,
-          termsAccepted: cleanedForm.agreePortfolioTerms,
+          termsAccepted: cleanedForm.termsAndConditions,
           fullName: cleanedForm.full_name,
           deletedImages: deletedImages,
         };
@@ -1007,20 +1008,6 @@ const FreelancerSignup = ({ navigation, route }) => {
                       <Eye size={20} color="#A098AE" />
                     )}
                   </TouchableOpacity>
-                </View>
-
-                <View style={styles.checkboxRow}>
-                  <Checkbox
-                    value={form.termsAccepted}
-                    onValueChange={(v) => setForm({ ...form, termsAccepted: v })}
-                    color={form.termsAccepted ? "#6D28D9" : undefined}
-                    style={styles.checkboxBox}
-                  />
-                  <Text style={styles.checkboxText}>
-                    I agree to the{" "}
-                    <Text style={styles.purpleLinkText}>Terms and Conditions</Text> and{" "}
-                    <Text style={styles.purpleLinkText}>Privacy Policy</Text>
-                  </Text>
                 </View>
 
                 <TouchableOpacity
@@ -1322,8 +1309,79 @@ const FreelancerSignup = ({ navigation, route }) => {
                   </Text>
                 </View>
 
-                {/* 5. Experience (in months) */}
-                <Text style={styles.sectionNumberTitle}>5. Experience (in months)</Text>
+                {/* 5. Date of Birth (Optional) */}
+                <Text style={styles.sectionNumberTitle}>
+                  5. Date of Birth <Text style={styles.optionalText}>(Optional)</Text>
+                </Text>
+                <TouchableOpacity
+                  style={styles.inputContainer}
+                  onPress={() => setShowDatePicker(true)}
+                  activeOpacity={0.8}
+                >
+                  <View style={styles.iconBox}>
+                    <Calendar size={20} color="#7C3AED" />
+                  </View>
+                  <Text
+                    style={[
+                      styles.textInput,
+                      !form.dob && { color: "#A098AE" },
+                      { paddingTop: 14 },
+                    ]}
+                  >
+                    {formatDateOfBirth(form.dob)}
+                  </Text>
+                </TouchableOpacity>
+
+                {showDatePicker && (
+                  <DateTimePicker
+                    value={
+                      form.dob
+                        ? typeof form.dob === "object" && form.dob instanceof Date
+                          ? form.dob
+                          : isNaN(new Date(form.dob).getTime())
+                            ? new Date()
+                            : new Date(form.dob)
+                        : new Date()
+                    }
+                    mode="date"
+                    display="default"
+                    onChange={(event, selectedDate) => {
+                      setShowDatePicker(false);
+                      if (selectedDate) {
+                        setForm({ ...form, dob: selectedDate });
+                      }
+                    }}
+                    maximumDate={new Date()}
+                  />
+                )}
+
+                {/* 6. Gender */}
+                <Text style={styles.sectionNumberTitle}>6. Gender</Text>
+                <View style={styles.radioGroupRow}>
+                  {["Male", "Female", "Other"].map((g) => (
+                    <TouchableOpacity
+                      key={g}
+                      style={styles.radioOption}
+                      onPress={() => setForm({ ...form, gender: g })}
+                      activeOpacity={0.8}
+                    >
+                      <View
+                        style={[
+                          styles.radioCircle,
+                          form.gender === g && styles.radioCircleSelected,
+                        ]}
+                      >
+                        {form.gender === g && (
+                          <View style={styles.radioInnerDot} />
+                        )}
+                      </View>
+                      <Text style={styles.radioLabelText}>{g}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                {/* 7. Experience (in months) */}
+                <Text style={styles.sectionNumberTitle}>7. Experience (in months)</Text>
                 <View style={styles.inputContainer}>
                   <View style={styles.iconBox}>
                     <Calendar size={20} color="#7C3AED" />
@@ -1338,8 +1396,8 @@ const FreelancerSignup = ({ navigation, route }) => {
                   />
                 </View>
 
-                {/* 6. Your Location */}
-                <Text style={styles.sectionNumberTitle}>6. Your Location</Text>
+                {/* 8. Your Location */}
+                <Text style={styles.sectionNumberTitle}>8. Your Location</Text>
                 <View style={styles.gridRow}>
                   <View style={styles.gridCol}>
                     <View style={styles.inputContainer}>
@@ -1375,8 +1433,8 @@ const FreelancerSignup = ({ navigation, route }) => {
                   </View>
                 </View>
 
-                {/* 7. Languages You Speak */}
-                <Text style={styles.sectionNumberTitle}>7. Languages You Speak</Text>
+                {/* 9. Languages You Speak */}
+                <Text style={styles.sectionNumberTitle}>9. Languages You Speak</Text>
                 <View style={styles.langInputCardContainer}>
                   <View style={styles.gridRow}>
                     <View style={[styles.gridCol, { flex: 1.3 }]}>
@@ -1429,8 +1487,8 @@ const FreelancerSignup = ({ navigation, route }) => {
                   </View>
                 </View>
 
-                {/* 8. Skills */}
-                <Text style={styles.sectionNumberTitle}>8. Skills</Text>
+                {/* 10. Skills */}
+                <Text style={styles.sectionNumberTitle}>10. Skills</Text>
                 <View style={styles.inputContainer}>
                   <View style={styles.iconBox}>
                     <Search size={20} color="#7C3AED" />
@@ -1445,8 +1503,8 @@ const FreelancerSignup = ({ navigation, route }) => {
                   Add multiple skills that describe your expertise.
                 </Text>
 
-                {/* 9. Certifications */}
-                <Text style={styles.sectionNumberTitle}>9. Certifications</Text>
+                {/* 11. Certifications */}
+                <Text style={styles.sectionNumberTitle}>11. Certifications</Text>
                 {form.certifications.map((cert, i) => (
                   <View key={i} style={styles.certRow}>
                     <View style={[styles.gridCol, { flex: 1 }]}>
@@ -1544,148 +1602,6 @@ const FreelancerSignup = ({ navigation, route }) => {
                   >
                     <Bookmark size={18} color="#6D28D9" style={{ marginRight: 6 }} />
                     <Text style={styles.saveDraftButtonText}>Save</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={styles.primaryHalfButton}
-                    onPress={nextStep}
-                  >
-                    <Text style={styles.primaryHalfButtonText}>Next</Text>
-                    <ArrowRight size={18} color="#FFFFFF" style={{ marginLeft: 6 }} />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
-
-            {/* Step 4: Personal Details & Links */}
-            {step === 4 && (
-              <View style={styles.card}>
-                <Text style={styles.sectionNumberTitle}>Gender</Text>
-                <View style={styles.radioGroupRow}>
-                  {["Male", "Female", "Other"].map((g) => (
-                    <TouchableOpacity
-                      key={g}
-                      style={styles.radioOption}
-                      onPress={() => setForm({ ...form, gender: g })}
-                      activeOpacity={0.8}
-                    >
-                      <View
-                        style={[
-                          styles.radioCircle,
-                          form.gender === g && styles.radioCircleSelected,
-                        ]}
-                      >
-                        {form.gender === g && (
-                          <View style={styles.radioInnerDot} />
-                        )}
-                      </View>
-                      <Text style={styles.radioLabelText}>{g}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-
-                <Text style={styles.sectionNumberTitle}>
-                  Date of Birth <Text style={styles.optionalText}>(Optional)</Text>
-                </Text>
-                <TouchableOpacity
-                  style={styles.inputContainer}
-                  onPress={() => setShowDatePicker(true)}
-                  activeOpacity={0.8}
-                >
-                  <View style={styles.iconBox}>
-                    <Calendar size={20} color="#7C3AED" />
-                  </View>
-                  <Text
-                    style={[
-                      styles.textInput,
-                      !form.dob && { color: "#A098AE" },
-                      { paddingTop: 14 },
-                    ]}
-                  >
-                    {formatDateOfBirth(form.dob)}
-                  </Text>
-                </TouchableOpacity>
-
-                {showDatePicker && (
-                  <DateTimePicker
-                    value={
-                      form.dob
-                        ? typeof form.dob === "object" && form.dob instanceof Date
-                          ? form.dob
-                          : isNaN(new Date(form.dob).getTime())
-                          ? new Date()
-                          : new Date(form.dob)
-                        : new Date()
-                    }
-                    mode="date"
-                    display="default"
-                    onChange={(event, selectedDate) => {
-                      setShowDatePicker(false);
-                      if (selectedDate) {
-                        setForm({ ...form, dob: selectedDate });
-                      }
-                    }}
-                    maximumDate={new Date()}
-                  />
-                )}
-
-                <Text style={styles.sectionNumberTitle}>Your Social Media Links</Text>
-                {form.socialLinks.map((link, i) => (
-                  <View key={i} style={styles.certRow}>
-                    <View style={[styles.inputContainer, { flex: 1 }]}>
-                      <View style={styles.iconBox}>
-                        <LinkIcon size={20} color="#7C3AED" />
-                      </View>
-                      <TextInput
-                        placeholderTextColor="#A098AE"
-                        style={styles.textInput}
-                        placeholder="www.instagram.com/xyz"
-                        value={link}
-                        onChangeText={(v) =>
-                          setForm({
-                            ...form,
-                            socialLinks: form.socialLinks.map((l, idx) =>
-                              idx === i ? v : l
-                            ),
-                          })
-                        }
-                      />
-                    </View>
-                    {form.socialLinks.length > 1 && (
-                      <TouchableOpacity
-                        style={styles.trashIconButton}
-                        onPress={() => {
-                          setForm({
-                            ...form,
-                            socialLinks: form.socialLinks.filter(
-                              (_, idx) => idx !== i
-                            ),
-                          });
-                        }}
-                      >
-                        <Trash2 size={18} color="#EF4444" />
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                ))}
-
-                <TouchableOpacity
-                  style={styles.addLinkRowButton}
-                  onPress={addSocialLink}
-                >
-                  <Plus size={16} color="#6D28D9" style={{ marginRight: 6 }} />
-                  <Text style={styles.addLinkRowButtonText}>
-                    Add more social media links
-                  </Text>
-                </TouchableOpacity>
-
-                <View style={styles.buttonRow}>
-                  <TouchableOpacity
-                    style={styles.secondaryHalfButton}
-                    onPress={prevStep}
-                  >
-                    <ArrowLeft size={18} color="#6D28D9" style={{ marginRight: 6 }} />
-                    <Text style={styles.secondaryHalfButtonText}>Back</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -1836,7 +1752,24 @@ const FreelancerSignup = ({ navigation, route }) => {
                   </View>
                 </View>
 
-                {/* Terms Checkbox */}
+                {/* Terms and Conditions Checkbox */}
+                <View style={styles.checkboxRow}>
+                  <Checkbox
+                    value={form.termsAndConditions}
+                    onValueChange={(v) =>
+                      setForm({ ...form, termsAndConditions: v })
+                    }
+                    color={form.termsAndConditions ? "#6D28D9" : undefined}
+                    style={styles.checkboxBox}
+                  />
+                  <Text style={styles.checkboxText}>
+                    I agree to the{" "}
+                    <Text style={styles.purpleLinkText}>Terms and Conditions</Text> and{" "}
+                    <Text style={styles.purpleLinkText}>Privacy Policy</Text>
+                  </Text>
+                </View>
+
+                {/* Portfolio Terms Checkbox */}
                 <View style={styles.checkboxRow}>
                   <Checkbox
                     value={form.agreePortfolioTerms}

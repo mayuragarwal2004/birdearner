@@ -47,6 +47,11 @@ const OtpVerification = ({ navigation, route }) => {
       return;
     }
 
+    if (cleanDigit.length > 1) {
+      handleOtpPaste(cleanDigit);
+      return;
+    }
+
     const lastChar = cleanDigit.slice(-1);
     const updatedDigits = [...otpDigits];
     updatedDigits[index] = lastChar;
@@ -67,6 +72,20 @@ const OtpVerification = ({ navigation, route }) => {
         setOtp(updatedDigits.join(""));
         inputRefs.current[index - 1]?.focus();
       }
+    }
+  };
+
+  const handleOtpPaste = (text) => {
+    const digits = text.replace(/[^0-9]/g, "").slice(0, 6);
+    if (digits.length > 0) {
+      const newDigits = ["", "", "", "", "", ""];
+      for (let i = 0; i < digits.length; i++) {
+        newDigits[i] = digits[i];
+      }
+      setOtpDigits(newDigits);
+      setOtp(digits);
+      const nextIndex = Math.min(digits.length, 5);
+      inputRefs.current[nextIndex]?.focus();
     }
   };
 
@@ -220,7 +239,7 @@ const OtpVerification = ({ navigation, route }) => {
                 </>
               ) : (
                 <>
-                  <Text style={styles.fieldLabel}>Verification Code (6-Digit OTP)</Text>
+                  <Text style={styles.fieldLabel}>Enter Verification Code</Text>
                   <View style={styles.otpBoxesRow}>
                     {otpDigits.map((digit, index) => (
                       <TextInput
@@ -237,8 +256,10 @@ const OtpVerification = ({ navigation, route }) => {
                         onFocus={() => setFocusedIndex(index)}
                         onBlur={() => setFocusedIndex(null)}
                         keyboardType="number-pad"
-                        maxLength={1}
+                        maxLength={index === 0 ? 6 : 1}
                         selectTextOnFocus
+                        textContentType={Platform.OS === "ios" ? "oneTimeCode" : undefined}
+                        autoComplete={Platform.OS === "android" ? "one-time-code" : undefined}
                       />
                     ))}
                   </View>
