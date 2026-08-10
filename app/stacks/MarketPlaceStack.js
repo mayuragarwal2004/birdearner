@@ -11,6 +11,11 @@ const MarketPlaceStack = () => (
       options={{ headerShown: false }}
     />
     <Stack.Screen
+      name="MarketplaceJobs"
+      getComponent={() => require('../screens/MarketplaceJobs').default}
+      options={{ headerShown: false }}
+    />
+    <Stack.Screen
       name="JobPriority"
       getComponent={() => require('../screens/JobPriority').default}
       options={{ headerShown: false }}

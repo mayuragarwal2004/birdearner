@@ -26,16 +26,11 @@ export const useMarketplaceJobs = () => {
         setFilterLoading(true);
       }
 
-      // Build filter parameters
+      // Build filter parameters - show ALL open unassigned jobs
       const filters = {
-        status: 'OPEN', // Only get open jobs that are available
-        unassigned: true, // Filter out jobs that already have freelancers
+        status: 'OPEN',
+        unassigned: true,
       };
-
-      // If user is a freelancer, filter jobs by their services
-      if (currentUserRole === 'FREELANCER' && userServices.length > 0) {
-        filters.serviceIds = userServices.map(service => service.id);
-      }
 
       // Add location filtering if requested
       if (filterByLocation && location) {
