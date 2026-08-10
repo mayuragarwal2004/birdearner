@@ -53,6 +53,7 @@ import {
   Link as LinkIcon,
   GraduationCap,
   Clock,
+  ChevronDown,
 } from "lucide-react-native";
 import apiService from "../lib/apiService";
 import { useAuth } from "../context/NewAuthContext";
@@ -855,9 +856,21 @@ const FreelancerSignup = ({ navigation, route }) => {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#2E0854" }}>
       <LinearGradient
-        colors={["#2E0854", "#3E0A70", "#1C0338"]}
+        colors={["#2B0855", "#3B0A75", "#160233"]}
         style={{ flex: 1 }}
       >
+        {/* Background Dot Matrix Decorative Elements */}
+        <View style={styles.dotMatrixLeft} pointerEvents="none">
+          {[...Array(15)].map((_, i) => (
+            <View key={i} style={styles.dotItem} />
+          ))}
+        </View>
+        <View style={styles.dotMatrixRight} pointerEvents="none">
+          {[...Array(15)].map((_, i) => (
+            <View key={i} style={styles.dotItem} />
+          ))}
+        </View>
+
         <KeyboardAvoidingView
           style={{ flex: 1 }}
           behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -893,7 +906,7 @@ const FreelancerSignup = ({ navigation, route }) => {
               </View>
             )}
 
-            {/* Step 1: Basic Signup Account Info */}
+            {/* Step 1: Basic Signup Account Info (Image 3/4 Reference) */}
             {step === 1 && mode === "signup" && (
               <View style={styles.card}>
                 <Text style={styles.fieldLabel}>Full Name</Text>
@@ -919,11 +932,12 @@ const FreelancerSignup = ({ navigation, route }) => {
                   <View style={styles.countryCodeBox}>
                     <Text style={styles.countryFlag}>🇮🇳</Text>
                     <Text style={styles.countryCodeText}>+91</Text>
+                    <ChevronDown size={14} color="#7C3AED" style={{ marginLeft: 2 }} />
                   </View>
                   <TextInput
                     style={styles.textInput}
                     placeholderTextColor="#A098AE"
-                    placeholder="Mobile number verified via OTP"
+                    placeholder="Enter your mobile number"
                     value={form.mobile}
                     editable={false}
                   />
@@ -1023,7 +1037,7 @@ const FreelancerSignup = ({ navigation, route }) => {
                 </TouchableOpacity>
 
                 <View style={styles.securityBanner}>
-                  <ShieldCheck size={16} color="#7C3AED" style={{ marginRight: 6 }} />
+                  <ShieldCheck size={18} color="#BDB4FE" style={{ marginRight: 8 }} />
                   <Text style={styles.securityBannerText}>
                     Your information is safe and secure with us.
                   </Text>
@@ -1031,7 +1045,7 @@ const FreelancerSignup = ({ navigation, route }) => {
               </View>
             )}
 
-            {/* Step 2: Add Your Services (Matching input_file_2.png) */}
+            {/* Step 2: Add Your Services */}
             {step === 2 && (
               <View style={styles.card}>
                 <Text style={styles.subFieldLabel}>
@@ -1180,7 +1194,7 @@ const FreelancerSignup = ({ navigation, route }) => {
               </View>
             )}
 
-            {/* Step 3: Complete Your Freelancer Profile (Matching input_file_0.png) */}
+            {/* Step 3: Complete Your Freelancer Profile (Exact Match to Image 2 Reference) */}
             {step === 3 && (
               <View style={styles.card}>
                 {/* 1. Add Your Profile Picture */}
@@ -1197,7 +1211,7 @@ const FreelancerSignup = ({ navigation, route }) => {
                         style={styles.avatarImage}
                       />
                     ) : (
-                      <User size={36} color="#8B5CF6" />
+                      <User size={38} color="#5B21B6" />
                     )}
                     <View style={styles.cameraBadge}>
                       <Camera size={14} color="#FFFFFF" />
@@ -1262,7 +1276,7 @@ const FreelancerSignup = ({ navigation, route }) => {
                     </View>
                     <View style={{ flex: 1, paddingRight: 4 }}>
                       <Text style={styles.typeCardTitle}>On-site</Text>
-                      <Text style={styles.typeCardSubtext}>Specific location</Text>
+                      <Text style={styles.typeCardSubtext}>Work at a specific location</Text>
                     </View>
                     <View
                       style={[
@@ -1294,10 +1308,6 @@ const FreelancerSignup = ({ navigation, route }) => {
                 {/* 4. Write About Yourself */}
                 <Text style={styles.sectionNumberTitle}>4. Write About Yourself</Text>
                 <View style={styles.textareaContainer}>
-                  <View style={styles.textareaHeader}>
-                    <Edit3 size={18} color="#7C3AED" style={{ marginRight: 6 }} />
-                    <Text style={styles.textareaHeaderLabel}>Short Bio</Text>
-                  </View>
                   <TextInput
                     style={styles.textareaInput}
                     placeholderTextColor="#A098AE"
@@ -1308,7 +1318,7 @@ const FreelancerSignup = ({ navigation, route }) => {
                     onChangeText={(v) => setForm({ ...form, bio: v })}
                   />
                   <Text style={styles.textareaCharCounter}>
-                    {form.bio.length} / 500
+                    {form.bio ? form.bio.length : 0} / 500
                   </Text>
                 </View>
 
@@ -1316,12 +1326,12 @@ const FreelancerSignup = ({ navigation, route }) => {
                 <Text style={styles.sectionNumberTitle}>5. Experience (in months)</Text>
                 <View style={styles.inputContainer}>
                   <View style={styles.iconBox}>
-                    <Clock size={20} color="#7C3AED" />
+                    <Calendar size={20} color="#7C3AED" />
                   </View>
                   <TextInput
                     style={styles.textInput}
                     placeholderTextColor="#A098AE"
-                    placeholder="Enter your total experience in months (e.g. 24)"
+                    placeholder="Enter your total experience in months"
                     keyboardType="numeric"
                     value={form.experience}
                     onChangeText={(v) => setForm({ ...form, experience: v })}
@@ -1339,7 +1349,7 @@ const FreelancerSignup = ({ navigation, route }) => {
                       <TextInput
                         style={styles.textInput}
                         placeholderTextColor="#A098AE"
-                        placeholder="City"
+                        placeholder="Enter your city"
                         value={form.city}
                         onChangeText={(v) =>
                           setForm({ ...form, city: v, autoFilledLocation: false })
@@ -1348,160 +1358,75 @@ const FreelancerSignup = ({ navigation, route }) => {
                     </View>
                   </View>
                   <View style={styles.gridCol}>
-                    <PickerModal
-                      items={indianStates}
-                      value={form.state}
-                      onValueChange={(value) =>
-                        setForm({ ...form, state: value, autoFilledLocation: false })
-                      }
-                      placeholder={fetchingLocation ? "Fetching..." : "State"}
-                      leftIcon={<Map size={20} color="#7C3AED" />}
-                      disabled={fetchingLocation}
-                      style={{ marginVertical: 0 }}
-                    />
-                  </View>
-                </View>
-
-                <View style={styles.gridRow}>
-                  <View style={styles.gridCol}>
                     <View style={styles.inputContainer}>
                       <View style={styles.iconBox}>
-                        <FileText size={20} color="#7C3AED" />
+                        <Building size={20} color="#7C3AED" />
                       </View>
                       <TextInput
                         style={styles.textInput}
-                        keyboardType="numeric"
-                        maxLength={6}
-                        value={form.zipCode}
-                        onChangeText={(text) => {
-                          setForm({ ...form, zipCode: text });
-                          if (text.length === 6) {
-                            fetchLocationFromPincode(text);
-                          }
-                        }}
-                        placeholder="Pin Code"
                         placeholderTextColor="#A098AE"
+                        placeholder="Enter your state"
+                        value={form.state}
+                        onChangeText={(v) =>
+                          setForm({ ...form, state: v, autoFilledLocation: false })
+                        }
                       />
                     </View>
                   </View>
-                  <View style={styles.gridCol}>
-                    <PickerModal
-                      items={COUNTRY_OPTIONS}
-                      value={form.country}
-                      onValueChange={(v) => setForm({ ...form, country: v })}
-                      placeholder="Country"
-                      leftIcon={<Globe size={20} color="#7C3AED" />}
-                      disabled={true}
-                      style={{ marginVertical: 0 }}
-                    />
-                  </View>
                 </View>
 
-                {/* Additional Qualification & Heading */}
-                <Text style={styles.subFieldLabel}>Highest Qualification</Text>
-                <View style={styles.inputContainer}>
-                  <View style={styles.iconBox}>
-                    <GraduationCap size={20} color="#7C3AED" />
-                  </View>
-                  <TextInput
-                    style={styles.textInput}
-                    placeholderTextColor="#A098AE"
-                    placeholder="E.g. Bachelor's Degree"
-                    value={form.qualification}
-                    onChangeText={(v) => setForm({ ...form, qualification: v })}
-                  />
-                </View>
-
-                <Text style={styles.subFieldLabel}>Profile Heading</Text>
-                <View style={styles.inputContainer}>
-                  <View style={styles.iconBox}>
-                    <Sparkles size={20} color="#7C3AED" />
-                  </View>
-                  <TextInput
-                    style={styles.textInput}
-                    placeholderTextColor="#A098AE"
-                    placeholder="E.g. I am a UI/UX Designer & Developer"
-                    value={form.heading}
-                    onChangeText={(v) => setForm({ ...form, heading: v })}
-                  />
-                </View>
-
-                {/* Footer Action Buttons */}
-                <View style={styles.buttonRow}>
-                  <TouchableOpacity
-                    style={styles.secondaryHalfButton}
-                    onPress={prevStep}
-                  >
-                    <ArrowLeft size={18} color="#6D28D9" style={{ marginRight: 6 }} />
-                    <Text style={styles.secondaryHalfButtonText}>Back</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={styles.primaryHalfButton}
-                    onPress={nextStep}
-                  >
-                    <Text style={styles.primaryHalfButtonText}>Next</Text>
-                    <ArrowRight size={18} color="#FFFFFF" style={{ marginLeft: 6 }} />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
-
-            {/* Step 4: Languages, Skills, Certifications & Personal Details */}
-            {step === 4 && (
-              <View style={styles.card}>
                 {/* 7. Languages You Speak */}
                 <Text style={styles.sectionNumberTitle}>7. Languages You Speak</Text>
-                <View style={styles.gridRow}>
-                  <View style={[styles.gridCol, { flex: 1.2 }]}>
-                    <View style={styles.inputContainer}>
-                      <View style={styles.iconBox}>
-                        <Globe size={20} color="#7C3AED" />
+                <View style={styles.langInputCardContainer}>
+                  <View style={styles.gridRow}>
+                    <View style={[styles.gridCol, { flex: 1.3 }]}>
+                      <View style={styles.inputContainer}>
+                        <TextInput
+                          style={styles.textInput}
+                          placeholderTextColor="#A098AE"
+                          placeholder="Enter a language (e.g. English)"
+                          value={languageInput}
+                          onChangeText={setLanguageInput}
+                        />
                       </View>
-                      <TextInput
-                        style={styles.textInput}
-                        placeholderTextColor="#A098AE"
-                        placeholder="Language (e.g. English)"
-                        value={languageInput}
-                        onChangeText={setLanguageInput}
+                    </View>
+                    <View style={[styles.gridCol, { flex: 1.1 }]}>
+                      <PickerModal
+                        items={PROFICIENCY_LEVELS}
+                        value={selectedProficiency}
+                        onValueChange={(v) => setSelectedProficiency(v)}
+                        placeholder="Select level"
+                        style={{ marginVertical: 0 }}
                       />
                     </View>
+                    <TouchableOpacity
+                      style={styles.smallAddButton}
+                      onPress={addLanguage}
+                      activeOpacity={0.85}
+                    >
+                      <Plus size={16} color="#FFFFFF" />
+                      <Text style={styles.smallAddButtonText}>Add</Text>
+                    </TouchableOpacity>
                   </View>
-                  <View style={[styles.gridCol, { flex: 1 }]}>
-                    <PickerModal
-                      items={PROFICIENCY_LEVELS}
-                      value={selectedProficiency}
-                      onValueChange={(v) => setSelectedProficiency(v)}
-                      placeholder="Level"
-                      style={{ marginVertical: 0 }}
-                    />
-                  </View>
-                  <TouchableOpacity
-                    style={styles.smallAddButton}
-                    onPress={addLanguage}
-                    activeOpacity={0.85}
-                  >
-                    <Plus size={16} color="#FFFFFF" />
-                    <Text style={styles.smallAddButtonText}>Add</Text>
-                  </TouchableOpacity>
-                </View>
 
-                {/* Added languages list */}
-                <View style={styles.tagsWrapper}>
-                  {languageList.map((lang, idx) => (
-                    <View key={idx} style={styles.langTagBadge}>
-                      <Text style={styles.langTagTitle}>{lang.name}</Text>
-                      <View style={styles.langTagLevelBox}>
-                        <Text style={styles.langTagLevelText}>{lang.level}</Text>
+                  {/* Added Languages Label & Pills */}
+                  <Text style={styles.addedLanguagesLabel}>Added Languages</Text>
+                  <View style={styles.tagsWrapper}>
+                    {languageList.map((lang, idx) => (
+                      <View key={idx} style={styles.langTagBadge}>
+                        <Text style={styles.langTagTitle}>{lang.name}</Text>
+                        <View style={styles.langTagLevelBox}>
+                          <Text style={styles.langTagLevelText}>{lang.level}</Text>
+                        </View>
+                        <TouchableOpacity
+                          onPress={() => removeLanguage(idx)}
+                          style={styles.tagRemoveBtn}
+                        >
+                          <X size={12} color="#6D28D9" />
+                        </TouchableOpacity>
                       </View>
-                      <TouchableOpacity
-                        onPress={() => removeLanguage(idx)}
-                        style={styles.tagRemoveBtn}
-                      >
-                        <X size={12} color="#6D28D9" />
-                      </TouchableOpacity>
-                    </View>
-                  ))}
+                    ))}
+                  </View>
                 </View>
 
                 {/* 8. Skills */}
@@ -1513,7 +1438,7 @@ const FreelancerSignup = ({ navigation, route }) => {
                   <TextInput
                     style={styles.textInput}
                     placeholderTextColor="#A098AE"
-                    placeholder="Search or add your skills..."
+                    placeholder="Search or add your skills"
                   />
                 </View>
                 <Text style={styles.fieldHelperText}>
@@ -1524,24 +1449,53 @@ const FreelancerSignup = ({ navigation, route }) => {
                 <Text style={styles.sectionNumberTitle}>9. Certifications</Text>
                 {form.certifications.map((cert, i) => (
                   <View key={i} style={styles.certRow}>
-                    <View style={[styles.inputContainer, { flex: 1 }]}>
-                      <View style={styles.iconBox}>
-                        <Award size={20} color="#7C3AED" />
+                    <View style={[styles.gridCol, { flex: 1 }]}>
+                      <View style={styles.inputContainer}>
+                        <View style={styles.iconBox}>
+                          <Award size={20} color="#7C3AED" />
+                        </View>
+                        <TextInput
+                          placeholderTextColor="#A098AE"
+                          style={styles.textInput}
+                          placeholder="Certificate name"
+                          value={cert}
+                          onChangeText={(v) =>
+                            setForm({
+                              ...form,
+                              certifications: form.certifications.map((c, idx) =>
+                                idx === i ? v : c
+                              ),
+                            })
+                          }
+                        />
                       </View>
-                      <TextInput
-                        placeholderTextColor="#A098AE"
-                        style={styles.textInput}
-                        placeholder="Certificate name"
-                        value={cert}
-                        onChangeText={(v) =>
-                          setForm({
-                            ...form,
-                            certifications: form.certifications.map((c, idx) =>
-                              idx === i ? v : c
-                            ),
-                          })
-                        }
-                      />
+                    </View>
+
+                    <View style={[styles.gridCol, { flex: 1 }]}>
+                      <View style={styles.inputContainer}>
+                        <View style={styles.iconBox}>
+                          <Building size={20} color="#7C3AED" />
+                        </View>
+                        <TextInput
+                          placeholderTextColor="#A098AE"
+                          style={styles.textInput}
+                          placeholder="University / Institute"
+                        />
+                      </View>
+                    </View>
+
+                    <View style={[styles.gridCol, { flex: 0.8 }]}>
+                      <View style={styles.inputContainer}>
+                        <View style={styles.iconBox}>
+                          <Calendar size={20} color="#7C3AED" />
+                        </View>
+                        <TextInput
+                          placeholderTextColor="#A098AE"
+                          style={styles.textInput}
+                          placeholder="Year"
+                          keyboardType="numeric"
+                        />
+                      </View>
                     </View>
 
                     {form.certifications.length > 1 && (
@@ -1573,7 +1527,39 @@ const FreelancerSignup = ({ navigation, route }) => {
                   </Text>
                 </TouchableOpacity>
 
-                {/* Gender */}
+                {/* Footer Action Buttons */}
+                <View style={styles.buttonRow}>
+                  <TouchableOpacity
+                    style={styles.secondaryHalfButton}
+                    onPress={prevStep}
+                  >
+                    <ArrowLeft size={18} color="#6D28D9" style={{ marginRight: 6 }} />
+                    <Text style={styles.secondaryHalfButtonText}>Back</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.saveDraftButton}
+                    onPress={handleSubmit}
+                    disabled={isLoading}
+                  >
+                    <Bookmark size={18} color="#6D28D9" style={{ marginRight: 6 }} />
+                    <Text style={styles.saveDraftButtonText}>Save</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.primaryHalfButton}
+                    onPress={nextStep}
+                  >
+                    <Text style={styles.primaryHalfButtonText}>Next</Text>
+                    <ArrowRight size={18} color="#FFFFFF" style={{ marginLeft: 6 }} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+
+            {/* Step 4: Personal Details & Links */}
+            {step === 4 && (
+              <View style={styles.card}>
                 <Text style={styles.sectionNumberTitle}>Gender</Text>
                 <View style={styles.radioGroupRow}>
                   {["Male", "Female", "Other"].map((g) => (
@@ -1598,7 +1584,6 @@ const FreelancerSignup = ({ navigation, route }) => {
                   ))}
                 </View>
 
-                {/* Date of Birth */}
                 <Text style={styles.sectionNumberTitle}>
                   Date of Birth <Text style={styles.optionalText}>(Optional)</Text>
                 </Text>
@@ -1644,7 +1629,6 @@ const FreelancerSignup = ({ navigation, route }) => {
                   />
                 )}
 
-                {/* Social Media Links */}
                 <Text style={styles.sectionNumberTitle}>Your Social Media Links</Text>
                 {form.socialLinks.map((link, i) => (
                   <View key={i} style={styles.certRow}>
@@ -1715,47 +1699,99 @@ const FreelancerSignup = ({ navigation, route }) => {
               </View>
             )}
 
-            {/* Step 5: Add Your Portfolio (Matching input_file_1.png) */}
+            {/* Step 5: Add Your Portfolio (Exact Match to Image 5 Reference) */}
             {step === 5 && (
               <View style={styles.card}>
-                <View style={styles.portfolioGridWrapper}>
+                <View style={styles.portfolioGridContainer}>
+                  {/* Top Row: Left big upload box + Right 2 stacked small upload boxes */}
+                  <View style={styles.portfolioGridWrapper}>
+                    <TouchableOpacity
+                      style={styles.portfolioBigUploadBox}
+                      onPress={uploadPortfolioImages}
+                      activeOpacity={0.8}
+                    >
+                      <Plus size={26} color="#7C3AED" />
+                      <Text style={styles.portfolioUploadBoxTitle}>
+                        Upload Image
+                      </Text>
+                      <Text style={styles.portfolioUploadBoxSubtext}>
+                        (Optional)
+                      </Text>
+                    </TouchableOpacity>
+
+                    <View style={styles.portfolioRightCol}>
+                      <TouchableOpacity
+                        style={styles.portfolioSmallUploadBox}
+                        onPress={uploadPortfolioImages}
+                        activeOpacity={0.8}
+                      >
+                        <Plus size={18} color="#7C3AED" />
+                        <Text style={styles.portfolioSmallBoxTitle}>
+                          Upload Image
+                        </Text>
+                        <Text style={styles.portfolioUploadBoxSubtext}>
+                          (Optional)
+                        </Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={styles.portfolioSmallUploadBox}
+                        onPress={uploadPortfolioImages}
+                        activeOpacity={0.8}
+                      >
+                        <Plus size={18} color="#7C3AED" />
+                        <Text style={styles.portfolioSmallBoxTitle}>
+                          Upload Image
+                        </Text>
+                        <Text style={styles.portfolioUploadBoxSubtext}>
+                          (Optional)
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  {/* Row 2: 3 Equal Boxes */}
+                  <View style={styles.portfolioRowThree}>
+                    {[1, 2, 3].map((idx) => (
+                      <TouchableOpacity
+                        key={idx}
+                        style={styles.portfolioRowBox}
+                        onPress={uploadPortfolioImages}
+                        activeOpacity={0.8}
+                      >
+                        <Plus size={18} color="#7C3AED" />
+                        <Text style={styles.portfolioSmallBoxTitle}>Upload Image</Text>
+                        <Text style={styles.portfolioUploadBoxSubtext}>(Optional)</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  {/* Row 3: 3 Equal Boxes */}
+                  <View style={styles.portfolioRowThree}>
+                    {[4, 5, 6].map((idx) => (
+                      <TouchableOpacity
+                        key={idx}
+                        style={styles.portfolioRowBox}
+                        onPress={uploadPortfolioImages}
+                        activeOpacity={0.8}
+                      >
+                        <Plus size={18} color="#7C3AED" />
+                        <Text style={styles.portfolioSmallBoxTitle}>Upload Image</Text>
+                        <Text style={styles.portfolioUploadBoxSubtext}>(Optional)</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  {/* Row 4: 1 Full Width Box */}
                   <TouchableOpacity
-                    style={styles.portfolioBigUploadBox}
+                    style={styles.portfolioFullWidthBox}
                     onPress={uploadPortfolioImages}
                     activeOpacity={0.8}
                   >
-                    <Plus size={28} color="#7C3AED" />
-                    <Text style={styles.portfolioUploadBoxTitle}>
-                      Upload Image
-                    </Text>
-                    <Text style={styles.portfolioUploadBoxSubtext}>
-                      (Optional)
-                    </Text>
+                    <Plus size={20} color="#7C3AED" />
+                    <Text style={styles.portfolioUploadBoxTitle}>Upload Image</Text>
+                    <Text style={styles.portfolioUploadBoxSubtext}>(Optional)</Text>
                   </TouchableOpacity>
-
-                  <View style={styles.portfolioRightCol}>
-                    <TouchableOpacity
-                      style={styles.portfolioSmallUploadBox}
-                      onPress={uploadPortfolioImages}
-                      activeOpacity={0.8}
-                    >
-                      <Plus size={20} color="#7C3AED" />
-                      <Text style={styles.portfolioSmallBoxTitle}>
-                        Upload Image
-                      </Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={styles.portfolioSmallUploadBox}
-                      onPress={uploadPortfolioImages}
-                      activeOpacity={0.8}
-                    >
-                      <Plus size={20} color="#7C3AED" />
-                      <Text style={styles.portfolioSmallBoxTitle}>
-                        Upload Image
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
                 </View>
 
                 {/* Uploaded Portfolio Previews */}
@@ -1785,9 +1821,11 @@ const FreelancerSignup = ({ navigation, route }) => {
                   </View>
                 )}
 
-                {/* Info Banner */}
+                {/* Info Banner matching Image 5 */}
                 <View style={styles.infoBannerBox}>
-                  <Info size={20} color="#7C3AED" style={{ marginRight: 10 }} />
+                  <View style={styles.infoIconBadge}>
+                    <Info size={16} color="#7C3AED" />
+                  </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.infoBannerTitle}>
                       You can upload up to 10 images.
@@ -1906,6 +1944,34 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 16,
     paddingBottom: 40,
+  },
+  dotMatrixLeft: {
+    position: "absolute",
+    left: 8,
+    top: 80,
+    width: 36,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    opacity: 0.18,
+    zIndex: 0,
+  },
+  dotMatrixRight: {
+    position: "absolute",
+    right: 8,
+    top: 260,
+    width: 36,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    opacity: 0.18,
+    zIndex: 0,
+  },
+  dotItem: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "#FFFFFF",
   },
   headerSection: {
     alignItems: "center",
@@ -2070,7 +2136,7 @@ const styles = StyleSheet.create({
     width: 90,
     height: 90,
     borderRadius: 45,
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderColor: "#8B5CF6",
     borderStyle: "dashed",
     backgroundColor: "#F5F0FF",
@@ -2214,6 +2280,21 @@ const styles = StyleSheet.create({
     textAlign: "right",
     marginTop: 4,
   },
+  langInputCardContainer: {
+    backgroundColor: "#FAFAFC",
+    borderWidth: 1,
+    borderColor: "#E9E3F4",
+    borderRadius: 16,
+    padding: 12,
+    marginBottom: 16,
+  },
+  addedLanguagesLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#1F1D2B",
+    marginTop: 8,
+    marginBottom: 6,
+  },
   smallAddButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -2233,8 +2314,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
-    marginVertical: 8,
-    marginBottom: 16,
+    marginVertical: 4,
   },
   langTagBadge: {
     flexDirection: "row",
@@ -2253,7 +2333,7 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   langTagLevelBox: {
-    backgroundColor: "#D8B4FE",
+    backgroundColor: "#E9D5FF",
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 8,
@@ -2286,9 +2366,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1.5,
-    borderColor: "#8B5CF6",
+    borderColor: "#6D28D9",
     borderStyle: "dashed",
-    backgroundColor: "#F5F0FF",
+    backgroundColor: "#FAFAFC",
     borderRadius: 14,
     height: 48,
     marginVertical: 8,
@@ -2310,15 +2390,17 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#6D28D9",
   },
+  portfolioGridContainer: {
+    gap: 10,
+    marginBottom: 16,
+  },
   portfolioGridWrapper: {
     flexDirection: "row",
-    gap: 12,
-    marginVertical: 8,
-    marginBottom: 16,
+    gap: 10,
   },
   portfolioBigUploadBox: {
     flex: 1.5,
-    height: 180,
+    height: 160,
     borderWidth: 1.5,
     borderColor: "#C4B5FD",
     borderStyle: "dashed",
@@ -2331,7 +2413,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "700",
     color: "#6D28D9",
-    marginTop: 6,
+    marginTop: 4,
   },
   portfolioUploadBoxSubtext: {
     fontSize: 11,
@@ -2339,10 +2421,10 @@ const styles = StyleSheet.create({
   },
   portfolioRightCol: {
     flex: 1,
-    gap: 12,
+    gap: 10,
   },
   portfolioSmallUploadBox: {
-    height: 84,
+    height: 75,
     borderWidth: 1.5,
     borderColor: "#C4B5FD",
     borderStyle: "dashed",
@@ -2355,7 +2437,32 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "600",
     color: "#6D28D9",
-    marginTop: 4,
+    marginTop: 2,
+  },
+  portfolioRowThree: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  portfolioRowBox: {
+    flex: 1,
+    height: 80,
+    borderWidth: 1.5,
+    borderColor: "#C4B5FD",
+    borderStyle: "dashed",
+    backgroundColor: "#FAFAFC",
+    borderRadius: 16,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  portfolioFullWidthBox: {
+    height: 70,
+    borderWidth: 1.5,
+    borderColor: "#C4B5FD",
+    borderStyle: "dashed",
+    backgroundColor: "#FAFAFC",
+    borderRadius: 16,
+    justifyContent: "center",
+    alignItems: "center",
   },
   uploadedImagesGrid: {
     flexDirection: "row",
@@ -2406,6 +2513,16 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     padding: 14,
     marginVertical: 12,
+  },
+  infoIconBadge: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    borderWidth: 1.5,
+    borderColor: "#7C3AED",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 10,
   },
   infoBannerTitle: {
     fontSize: 13,
@@ -2537,7 +2654,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: "#6D28D9",
     borderRadius: 14,
-    backgroundColor: "transparent",
+    backgroundColor: "#FFFFFF",
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
@@ -2553,7 +2670,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: "#6D28D9",
     borderRadius: 14,
-    backgroundColor: "#F5F0FF",
+    backgroundColor: "#FFFFFF",
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
@@ -2574,7 +2691,7 @@ const styles = StyleSheet.create({
   },
   securityBannerText: {
     fontSize: 12,
-    color: "#8E8EA9",
+    color: "#D4C5ED",
   },
 });
 

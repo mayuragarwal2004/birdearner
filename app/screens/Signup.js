@@ -12,7 +12,7 @@ import {
   StatusBar,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { Phone, ShieldCheck } from "lucide-react-native";
+import { Phone, ShieldCheck, ChevronDown } from "lucide-react-native";
 import Toast from "react-native-toast-message";
 import apiService from "../lib/apiService";
 
@@ -63,9 +63,21 @@ const Signup = ({ navigation, route }) => {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#2E0854" }}>
       <LinearGradient
-        colors={["#2E0854", "#3E0A70", "#1C0338"]}
+        colors={["#2B0855", "#3B0A75", "#160233"]}
         style={{ flex: 1 }}
       >
+        {/* Background Dot Matrix Decorative Elements */}
+        <View style={styles.dotMatrixLeft} pointerEvents="none">
+          {[...Array(15)].map((_, i) => (
+            <View key={i} style={styles.dotItem} />
+          ))}
+        </View>
+        <View style={styles.dotMatrixRight} pointerEvents="none">
+          {[...Array(15)].map((_, i) => (
+            <View key={i} style={styles.dotItem} />
+          ))}
+        </View>
+
         <ScrollView
           contentContainerStyle={styles.scrollContainer}
           keyboardShouldPersistTaps="handled"
@@ -91,6 +103,7 @@ const Signup = ({ navigation, route }) => {
               <View style={styles.countryCodeBox}>
                 <Text style={styles.countryFlag}>🇮🇳</Text>
                 <Text style={styles.countryCodeText}>+91</Text>
+                <ChevronDown size={14} color="#7C3AED" style={{ marginLeft: 2 }} />
               </View>
               <TextInput
                 style={styles.textInput}
@@ -139,6 +152,34 @@ const styles = StyleSheet.create({
     paddingTop: 40,
     paddingBottom: 40,
     justifyContent: "center",
+  },
+  dotMatrixLeft: {
+    position: "absolute",
+    left: 8,
+    top: 80,
+    width: 36,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    opacity: 0.18,
+    zIndex: 0,
+  },
+  dotMatrixRight: {
+    position: "absolute",
+    right: 8,
+    top: 260,
+    width: 36,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    opacity: 0.18,
+    zIndex: 0,
+  },
+  dotItem: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "#FFFFFF",
   },
   headerBadgeContainer: {
     alignItems: "center",

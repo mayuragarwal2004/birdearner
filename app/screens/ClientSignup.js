@@ -616,9 +616,21 @@ const ClientSignup = ({ navigation, route }) => {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#2E0854" }}>
       <LinearGradient
-        colors={["#2E0854", "#3E0A70", "#1C0338"]}
+        colors={["#2B0855", "#3B0A75", "#160233"]}
         style={{ flex: 1 }}
       >
+        {/* Background Dot Matrix Decorative Elements */}
+        <View style={styles.dotMatrixLeft} pointerEvents="none">
+          {[...Array(15)].map((_, i) => (
+            <View key={i} style={styles.dotItem} />
+          ))}
+        </View>
+        <View style={styles.dotMatrixRight} pointerEvents="none">
+          {[...Array(15)].map((_, i) => (
+            <View key={i} style={styles.dotItem} />
+          ))}
+        </View>
+
         <KeyboardAvoidingView
           style={{ flex: 1 }}
           behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -689,11 +701,12 @@ const ClientSignup = ({ navigation, route }) => {
                   <View style={styles.countryCodeBox}>
                     <Text style={styles.countryFlag}>🇮🇳</Text>
                     <Text style={styles.countryCodeText}>+91</Text>
+                    <ChevronDown size={14} color="#7C3AED" style={{ marginLeft: 2 }} />
                   </View>
                   <TextInput
                     style={styles.textInput}
                     placeholderTextColor="#A098AE"
-                    placeholder="Mobile number verified via OTP"
+                    placeholder="Enter your mobile number"
                     value={form.mobile}
                     editable={false}
                   />
@@ -818,7 +831,7 @@ const ClientSignup = ({ navigation, route }) => {
                         style={styles.avatarImage}
                       />
                     ) : (
-                      <User size={36} color="#8B5CF6" />
+                      <User size={38} color="#5B21B6" />
                     )}
                     <View style={styles.cameraBadge}>
                       <Camera size={14} color="#FFFFFF" />
@@ -940,7 +953,7 @@ const ClientSignup = ({ navigation, route }) => {
                       <TextInput
                         style={styles.textInput}
                         placeholderTextColor="#A098AE"
-                        placeholder="Address Line 2 / Company"
+                        placeholder="Address Line 2"
                         value={form.heading}
                         onChangeText={(v) => setForm({ ...form, heading: v })}
                       />
@@ -952,7 +965,7 @@ const ClientSignup = ({ navigation, route }) => {
                   <View style={styles.gridCol}>
                     <View style={styles.inputContainer}>
                       <View style={styles.iconBox}>
-                        <FileText size={20} color="#7C3AED" />
+                        <Mail size={20} color="#7C3AED" />
                       </View>
                       <TextInput
                         style={styles.textInput}
@@ -1004,7 +1017,7 @@ const ClientSignup = ({ navigation, route }) => {
                 </Text>
                 <View style={styles.textAreaContainer}>
                   <View style={styles.textAreaIconBox}>
-                    <Edit3 size={20} color="#7C3AED" />
+                    <Edit3 size={18} color="#A098AE" />
                   </View>
                   <TextInput
                     style={styles.textAreaInput}
@@ -1013,11 +1026,26 @@ const ClientSignup = ({ navigation, route }) => {
                     value={form.bio}
                     multiline
                     onChangeText={(v) =>
-                      v.length <= 255 && setForm({ ...form, bio: v })
+                      v.length <= 500 && setForm({ ...form, bio: v })
                     }
                   />
                   <Text style={styles.charCountText}>
-                    {form.bio ? form.bio.length : 0} / 255
+                    {form.bio ? form.bio.length : 0} / 500
+                  </Text>
+                </View>
+
+                {/* Checkbox for Step 2 matching Image 1 */}
+                <View style={styles.checkboxRow}>
+                  <Checkbox
+                    value={form.termsAccepted}
+                    onValueChange={(v) => setForm({ ...form, termsAccepted: v })}
+                    color={form.termsAccepted ? "#6D28D9" : undefined}
+                    style={styles.checkboxBox}
+                  />
+                  <Text style={styles.checkboxText}>
+                    I confirm that the information provided is true and filled by me. I have read and agree to the{" "}
+                    <Text style={styles.purpleLinkText}>terms & conditions</Text> and{" "}
+                    <Text style={styles.purpleLinkText}>policies</Text>.
                   </Text>
                 </View>
 
@@ -1072,6 +1100,34 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 16,
     paddingBottom: 40,
+  },
+  dotMatrixLeft: {
+    position: "absolute",
+    left: 8,
+    top: 80,
+    width: 36,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    opacity: 0.18,
+    zIndex: 0,
+  },
+  dotMatrixRight: {
+    position: "absolute",
+    right: 8,
+    top: 260,
+    width: 36,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    opacity: 0.18,
+    zIndex: 0,
+  },
+  dotItem: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "#FFFFFF",
   },
   headerSection: {
     alignItems: "center",

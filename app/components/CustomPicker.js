@@ -157,6 +157,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   leftIconContainer: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: '#F3E8FF',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginRight: 10,
   },
   disabledBox: {
