@@ -5,7 +5,3 @@ export { useLocation } from './useMarketplaceLocation';
 export { useMarketplaceJobs } from './useMarketplaceJobs';
 export { useDistanceSlider } from './useDistanceSlider';
 export { useUserServices } from './useUserServices';
-export { usePriorityWheel } from './usePriorityWheel';
-
-// Usage example:
-// import { useLocation, useMarketplaceJobs, useDistanceSlider } from '../hooks/marketplace';

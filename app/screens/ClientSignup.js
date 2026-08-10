@@ -19,30 +19,31 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import Toast from "react-native-toast-message";
 import * as ImagePicker from "expo-image-picker";
 import { z } from "zod";
-import {
-  User,
-  UserCheck,
-  Phone,
-  Mail,
-  Lock,
-  Eye,
-  EyeOff,
-  ShieldCheck,
-  Calendar,
-  MapPin,
-  Building,
-  Globe,
-  FileText,
-  Map,
-  Edit3,
-  Camera,
-  ArrowLeft,
-  Plus,
-  Trash2,
-  Briefcase,
-  Link,
-  ChevronDown,
-} from "lucide-react-native";
+import * as LucideIcons from "lucide-react-native";
+
+const getIcon = (name) => LucideIcons[name]?.default || LucideIcons[name];
+const User = getIcon("User");
+const UserCheck = getIcon("UserCheck");
+const Phone = getIcon("Phone");
+const Mail = getIcon("Mail");
+const Lock = getIcon("Lock");
+const Eye = getIcon("Eye");
+const EyeOff = getIcon("EyeOff");
+const ShieldCheck = getIcon("ShieldCheck");
+const Calendar = getIcon("Calendar");
+const MapPin = getIcon("MapPin");
+const Building = getIcon("Building");
+const Globe = getIcon("Globe");
+const FileText = getIcon("FileText");
+const Map = getIcon("Map");
+const Edit3 = getIcon("Edit3");
+const Camera = getIcon("Camera");
+const ArrowLeft = getIcon("ArrowLeft");
+const Plus = getIcon("Plus");
+const Trash2 = getIcon("Trash2");
+const Briefcase = getIcon("Briefcase");
+const Link = getIcon("Link");
+const ChevronDown = getIcon("ChevronDown");
 import apiService from "../lib/apiService";
 import { useAuth } from "../context/NewAuthContext";
 import PickerModal from "../components/CustomPicker";

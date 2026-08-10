@@ -3,7 +3,15 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createStackNavigator } from "@react-navigation/stack";
 import { LinearGradient } from "expo-linear-gradient";
 import { View, StyleSheet, Platform, Text } from "react-native";
-import { Briefcase, ChartColumn, ClipboardPen, House, Bird as LucideBird, Plus } from "lucide-react-native";
+import * as LucideIcons from "lucide-react-native";
+
+const getLucideIcon = (name) => LucideIcons[name]?.default || LucideIcons[name];
+const Briefcase = getLucideIcon("Briefcase");
+const ChartColumn = getLucideIcon("ChartColumn");
+const ClipboardPen = getLucideIcon("ClipboardPen");
+const House = getLucideIcon("House");
+const LucideBird = getLucideIcon("Bird");
+const Plus = getLucideIcon("Plus");
 
 // Lightweight assets needed for the tab bar (keep these eager)
 import BirdEarnerSvg from "./assets/BirdEarnerSvg";
@@ -330,6 +338,11 @@ function renderCustomSvgIcon(focused, SvgComponent, iconColor) {
   const activeColor = "#FFFFFF";
   const inactiveColor = "#C4B5FD";
 
+  const SvgItem = SvgComponent?.default || SvgComponent;
+  if (!SvgItem || (typeof SvgItem !== "function" && typeof SvgItem !== "object")) {
+    return null;
+  }
+
   return (
     <View style={styles.iconContainer}>
       <View style={[styles.iconWrapper, focused && styles.activeIconWrapper]}>
@@ -341,7 +354,7 @@ function renderCustomSvgIcon(focused, SvgComponent, iconColor) {
             end={{ x: 1, y: 1 }}
           >
             <View style={[styles.svgIconWrapper, { tintColor: activeColor }]}>
-              <SvgComponent
+              <SvgItem
                 width={22}
                 height={22}
                 fill={activeColor}
@@ -354,7 +367,7 @@ function renderCustomSvgIcon(focused, SvgComponent, iconColor) {
         ) : (
           <View style={styles.inactiveIconBackground}>
             <View style={[styles.svgIconWrapper, { tintColor: inactiveColor }]}>
-              <SvgComponent
+              <SvgItem
                 width={22}
                 height={22}
                 fill={inactiveColor}
@@ -372,6 +385,11 @@ function renderCustomSvgIcon(focused, SvgComponent, iconColor) {
 
 // Render Lucide icons
 function renderLucideIcon(focused, IconComponent = LucideBird, iconColor) {
+  const Icon = IconComponent?.default || IconComponent || LucideBird?.default || LucideBird;
+  if (!Icon || (typeof Icon !== "function" && typeof Icon !== "object")) {
+    return null;
+  }
+
   return (
     <View style={styles.iconContainer}>
       <View style={[styles.iconWrapper, focused && styles.activeIconWrapper]}>
@@ -382,11 +400,11 @@ function renderLucideIcon(focused, IconComponent = LucideBird, iconColor) {
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
           >
-            <IconComponent color="#FFFFFF" size={22} />
+            <Icon color="#FFFFFF" size={22} />
           </LinearGradient>
         ) : (
           <View style={styles.inactiveIconBackground}>
-            <IconComponent color="#C4B5FD" size={22} />
+            <Icon color="#C4B5FD" size={22} />
           </View>
         )}
       </View>

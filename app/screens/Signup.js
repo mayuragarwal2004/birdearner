@@ -12,9 +12,14 @@ import {
   StatusBar,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { Phone, ShieldCheck, ChevronDown } from "lucide-react-native";
+import * as LucideIcons from "lucide-react-native";
 import Toast from "react-native-toast-message";
 import apiService from "../lib/apiService";
+
+const getIcon = (name) => LucideIcons[name]?.default || LucideIcons[name];
+const Phone = getIcon("Phone");
+const ShieldCheck = getIcon("ShieldCheck");
+const ChevronDown = getIcon("ChevronDown");
 
 const validateMobile = (mobile) => {
   const re = /^\+?[0-9]{10,15}$/;

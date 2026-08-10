@@ -19,42 +19,43 @@ import Toast from "react-native-toast-message";
 import * as ImagePicker from "expo-image-picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { z } from "zod";
-import {
-  User,
-  UserCheck,
-  Phone,
-  Mail,
-  Lock,
-  Eye,
-  EyeOff,
-  Calendar,
-  MapPin,
-  Building,
-  Map,
-  Globe,
-  FileText,
-  Edit3,
-  Camera,
-  Trash2,
-  Plus,
-  ArrowLeft,
-  ArrowRight,
-  Check,
-  Search,
-  Award,
-  BookOpen,
-  Briefcase,
-  Bookmark,
-  Sparkles,
-  Laptop,
-  Info,
-  ShieldCheck,
-  X,
-  Link as LinkIcon,
-  GraduationCap,
-  Clock,
-  ChevronDown,
-} from "lucide-react-native";
+import * as LucideIcons from "lucide-react-native";
+
+const getIcon = (name) => LucideIcons[name]?.default || LucideIcons[name];
+const User = getIcon("User");
+const UserCheck = getIcon("UserCheck");
+const Phone = getIcon("Phone");
+const Mail = getIcon("Mail");
+const Lock = getIcon("Lock");
+const Eye = getIcon("Eye");
+const EyeOff = getIcon("EyeOff");
+const Calendar = getIcon("Calendar");
+const MapPin = getIcon("MapPin");
+const Building = getIcon("Building");
+const Map = getIcon("Map");
+const Globe = getIcon("Globe");
+const FileText = getIcon("FileText");
+const Edit3 = getIcon("Edit3");
+const Camera = getIcon("Camera");
+const Trash2 = getIcon("Trash2");
+const Plus = getIcon("Plus");
+const ArrowLeft = getIcon("ArrowLeft");
+const ArrowRight = getIcon("ArrowRight");
+const Check = getIcon("Check");
+const Search = getIcon("Search");
+const Award = getIcon("Award");
+const BookOpen = getIcon("BookOpen");
+const Briefcase = getIcon("Briefcase");
+const Bookmark = getIcon("Bookmark");
+const Sparkles = getIcon("Sparkles");
+const Laptop = getIcon("Laptop");
+const Info = getIcon("Info");
+const ShieldCheck = getIcon("ShieldCheck");
+const X = getIcon("X");
+const LinkIcon = getIcon("Link");
+const GraduationCap = getIcon("GraduationCap");
+const Clock = getIcon("Clock");
+const ChevronDown = getIcon("ChevronDown");
 import apiService from "../lib/apiService";
 import { useAuth } from "../context/NewAuthContext";
 import PickerModal from "../components/CustomPicker";
