@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   Image,
   ImageBackground,
@@ -18,6 +17,7 @@ import Toast from "react-native-toast-message";
 import { useAuth } from "../context/NewAuthContext";
 import { useTheme } from "../context/ThemeContext";
 import apiService from "../lib/apiService";
+import SafeSpinner from "../components/SafeSpinner";
 
 const PURPLE = "#7B2CFF";
 const DEEP = "#17151D";
@@ -300,7 +300,7 @@ const SettingsScreen = ({ navigation }) => {
               {hasBothProfiles ? `Switch to ${nextRole === "CLIENT" ? "Client" : "Freelancer"}` : "Switch role"}
             </Text>
             {switchingRole ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
+              <SafeSpinner size="small" color="#FFFFFF" />
             ) : (
               <Switch
                 value={role === "FREELANCER"}

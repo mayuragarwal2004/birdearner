@@ -110,6 +110,16 @@ const ProfileStack = () => (
       getComponent={() => require("../screens/ManageAddresses").default}
       options={{ headerShown: false }}
     />
+    <Stack.Screen
+      name="ClientSignup"
+      getComponent={() => require("../screens/ClientSignup").default}
+      options={{ headerShown: false }}
+    />
+    <Stack.Screen
+      name="FreelancerSignup"
+      getComponent={() => require("../screens/FreelancerSignup").default}
+      options={{ headerShown: false }}
+    />
   </Stack.Navigator>
 );
 

@@ -5,7 +5,6 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  ActivityIndicator,
   ScrollView,
   SafeAreaView,
   Image,
@@ -18,6 +17,7 @@ import Checkbox from "expo-checkbox";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import Toast from "react-native-toast-message";
 import * as ImagePicker from "expo-image-picker";
+import SafeSpinner from "../components/SafeSpinner";
 import { z } from "zod";
 import * as LucideIcons from "lucide-react-native";
 
@@ -147,12 +147,6 @@ const createSchema = (mode) => {
 
 const ClientSignup = ({ navigation, route }) => {
   const { register, user, refreshUserData } = useAuth();
-  const [step, setStep] = useState(1);
-  const [isLoading, setIsLoading] = useState(false);
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [fetchingLocation, setFetchingLocation] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Extract route params to determine mode and data
   const {
@@ -164,11 +158,12 @@ const ClientSignup = ({ navigation, route }) => {
   } = route.params || {};
 
   const schema = createSchema(mode);
-
-  useEffect(() => {
-    const initialStep = mode === "signup" ? 1 : 2;
-    setStep(initialStep);
-  }, [mode]);
+  const [step, setStep] = useState(mode === "signup" ? 1 : 2);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [fetchingLocation, setFetchingLocation] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [form, setForm] = useState({
     full_name: user?.fullName || "",
@@ -777,7 +772,7 @@ const ClientSignup = ({ navigation, route }) => {
                   activeOpacity={0.85}
                 >
                   {isLoading ? (
-                    <ActivityIndicator color="white" size="small" />
+                    <SafeSpinner color="white" size="small" />
                   ) : (
                     <Text style={styles.primaryButtonText}>Next</Text>
                   )}
@@ -1041,7 +1036,7 @@ const ClientSignup = ({ navigation, route }) => {
                     activeOpacity={0.85}
                   >
                     {isLoading ? (
-                      <ActivityIndicator color="white" size="small" />
+                      <SafeSpinner color="white" size="small" />
                     ) : (
                       <Text style={styles.primaryButtonText}>Submit</Text>
                     )}
