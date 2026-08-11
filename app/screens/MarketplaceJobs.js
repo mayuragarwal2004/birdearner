@@ -10,27 +10,17 @@ import {
   FlatList,
   Image,
   ActivityIndicator,
-  ScrollView,
 } from "react-native";
 import Toast from "react-native-toast-message";
 import {
   ArrowLeft,
   SlidersHorizontal,
   X,
-  Check,
-  ArrowsDownUp,
-  ListChecks,
 } from "phosphor-react-native";
 
 import { useTheme } from "../context/ThemeContext";
 import { useMarketplaceJobs } from "../hooks/marketplace";
 import apiService from "../lib/apiService";
-
-const SORT_OPTIONS = [
-  { key: "none", label: "Default" },
-  { key: "lowToHigh", label: "Price: Low to High" },
-  { key: "highToLow", label: "Price: High to Low" },
-];
 
 const MarketplaceJobs = ({ navigation, route }) => {
   const { theme, themeStyles } = useTheme();
@@ -54,14 +44,9 @@ const MarketplaceJobs = ({ navigation, route }) => {
     refreshUserData,
   } = route.params || {};
 
-  const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [selectedServices, setSelectedServices] = useState([]);
   const [sortBy, setSortBy] = useState("none");
   const [allServices, setAllServices] = useState([]);
-
-  // Temporary state for filter panel (before applying)
-  const [tempSelectedServices, setTempSelectedServices] = useState([]);
-  const [tempSortBy, setTempSortBy] = useState("none");
 
   // Fetch all services from API
   useEffect(() => {
@@ -176,36 +161,24 @@ const MarketplaceJobs = ({ navigation, route }) => {
     return result;
   }, [allJobs, selectedServices, sortBy]);
 
+  // Listen for filter results returned from JobFilterScreen
+  useEffect(() => {
+    if (route.params?.filterResult) {
+      const { selectedServices: newServices, sortBy: newSortBy } =
+        route.params.filterResult;
+      setSelectedServices(newServices);
+      setSortBy(newSortBy);
+      navigation.setParams({ filterResult: null });
+    }
+  }, [route.params?.filterResult]);
+
   const openFilterPanel = () => {
-    setTempSelectedServices([...selectedServices]);
-    setTempSortBy(sortBy);
-    setShowFilterPanel(true);
-  };
-
-  const applyFilters = () => {
-    setSelectedServices(tempSelectedServices);
-    setSortBy(tempSortBy);
-    setShowFilterPanel(false);
-  };
-
-  const closeFilterPanel = () => {
-    setShowFilterPanel(false);
-  };
-
-  const handleTempToggleService = (serviceId) => {
-    setTempSelectedServices((prev) =>
-      prev.includes(serviceId)
-        ? prev.filter((id) => id !== serviceId)
-        : [...prev, serviceId]
-    );
-  };
-
-  const handleTempSelectAllServices = () => {
-    setTempSelectedServices(availableServices.map((s) => s.id));
-  };
-
-  const handleTempClearAllServices = () => {
-    setTempSelectedServices([]);
+    navigation.navigate("JobFilterScreen", {
+      availableServices,
+      serviceJobCounts,
+      currentSelectedServices: selectedServices,
+      currentSortBy: sortBy,
+    });
   };
 
   const handleRefresh = () => {
@@ -413,120 +386,6 @@ const MarketplaceJobs = ({ navigation, route }) => {
         )}
       </View>
 
-      {/* Filter Panel - Expandable */}
-      {showFilterPanel && (
-        <View style={styles.filterPanel}>
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.filterPanelContent}
-          >
-            {/* Sort Section */}
-            <View style={styles.filterSection}>
-              <View style={styles.filterSectionHeader}>
-                <View style={styles.filterSectionTitleRow}>
-                  <ArrowsDownUp size={16} color="#762BAD" />
-                  <Text style={styles.filterSectionTitle}>Sort by Price</Text>
-                </View>
-              </View>
-              {SORT_OPTIONS.map((option) => (
-                <TouchableOpacity
-                  key={option.key}
-                  style={[
-                    styles.filterOptionRow,
-                    tempSortBy === option.key && styles.filterOptionRowActive,
-                  ]}
-                  onPress={() => setTempSortBy(option.key)}
-                  activeOpacity={0.7}
-                >
-                  <Text
-                    style={[
-                      styles.filterOptionText,
-                      tempSortBy === option.key && styles.filterOptionTextActive,
-                    ]}
-                  >
-                    {option.label}
-                  </Text>
-                  {tempSortBy === option.key && (
-                    <Check size={18} color="#762BAD" weight="bold" />
-                  )}
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            {/* Services Section */}
-            {availableServices.length > 0 && (
-              <View style={styles.filterSection}>
-                <View style={styles.filterSectionHeader}>
-                  <View style={styles.filterSectionTitleRow}>
-                    <ListChecks size={16} color="#762BAD" />
-                    <Text style={styles.filterSectionTitle}>Services</Text>
-                  </View>
-                  <View style={styles.serviceActions}>
-                    <TouchableOpacity onPress={handleTempSelectAllServices}>
-                      <Text style={styles.serviceActionText}>Select All</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={handleTempClearAllServices}>
-                      <Text
-                        style={[styles.serviceActionText, { color: "#EF4444" }]}
-                      >
-                        Clear
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-                {availableServices.map((service) => {
-                  const isSelected = tempSelectedServices.includes(service.id);
-                  const jobCount = serviceJobCounts[service.id] || 0;
-                  return (
-                    <TouchableOpacity
-                      key={service.id}
-                      style={[
-                        styles.filterOptionRow,
-                        isSelected && styles.filterOptionRowActive,
-                      ]}
-                      onPress={() => handleTempToggleService(service.id)}
-                      activeOpacity={0.7}
-                    >
-                      <View style={styles.serviceRowLeft}>
-                        <Text
-                          style={[
-                            styles.filterOptionText,
-                            isSelected && styles.filterOptionTextActive,
-                          ]}
-                        >
-                          {service.name}
-                        </Text>
-                        {jobCount > 0 && (
-                          <View style={styles.serviceCountBadge}>
-                            <Text style={styles.serviceCountText}>
-                              {jobCount}
-                            </Text>
-                          </View>
-                        )}
-                      </View>
-                      {isSelected && (
-                        <Check size={18} color="#762BAD" weight="bold" />
-                      )}
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            )}
-          </ScrollView>
-
-          {/* Apply Button */}
-          <View style={styles.applyButtonContainer}>
-            <TouchableOpacity
-              style={styles.applyButton}
-              onPress={applyFilters}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.applyButtonText}>Apply Filters</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
-
       {/* Jobs List */}
       <FlatList
         data={filteredJobs}
@@ -658,103 +517,6 @@ const getStyles = (currentTheme) =>
       fontSize: 13,
       fontWeight: "600",
       color: "#EF4444",
-    },
-    filterPanel: {
-      backgroundColor: currentTheme.cardBackground || "#FAFAFA",
-      borderBottomWidth: 1,
-      borderBottomColor: currentTheme.border || "#F3E8FF",
-      maxHeight: 350,
-    },
-    filterPanelContent: {
-      paddingHorizontal: 20,
-      paddingVertical: 12,
-    },
-    filterSection: {
-      marginBottom: 16,
-    },
-    filterSectionHeader: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      marginBottom: 10,
-    },
-    filterSectionTitleRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 8,
-    },
-    filterSectionTitle: {
-      fontSize: 15,
-      fontWeight: "bold",
-      color: currentTheme.text || "#1F1D2B",
-    },
-    serviceActions: {
-      flexDirection: "row",
-      gap: 12,
-    },
-    serviceActionText: {
-      fontSize: 13,
-      fontWeight: "600",
-      color: "#762BAD",
-    },
-    filterOptionRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      paddingVertical: 12,
-      paddingHorizontal: 14,
-      borderRadius: 12,
-      marginBottom: 6,
-      backgroundColor:
-        currentTheme.theme === "dark" ? "#374151" : "#F8F4FF",
-    },
-    filterOptionRowActive: {
-      backgroundColor:
-        currentTheme.theme === "dark" ? "#4B0082" : "#F3E8FF",
-      borderWidth: 1,
-      borderColor: "#762BAD",
-    },
-    filterOptionText: {
-      fontSize: 15,
-      color: currentTheme.text || "#333",
-    },
-    filterOptionTextActive: {
-      fontWeight: "600",
-      color: "#762BAD",
-    },
-    serviceRowLeft: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 8,
-    },
-    serviceCountBadge: {
-      backgroundColor: currentTheme.theme === "dark" ? "#4B0082" : "#EDE4FB",
-      borderRadius: 10,
-      minWidth: 22,
-      height: 22,
-      alignItems: "center",
-      justifyContent: "center",
-      paddingHorizontal: 6,
-    },
-    serviceCountText: {
-      fontSize: 11,
-      fontWeight: "600",
-      color: "#762BAD",
-    },
-    applyButtonContainer: {
-      paddingHorizontal: 20,
-      paddingBottom: 12,
-    },
-    applyButton: {
-      backgroundColor: "#762BAD",
-      paddingVertical: 14,
-      borderRadius: 14,
-      alignItems: "center",
-    },
-    applyButtonText: {
-      color: "#FFF",
-      fontSize: 16,
-      fontWeight: "bold",
     },
     listContent: {
       paddingHorizontal: 20,
