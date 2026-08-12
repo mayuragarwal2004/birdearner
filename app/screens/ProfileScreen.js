@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   Image,
   Modal,
@@ -12,6 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import SafeSpinner from "../components/SafeSpinner";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { FontAwesome, MaterialIcons } from "@expo/vector-icons";
 import ImageViewer from "react-native-image-zoom-viewer";
@@ -311,7 +311,7 @@ export default function ProfileScreen({ route, navigation }) {
   if (loading && !refreshing) {
     return (
       <SafeAreaView style={styles.centered}>
-        <ActivityIndicator size="large" color={PURPLE} />
+        <SafeSpinner size={42} color={PURPLE} />
       </SafeAreaView>
     );
   }

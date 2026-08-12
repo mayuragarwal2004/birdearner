@@ -6,8 +6,8 @@ import {
   TouchableOpacity,
   TextInput,
   Animated,
-  ActivityIndicator,
 } from "react-native";
+import SafeSpinner from "../components/SafeSpinner";
 import LottieView from "lottie-react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import RazorpayCheckout from "react-native-razorpay";
@@ -197,7 +197,7 @@ const PaymentScreen = ({ navigation }) => {
               disabled={isLoading}
             >
               {isLoading ? (
-                <ActivityIndicator size="small" color="#fff" />
+                <SafeSpinner size={18} color="#fff" />
               ) : (
                 <>
                   <FontAwesome5 name="wallet" size={20} color="#fff" />

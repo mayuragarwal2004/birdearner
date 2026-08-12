@@ -23,13 +23,13 @@ const ClientActions = ({
           style={styles.acceptButton}
           onPress={onAccept}
         >
-          <Text style={styles.buttonText}>Accept</Text>
+          <Text style={styles.buttonText}>✓  Accept</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.rejectButton}
           onPress={onReject}
         >
-          <Text style={styles.buttonText}>Reject</Text>
+          <Text style={styles.buttonText}>✕  Reject</Text>
         </TouchableOpacity>
       </View>
     );

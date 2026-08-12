@@ -6,12 +6,12 @@ import {
   ScrollView,
   StyleSheet,
   ImageBackground,
-  ActivityIndicator,
   Share,
   RefreshControl,
   Alert,
   Platform,
 } from "react-native";
+import SafeSpinner from "../components/SafeSpinner";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { FontAwesome, MaterialIcons } from "@expo/vector-icons";
 import { TouchableOpacity } from "react-native";
@@ -154,7 +154,7 @@ export default function MyReview({ navigation, route }) {
   if (loadingProfile) {
     return (
       <SafeAreaView style={styles.centered}>
-        <ActivityIndicator size="large" color="#4C0183" />
+        <SafeSpinner size={42} color="#4C0183" />
       </SafeAreaView>
     );
   }

@@ -11,12 +11,15 @@ import {
   KeyboardAvoidingView,
   Platform,
   StatusBar,
+  Alert,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import Checkbox from "expo-checkbox";
 import Toast from "react-native-toast-message";
 import * as ImagePicker from "expo-image-picker";
+import * as DocumentPicker from "expo-document-picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import { MaterialIcons } from "@expo/vector-icons";
 import SafeSpinner from "../components/SafeSpinner";
 import { z } from "zod";
 import * as LucideIcons from "lucide-react-native";
@@ -247,10 +250,18 @@ const FreelancerSignup = ({ navigation, route }) => {
       ? { uri: user.freelancer.coverPhoto, isExisting: true }
       : null,
     portfolioImages: user?.freelancer?.portfolioImages?.length
-      ? user.freelancer.portfolioImages.map((img) => ({
-        uri: img,
-        isExisting: true,
-      }))
+      ? user.freelancer.portfolioImages.map((item) => {
+          const uri = typeof item === "string" ? item : item?.uri || item?.url || "";
+          const isPdf = uri.toLowerCase().endsWith(".pdf") ||
+            (typeof item === "object" && item?.mimeType === "application/pdf");
+          return {
+            uri,
+            isExisting: true,
+            fileType: isPdf ? "pdf" : "image",
+            fileName: typeof item === "object" ? item?.fileName : uri.split("/").pop(),
+            mimeType: isPdf ? "application/pdf" : undefined,
+          };
+        })
       : [],
     agreePortfolioTerms: user?.freelancer?.termsAccepted || false,
     termsAndConditions: false,
@@ -302,10 +313,18 @@ const FreelancerSignup = ({ navigation, route }) => {
           ? { uri: dataSource.coverPhoto, isExisting: true }
           : prevForm.coverImage,
         portfolioImages: dataSource.portfolioImages?.length
-          ? dataSource.portfolioImages.map((img) => ({
-            uri: img,
-            isExisting: true,
-          }))
+          ? dataSource.portfolioImages.map((item) => {
+              const uri = typeof item === "string" ? item : item?.uri || item?.url || "";
+              const isPdf = uri.toLowerCase().endsWith(".pdf") ||
+                (typeof item === "object" && item?.mimeType === "application/pdf");
+              return {
+                uri,
+                isExisting: true,
+                fileType: isPdf ? "pdf" : "image",
+                fileName: typeof item === "object" ? item?.fileName : uri.split("/").pop(),
+                mimeType: isPdf ? "application/pdf" : undefined,
+              };
+            })
           : prevForm.portfolioImages,
         agreePortfolioTerms:
           dataSource.termsAccepted || prevForm.agreePortfolioTerms,
@@ -414,31 +433,107 @@ const FreelancerSignup = ({ navigation, route }) => {
     }
   };
 
+  const MAX_PORTFOLIO_SIZE = 10 * 1024 * 1024; // 10MB
+
+  const isPdfFile = (asset) => {
+    const uri = asset?.uri || "";
+    const mime = asset?.mimeType || asset?.type || "";
+    return (
+      uri.toLowerCase().endsWith(".pdf") ||
+      mime === "application/pdf"
+    );
+  };
+
+  const formatFileSize = (bytes) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
   const uploadPortfolioImages = async () => {
     try {
-      const permissionResult =
-        await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!permissionResult.granted) {
-        showToast("error", "Permission Denied", "Grant access to photos.");
-        return;
-      }
-      const pickerResult = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        quality: 1,
-        allowsMultipleSelection: true,
-      });
-      if (!pickerResult.canceled && pickerResult.assets?.length > 0) {
-        const newImages = pickerResult.assets.map((asset) => ({
-          ...asset,
-          isExisting: false,
-        }));
-        setForm({
-          ...form,
-          portfolioImages: [...form.portfolioImages, ...newImages],
-        });
-      }
+      Alert.alert(
+        "Add Portfolio",
+        "Choose upload type",
+        [
+          {
+            text: "Images",
+            onPress: async () => {
+              const permissionResult =
+                await ImagePicker.requestMediaLibraryPermissionsAsync();
+              if (!permissionResult.granted) {
+                showToast("error", "Permission Denied", "Grant access to photos.");
+                return;
+              }
+              const pickerResult = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                quality: 1,
+                allowsMultipleSelection: true,
+              });
+              if (!pickerResult.canceled && pickerResult.assets?.length > 0) {
+                const validAssets = [];
+                for (const asset of pickerResult.assets) {
+                  if (asset.fileSize && asset.fileSize > MAX_PORTFOLIO_SIZE) {
+                    showToast(
+                      "error",
+                      "File Too Large",
+                      `${asset.fileName || "Image"} exceeds 10MB (${formatFileSize(asset.fileSize)})`
+                    );
+                    continue;
+                  }
+                  validAssets.push({ ...asset, isExisting: false, fileType: "image" });
+                }
+                if (validAssets.length > 0) {
+                  setForm({
+                    ...form,
+                    portfolioImages: [...form.portfolioImages, ...validAssets],
+                  });
+                }
+              }
+            },
+          },
+          {
+            text: "PDF",
+            onPress: async () => {
+              const docResult = await DocumentPicker.getDocumentAsync({
+                type: "application/pdf",
+                multiple: true,
+                copyToCacheDirectory: true,
+              });
+              if (!docResult.canceled && docResult.assets?.length > 0) {
+                const validAssets = [];
+                for (const asset of docResult.assets) {
+                  if (asset.size && asset.size > MAX_PORTFOLIO_SIZE) {
+                    showToast(
+                      "error",
+                      "File Too Large",
+                      `${asset.name || "PDF"} exceeds 10MB (${formatFileSize(asset.size)})`
+                    );
+                    continue;
+                  }
+                  validAssets.push({
+                    uri: asset.uri,
+                    fileName: asset.name || "document.pdf",
+                    mimeType: "application/pdf",
+                    fileSize: asset.size,
+                    isExisting: false,
+                    fileType: "pdf",
+                  });
+                }
+                if (validAssets.length > 0) {
+                  setForm({
+                    ...form,
+                    portfolioImages: [...form.portfolioImages, ...validAssets],
+                  });
+                }
+              }
+            },
+          },
+          { text: "Cancel", style: "cancel" },
+        ]
+      );
     } catch (error) {
-      showToast("error", "Error", `Failed to pick images: ${error.message}`);
+      showToast("error", "Error", `Failed to pick file: ${error.message}`);
     }
   };
 
@@ -684,31 +779,57 @@ const FreelancerSignup = ({ navigation, route }) => {
     }
 
     if (cleanedForm.portfolioImages && cleanedForm.portfolioImages.length > 0) {
-      let uploadedImages = [];
+      let uploadedFiles = [];
       for (let i = 0; i < cleanedForm.portfolioImages.length; i++) {
-        const portfolioImage = cleanedForm.portfolioImages[i];
+        const portfolioItem = cleanedForm.portfolioImages[i];
 
-        if (portfolioImage.isExisting) {
-          uploadedImages.push(portfolioImage.uri);
+        if (portfolioItem.isExisting) {
+          uploadedFiles.push(portfolioItem.uri);
         } else if (
-          portfolioImage.uri &&
-          !portfolioImage.uri.startsWith("http") &&
-          !portfolioImage.uri.startsWith("/uploads")
+          portfolioItem.uri &&
+          !portfolioItem.uri.startsWith("http") &&
+          !portfolioItem.uri.startsWith("/uploads")
         ) {
-          const result = await apiService.uploadImage(
-            portfolioImage,
-            "freelancer_portfolios"
-          );
-          if (result.success) {
-            uploadedImages.push(result.url);
-          } else {
-            showToast("error", "Error Uploading Portfolio Image", result.message);
+          const formData = new FormData();
+          const isPdf = portfolioItem.fileType === "pdf" || isPdfFile(portfolioItem);
+          const fileName = portfolioItem.fileName || (isPdf ? `portfolio_${Date.now()}.pdf` : `portfolio_${Date.now()}.jpg`);
+          const mimeType = portfolioItem.mimeType || (isPdf ? "application/pdf" : "image/jpeg");
+
+          formData.append("file", {
+            uri: portfolioItem.uri,
+            type: mimeType,
+            name: fileName,
+          });
+          formData.append("category", "freelancer_portfolios");
+
+          try {
+            const response = await fetch(
+              `${apiService.baseURL}/upload?category=freelancer_portfolios`,
+              {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${apiService.token}`,
+                  Accept: "application/json",
+                },
+                body: formData,
+              }
+            );
+            const data = await response.json();
+            if (response.ok && data.data?.url) {
+              uploadedFiles.push(data.data.url);
+            } else {
+              showToast("error", "Upload Failed", data.message || `Failed to upload ${fileName}`);
+              setIsLoading(false);
+              return;
+            }
+          } catch (uploadError) {
+            showToast("error", "Upload Failed", uploadError.message);
             setIsLoading(false);
             return;
           }
         }
       }
-      cleanedForm.portfolioImages = uploadedImages;
+      cleanedForm.portfolioImages = uploadedFiles;
     } else {
       cleanedForm.portfolioImages = [];
     }
@@ -720,6 +841,7 @@ const FreelancerSignup = ({ navigation, route }) => {
         result = await register({
           ...cleanedForm,
           mobile: form.mobile,
+          termsAccepted: form.termsAndConditions !== undefined ? form.termsAndConditions : (form.termsAccepted !== undefined ? form.termsAccepted : true),
           role: "FREELANCER",
         });
 
@@ -1624,10 +1746,10 @@ const FreelancerSignup = ({ navigation, route }) => {
                     >
                       <Plus size={26} color="#7C3AED" />
                       <Text style={styles.portfolioUploadBoxTitle}>
-                        Upload Image
+                        Upload File
                       </Text>
                       <Text style={styles.portfolioUploadBoxSubtext}>
-                        (Optional)
+                        Image or PDF (Optional)
                       </Text>
                     </TouchableOpacity>
 
@@ -1639,10 +1761,10 @@ const FreelancerSignup = ({ navigation, route }) => {
                       >
                         <Plus size={18} color="#7C3AED" />
                         <Text style={styles.portfolioSmallBoxTitle}>
-                          Upload Image
+                          Upload File
                         </Text>
                         <Text style={styles.portfolioUploadBoxSubtext}>
-                          (Optional)
+                          Image or PDF
                         </Text>
                       </TouchableOpacity>
 
@@ -1653,10 +1775,10 @@ const FreelancerSignup = ({ navigation, route }) => {
                       >
                         <Plus size={18} color="#7C3AED" />
                         <Text style={styles.portfolioSmallBoxTitle}>
-                          Upload Image
+                          Upload File
                         </Text>
                         <Text style={styles.portfolioUploadBoxSubtext}>
-                          (Optional)
+                          Image or PDF
                         </Text>
                       </TouchableOpacity>
                     </View>
@@ -1672,8 +1794,8 @@ const FreelancerSignup = ({ navigation, route }) => {
                         activeOpacity={0.8}
                       >
                         <Plus size={18} color="#7C3AED" />
-                        <Text style={styles.portfolioSmallBoxTitle}>Upload Image</Text>
-                        <Text style={styles.portfolioUploadBoxSubtext}>(Optional)</Text>
+                        <Text style={styles.portfolioSmallBoxTitle}>Upload File</Text>
+                        <Text style={styles.portfolioUploadBoxSubtext}>Image or PDF</Text>
                       </TouchableOpacity>
                     ))}
                   </View>
@@ -1688,8 +1810,8 @@ const FreelancerSignup = ({ navigation, route }) => {
                         activeOpacity={0.8}
                       >
                         <Plus size={18} color="#7C3AED" />
-                        <Text style={styles.portfolioSmallBoxTitle}>Upload Image</Text>
-                        <Text style={styles.portfolioUploadBoxSubtext}>(Optional)</Text>
+                        <Text style={styles.portfolioSmallBoxTitle}>Upload File</Text>
+                        <Text style={styles.portfolioUploadBoxSubtext}>Image or PDF</Text>
                       </TouchableOpacity>
                     ))}
                   </View>
@@ -1701,21 +1823,30 @@ const FreelancerSignup = ({ navigation, route }) => {
                     activeOpacity={0.8}
                   >
                     <Plus size={20} color="#7C3AED" />
-                    <Text style={styles.portfolioUploadBoxTitle}>Upload Image</Text>
-                    <Text style={styles.portfolioUploadBoxSubtext}>(Optional)</Text>
+                    <Text style={styles.portfolioUploadBoxTitle}>Upload File</Text>
+                    <Text style={styles.portfolioUploadBoxSubtext}>Image or PDF (Optional)</Text>
                   </TouchableOpacity>
                 </View>
 
                 {/* Uploaded Portfolio Previews */}
                 {form.portfolioImages.length > 0 && (
                   <View style={styles.uploadedImagesGrid}>
-                    {form.portfolioImages.map((image, i) => (
+                    {form.portfolioImages.map((file, i) => (
                       <View key={i} style={styles.portfolioPreviewBox}>
-                        <Image
-                          source={{ uri: apiService.loadImageURI(image.uri) }}
-                          style={styles.portfolioPreviewImg}
-                        />
-                        {image.isExisting && mode === "update" && (
+                        {file.fileType === "pdf" ? (
+                          <View style={styles.pdfPreviewContainer}>
+                            <MaterialIcons name="picture-as-pdf" size={32} color="#EF4444" />
+                            <Text style={styles.pdfPreviewName} numberOfLines={2}>
+                              {file.fileName || "document.pdf"}
+                            </Text>
+                          </View>
+                        ) : (
+                          <Image
+                            source={{ uri: apiService.loadImageURI(file.uri) }}
+                            style={styles.portfolioPreviewImg}
+                          />
+                        )}
+                        {file.isExisting && mode === "update" && (
                           <View style={styles.existingImageTag}>
                             <Text style={styles.existingImageTagText}>
                               Existing
@@ -1733,17 +1864,17 @@ const FreelancerSignup = ({ navigation, route }) => {
                   </View>
                 )}
 
-                {/* Info Banner matching Image 5 */}
+                {/* Info Banner */}
                 <View style={styles.infoBannerBox}>
                   <View style={styles.infoIconBadge}>
                     <Info size={16} color="#7C3AED" />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.infoBannerTitle}>
-                      You can upload up to 10 images.
+                      Upload images or PDF documents.
                     </Text>
                     <Text style={styles.infoBannerText}>
-                      Supported formats: JPG, PNG, WebP (Max 5MB each)
+                      Supported: JPG, PNG, WebP, PDF (Max 10MB each)
                     </Text>
                   </View>
                 </View>
@@ -2404,11 +2535,31 @@ const styles = StyleSheet.create({
     height: 90,
     borderRadius: 12,
     position: "relative",
+    overflow: "hidden",
+    backgroundColor: "#F5F0FF",
   },
   portfolioPreviewImg: {
     width: "100%",
     height: "100%",
     borderRadius: 12,
+  },
+  pdfPreviewContainer: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 12,
+    backgroundColor: "#FEF2F2",
+    borderWidth: 1,
+    borderColor: "#FECACA",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 4,
+  },
+  pdfPreviewName: {
+    fontSize: 9,
+    color: "#EF4444",
+    fontWeight: "600",
+    textAlign: "center",
+    marginTop: 2,
   },
   existingImageTag: {
     position: "absolute",

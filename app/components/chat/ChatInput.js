@@ -5,8 +5,8 @@ import {
   TouchableOpacity,
   Text,
   StyleSheet,
-  ActivityIndicator,
 } from 'react-native';
+import SafeSpinner from '../SafeSpinner';
 import { MaterialIcons } from "@expo/vector-icons";
 import { useTheme } from "../../context/ThemeContext";
 import FilePreview from './FilePreview';
@@ -69,7 +69,7 @@ const ChatInput = ({
 
         {sending ? (
           <View style={styles.sendButton}>
-            <ActivityIndicator size="small" color="#FFFFFF" />
+            <SafeSpinner size={18} color="#FFFFFF" />
           </View>
         ) : (
           <TouchableOpacity style={styles.sendButton} onPress={handleSend}>
@@ -83,7 +83,7 @@ const ChatInput = ({
           <Text style={styles.uploadText}>
             Uploading file... {Math.round(uploadProgress)}%
           </Text>
-          <ActivityIndicator size="small" color="#4C0183" />
+          <SafeSpinner size={18} color="#4C0183" />
         </View>
       )}
     </View>

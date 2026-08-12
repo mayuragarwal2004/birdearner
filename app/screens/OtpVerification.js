@@ -5,13 +5,13 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  ActivityIndicator,
   SafeAreaView,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   StatusBar,
 } from "react-native";
+import SafeSpinner from "../components/SafeSpinner";
 import { LinearGradient } from "expo-linear-gradient";
 import * as LucideIcons from "lucide-react-native";
 import Toast from "react-native-toast-message";
@@ -237,7 +237,7 @@ const OtpVerification = ({ navigation, route }) => {
                     activeOpacity={0.85}
                   >
                     {isLoading ? (
-                      <ActivityIndicator color="white" size="small" />
+                      <SafeSpinner color="white" size={18} />
                     ) : (
                       <Text style={styles.primaryButtonText}>Send OTP</Text>
                     )}
@@ -277,7 +277,7 @@ const OtpVerification = ({ navigation, route }) => {
                     activeOpacity={0.85}
                   >
                     {isLoading ? (
-                      <ActivityIndicator color="white" size="small" />
+                      <SafeSpinner color="white" size={18} />
                     ) : (
                       <Text style={styles.primaryButtonText}>Verify & Proceed</Text>
                     )}

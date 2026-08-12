@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from "react";
 import {
   View,
-  ActivityIndicator,
   SafeAreaView,
   TouchableOpacity,
   Text,
   StyleSheet,
 } from "react-native";
+import SafeSpinner from "../components/SafeSpinner";
 import { WebView } from "react-native-webview";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../context/ThemeContext";
@@ -65,8 +65,8 @@ const TermsAndConditionsScreen = ({ navigation }) => {
       </View>
 
       {loading ? (
-        <ActivityIndicator
-          size="large"
+        <SafeSpinner
+          size={42}
           color="#6A0DAD"
           style={{ marginTop: 40 }}
         />
@@ -75,8 +75,8 @@ const TermsAndConditionsScreen = ({ navigation }) => {
           source={{ uri: termsUrl }}
           startInLoadingState
           renderLoading={() => (
-            <ActivityIndicator
-              size="large"
+            <SafeSpinner
+              size={42}
               color="#6A0DAD"
               style={{ marginTop: 20 }}
             />

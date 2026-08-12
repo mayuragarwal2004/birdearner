@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import SafeSpinner from '../SafeSpinner';
 import { MapPin, Minus, Plus } from 'phosphor-react-native';
 import Toast from 'react-native-toast-message';
 import { MARKETPLACE_CONSTANTS } from '../../utils/marketplaceUtils';
@@ -25,8 +26,8 @@ const DistanceSlider = ({
         <MapPin size={20} color="#762BAD" weight="bold" style={styles.pinIcon} />
         <Text style={styles.distanceText}>{distance} km</Text>
         {isLoading && (
-          <ActivityIndicator 
-            size="small" 
+          <SafeSpinner 
+            size={18} 
             color="#762BAD" 
             style={styles.loadingIndicator}
           />

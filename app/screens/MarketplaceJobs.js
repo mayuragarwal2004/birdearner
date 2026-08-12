@@ -9,8 +9,8 @@ import {
   TouchableOpacity,
   FlatList,
   Image,
-  ActivityIndicator,
 } from "react-native";
+import SafeSpinner from "../components/SafeSpinner";
 import Toast from "react-native-toast-message";
 import {
   ArrowLeft,
@@ -315,7 +315,7 @@ const MarketplaceJobs = ({ navigation, route }) => {
           <View style={{ width: 44 }} />
         </View>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#762BAD" />
+          <SafeSpinner size={42} color="#762BAD" />
           <Text style={styles.loadingText}>Loading jobs...</Text>
         </View>
       </SafeAreaView>

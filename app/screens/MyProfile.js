@@ -8,7 +8,6 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  ActivityIndicator,
   Share,
   Modal,
   RefreshControl,
@@ -16,6 +15,7 @@ import {
   Animated,
   Easing,
 } from "react-native";
+import SafeSpinner from "../components/SafeSpinner";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { FontAwesome, MaterialIcons } from "@expo/vector-icons";
 import ImageViewer from "react-native-image-zoom-viewer";
@@ -312,7 +312,7 @@ export default function ProfileScreen({ navigation }) {
   if (loading || loadingProfile) {
     return (
       <SafeAreaView style={styles.centered}>
-        <ActivityIndicator size="large" color={currentTheme.text || "#fff"} />
+        <SafeSpinner size={42} color={currentTheme.text || "#fff"} />
       </SafeAreaView>
     );
   }

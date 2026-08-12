@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   Dimensions,
   Image,
   Platform,
@@ -13,6 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import SafeSpinner from "../components/SafeSpinner";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import {
@@ -411,7 +411,7 @@ const ClientHomeScreen = () => {
       >
         {/* Promo carousel — admin-configured banners */}
         {loadingPromos && banners.length === 0 ? (
-          <ActivityIndicator color={PURPLE} style={{ marginVertical: 24 }} />
+          <SafeSpinner color={PURPLE} size={24} style={{ marginVertical: 24 }} />
         ) : banners.length > 0 ? (
           <>
             <ScrollView
@@ -505,7 +505,7 @@ const ClientHomeScreen = () => {
 
           {loadingJobs ? (
             <View style={styles.loadingBox}>
-              <ActivityIndicator color={PURPLE} />
+              <SafeSpinner color={PURPLE} size={24} />
             </View>
           ) : ongoingJobs.length > 0 ? (
             ongoingJobs.slice(0, 3).map(renderOngoingJob)

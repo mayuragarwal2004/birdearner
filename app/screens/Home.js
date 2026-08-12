@@ -8,8 +8,8 @@ import {
   ScrollView,
   RefreshControl,
   Platform,
-  ActivityIndicator,
 } from "react-native";
+import SafeSpinner from "../components/SafeSpinner";
 import { FontAwesome, MaterialIcons, Ionicons } from "@expo/vector-icons";
 import { Bell, Crown, Clock, Flag, ChatCircleText, Wallet, CreditCard, ArrowCircleUp, ClipboardText, ListDashes, XCircle, Sparkle, ChatCircleDots, Star } from "phosphor-react-native";
 import { LinearGradient } from "expo-linear-gradient";

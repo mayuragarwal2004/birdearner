@@ -14,6 +14,7 @@ import WarningModal from "../components/chat/client/WarningModal";
 import CancelJobModal from "../components/chat/client/CancelJobModal";
 import ReportModal from "../components/chat/ReportModal";
 import ReviewFormModal from "../components/chat/ReviewFormModal";
+import NegotiationPanel from "../components/chat/NegotiationPanel";
 import { useChatData } from "../hooks/useChatSWR";
 import { useAuth } from "../context/NewAuthContext";
 import ApiService from "../lib/apiService";
@@ -392,6 +393,11 @@ const ClientChat = ({ route, navigation }) => {
     charactersRemaining,
     otherCharactersUsed,
     otherCharactersRemaining,
+    clientOffer,
+    freelancerOffer,
+    agreedAmount,
+    isNegotiable,
+    updateOffer,
     isLoading,
     sendMessage,
     handleRequestCompletion: swrHandleRequestCompletion,
@@ -1050,67 +1056,91 @@ const ClientChat = ({ route, navigation }) => {
           onConfirmCompletion={handleConfirmProjComp}
         />
 
-        {renderDeadlineSection()}
+        <View style={{ flex: 1, flexDirection: "row" }}>
+          <NegotiationPanel
+            role="client"
+            otherPartyName={
+              route.params.freelancer?.user?.fullName ||
+              route.params.freelancer?.fullName ||
+              route.params.freelancer?.name ||
+              "Freelancer"
+            }
+            clientOffer={clientOffer}
+            freelancerOffer={freelancerOffer}
+            agreedAmount={agreedAmount}
+            isNegotiable={isNegotiable}
+            onUpdateOffer={updateOffer}
+            onRefresh={() => {
+              mutateThread?.();
+              mutateMessages?.();
+            }}
+            onViewProposalDetails={() => {
+              navigation.navigate("JobDetailsChat", { jobId: job?.id || route.params.jobId });
+            }}
+          />
 
-        <FlatList
-          data={messages}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <MessageItem
-              messageItem={item}
-              message={item.messageContent}
-              isCurrentUser={item.senderId === userData?.id}
-              media={item.userMedia}
-              isUploading={item.isUploading}
-              currentUserId={userData?.id}
-              userRole="client"
-              onMessageUpdate={(type, data) => {
-                if (type === 'review_press') {
-                  handleReviewPress(data);
-                } else {
-                  // Handle other updates if needed
-                  mutateMessages();
-                }
-              }}
+          <View style={{ flex: 1 }}>
+            {renderDeadlineSection()}
+
+            <FlatList
+              data={messages}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => (
+                <MessageItem
+                  messageItem={item}
+                  message={item.messageContent}
+                  isCurrentUser={item.senderId === userData?.id}
+                  media={item.userMedia}
+                  isUploading={item.isUploading}
+                  currentUserId={userData?.id}
+                  userRole="client"
+                  onMessageUpdate={(type, data) => {
+                    if (type === 'review_press') {
+                      handleReviewPress(data);
+                    } else {
+                      mutateMessages();
+                    }
+                  }}
+                />
+              )}
+              style={styles.chatList}
+              contentContainerStyle={styles.chatListContainer}
             />
-          )}
-          style={styles.chatList}
-          contentContainerStyle={styles.chatListContainer}
-        />
 
-        {jobStatus === "OPEN" && characterLimit && (
-          <View style={styles.limit}>
-            <Text style={styles.limitchar}>Character Limit Active</Text>
-            <Text style={styles.limitvar}>
-              {charactersRemaining !== null
-                ? `${Math.max(0, charactersRemaining - currentInputLength)} characters remaining (${charactersUsed + currentInputLength}/${characterLimit} used)`
-                : `Maximum ${characterLimit} characters total`
-              }
-            </Text>
-            {/* Info about character limit removal and other user's status */}
-            <Text style={styles.limitInfo}>
-              {`Limit will be removed once you accept the freelancer for this job.`}
-            </Text>
-            {otherCharactersRemaining === 0 && (
-              <Text style={styles.limitWarn}>
-                {`Freelancer has exhausted their character limit.`}
-              </Text>
+            {jobStatus === "OPEN" && characterLimit && (
+              <View style={styles.limit}>
+                <Text style={styles.limitchar}>Character Limit Active</Text>
+                <Text style={styles.limitvar}>
+                  {charactersRemaining !== null
+                    ? `${Math.max(0, charactersRemaining - currentInputLength)} characters remaining (${charactersUsed + currentInputLength}/${characterLimit} used)`
+                    : `Maximum ${characterLimit} characters total`
+                  }
+                </Text>
+                <Text style={styles.limitInfo}>
+                  {`Limit will be removed once you accept the freelancer for this job.`}
+                </Text>
+                {otherCharactersRemaining === 0 && (
+                  <Text style={styles.limitWarn}>
+                    {`Freelancer has exhausted their character limit.`}
+                  </Text>
+                )}
+              </View>
             )}
-          </View>
-        )}
 
-        <ChatInput
-          onSend={handleSendMessage}
-          onFilePick={handleFilePick}
-          onRemoveFile={handleRemoveFile}
-          characterLimit={characterLimit}
-          charactersRemaining={charactersRemaining}
-          onInputChange={setCurrentInputLength}
-          fileInfo={fileInfo}
-          sending={sending}
-          isUploading={isUploading}
-          uploadProgress={uploadProgress}
-        />
+            <ChatInput
+              onSend={handleSendMessage}
+              onFilePick={handleFilePick}
+              onRemoveFile={handleRemoveFile}
+              characterLimit={characterLimit}
+              charactersRemaining={charactersRemaining}
+              onInputChange={setCurrentInputLength}
+              fileInfo={fileInfo}
+              sending={sending}
+              isUploading={isUploading}
+              uploadProgress={uploadProgress}
+            />
+          </View>
+        </View>
 
         <WarningModal
           visible={modalVisible}

@@ -6,12 +6,12 @@ import {
   StyleSheet, 
   Alert, 
   ScrollView,
-  ActivityIndicator,
   TextInput,
   KeyboardAvoidingView,
   Platform,
   Linking
 } from "react-native";
+import SafeSpinner from "../components/SafeSpinner";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../context/NewAuthContext";
 import { useTheme } from "../context/ThemeContext";
@@ -197,7 +197,7 @@ const DeleteAccountScreen = ({ navigation }) => {
   if (isLoading) {
     return (
       <View style={[styles.container, styles.loadingContainer]}>
-        <ActivityIndicator size="large" color={currentTheme.primary || "#6A0DAD"} />
+        <SafeSpinner size={42} color={currentTheme.primary || "#6A0DAD"} />
         <Text style={[styles.loadingText, { color: currentTheme.text }]}>
           Checking account status...
         </Text>
@@ -321,7 +321,7 @@ const DeleteAccountScreen = ({ navigation }) => {
               >
                 {isDeleting ? (
                   <View style={styles.loadingRow}>
-                    <ActivityIndicator size="small" color="white" />
+                    <SafeSpinner size={18} color="white" />
                     <Text style={styles.cancelRequestButtonText}>Cancelling...</Text>
                   </View>
                 ) : (
@@ -385,7 +385,7 @@ const DeleteAccountScreen = ({ navigation }) => {
               >
                 {isUpdating ? (
                   <View style={styles.loadingRow}>
-                    <ActivityIndicator size="small" color="white" />
+                    <SafeSpinner size={18} color="white" />
                     <Text style={styles.submitButtonText}>Updating...</Text>
                   </View>
                 ) : (
@@ -439,7 +439,7 @@ const DeleteAccountScreen = ({ navigation }) => {
             >
               {isSubmitting ? (
                 <View style={styles.loadingRow}>
-                  <ActivityIndicator size="small" color="white" />
+                  <SafeSpinner size={18} color="white" />
                   <Text style={styles.deleteButtonText}>Processing...</Text>
                 </View>
               ) : (
@@ -472,7 +472,7 @@ const DeleteAccountScreen = ({ navigation }) => {
               >
                 {isSubmitting ? (
                   <View style={styles.loadingRow}>
-                    <ActivityIndicator size="small" color="white" />
+                    <SafeSpinner size={18} color="white" />
                     <Text style={styles.submitButtonText}>Submitting...</Text>
                   </View>
                 ) : (

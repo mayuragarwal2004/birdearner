@@ -5,8 +5,8 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  ActivityIndicator
 } from "react-native";
+import SafeSpinner from "../components/SafeSpinner";
 import Toast from "react-native-toast-message";
 import apiService from "../lib/apiService";
 
@@ -116,7 +116,7 @@ const ResetPasswordScreen = ({ route, navigation }) => {
         disabled={loading}
       >
         {loading ? (
-          <ActivityIndicator color="white" />
+          <SafeSpinner size={24} color="white" />
         ) : (
           <Text style={styles.loginButtonText}>Reset Password</Text>
         )}

@@ -7,8 +7,8 @@ import {
   FlatList,
   Alert,
   RefreshControl,
-  ActivityIndicator,
 } from "react-native";
+import SafeSpinner from "../components/SafeSpinner";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ArrowLeft, Wallet, ClockCounterClockwise } from "phosphor-react-native";
 import { useAuth } from "../context/NewAuthContext";
@@ -156,7 +156,7 @@ const WalletFreelancerScreen = ({ navigation }) => {
 
         {loading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={primaryColor} />
+            <SafeSpinner size={42} color={primaryColor} />
             <Text style={styles.loadingText}>Loading wallet data...</Text>
           </View>
         ) : (

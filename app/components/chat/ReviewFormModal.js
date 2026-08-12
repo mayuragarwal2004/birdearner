@@ -6,10 +6,10 @@ import {
   TouchableOpacity,
   TextInput,
   Modal,
-  ActivityIndicator,
   TouchableWithoutFeedback,
   Keyboard
 } from "react-native";
+import SafeSpinner from "../SafeSpinner";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useTheme } from "../../context/ThemeContext";
 
@@ -172,7 +172,7 @@ const ReviewFormModal = ({ visible, onClose, onSubmit, isSubmitting }) => {
                 disabled={isSubmitting}
             >
                 {isSubmitting ? (
-                    <ActivityIndicator color="#FFF" size="small" />
+                    <SafeSpinner color="#FFF" size={18} />
                 ) : (
                     <Text style={styles.submitButtonText}>Submit Review</Text>
                 )}

@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   Modal,
   Platform,
@@ -11,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import SafeSpinner from "./SafeSpinner";
 import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
 import * as Location from "expo-location";
 import { Ionicons } from "@expo/vector-icons";
@@ -364,7 +364,7 @@ const AddressPickerModal = ({
                   disabled={pinLoading}
                 >
                   {pinLoading ? (
-                    <ActivityIndicator color={PURPLE} size="small" />
+                    <SafeSpinner color={PURPLE} size={18} />
                   ) : (
                     <NavigationArrow size={16} color={PURPLE} weight="fill" />
                   )}
@@ -421,7 +421,7 @@ const AddressPickerModal = ({
                 disabled={!form.line1.trim() || !form.city.trim() || !hasPin || saving}
               >
                 {saving ? (
-                  <ActivityIndicator color="#fff" />
+                  <SafeSpinner color="#fff" size={18} />
                 ) : (
                   <Text style={styles.primaryBtnText}>
                     {isEditing ? "Update address" : "Save address"}
@@ -444,7 +444,7 @@ const AddressPickerModal = ({
               >
                 <View style={styles.actionIcon}>
                   {locating ? (
-                    <ActivityIndicator color={PURPLE} />
+                    <SafeSpinner color={PURPLE} size={20} />
                   ) : (
                     <NavigationArrow size={20} color={PURPLE} weight="fill" />
                   )}

@@ -6,10 +6,10 @@ import {
   FlatList,
   TouchableOpacity,
   RefreshControl,
-  ActivityIndicator,
   Image,
   Platform
 } from "react-native";
+import SafeSpinner from "../components/SafeSpinner";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
@@ -191,7 +191,7 @@ const NotificationScreen = () => {
 
       {loading && page === 1 ? (
         <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color="#762BAD" />
+          <SafeSpinner size={42} color="#762BAD" />
         </View>
       ) : (
         <FlatList
@@ -213,7 +213,7 @@ const NotificationScreen = () => {
               <Text style={styles.emptySubtitle}>We'll notify you when something important happens.</Text>
             </View>
           }
-          ListFooterComponent={hasMore && page > 1 && <ActivityIndicator size="small" color="#762BAD" style={{ padding: 10 }} />}
+          ListFooterComponent={hasMore && page > 1 && <SafeSpinner size={18} color="#762BAD" style={{ padding: 10 }} />}
         />
       )}
     </SafeAreaView>

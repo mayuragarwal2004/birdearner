@@ -579,6 +579,10 @@ export function App() {
             name="FreelancerSignup"
             getComponent={getFreelancerSignupScreen}
           />
+          <Stack.Screen
+            name="OtpVerification"
+            getComponent={getOtpVerificationScreen}
+          />
         </>
       ) : (
         // Non-Authenticated Stack - Login/Signup flow

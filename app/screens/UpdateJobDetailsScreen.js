@@ -9,8 +9,8 @@ import {
   Modal,
   Alert,
   TextInput,
-  ActivityIndicator,
 } from "react-native";
+import SafeSpinner from "../components/SafeSpinner";
 import { FontAwesome, Ionicons } from "@expo/vector-icons";
 import ImageViewer from "react-native-image-zoom-viewer";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -418,7 +418,7 @@ const UpdateJobDetailsScreen = ({ route, navigation }) => {
         {budgetValidating && (
           <View style={styles.budgetValidationContainer}>
             <View style={styles.budgetValidationRow}>
-              <ActivityIndicator size="small" color="#6A0DAD" />
+              <SafeSpinner size={18} color="#6A0DAD" />
               <Text style={styles.budgetValidationText}>Validating budget...</Text>
             </View>
           </View>

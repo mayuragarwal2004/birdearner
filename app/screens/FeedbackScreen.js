@@ -11,8 +11,8 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
 } from "react-native";
+import SafeSpinner from "../components/SafeSpinner";
 import { useAuth } from "../context/NewAuthContext";
 import { useTheme } from "../context/ThemeContext";
 import apiService from "../lib/apiService";
@@ -399,7 +399,7 @@ const FeedbackScreen = ({ navigation }) => {
                 >
                   {isSubmitting ? (
                     <View style={styles.loadingContainer}>
-                      <ActivityIndicator size="small" color="#fff" />
+                      <SafeSpinner size={18} color="#fff" />
                       <Text style={styles.submitText}>Sending...</Text>
                     </View>
                   ) : (

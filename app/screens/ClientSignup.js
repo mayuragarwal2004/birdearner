@@ -493,6 +493,7 @@ const ClientSignup = ({ navigation, route }) => {
         result = await register({
           ...cleanedForm,
           mobile: form.mobile,
+          termsAccepted: form.termsAccepted !== undefined ? form.termsAccepted : true,
           role: "CLIENT",
         });
 

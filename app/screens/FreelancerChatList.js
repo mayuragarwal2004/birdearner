@@ -6,9 +6,9 @@ import {
   FlatList,
   StyleSheet,
   Image,
-  ActivityIndicator,
   RefreshControl,
 } from "react-native";
+import SafeSpinner from "../components/SafeSpinner";
 import { useAuth } from "../context/NewAuthContext";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
@@ -131,7 +131,7 @@ const FreelancerChatList = () => {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#3b006b" />
+        <SafeSpinner size={42} color="#3b006b" />
         <Text style={{ color: currentTheme.subText }}>Loading chats...</Text>
       </View>
     );

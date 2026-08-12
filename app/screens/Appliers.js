@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   FlatList,
   Image,
@@ -10,6 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import SafeSpinner from "../components/SafeSpinner";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import {
@@ -216,7 +216,7 @@ const AppliersScreen = ({ navigation, route }) => {
         ListEmptyComponent={
           loading ? (
             <View style={styles.stateContainer}>
-              <ActivityIndicator size="large" color={PURPLE} />
+              <SafeSpinner size={24} color={PURPLE} />
               <Text style={styles.stateText}>Loading applicants...</Text>
             </View>
           ) : error ? (

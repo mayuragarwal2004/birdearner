@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   FlatList,
   Image,
@@ -11,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import SafeSpinner from "../components/SafeSpinner";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { Briefcase, CalendarBlank, ChatCircleText, CurrencyInr } from "phosphor-react-native";
@@ -242,7 +242,7 @@ const JobsPostedScreen = ({ navigation }) => {
         ListEmptyComponent={
           loading ? (
             <View style={styles.stateContainer}>
-              <ActivityIndicator size="large" color={PURPLE} />
+              <SafeSpinner size={42} color={PURPLE} />
               <Text style={styles.stateText}>Loading jobs...</Text>
             </View>
           ) : error ? (

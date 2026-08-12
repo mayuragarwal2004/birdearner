@@ -5,11 +5,11 @@ import {
   StyleSheet,
   TouchableOpacity,
   TextInput,
-  ActivityIndicator,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import SafeSpinner from "../components/SafeSpinner";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ArrowLeft, Envelope, LockKey, Eye, EyeSlash } from "phosphor-react-native";
 import { useTheme } from "../context/ThemeContext";
@@ -284,7 +284,7 @@ const EmailUpdateScreen = ({ navigation }) => {
             >
               {loading ? (
                 <View style={styles.loadingContainer}>
-                  <ActivityIndicator size="small" color="white" />
+                  <SafeSpinner size={18} color="white" />
                   <Text style={styles.loadingText}>Updating...</Text>
                 </View>
               ) : (

@@ -1,10 +1,11 @@
 import React from 'react';
-import { ActivityIndicator, View, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import SafeSpinner from './SafeSpinner';
 
 const Loader = () => {
   return (
     <View style={styles.loaderContainer}>
-      <ActivityIndicator size="large" color="#0000ff" />
+      <SafeSpinner size={42} color="#0000ff" />
     </View>
   );
 };

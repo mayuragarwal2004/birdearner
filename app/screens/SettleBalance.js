@@ -6,8 +6,8 @@ import {
     TouchableOpacity,
     TextInput,
     Animated,
-    ActivityIndicator,
 } from "react-native";
+import SafeSpinner from "../components/SafeSpinner";
 import LottieView from "lottie-react-native";
 import RazorpayCheckout from "react-native-razorpay";
 import { useAuth } from "../context/NewAuthContext";
@@ -180,7 +180,7 @@ const SettleBalanceScreen = ({ navigation }) => {
                             disabled={isLoading}
                         >
                             {isLoading ? (
-                                <ActivityIndicator size="small" color="#fff" />
+                                <SafeSpinner size={18} color="#fff" />
                             ) : (
                                 <>
                                     <FontAwesome5 name="check-circle" size={20} color="#fff" />

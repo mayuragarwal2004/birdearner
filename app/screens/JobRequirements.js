@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   Image,
   Modal,
@@ -13,6 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import SafeSpinner from "../components/SafeSpinner";
 import CustomPicker from "../components/CustomPicker";
 import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
@@ -1242,7 +1242,7 @@ const JobRequirementsScreen = ({ navigation }) => {
               disabled={locationLoading}
             >
               {locationLoading ? (
-                <ActivityIndicator color="#fff" size="small" />
+                <SafeSpinner color="#fff" size={18} />
               ) : (
                 <Text style={styles.mapModalConfirmText}>Confirm</Text>
               )}

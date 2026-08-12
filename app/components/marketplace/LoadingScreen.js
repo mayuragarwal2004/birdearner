@@ -1,12 +1,13 @@
 import React from 'react';
-import { SafeAreaView, ActivityIndicator, StyleSheet } from 'react-native';
+import { SafeAreaView, StyleSheet } from 'react-native';
+import SafeSpinner from '../SafeSpinner';
 
 const LoadingScreen = ({ theme }) => {
   const styles = getStyles(theme);
   
   return (
     <SafeAreaView style={styles.loadingContainer}>
-      <ActivityIndicator size="large" color="#762BAD" />
+      <SafeSpinner size={42} color="#762BAD" />
     </SafeAreaView>
   );
 };

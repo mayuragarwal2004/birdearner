@@ -353,6 +353,47 @@ export const useChatData = (role, params) => {
     }
   }, [job?.id, mutateJob, mutateThread, mutateMessages]);
 
+  // Handle updating offer during negotiation
+  const updateOffer = useCallback(async (amount) => {
+    const activeThreadId = params?.threadId || thread?.id;
+    if (!activeThreadId) {
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Chat thread not initialized yet',
+      });
+      return;
+    }
+
+    try {
+      const api = ApiService;
+      await api.init();
+      const res = await api.updateNegotiationOffer(activeThreadId, amount, role);
+      if (res.success) {
+        Toast.show({
+          type: 'success',
+          text1: 'Offer Updated',
+          text2: `Your offer has been updated to $${amount}`,
+        });
+        await mutateThread();
+        await mutateMessages();
+      } else {
+        Toast.show({
+          type: 'error',
+          text1: 'Error',
+          text2: res.message || 'Failed to update offer',
+        });
+      }
+    } catch (err) {
+      console.error('Error updating offer:', err);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: err.message || 'Failed to update offer',
+      });
+    }
+  }, [thread?.id, params?.threadId, role, mutateThread, mutateMessages]);
+
   // Calculate character usage for current user
   const totalCharacterLimit = (job?.jobStatus?.toUpperCase() === 'OPEN')
     ? (thread?.characterLimit || job?.characterLimit || 200)
@@ -407,6 +448,13 @@ export const useChatData = (role, params) => {
     handleRequestCompletion,
     handleJobCancel,
     addOptimisticMessage,
+    updateOffer,
+
+    // Negotiation values
+    clientOffer: thread?.clientOffer || job?.budgetAmount?.toString() || "0",
+    freelancerOffer: thread?.freelancerOffer || job?.budgetAmount?.toString() || "0",
+    agreedAmount: thread?.agreedAmount || (thread?.isAccepted ? job?.budgetAmount?.toString() : null),
+    isNegotiable: !thread?.isAccepted && thread?.status !== 'ACCEPTED' && thread?.status !== 'REJECTED',
 
     // Computed values
     chatStatus: thread?.status || 'PENDING',

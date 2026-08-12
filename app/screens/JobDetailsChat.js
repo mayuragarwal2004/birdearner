@@ -6,10 +6,10 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
-  ActivityIndicator,
   Modal,
   Image,
 } from "react-native";
+import SafeSpinner from "../components/SafeSpinner";
 import { FontAwesome, Ionicons } from "@expo/vector-icons";
 import ImageViewer from "react-native-image-zoom-viewer";
 import { useAuth } from "../context/NewAuthContext";
@@ -202,8 +202,8 @@ const JobDetailsChatScreen = ({ route, navigation }) => {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator
-          size="large"
+        <SafeSpinner
+          size={42}
           color={currentTheme?.primary || "#4e2587"}
         />
         <Text style={styles.loadingText}>Loading job details...</Text>

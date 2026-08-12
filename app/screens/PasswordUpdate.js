@@ -6,11 +6,11 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
-  ActivityIndicator,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import SafeSpinner from "../components/SafeSpinner";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ArrowLeft, LockKey, Eye, EyeSlash, CheckCircle, XCircle } from "phosphor-react-native";
 import { useTheme } from "../context/ThemeContext";
@@ -286,7 +286,7 @@ const PasswordUpdateScreen = ({ navigation }) => {
               activeOpacity={0.8}
             >
               {loading ? (
-                <ActivityIndicator color="#fff" size="small" />
+                <SafeSpinner color="#fff" size={18} />
               ) : (
                 <Text style={styles.updateButtonText}>Update Password</Text>
               )}

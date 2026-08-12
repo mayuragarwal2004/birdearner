@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   ScrollView,
   StyleSheet,
@@ -8,6 +7,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import SafeSpinner from "../components/SafeSpinner";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import {
@@ -100,7 +100,7 @@ const ManageAddressesScreen = ({ navigation }) => {
         >
           <View style={styles.actionIcon}>
             {locating ? (
-              <ActivityIndicator color={PURPLE} />
+              <SafeSpinner color={PURPLE} size={24} />
             ) : (
               <NavigationArrow size={20} color={PURPLE} weight="fill" />
             )}
@@ -123,7 +123,7 @@ const ManageAddressesScreen = ({ navigation }) => {
 
         <Text style={styles.sectionLabel}>Saved addresses</Text>
         {loading ? (
-          <ActivityIndicator color={PURPLE} style={{ marginTop: 20 }} />
+          <SafeSpinner color={PURPLE} size={24} style={{ marginTop: 20 }} />
         ) : addresses.length === 0 ? (
           <Text style={styles.empty}>No addresses saved yet.</Text>
         ) : (

@@ -9,12 +9,12 @@ import {
   ScrollView,
   RefreshControl,
   SafeAreaView,
-  ActivityIndicator,
   Linking,
   Alert,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import SafeSpinner from "../components/SafeSpinner";
 import { LinearGradient } from "expo-linear-gradient";
 import { 
   Envelope, 
@@ -219,7 +219,7 @@ const Login = ({ navigation }) => {
                 end={{ x: 1, y: 0 }}
               >
                 {isLoading ? (
-                  <ActivityIndicator color="white" size="small" />
+                  <SafeSpinner color="white" size={18} />
                 ) : (
                   <Text style={styles.loginButtonText}>Login</Text>
                 )}

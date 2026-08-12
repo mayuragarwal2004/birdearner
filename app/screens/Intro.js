@@ -6,8 +6,8 @@ import {
   StyleSheet, 
   SafeAreaView,
   TouchableOpacity,
-  ActivityIndicator 
 } from 'react-native';
+import SafeSpinner from '../components/SafeSpinner';
 import * as SplashScreen from 'expo-splash-screen';
 import { useAuth } from '../context/NewAuthContext';
 import { InstagramLogoIcon, XLogoIcon } from "phosphor-react-native";
@@ -105,9 +105,9 @@ const Intro = ({ navigation }) => {
 
         {/* Loading Indicator */}
         {loading && (
-          <ActivityIndicator 
+          <SafeSpinner 
             color="white" 
-            size="large" 
+            size={42}
             style={styles.loadingIndicator}
           />
         )}

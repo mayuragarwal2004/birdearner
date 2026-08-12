@@ -5,13 +5,13 @@ import {
   StyleSheet,
   TouchableOpacity,
   TextInput,
-  ActivityIndicator,
   ScrollView,
   FlatList,
   RefreshControl,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import SafeSpinner from "../components/SafeSpinner";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ArrowLeft, Info, CurrencyInr, CaretUp, CaretDown, Archive } from "phosphor-react-native";
 import { useAuth } from "../context/NewAuthContext";
@@ -243,7 +243,7 @@ const WithdrawalEarningScreen = ({ navigation }) => {
 
           {fetchingWallet ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={primaryColor} />
+              <SafeSpinner size={42} color={primaryColor} />
               <Text style={styles.loadingText}>Loading wallet data...</Text>
             </View>
           ) : (
@@ -328,7 +328,7 @@ const WithdrawalEarningScreen = ({ navigation }) => {
                 {showHistory && (
                   <View style={styles.historyContent}>
                     {fetchingHistory ? (
-                      <ActivityIndicator size="small" color={primaryColor} />
+                      <SafeSpinner size={18} color={primaryColor} />
                     ) : withdrawalHistory.length === 0 ? (
                       <View style={styles.emptyHistoryContainer}>
                         <View style={styles.emptyHistoryIconWrapper}>

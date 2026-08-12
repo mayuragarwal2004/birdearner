@@ -2,7 +2,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 
-const DEV_API_BASE_URL = "https://click-macro-charts-evaluate.trycloudflare.com/api";
+const DEV_API_BASE_URL = "https://revision-professor-allied-trivia.trycloudflare.com/api";
 // const DEV_API_BASE_URL = "https://api.birdearner.com/api";
 
 const PROD_API_BASE_URL = "https://api.birdearner.com/api";
@@ -161,6 +161,12 @@ class ApiService {
       } catch (parseError) {
         console.error("JSON Parse Error:", parseError);
         console.error("Response was not valid JSON:", responseText);
+        if (responseText.includes("502") || responseText.includes("error code:")) {
+          throw new Error("Cloudflare Tunnel 502 Bad Gateway: The tunnel is pointing to port 3000, but your API server is running on port 3001.");
+        }
+        if (responseText.trim().startsWith("<")) {
+          throw new Error("Server returned HTML instead of JSON. Please check if your Cloudflare tunnel is pointing to the correct API port (e.g. port 3001).");
+        }
         throw new Error(`Invalid JSON response: ${responseText}`);
       }
 
@@ -227,6 +233,85 @@ class ApiService {
       body: JSON.stringify({ mobile, otp }),
     });
     return response;
+  }
+
+  // Upload image to backend Cloudinary service
+  async uploadImage(imageFile, category) {
+    if (!imageFile || !imageFile.uri) {
+      return { success: false, message: "No image file provided" };
+    }
+
+    try {
+      const formData = new FormData();
+      const fileName =
+        imageFile.fileName ||
+        imageFile.name ||
+        `upload_${Date.now()}.jpg`;
+      const mimeType =
+        imageFile.mimeType || imageFile.type || "image/jpeg";
+
+      formData.append("file", {
+        uri: imageFile.uri,
+        type: mimeType,
+        name: fileName,
+      });
+      formData.append("category", category);
+
+      const url = `${this.baseURL}/upload`;
+      const headers = {};
+      if (this.token) {
+        headers["Authorization"] = `Bearer ${this.token}`;
+      }
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers,
+        body: formData,
+      });
+
+      const responseText = await response.text();
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (e) {
+        return {
+          success: false,
+          message: "Invalid JSON response from upload endpoint",
+        };
+      }
+
+      if (response.ok && data.success) {
+        return {
+          success: true,
+          url: data.secure_url || data.data?.url,
+          data: data.data,
+        };
+      }
+
+      return {
+        success: false,
+        message: data.message || "Image upload failed",
+      };
+    } catch (error) {
+      console.error("uploadImage error:", error);
+      return {
+        success: false,
+        message: error.message || "Failed to upload image",
+      };
+    }
+  }
+
+  // Update negotiation offer amount
+  async updateNegotiationOffer(threadId, amount, userRole) {
+    const response = await this.makeRequest("/chats/negotiate/update", {
+      method: "POST",
+      body: JSON.stringify({ threadId, amount, userRole }),
+    });
+    return response;
+  }
+
+  async updateOffer(threadId, amount, userRole) {
+    return this.updateNegotiationOffer(threadId, amount, userRole);
   }
 
   // Signup client

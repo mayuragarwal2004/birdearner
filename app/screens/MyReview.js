@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   Image,
   RefreshControl,
@@ -11,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import SafeSpinner from "../components/SafeSpinner";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { FontAwesome, MaterialIcons } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
@@ -226,7 +226,7 @@ export default function MyReview({ navigation, route }) {
   if (loadingProfile && !reviews.length && !reviewStats) {
     return (
       <SafeAreaView style={styles.centered}>
-        <ActivityIndicator size="large" color={PURPLE} />
+        <SafeSpinner size={42} color={PURPLE} />
       </SafeAreaView>
     );
   }

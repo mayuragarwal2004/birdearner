@@ -11,10 +11,12 @@ import ChatHeader from "../components/chat/ChatHeader";
 import ChatInput from "../components/chat/ChatInput";
 import AssignmentBanner from "../components/chat/freelancer/AssignmentBanner";
 import ReportModal from "../components/chat/ReportModal";
+import NegotiationPanel from "../components/chat/NegotiationPanel";
 import { useChatData } from "../hooks/useChatSWR";
 import { useAuth } from "../context/NewAuthContext";
 import ApiService from "../lib/apiService";
 import ReviewFormModal from "../components/chat/ReviewFormModal";
+import { Ionicons } from "@expo/vector-icons";
 
 const getStyles = (currentTheme, isKeyboardVisible) =>
   StyleSheet.create({
@@ -259,6 +261,24 @@ const getStyles = (currentTheme, isKeyboardVisible) =>
       textAlign: 'center',
       letterSpacing: 0.5,
     },
+    reviewBanner: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: "#F3E8FF",
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      marginHorizontal: 16,
+      marginTop: 8,
+      marginBottom: 8,
+      borderRadius: 12,
+    },
+    reviewBannerText: {
+      fontSize: 12,
+      color: "#5B21B6",
+      flex: 1,
+      lineHeight: 16,
+      fontWeight: "500",
+    },
   });
 
 const FreelancerChat = ({ route, navigation }) => {
@@ -298,11 +318,17 @@ const FreelancerChat = ({ route, navigation }) => {
     charactersRemaining,
     otherCharactersUsed,
     otherCharactersRemaining,
+    clientOffer,
+    freelancerOffer,
+    agreedAmount,
+    isNegotiable,
+    updateOffer,
     isLoading,
     sendMessage,
     handleRequestCompletion: swrHandleRequestCompletion,
     mutateMessages,
     mutateJob,
+    mutateThread,
   } = useChatData("freelancer", route.params);
 
   const handleViewProfile = () => {
@@ -563,92 +589,125 @@ const FreelancerChat = ({ route, navigation }) => {
           currentFreelancerId={userData?.freelancer?.id}
         />
 
-        {(chatStatus === "ACCEPTED" || chatStatus === "IN_PROGRESS") && (
-          <View style={styles.deadlineContainer}>
-            {chatStatus !== "COMPLETED" && chatStatus !== "IN_PROGRESS" && (
-              <Text style={styles.deadline}>
-                {job?.deadlineDate && new Date(job.deadlineDate) < new Date()
-                  ? "Deadline Over"
-                  : null}
-              </Text>
-            )}
-            <View style={styles.deadlineTimerContainer}>
-              {job?.jobStatus === "COMPLETED" ? (
-                <View style={styles.conColorc}>
-                  <Text style={styles.completedText}>Project Completed ✓</Text>
+        {!job?.assignedFreelancerId && chatStatus !== "ACCEPTED" && (
+          <View style={styles.reviewBanner}>
+            <Ionicons name="information-circle-outline" size={20} color="#6D28D9" style={{ marginRight: 8 }} />
+            <Text style={styles.reviewBannerText}>
+              Your offer is currently under review. The client hasn't accepted it yet. Please wait for the client to accept your offer, and you will get the project.
+            </Text>
+          </View>
+        )}
+
+        <View style={{ flex: 1, flexDirection: "row" }}>
+          <NegotiationPanel
+            role="freelancer"
+            otherPartyName={
+              route.params.client?.companyName ||
+              route.params.client?.user?.fullName ||
+              route.params.client?.name ||
+              "Client"
+            }
+            clientOffer={clientOffer}
+            freelancerOffer={freelancerOffer}
+            agreedAmount={agreedAmount}
+            isNegotiable={isNegotiable}
+            onUpdateOffer={updateOffer}
+            onRefresh={() => {
+              mutateThread?.();
+              mutateMessages?.();
+            }}
+            onViewProposalDetails={() => {
+              navigation.navigate("JobDetailsChat", { jobId: job?.id || route.params.jobId });
+            }}
+          />
+
+          <View style={{ flex: 1 }}>
+            {(chatStatus === "ACCEPTED" || chatStatus === "IN_PROGRESS") && (
+              <View style={styles.deadlineContainer}>
+                {chatStatus !== "COMPLETED" && chatStatus !== "IN_PROGRESS" && (
+                  <Text style={styles.deadline}>
+                    {job?.deadlineDate && new Date(job.deadlineDate) < new Date()
+                      ? "Deadline Over"
+                      : null}
+                  </Text>
+                )}
+                <View style={styles.deadlineTimerContainer}>
+                  {job?.jobStatus === "COMPLETED" ? (
+                    <View style={styles.conColorc}>
+                      <Text style={styles.completedText}>Project Completed ✓</Text>
+                    </View>
+                  ) : (
+                    <DeadlineTimer
+                      deadline={job?.deadlineDate}
+                      jobCompleted={job?.jobStatus === "COMPLETED"}
+                      style={{
+                        timeBox: styles.timeBox,
+                        timeText: styles.timeText,
+                        unitText: styles.unitText,
+                        completedText: styles.conColorc,
+                        timeContainer: styles.timeContainer,
+                      }}
+                    />
+                  )}
                 </View>
-              ) : (
-                <DeadlineTimer
-                  deadline={job?.deadlineDate}
-                  jobCompleted={job?.jobStatus === "COMPLETED"}
-                  style={{
-                    timeBox: styles.timeBox,
-                    timeText: styles.timeText,
-                    unitText: styles.unitText,
-                    completedText: styles.conColorc,
-                    timeContainer: styles.timeContainer,
+              </View>
+            )}
+
+            <FlatList
+              data={messages}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => (
+                <MessageItem
+                  messageItem={item}
+                  message={item.messageContent}
+                  isCurrentUser={item.senderId === userData?.id}
+                  media={item.userMedia}
+                  isUploading={item.isUploading}
+                  currentUserId={userData?.id}
+                  userRole="freelancer"
+                  onMessageUpdate={() => {
+                    mutateMessages();
                   }}
                 />
               )}
-            </View>
-          </View>
-        )}
-
-        <FlatList
-          data={messages}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <MessageItem
-              messageItem={item}
-              message={item.messageContent}
-              isCurrentUser={item.senderId === userData?.id}
-              media={item.userMedia}
-              isUploading={item.isUploading}
-              currentUserId={userData?.id}
-              userRole="freelancer"
-              onMessageUpdate={() => {
-                // Refresh messages when cash payment status updates using SWR
-                mutateMessages();
-              }}
+              style={styles.chatList}
+              contentContainerStyle={styles.chatListContainer}
             />
-          )}
-          style={styles.chatList}
-          contentContainerStyle={styles.chatListContainer}
-        />
 
-        {jobStatus === "OPEN" && characterLimit && (
-          <View style={styles.limit}>
-            <Text style={styles.limitchar}>Character Limit Active</Text>
-            <Text style={styles.limitvar}>
-              {charactersRemaining !== null
-                ? `${Math.max(0, charactersRemaining - currentInputLength)} characters remaining (${charactersUsed + currentInputLength}/${characterLimit} used)`
-                : `Maximum ${characterLimit} characters total`
-              }
-            </Text>
-            {/* Info about character limit removal and other user's status */}
-            <Text style={styles.limitInfo}>
-              {`Limit will be removed once the client accepts you as their freelancer.`}
-            </Text>
-            {otherCharactersRemaining === 0 && (
-              <Text style={styles.limitWarn}>
-                {`Client has exhausted their character limit.`}
-              </Text>
+            {jobStatus === "OPEN" && characterLimit && (
+              <View style={styles.limit}>
+                <Text style={styles.limitchar}>Character Limit Active</Text>
+                <Text style={styles.limitvar}>
+                  {charactersRemaining !== null
+                    ? `${Math.max(0, charactersRemaining - currentInputLength)} characters remaining (${charactersUsed + currentInputLength}/${characterLimit} used)`
+                    : `Maximum ${characterLimit} characters total`
+                  }
+                </Text>
+                <Text style={styles.limitInfo}>
+                  {`Limit will be removed once the client accepts you as their freelancer.`}
+                </Text>
+                {otherCharactersRemaining === 0 && (
+                  <Text style={styles.limitWarn}>
+                    {`Client has exhausted their character limit.`}
+                  </Text>
+                )}
+              </View>
             )}
-          </View>
-        )}
 
-        <ChatInput
-          onSend={handleSendMessage}
-          onFilePick={handleFilePick}
-          onRemoveFile={handleRemoveFile}
-          characterLimit={characterLimit}
-          charactersRemaining={charactersRemaining}
-          onInputChange={setCurrentInputLength}
-          fileInfo={fileInfo}
-          sending={sending}
-          isUploading={isUploading}
-          uploadProgress={uploadProgress}
-        />
+            <ChatInput
+              onSend={handleSendMessage}
+              onFilePick={handleFilePick}
+              onRemoveFile={handleRemoveFile}
+              characterLimit={characterLimit}
+              charactersRemaining={charactersRemaining}
+              onInputChange={setCurrentInputLength}
+              fileInfo={fileInfo}
+              sending={sending}
+              isUploading={isUploading}
+              uploadProgress={uploadProgress}
+            />
+          </View>
+        </View>
 
         <ReportModal
           visible={reportModalVisible}

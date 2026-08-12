@@ -12,9 +12,9 @@ import {
   TouchableOpacity,
   Modal,
   Alert,
-  ActivityIndicator,
   Linking,
 } from "react-native";
+import SafeSpinner from "../components/SafeSpinner";
 import { FontAwesome } from "@expo/vector-icons";
 import ImageViewer from "react-native-image-zoom-viewer";
 import { useAuth } from "../context/NewAuthContext";
@@ -421,7 +421,7 @@ const JobDescriptionScreen = ({ route, navigation }) => {
             disabled={!canApply || isCheckingBalance}
           >
             {isCheckingBalance ? (
-              <ActivityIndicator color="#FFF" />
+              <SafeSpinner size={24} color="#FFF" />
             ) : (
               <Text style={styles.actionButtonText}>Apply for Job</Text>
             )}
