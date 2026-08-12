@@ -12,6 +12,7 @@ import {
   Platform,
   StatusBar,
   Alert,
+  Modal,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import Checkbox from "expo-checkbox";
@@ -135,9 +136,8 @@ const assetSchema = z.any();
 // Create conditional schema based on mode
 const createSchema = (mode) => {
   const baseSchema = {
-    selectedServices: z
-      .array(z.string())
-      .min(1, "You must select at least one service"),
+    selectedServices: z.array(z.string()).optional(),
+    suggestedService: z.any().optional().nullable(),
     qualification: z.string().optional(),
     experience: z.string().optional(),
     heading: z.string().optional(),
@@ -159,6 +159,11 @@ const createSchema = (mode) => {
     }),
   };
 
+  const validateServicesConstraint = (data) => {
+    const totalCount = (data.selectedServices?.length || 0) + (data.suggestedService ? 1 : 0);
+    return totalCount >= 1 && totalCount <= 5;
+  };
+
   if (mode === "signup") {
     return z
       .object({
@@ -171,9 +176,16 @@ const createSchema = (mode) => {
       .refine((data) => data.password === data.confirmPassword, {
         message: "Passwords don't match",
         path: ["confirmPassword"],
+      })
+      .refine((data) => validateServicesConstraint(data), {
+        message: "Please select at least 1 service or suggest a service (maximum 5 total).",
+        path: ["selectedServices"],
       });
   } else {
-    return z.object(baseSchema);
+    return z.object(baseSchema).refine((data) => validateServicesConstraint(data), {
+      message: "Please select at least 1 service or suggest a service (maximum 5 total).",
+      path: ["selectedServices"],
+    });
   }
 };
 
@@ -204,6 +216,15 @@ const FreelancerSignup = ({ navigation, route }) => {
   const [servicesLoading, setServicesLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredServices, setFilteredServices] = useState([]);
+
+  // Suggested Service State
+  const [showSuggestModal, setShowSuggestModal] = useState(false);
+  const [suggestedServiceForm, setSuggestedServiceForm] = useState({
+    serviceName: "",
+    description: "",
+    images: [],
+  });
+  const [suggestedService, setSuggestedService] = useState(null);
 
   // Languages & Freelancer mode state extensions
   const [workType, setWorkType] = useState("remote"); // 'remote' or 'onsite'
@@ -266,6 +287,7 @@ const FreelancerSignup = ({ navigation, route }) => {
     agreePortfolioTerms: user?.freelancer?.termsAccepted || false,
     termsAndConditions: false,
     selectedServices: user?.freelancer?.selectedServices || [],
+    suggestedService: null,
   });
 
   const [deletedImages, setDeletedImages] = useState([]);
@@ -328,12 +350,21 @@ const FreelancerSignup = ({ navigation, route }) => {
           : prevForm.portfolioImages,
         agreePortfolioTerms:
           dataSource.termsAccepted || prevForm.agreePortfolioTerms,
-        selectedServices:
-          dataSource.selectedServices || prevForm.selectedServices,
       }));
 
       if (dataSource.selectedServices) {
-        setSelectedServices(dataSource.selectedServices);
+        let parsedServices = dataSource.selectedServices;
+        if (typeof parsedServices === "string") {
+          try {
+            parsedServices = JSON.parse(parsedServices);
+          } catch (e) {
+            parsedServices = [parsedServices];
+          }
+        }
+        if (Array.isArray(parsedServices)) {
+          setSelectedServices(parsedServices);
+          setForm((prevForm) => ({ ...prevForm, selectedServices: parsedServices }));
+        }
       }
     }
   }, [mode, user?.id, profileData]);
@@ -571,6 +602,68 @@ const FreelancerSignup = ({ navigation, route }) => {
     setLanguageList(languageList.filter((_, i) => i !== index));
   };
 
+  const handlePickSuggestedImage = async () => {
+    if ((suggestedServiceForm.images || []).length >= 3) {
+      showToast("info", "Limit Reached", "You can upload up to 3 images for a suggested service");
+      return;
+    }
+    try {
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permissionResult.granted) {
+        showToast("error", "Permission Denied", "Grant access to photos.");
+        return;
+      }
+      const pickerResult = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.8,
+        allowsMultipleSelection: false,
+      });
+      if (!pickerResult.canceled && pickerResult.assets?.length > 0) {
+        setSuggestedServiceForm((prev) => ({
+          ...prev,
+          images: [...(prev.images || []), pickerResult.assets[0]],
+        }));
+      }
+    } catch (e) {
+      showToast("error", "Error", "Failed to pick image");
+    }
+  };
+
+  const handleRemoveSuggestedImage = (index) => {
+    setSuggestedServiceForm((prev) => ({
+      ...prev,
+      images: (prev.images || []).filter((_, i) => i !== index),
+    }));
+  };
+
+  const handleRemoveSuggestedService = () => {
+    setSuggestedService(null);
+    setForm((prev) => ({ ...prev, suggestedService: null }));
+  };
+
+  const handleSubmitSuggestionModal = () => {
+    if (!suggestedServiceForm.serviceName.trim()) {
+      showToast("error", "Service Name Required", "Please enter a service name");
+      return;
+    }
+    const currentCount = selectedServices.length;
+    if (currentCount >= 5) {
+      showToast("info", "Limit Reached", "You can select/suggest maximum 5 services total");
+      return;
+    }
+
+    const suggestionObj = {
+      serviceName: suggestedServiceForm.serviceName.trim(),
+      description: suggestedServiceForm.description.trim(),
+      images: suggestedServiceForm.images || [],
+    };
+
+    setSuggestedService(suggestionObj);
+    setForm((prev) => ({ ...prev, suggestedService: suggestionObj }));
+    setShowSuggestModal(false);
+    showToast("success", "Service Suggested", "Your service suggestion has been added!");
+  };
+
   useEffect(() => {
     const loadServices = async () => {
       try {
@@ -619,12 +712,13 @@ const FreelancerSignup = ({ navigation, route }) => {
       setSelectedServices(newSelected);
       setForm({ ...form, selectedServices: newSelected });
     } else {
-      if (selectedServices.length < 5) {
+      const totalCount = selectedServices.length + (suggestedService ? 1 : 0);
+      if (totalCount < 5) {
         const newSelected = [...selectedServices, serviceId];
         setSelectedServices(newSelected);
         setForm({ ...form, selectedServices: newSelected });
       } else {
-        showToast("info", "Limit Reached", "You can select maximum 5 services");
+        showToast("info", "Limit Reached", "You can select maximum 5 services total");
       }
     }
   };
@@ -694,11 +788,12 @@ const FreelancerSignup = ({ navigation, route }) => {
         return;
       }
     } else if (step === 2) {
-      if (selectedServices.length === 0) {
+      const totalCount = selectedServices.length + (suggestedService ? 1 : 0);
+      if (totalCount === 0) {
         showToast(
           "error",
           "Services Required",
-          "Please select at least one service you want to offer"
+          "Please select at least one service or suggest a service you want to offer"
         );
         return;
       }
@@ -837,10 +932,32 @@ const FreelancerSignup = ({ navigation, route }) => {
     try {
       let result;
 
+      const activeSuggested = form.suggestedService || suggestedService;
+      let uploadedSuggestedImages = [];
+      if (activeSuggested && activeSuggested.images && activeSuggested.images.length > 0) {
+        for (const img of activeSuggested.images) {
+          if (typeof img === "object" && img.uri && !img.uri.startsWith("http")) {
+            const uploadRes = await apiService.uploadImage(img, "freelancer_portfolios");
+            if (uploadRes.success) {
+              uploadedSuggestedImages.push(uploadRes.url);
+            }
+          } else if (typeof img === "string") {
+            uploadedSuggestedImages.push(img);
+          }
+        }
+      }
+
+      const suggestedServicePayload = activeSuggested ? {
+        serviceName: activeSuggested.serviceName,
+        description: activeSuggested.description || "",
+        images: uploadedSuggestedImages,
+      } : null;
+
       if (mode === "signup") {
         result = await register({
           ...cleanedForm,
           mobile: form.mobile,
+          suggestedService: suggestedServicePayload,
           termsAccepted: form.termsAndConditions !== undefined ? form.termsAndConditions : (form.termsAccepted !== undefined ? form.termsAccepted : true),
           role: "FREELANCER",
         });
@@ -855,6 +972,7 @@ const FreelancerSignup = ({ navigation, route }) => {
         const freelancerCreateData = {
           userId: user?.id,
           selectedServices: cleanedForm.selectedServices,
+          suggestedService: suggestedServicePayload,
           highestQualification: cleanedForm.qualification,
           experience: cleanedForm.experience
             ? parseInt(cleanedForm.experience)
@@ -897,6 +1015,7 @@ const FreelancerSignup = ({ navigation, route }) => {
       } else if (mode === "update") {
         const freelancerUpdateData = {
           selectedServices: cleanedForm.selectedServices,
+          suggestedService: suggestedServicePayload,
           highestQualification: cleanedForm.qualification,
           experience: cleanedForm.experience
             ? parseInt(cleanedForm.experience)
@@ -929,8 +1048,9 @@ const FreelancerSignup = ({ navigation, route }) => {
           }
         });
 
+        const freelancerIdToUpdate = profileData?.id || userProfile?.id || user?.freelancer?.id;
         result = await apiService.updateFreelancerProfile(
-          user?.freelancer?.id,
+          freelancerIdToUpdate,
           freelancerUpdateData
         );
 
@@ -1274,6 +1394,39 @@ const FreelancerSignup = ({ navigation, route }) => {
                   </ScrollView>
                 )}
 
+                {suggestedService && (
+                  <View style={styles.suggestedBadgeCard}>
+                    <View style={{ flex: 1 }}>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                        <Sparkles size={14} color="#6D28D9" />
+                        <Text style={styles.suggestedBadgeTitle}>
+                          Suggested: {suggestedService.serviceName}
+                        </Text>
+                      </View>
+                      <Text style={styles.suggestedBadgeSubtitle}>
+                        Pending Super Admin Approval
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      onPress={handleRemoveSuggestedService}
+                      style={styles.tagRemoveBtn}
+                    >
+                      <X size={12} color="#FFFFFF" />
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                <TouchableOpacity
+                  style={styles.suggestServiceTriggerBtn}
+                  onPress={() => setShowSuggestModal(true)}
+                  activeOpacity={0.8}
+                >
+                  <Sparkles size={16} color="#6D28D9" style={{ marginRight: 6 }} />
+                  <Text style={styles.suggestServiceTriggerText}>
+                    Can't find your service? Suggest a Service
+                  </Text>
+                </TouchableOpacity>
+
                 <View style={styles.buttonRow}>
                   <TouchableOpacity
                     style={styles.secondaryHalfButton}
@@ -1287,10 +1440,10 @@ const FreelancerSignup = ({ navigation, route }) => {
                   <TouchableOpacity
                     style={[
                       styles.primaryHalfButton,
-                      selectedServices.length === 0 && styles.disabledButton,
+                      (selectedServices.length === 0 && !suggestedService) && styles.disabledButton,
                     ]}
                     onPress={nextStep}
-                    disabled={selectedServices.length === 0}
+                    disabled={selectedServices.length === 0 && !suggestedService}
                   >
                     <Text style={styles.primaryHalfButtonText}>Next</Text>
                     <ArrowRight size={18} color="#FFFFFF" style={{ marginLeft: 6 }} />
@@ -1993,6 +2146,100 @@ const FreelancerSignup = ({ navigation, route }) => {
           </ScrollView>
         </KeyboardAvoidingView>
       </LinearGradient>
+
+      {/* Suggest Service Modal */}
+      <Modal
+        visible={showSuggestModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowSuggestModal(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.modalOverlay}
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                <Sparkles size={20} color="#6D28D9" />
+                <Text style={styles.modalTitle}>Suggest a New Service</Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setShowSuggestModal(false)}
+                style={styles.modalCloseBtn}
+              >
+                <X size={18} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={{ maxHeight: 400 }} showsVerticalScrollIndicator={false}>
+              <Text style={styles.modalInputLabel}>Service Name *</Text>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="e.g. AI Prompt Engineering, Video Editing..."
+                placeholderTextColor="#A098AE"
+                value={suggestedServiceForm.serviceName}
+                onChangeText={(text) =>
+                  setSuggestedServiceForm((prev) => ({ ...prev, serviceName: text }))
+                }
+              />
+
+              <Text style={styles.modalInputLabel}>Description (Optional)</Text>
+              <TextInput
+                style={[styles.modalInput, { height: 80, textAlignVertical: "top" }]}
+                placeholder="Briefly describe what this service involves..."
+                placeholderTextColor="#A098AE"
+                multiline={true}
+                numberOfLines={3}
+                value={suggestedServiceForm.description}
+                onChangeText={(text) =>
+                  setSuggestedServiceForm((prev) => ({ ...prev, description: text }))
+                }
+              />
+
+              <Text style={styles.modalInputLabel}>Images / Samples (Up to 3)</Text>
+              <View style={styles.suggestImagesRow}>
+                {(suggestedServiceForm.images || []).map((img, idx) => (
+                  <View key={idx} style={styles.suggestImageThumbWrapper}>
+                    <Image source={{ uri: img.uri }} style={styles.suggestImageThumb} />
+                    <TouchableOpacity
+                      style={styles.suggestImageRemoveBtn}
+                      onPress={() => handleRemoveSuggestedImage(idx)}
+                    >
+                      <X size={12} color="#FFFFFF" />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+                {(suggestedServiceForm.images || []).length < 3 && (
+                  <TouchableOpacity
+                    style={styles.suggestImageAddBtn}
+                    onPress={handlePickSuggestedImage}
+                  >
+                    <Plus size={20} color="#6D28D9" />
+                    <Text style={{ fontSize: 11, color: "#6D28D9", marginTop: 2 }}>Add</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </ScrollView>
+
+            <View style={styles.modalFooter}>
+              <TouchableOpacity
+                style={styles.modalCancelBtn}
+                onPress={() => setShowSuggestModal(false)}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalSubmitBtn}
+                onPress={handleSubmitSuggestionModal}
+              >
+                <Text style={styles.modalSubmitText}>Submit Suggestion</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
       <Toast />
     </SafeAreaView>
   );
@@ -2772,6 +3019,175 @@ const styles = StyleSheet.create({
   securityBannerText: {
     fontSize: 12,
     color: "#D4C5ED",
+  },
+  suggestedBadgeCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#F3E8FF",
+    borderWidth: 1,
+    borderColor: "#C084FC",
+    borderRadius: 12,
+    padding: 12,
+    marginVertical: 10,
+  },
+  suggestedBadgeTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#6D28D9",
+  },
+  suggestedBadgeSubtitle: {
+    fontSize: 12,
+    color: "#7E22CE",
+    marginTop: 2,
+  },
+  suggestServiceTriggerBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: "#DDD6FE",
+    borderStyle: "dashed",
+    backgroundColor: "#FAF5FF",
+    marginVertical: 10,
+  },
+  suggestServiceTriggerText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#6D28D9",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(15, 23, 42, 0.6)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  modalContainer: {
+    width: "100%",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 20,
+    maxHeight: "85%",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 15,
+    elevation: 10,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingBottom: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F5F9",
+    marginBottom: 14,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#1E293B",
+  },
+  modalCloseBtn: {
+    padding: 6,
+    borderRadius: 8,
+    backgroundColor: "#F8FAFC",
+  },
+  modalInputLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#475569",
+    marginTop: 12,
+    marginBottom: 6,
+  },
+  modalInput: {
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: "#1E293B",
+  },
+  suggestImagesRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    marginTop: 6,
+    marginBottom: 14,
+  },
+  suggestImageThumbWrapper: {
+    position: "relative",
+    width: 64,
+    height: 64,
+    borderRadius: 10,
+    overflow: "hidden",
+  },
+  suggestImageThumb: {
+    width: "100%",
+    height: "100%",
+  },
+  suggestImageRemoveBtn: {
+    position: "absolute",
+    top: 3,
+    right: 3,
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    borderRadius: 10,
+    width: 18,
+    height: 18,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  suggestImageAddBtn: {
+    width: 64,
+    height: 64,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: "#DDD6FE",
+    borderStyle: "dashed",
+    backgroundColor: "#FAF5FF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalFooter: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 16,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#F1F5F9",
+  },
+  modalCancelBtn: {
+    flex: 1,
+    height: 46,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalCancelText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#64748B",
+  },
+  modalSubmitBtn: {
+    flex: 1,
+    height: 46,
+    borderRadius: 12,
+    backgroundColor: "#6D28D9",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalSubmitText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#FFFFFF",
   },
 });
 

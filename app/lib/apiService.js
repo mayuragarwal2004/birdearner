@@ -2,7 +2,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 
-const DEV_API_BASE_URL = "https://generous-sharing-mirror-dts.trycloudflare.com/api";
+const DEV_API_BASE_URL = "https://alloy-stopped-compute-cope.trycloudflare.com/api";
 // const DEV_API_BASE_URL = "https://api.birdearner.com/api";
 
 const PROD_API_BASE_URL = "https://api.birdearner.com/api";
@@ -352,6 +352,14 @@ class ApiService {
     }
 
     return response;
+  }
+
+  // Suggest a new service
+  async suggestService(suggestedData) {
+    return await this.makeRequest("/suggested-services", {
+      method: "POST",
+      body: JSON.stringify(suggestedData),
+    });
   }
 
   // Auth endpoints

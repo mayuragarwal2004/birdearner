@@ -169,7 +169,7 @@ export default function ProfileScreen({ route, navigation }) {
           }
         })
       );
-      nextServices.push(...serviceResults.filter(Boolean));
+      nextServices.push(...serviceResults.filter(s => s && !s.isMissing));
     }
     setServices(nextServices);
 

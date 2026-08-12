@@ -46,8 +46,8 @@ export const useUserServices = () => {
               })
             );
 
-            // Filter out null services (failed to load)
-            const validServices = services.filter(s => s !== null);
+            // Filter out null services (failed to load) and missing suggested services
+            const validServices = services.filter(s => s !== null && !s.isMissing);
             setUserServices(validServices);
 
             // Show warning if some services failed to load

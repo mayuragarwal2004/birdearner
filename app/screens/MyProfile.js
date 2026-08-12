@@ -167,7 +167,7 @@ export default function ProfileScreen({ navigation }) {
             }
           })
         );
-        setUserServices(serviceResults.filter(Boolean));
+        setUserServices(serviceResults.filter(s => s && !s.isMissing));
       } catch (error) {
         console.error("Error loading services:", error);
         setUserServices([]);
