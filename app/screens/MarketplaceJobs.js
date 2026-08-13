@@ -20,7 +20,9 @@ import {
 
 import { useTheme } from "../context/ThemeContext";
 import { useMarketplaceJobs } from "../hooks/marketplace";
-import apiService from "../lib/apiService";
+
+// Module-level cache: survives all navigations, re-renders, and remounts
+let _cachedFreelancerServices = null;
 
 const MarketplaceJobs = ({ navigation, route }) => {
   const { theme, themeStyles } = useTheme();
@@ -40,41 +42,23 @@ const MarketplaceJobs = ({ navigation, route }) => {
     location,
     distance,
     currentUserRole,
-    userServices,
+    userServices: routeUserServices,
     refreshUserData,
   } = route.params || {};
 
   const [selectedServices, setSelectedServices] = useState([]);
   const [sortBy, setSortBy] = useState("none");
-  const [allServices, setAllServices] = useState([]);
 
-  // Fetch all services from API
-  useEffect(() => {
-    const fetchServices = async () => {
-      try {
-        await apiService.init();
-        const url = `${apiService.baseURL}/services`;
-        const headers = { "Content-Type": "application/json" };
-        if (apiService.token) {
-          headers["Authorization"] = `Bearer ${apiService.token}`;
-        }
-        const res = await fetch(url, { method: "GET", headers });
-        if (!res.ok) {
-          console.error("[MarketplaceJobs] Services HTTP error:", res.status);
-          return;
-        }
-        const json = await res.json();
-        const list = Array.isArray(json.data) ? json.data : [];
-        console.log("[MarketplaceJobs] Services loaded:", list.length);
-        if (list.length > 0) {
-          setAllServices(list.map((s) => ({ id: s.id, name: s.name })));
-        }
-      } catch (error) {
-        console.error("[MarketplaceJobs] Services fetch error:", error.message);
-      }
-    };
-    fetchServices();
-  }, []);
+  // Capture freelancer services into module-level cache (once, permanently)
+  if (_cachedFreelancerServices === null) {
+    if (routeUserServices && Array.isArray(routeUserServices)) {
+      _cachedFreelancerServices = routeUserServices
+        .filter((s) => s && s.id && s.name)
+        .map((s) => ({ id: s.id, name: s.name }));
+    } else {
+      _cachedFreelancerServices = [];
+    }
+  }
 
   // Fetch jobs when screen mounts
   useEffect(() => {
@@ -83,35 +67,19 @@ const MarketplaceJobs = ({ navigation, route }) => {
       location,
       distance || 20,
       currentUserRole || "FREELANCER",
-      userServices || [],
+      routeUserServices || [],
       true
     );
   }, []);
 
   const allJobs = useMemo(() => getAllJobs(), [getAllJobs]);
 
-  // Extract unique services from jobs as fallback / supplement
-  const jobServices = useMemo(() => {
-    const map = new Map();
-    allJobs.forEach((job) => {
-      if (job.serviceId && job.serviceName && !map.has(job.serviceId)) {
-        map.set(job.serviceId, { id: job.serviceId, name: job.serviceName });
-      }
-    });
-    return Array.from(map.values());
-  }, [allJobs]);
-
-  // Use all services from API merged with job services, sorted alphabetically
+  // Use only freelancer's own services for filtering
   const availableServices = useMemo(() => {
-    const merged = new Map();
-    allServices.forEach((s) => merged.set(s.id, s));
-    jobServices.forEach((s) => {
-      if (!merged.has(s.id)) merged.set(s.id, s);
-    });
-    return Array.from(merged.values()).sort((a, b) =>
+    return [...(_cachedFreelancerServices || [])].sort((a, b) =>
       a.name.localeCompare(b.name)
     );
-  }, [allServices, jobServices]);
+  }, []);
 
   // Count jobs per service for badge display
   const serviceJobCounts = useMemo(() => {
@@ -187,7 +155,7 @@ const MarketplaceJobs = ({ navigation, route }) => {
       location,
       distance || 20,
       currentUserRole || "FREELANCER",
-      userServices || [],
+      routeUserServices || [],
       false
     );
   };
