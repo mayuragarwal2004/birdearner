@@ -102,6 +102,10 @@ const SettingsScreen = ({ navigation }) => {
   };
 
   const handleEditProfile = () => {
+    navigateTo(editProfileOption.stack_name, editProfileOption.params);
+  };
+
+  const handleViewProfile = () => {
     navigateTo("MyProfile");
   };
 
@@ -148,7 +152,7 @@ const SettingsScreen = ({ navigation }) => {
         {
           label: "View Profile",
           icon: "person-outline",
-          onPress: handleEditProfile,
+          onPress: handleViewProfile,
         },
         ...(isFreelancer
           ? [
@@ -306,7 +310,7 @@ const SettingsScreen = ({ navigation }) => {
 
             <TouchableOpacity style={styles.editShortcut} onPress={handleEditProfile}>
               <Ionicons name="create-outline" size={30} color="#FFFFFF" />
-              <Text style={styles.editShortcutText}>View Profile</Text>
+              <Text style={styles.editShortcutText}>Edit Profile</Text>
             </TouchableOpacity>
           </View>
 
