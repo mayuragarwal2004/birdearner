@@ -121,7 +121,7 @@ const MarketplaceScreen = ({ navigation }) => {
   }, [getAllJobs]);
 
   const handleAddServicesPress = () => {
-    navigation.navigate("Profile");
+    navigation.navigate("Settings");
   };
 
   const handleViewJobs = () => {

@@ -106,6 +106,11 @@ const ProfileStack = ({ initialRouteName = "MyProfile" }) => (
       options={{ headerShown: false }}
     />
     <Stack.Screen
+      name="FreelancerJobHistory"
+      getComponent={() => require("../screens/FreelancerJobHistory").default}
+      options={{ headerShown: false }}
+    />
+    <Stack.Screen
       name="ManageAddresses"
       getComponent={() => require("../screens/ManageAddresses").default}
       options={{ headerShown: false }}

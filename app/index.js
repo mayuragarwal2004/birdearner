@@ -39,8 +39,19 @@ const getForgotPasswordScreen = () => require("./screens/ForgotPassword").defaul
 const getResetPasswordScreen = () => require("./screens/ResetPassword").default;
 const getRoleScreen = () => require("./screens/Role").default;
 const getLeaderboardScreen = () => require("./screens/Leaderboard").default;
+// Stable wrapper components for profile tabs (avoids infinite re-render from getComponent)
+const ClientProfileTab = (props) => {
+  const ProfileStack = require("./stacks/ProfileStack").default;
+  return <ProfileStack {...props} initialRouteName="MyProfile" />;
+};
+const SettingsProfileTab = (props) => {
+  const ProfileStack = require("./stacks/ProfileStack").default;
+  return <ProfileStack {...props} initialRouteName="Settings" />;
+};
+
 const getProfileStack = () => require("./stacks/ProfileStack").default;
-const getClientProfileStack = () => require("./stacks/ClientProfileStack").default;
+const getClientProfileTab = () => ClientProfileTab;
+const getSettingsProfileTab = () => SettingsProfileTab;
 const getHomeStack = () => require("./stacks/HomeStack").default;
 const getBirdScreen = () => require("./screens/Bird").default;
 const getJobRequirementStack = () => require("./stacks/JobRequirementStack").default;
@@ -202,14 +213,14 @@ function MainTabs() {
       { name: "Job Posted", getComponent: getJobStack },
       { name: "Job Requirements", getComponent: getJobRequirementStack },
       { name: "AI Bird", getComponent: getBirdScreen },
-      { name: "Settings", getComponent: getClientProfileStack },
+      { name: "Profile", getComponent: getClientProfileTab },
     ]
     : [
       { name: "Home", getComponent: getHomeStack },
       { name: "Leaderboard", getComponent: getLeaderboardScreen },
       { name: "Marketplace", getComponent: getMarketPlaceStack },
       { name: "AI Bird", getComponent: getBirdScreen },
-      { name: "Profile", getComponent: getProfileStack },
+      { name: "Settings", getComponent: getSettingsProfileTab },
     ];
 
   return (

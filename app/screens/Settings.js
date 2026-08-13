@@ -139,6 +139,8 @@ const SettingsScreen = ({ navigation }) => {
     ]);
   };
 
+  const isFreelancer = role === "FREELANCER";
+
   const sections = [
     {
       title: "Account Settings",
@@ -148,11 +150,21 @@ const SettingsScreen = ({ navigation }) => {
           icon: "person-outline",
           onPress: handleEditProfile,
         },
-        {
-          label: "Manage Addresses",
-          icon: "location-outline",
-          route: "ManageAddresses",
-        },
+        ...(isFreelancer
+          ? [
+              {
+                label: "Availability",
+                icon: "time-outline",
+                route: "Availability",
+              },
+            ]
+          : [
+              {
+                label: "Manage Addresses",
+                icon: "location-outline",
+                route: "ManageAddresses",
+              },
+            ]),
         {
           label: "Security",
           icon: "shield-checkmark-outline",
@@ -164,7 +176,7 @@ const SettingsScreen = ({ navigation }) => {
       title: "Payment Settings",
       items: [
         {
-          label: "Payment Methods",
+          label: isFreelancer ? "Payment Details" : "Payment Methods",
           icon: "card-outline",
           route: "Bank Account details",
         },
@@ -208,11 +220,15 @@ const SettingsScreen = ({ navigation }) => {
           icon: "shield-outline",
           route: "PrivacyPolicy",
         },
-        {
-          label: "Your Feedbacks",
-          icon: "chatbox-ellipses-outline",
-          route: "Feedback",
-        },
+        ...(!isFreelancer
+          ? [
+              {
+                label: "Your Feedbacks",
+                icon: "chatbox-ellipses-outline",
+                route: "Feedback",
+              },
+            ]
+          : []),
         {
           label: "Support",
           icon: "headset-outline",
@@ -224,9 +240,9 @@ const SettingsScreen = ({ navigation }) => {
       title: "More",
       items: [
         {
-          label: "Job Post History",
+          label: isFreelancer ? "Job History" : "Job Post History",
           icon: "briefcase-outline",
-          route: "Job Posted",
+          route: isFreelancer ? "FreelancerJobHistory" : "Job Posted",
         },
         {
           label: "Delete Account",
