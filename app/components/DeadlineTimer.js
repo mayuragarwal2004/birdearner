@@ -40,16 +40,26 @@ const DeadlineTimer = ({ deadline, jobCompleted, style }) => {
   }
 
   return (
-    <View>
-      <Text style={styles.label}>Deadline Timer</Text>
+    <View style={[{ width: "100%", alignItems: "center" }, style?.container]}>
+      <Text style={[styles.label, style?.label]}>Deadline Timer</Text>
       <View style={[styles.timeContainer, style?.timeContainer]}>
         {timeLeft.split(" ").map((timePart, index) => {
           const unit = timePart.slice(-1);
           const value = timePart.slice(0, -1);
           return (
             <View key={index} style={[styles.timeBox, style?.timeBox]}>
-              <Text style={[styles.timeText, style?.timeText]}>{value}</Text>
-              <Text style={[styles.unitText, style?.unitText]}>
+              <Text
+                style={[styles.timeText, style?.timeText]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.6}
+              >
+                {value}
+              </Text>
+              <Text
+                style={[styles.unitText, style?.unitText]}
+                numberOfLines={1}
+              >
                 {unit.toUpperCase()}
               </Text>
             </View>
@@ -69,27 +79,31 @@ const styles = StyleSheet.create({
   },
   timeContainer: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "stretch",
     justifyContent: "center",
-    gap: 5,
+    gap: 6,
   },
   timeBox: {
+    flex: 1,
+    minWidth: 0,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#4C0183",
-    borderRadius: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    minWidth: 45,
+    borderRadius: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+    overflow: "hidden",
   },
   timeText: {
     color: "#fff",
     fontSize: 14,
     fontWeight: "bold",
+    textAlign: "center",
   },
   unitText: {
     color: "#fff",
-    fontSize: 10,
+    fontSize: 9,
+    marginTop: 2,
   },
   completedText: {
     color: "#4C0183",

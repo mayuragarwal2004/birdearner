@@ -26,9 +26,10 @@ const getStyles = (currentTheme, isKeyboardVisible) =>
       paddingBottom: isKeyboardVisible ? 0 : (Platform.OS === "ios" ? 85 : 70), // Dynamic padding based on keyboard visibility
     },
     deadlineContainer: {
-      alignItems: "center",
+      alignItems: "stretch",
+      width: "100%",
       marginVertical: 4,
-      paddingHorizontal: 20,
+      paddingHorizontal: 16,
     },
     deadline: {
       fontSize: 16,
@@ -39,13 +40,14 @@ const getStyles = (currentTheme, isKeyboardVisible) =>
       letterSpacing: 0.3,
     },
     deadlineTimerContainer: {
+      width: "100%",
       flexDirection: "row",
       justifyContent: "center",
       alignItems: "center",
-      marginVertical: 12,
+      marginVertical: 4,
       backgroundColor: currentTheme.surface || "#FFFFFF",
       borderRadius: 16,
-      padding: 16,
+      padding: 10,
       shadowColor: "#000",
       shadowOffset: {
         width: 0,
@@ -55,15 +57,22 @@ const getStyles = (currentTheme, isKeyboardVisible) =>
       shadowRadius: 8,
       elevation: 4,
     },
+    timeContainer: {
+      flexDirection: "row",
+      alignItems: "stretch",
+      gap: 6,
+      width: "100%",
+    },
     timeBox: {
-      paddingHorizontal: 12,
+      flex: 1,
+      minWidth: 0,
+      paddingHorizontal: 4,
       paddingVertical: 8,
       backgroundColor: currentTheme.primary || "#3B82F6",
-      marginHorizontal: 4,
       alignItems: "center",
       justifyContent: "center",
-      borderRadius: 12,
-      minWidth: 44,
+      borderRadius: 10,
+      overflow: "hidden",
       shadowColor: currentTheme.primary || "#3B82F6",
       shadowOffset: {
         width: 0,
@@ -74,13 +83,13 @@ const getStyles = (currentTheme, isKeyboardVisible) =>
       elevation: 3,
     },
     timeText: {
-      fontSize: 20,
+      fontSize: 15,
       fontWeight: "700",
       color: "#FFFFFF",
       textAlign: "center",
     },
     unitText: {
-      fontSize: 12,
+      fontSize: 10,
       fontWeight: "600",
       color: "#FFFFFF",
       textAlign: "center",
