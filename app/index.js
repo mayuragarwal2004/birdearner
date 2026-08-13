@@ -213,7 +213,7 @@ function MainTabs() {
       { name: "Job Posted", getComponent: getJobStack },
       { name: "Job Requirements", getComponent: getJobRequirementStack },
       { name: "AI Bird", getComponent: getBirdScreen },
-      { name: "Profile", getComponent: getClientProfileTab },
+      { name: "Settings", getComponent: getSettingsProfileTab },
     ]
     : [
       { name: "Home", getComponent: getHomeStack },
