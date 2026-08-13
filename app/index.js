@@ -40,6 +40,7 @@ const getResetPasswordScreen = () => require("./screens/ResetPassword").default;
 const getRoleScreen = () => require("./screens/Role").default;
 const getLeaderboardScreen = () => require("./screens/Leaderboard").default;
 const getProfileStack = () => require("./stacks/ProfileStack").default;
+const getClientProfileStack = () => require("./stacks/ClientProfileStack").default;
 const getHomeStack = () => require("./stacks/HomeStack").default;
 const getBirdScreen = () => require("./screens/Bird").default;
 const getJobRequirementStack = () => require("./stacks/JobRequirementStack").default;
@@ -107,6 +108,16 @@ const linking = {
       MainTabs: {
         screens: {
           Profile: {
+            screens: {
+              ProfileScreen: {
+                path: "/profile/:userId",
+                parse: {
+                  userId: (userId) => userId,
+                },
+              },
+            },
+          },
+          Settings: {
             screens: {
               ProfileScreen: {
                 path: "/profile/:userId",
@@ -191,7 +202,7 @@ function MainTabs() {
       { name: "Job Posted", getComponent: getJobStack },
       { name: "Job Requirements", getComponent: getJobRequirementStack },
       { name: "AI Bird", getComponent: getBirdScreen },
-      { name: "Profile", getComponent: getProfileStack },
+      { name: "Settings", getComponent: getClientProfileStack },
     ]
     : [
       { name: "Home", getComponent: getHomeStack },
@@ -280,6 +291,7 @@ function renderTabIcon(route, focused) {
     // Enable these custom SVGs - you can uncomment others as needed
     "AI Bird": BirdEarnerSvg,
     Profile: UserSvg,
+    Settings: UserSvg,
     Marketplace: MarketplaceSvg,
   };
 

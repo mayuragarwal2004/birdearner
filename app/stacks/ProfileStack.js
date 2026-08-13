@@ -3,8 +3,8 @@ import { createStackNavigator } from "@react-navigation/stack";
 
 const Stack = createStackNavigator();
 
-const ProfileStack = () => (
-  <Stack.Navigator>
+const ProfileStack = ({ initialRouteName = "MyProfile" }) => (
+  <Stack.Navigator initialRouteName={initialRouteName}>
     <Stack.Screen
       name="MyProfile"
       getComponent={() => require("../screens/MyProfile").default}
