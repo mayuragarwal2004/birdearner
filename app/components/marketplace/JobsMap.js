@@ -106,7 +106,9 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: 'hidden',
     marginBottom: 20,
-    backgroundColor: '#E5E5EA', // Placeholder while map loads
+    backgroundColor: '#E5E5EA',
+    borderWidth: 1.5,
+    borderColor: '#D1D5DB',
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
