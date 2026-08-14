@@ -139,10 +139,10 @@ const createSchema = (mode) => {
     selectedServices: z.array(z.string()).optional(),
     suggestedService: z.any().optional().nullable(),
     qualification: z.string().optional(),
-    experience: z.string().optional(),
+    experience: z.string().min(1, "Experience is required"),
     heading: z.string().optional(),
-    city: z.string().optional(),
-    state: z.string().optional(),
+    city: z.string().min(1, "City is required"),
+    state: z.string().min(1, "State is required"),
     zipCode: z.string().optional(),
     country: z.string().optional(),
     bio: z.string().optional(),
@@ -157,6 +157,8 @@ const createSchema = (mode) => {
     termsAndConditions: z.boolean().refine((val) => val === true, {
       message: "You must accept the Terms and Conditions.",
     }),
+    freelancerCategory: z.string().min(1, "Freelancer type is required"),
+    skills: z.array(z.string()).min(1, "At least one skill is required"),
   };
 
   const validateServicesConstraint = (data) => {
@@ -235,6 +237,8 @@ const FreelancerSignup = ({ navigation, route }) => {
     { name: "English", level: "Fluent" },
     { name: "Hindi", level: "Native" },
   ]);
+  const [skillInput, setSkillInput] = useState("");
+  const [skillsList, setSkillsList] = useState([]);
 
   const [form, setForm] = useState({
     full_name: user?.fullName || "",
@@ -288,6 +292,8 @@ const FreelancerSignup = ({ navigation, route }) => {
     termsAndConditions: false,
     selectedServices: user?.freelancer?.selectedServices || [],
     suggestedService: null,
+    freelancerCategory: user?.freelancer?.freelancerCategory || "",
+    skills: user?.freelancer?.skills || [],
   });
 
   const [deletedImages, setDeletedImages] = useState([]);
@@ -365,6 +371,16 @@ const FreelancerSignup = ({ navigation, route }) => {
           setSelectedServices(parsedServices);
           setForm((prevForm) => ({ ...prevForm, selectedServices: parsedServices }));
         }
+      }
+
+      if (dataSource.freelancerCategory) {
+        setFreelancerCategory(dataSource.freelancerCategory);
+        setForm((prevForm) => ({ ...prevForm, freelancerCategory: dataSource.freelancerCategory }));
+      }
+
+      if (dataSource.skills && Array.isArray(dataSource.skills) && dataSource.skills.length > 0) {
+        setSkillsList(dataSource.skills);
+        setForm((prevForm) => ({ ...prevForm, skills: dataSource.skills }));
       }
     }
   }, [mode, user?.id, profileData]);
@@ -602,6 +618,28 @@ const FreelancerSignup = ({ navigation, route }) => {
     setLanguageList(languageList.filter((_, i) => i !== index));
   };
 
+  const addSkill = () => {
+    const trimmed = skillInput.trim();
+    if (!trimmed) {
+      showToast("error", "Skill Required", "Please enter a skill name");
+      return;
+    }
+    if (skillsList.some((s) => s.toLowerCase() === trimmed.toLowerCase())) {
+      showToast("info", "Duplicate Skill", "This skill is already added");
+      return;
+    }
+    if (skillsList.length >= 10) {
+      showToast("info", "Limit Reached", "You can add up to 10 skills");
+      return;
+    }
+    setSkillsList([...skillsList, trimmed]);
+    setSkillInput("");
+  };
+
+  const removeSkill = (index) => {
+    setSkillsList(skillsList.filter((_, i) => i !== index));
+  };
+
   const handlePickSuggestedImage = async () => {
     if ((suggestedServiceForm.images || []).length >= 3) {
       showToast("info", "Limit Reached", "You can upload up to 3 images for a suggested service");
@@ -799,6 +837,26 @@ const FreelancerSignup = ({ navigation, route }) => {
       }
       setStep(3);
     } else if (step === 3) {
+      if (!freelancerCategory) {
+        showToast("error", "Freelancer Type Required", "Please select your freelancer type");
+        return;
+      }
+      if (!form.experience || form.experience.trim() === "") {
+        showToast("error", "Experience Required", "Please enter your experience in months");
+        return;
+      }
+      if (!form.city || form.city.trim() === "") {
+        showToast("error", "City Required", "Please enter your city");
+        return;
+      }
+      if (!form.state || form.state.trim() === "") {
+        showToast("error", "State Required", "Please enter your state");
+        return;
+      }
+      if (skillsList.length === 0) {
+        showToast("error", "Skills Required", "Please add at least one skill");
+        return;
+      }
       setStep(5);
     } else {
       setStep(step + 1);
@@ -820,7 +878,12 @@ const FreelancerSignup = ({ navigation, route }) => {
   const handleSubmit = async () => {
     setIsLoading(true);
 
-    const result = schema.safeParse(form);
+    const formToValidate = {
+      ...form,
+      freelancerCategory,
+      skills: skillsList,
+    };
+    const result = schema.safeParse(formToValidate);
     if (!result.success) {
       setIsLoading(false);
       showToast("error", "Validation Error", result.error.errors[0].message);
@@ -829,6 +892,8 @@ const FreelancerSignup = ({ navigation, route }) => {
 
     const cleanedForm = {
       ...form,
+      freelancerCategory,
+      skills: skillsList,
       certifications: form.certifications.filter((cert) => cert.trim() !== ""),
       socialLinks: form.socialLinks.filter((link) => link.trim() !== ""),
     };
@@ -992,6 +1057,8 @@ const FreelancerSignup = ({ navigation, route }) => {
           portfolioImages: cleanedForm.portfolioImages,
           termsAccepted: cleanedForm.termsAndConditions,
           fullName: cleanedForm.full_name,
+          freelancerCategory: cleanedForm.freelancerCategory,
+          skills: cleanedForm.skills,
         };
 
         Object.keys(freelancerCreateData).forEach((key) => {
@@ -1036,6 +1103,8 @@ const FreelancerSignup = ({ navigation, route }) => {
           termsAccepted: cleanedForm.termsAndConditions,
           fullName: cleanedForm.full_name,
           deletedImages: deletedImages,
+          freelancerCategory: cleanedForm.freelancerCategory,
+          skills: cleanedForm.skills,
         };
 
         Object.keys(freelancerUpdateData).forEach((key) => {
@@ -1494,7 +1563,7 @@ const FreelancerSignup = ({ navigation, route }) => {
                 </View>
 
                 {/* 2. Choose Freelancer Type */}
-                <Text style={styles.sectionNumberTitle}>2. Choose Freelancer Type</Text>
+                <Text style={styles.sectionNumberTitle}>2. Choose Freelancer Type <Text style={styles.requiredText}>*</Text></Text>
                 <View style={styles.gridRow}>
                   <TouchableOpacity
                     style={[
@@ -1549,12 +1618,15 @@ const FreelancerSignup = ({ navigation, route }) => {
 
                 {/* 3. Select Your Freelancer Type */}
                 <Text style={styles.sectionNumberTitle}>
-                  3. Select Your Freelancer Type
+                  3. Select Your Freelancer Type <Text style={styles.requiredText}>*</Text>
                 </Text>
                 <PickerModal
                   items={FREELANCER_TYPE_OPTIONS}
                   value={freelancerCategory}
-                  onValueChange={(v) => setFreelancerCategory(v)}
+                  onValueChange={(v) => {
+                    setFreelancerCategory(v);
+                    setForm({ ...form, freelancerCategory: v });
+                  }}
                   placeholder="Select your freelancer type"
                   leftIcon={<Briefcase size={20} color="#7C3AED" />}
                   style={{ marginVertical: 4, marginBottom: 4 }}
@@ -1652,7 +1724,7 @@ const FreelancerSignup = ({ navigation, route }) => {
                 </View>
 
                 {/* 7. Experience (in months) */}
-                <Text style={styles.sectionNumberTitle}>7. Experience (in months)</Text>
+                <Text style={styles.sectionNumberTitle}>7. Experience (in months) <Text style={styles.requiredText}>*</Text></Text>
                 <View style={styles.inputContainer}>
                   <View style={styles.iconBox}>
                     <Calendar size={20} color="#7C3AED" />
@@ -1668,7 +1740,7 @@ const FreelancerSignup = ({ navigation, route }) => {
                 </View>
 
                 {/* 8. Your Location */}
-                <Text style={styles.sectionNumberTitle}>8. Your Location</Text>
+                <Text style={styles.sectionNumberTitle}>8. Your Location <Text style={styles.requiredText}>*</Text></Text>
                 <View style={styles.gridRow}>
                   <View style={styles.gridCol}>
                     <View style={styles.inputContainer}>
@@ -1759,17 +1831,47 @@ const FreelancerSignup = ({ navigation, route }) => {
                 </View>
 
                 {/* 10. Skills */}
-                <Text style={styles.sectionNumberTitle}>10. Skills</Text>
-                <View style={styles.inputContainer}>
-                  <View style={styles.iconBox}>
-                    <Search size={20} color="#7C3AED" />
+                <Text style={styles.sectionNumberTitle}>10. Skills <Text style={styles.requiredText}>*</Text></Text>
+                <View style={styles.gridRow}>
+                  <View style={[styles.gridCol, { flex: 1.3 }]}>
+                    <View style={styles.inputContainer}>
+                      <View style={styles.iconBox}>
+                        <Search size={20} color="#7C3AED" />
+                      </View>
+                      <TextInput
+                        style={styles.textInput}
+                        placeholderTextColor="#A098AE"
+                        placeholder="Search or add your skills"
+                        value={skillInput}
+                        onChangeText={setSkillInput}
+                        onSubmitEditing={addSkill}
+                      />
+                    </View>
                   </View>
-                  <TextInput
-                    style={styles.textInput}
-                    placeholderTextColor="#A098AE"
-                    placeholder="Search or add your skills"
-                  />
+                  <TouchableOpacity
+                    style={styles.smallAddButton}
+                    onPress={addSkill}
+                    activeOpacity={0.85}
+                  >
+                    <Plus size={16} color="#FFFFFF" />
+                    <Text style={styles.smallAddButtonText}>Add</Text>
+                  </TouchableOpacity>
                 </View>
+                {skillsList.length > 0 && (
+                  <View style={styles.tagsWrapper}>
+                    {skillsList.map((skill, idx) => (
+                      <View key={idx} style={styles.langTagBadge}>
+                        <Text style={styles.langTagTitle}>{skill}</Text>
+                        <TouchableOpacity
+                          onPress={() => removeSkill(idx)}
+                          style={styles.tagRemoveBtn}
+                        >
+                          <X size={12} color="#6D28D9" />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </View>
+                )}
                 <Text style={styles.fieldHelperText}>
                   Add multiple skills that describe your expertise.
                 </Text>
@@ -1866,14 +1968,16 @@ const FreelancerSignup = ({ navigation, route }) => {
                     <Text style={styles.secondaryHalfButtonText}>Back</Text>
                   </TouchableOpacity>
 
-                  <TouchableOpacity
-                    style={styles.saveDraftButton}
-                    onPress={handleSubmit}
-                    disabled={isLoading}
-                  >
-                    <Bookmark size={18} color="#6D28D9" style={{ marginRight: 6 }} />
-                    <Text style={styles.saveDraftButtonText}>Save</Text>
-                  </TouchableOpacity>
+                  {mode !== "signup" && (
+                    <TouchableOpacity
+                      style={styles.saveDraftButton}
+                      onPress={handleSubmit}
+                      disabled={isLoading}
+                    >
+                      <Bookmark size={18} color="#6D28D9" style={{ marginRight: 6 }} />
+                      <Text style={styles.saveDraftButtonText}>Save</Text>
+                    </TouchableOpacity>
+                  )}
 
                   <TouchableOpacity
                     style={styles.primaryHalfButton}
@@ -2075,36 +2179,44 @@ const FreelancerSignup = ({ navigation, route }) => {
                     <Text style={styles.secondaryHalfButtonText}>Back</Text>
                   </TouchableOpacity>
 
-                  <TouchableOpacity
-                    style={styles.saveDraftButton}
-                    onPress={handleSubmit}
-                    disabled={isLoading}
-                  >
-                    <Bookmark size={18} color="#6D28D9" style={{ marginRight: 6 }} />
-                    <Text style={styles.saveDraftButtonText}>Save</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[
-                      styles.primaryHalfButton,
-                      isLoading && styles.disabledButton,
-                    ]}
-                    onPress={handleSubmit}
-                    disabled={isLoading}
-                  >
-                    {isLoading ? (
-                      <SafeSpinner color="white" size="small" />
-                    ) : (
-                      <>
-                        <Text style={styles.primaryHalfButtonText}>Finish</Text>
-                        <ArrowRight
-                          size={18}
-                          color="#FFFFFF"
-                          style={{ marginLeft: 6 }}
-                        />
-                      </>
-                    )}
-                  </TouchableOpacity>
+                  {mode === "signup" ? (
+                    <TouchableOpacity
+                      style={[
+                        styles.primaryHalfButton,
+                        isLoading && styles.disabledButton,
+                      ]}
+                      onPress={handleSubmit}
+                      disabled={isLoading}
+                    >
+                      {isLoading ? (
+                        <SafeSpinner color="white" size="small" />
+                      ) : (
+                        <>
+                          <Text style={styles.primaryHalfButtonText}>Finish</Text>
+                          <ArrowRight
+                            size={18}
+                            color="#FFFFFF"
+                            style={{ marginLeft: 6 }}
+                          />
+                        </>
+                      )}
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity
+                      style={styles.saveDraftButton}
+                      onPress={handleSubmit}
+                      disabled={isLoading}
+                    >
+                      {isLoading ? (
+                        <SafeSpinner color="#6D28D9" size="small" />
+                      ) : (
+                        <>
+                          <Bookmark size={18} color="#6D28D9" style={{ marginRight: 6 }} />
+                          <Text style={styles.saveDraftButtonText}>Save</Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+                  )}
                 </View>
               </View>
             )}
@@ -2367,6 +2479,11 @@ const styles = StyleSheet.create({
     color: "#1F1D2B",
     marginTop: 16,
     marginBottom: 12,
+  },
+  requiredText: {
+    color: "#EF4444",
+    fontSize: 15,
+    fontWeight: "700",
   },
   inputContainer: {
     flexDirection: "row",

@@ -44,6 +44,7 @@ const Trash2 = getIcon("Trash2");
 const Briefcase = getIcon("Briefcase");
 const Link = getIcon("Link");
 const ChevronDown = getIcon("ChevronDown");
+const Bookmark = getIcon("Bookmark");
 import apiService from "../lib/apiService";
 import { useAuth } from "../context/NewAuthContext";
 import PickerModal from "../components/CustomPicker";
@@ -1030,18 +1031,35 @@ const ClientSignup = ({ navigation, route }) => {
                     <Text style={styles.outlinedButtonText}>Back</Text>
                   </TouchableOpacity>
 
-                  <TouchableOpacity
-                    style={[styles.primaryHalfButton, isLoading && styles.disabledButton]}
-                    onPress={handleSubmit}
-                    disabled={isLoading}
-                    activeOpacity={0.85}
-                  >
-                    {isLoading ? (
-                      <SafeSpinner color="white" size="small" />
-                    ) : (
-                      <Text style={styles.primaryButtonText}>Submit</Text>
-                    )}
-                  </TouchableOpacity>
+                  {mode === "signup" ? (
+                    <TouchableOpacity
+                      style={[styles.primaryHalfButton, isLoading && styles.disabledButton]}
+                      onPress={handleSubmit}
+                      disabled={isLoading}
+                      activeOpacity={0.85}
+                    >
+                      {isLoading ? (
+                        <SafeSpinner color="white" size="small" />
+                      ) : (
+                        <Text style={styles.primaryButtonText}>Submit</Text>
+                      )}
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity
+                      style={styles.saveDraftButton}
+                      onPress={handleSubmit}
+                      disabled={isLoading}
+                    >
+                      {isLoading ? (
+                        <SafeSpinner color="#6D28D9" size="small" />
+                      ) : (
+                        <>
+                          <Bookmark size={18} color="#6D28D9" style={{ marginRight: 6 }} />
+                          <Text style={styles.saveDraftButtonText}>Save</Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+                  )}
                 </View>
               </View>
             )}
@@ -1494,6 +1512,22 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 8,
     elevation: 4,
+  },
+  saveDraftButton: {
+    flex: 1,
+    height: 52,
+    borderWidth: 1.5,
+    borderColor: "#6D28D9",
+    borderRadius: 14,
+    backgroundColor: "#FFFFFF",
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  saveDraftButtonText: {
+    color: "#6D28D9",
+    fontSize: 15,
+    fontWeight: "600",
   },
   securityBanner: {
     flexDirection: "row",
