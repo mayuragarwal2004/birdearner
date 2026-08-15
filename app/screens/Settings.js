@@ -110,7 +110,26 @@ const SettingsScreen = ({ navigation }) => {
   };
 
   const handleRoleSwitch = async () => {
-    if (!hasBothProfiles || switchingRole) return;
+    if (switchingRole) return;
+
+    const hasTargetProfile =
+      (nextRole === "FREELANCER" && !!userData?.freelancer) ||
+      (nextRole === "CLIENT" && !!userData?.client);
+
+    if (!hasTargetProfile) {
+      if (nextRole === "CLIENT") {
+        navigation.navigate("ClientSignup", {
+          mode: "create",
+          title: "Create Client Profile",
+        });
+      } else {
+        navigation.navigate("FreelancerSignup", {
+          mode: "create",
+          title: "Create Freelancer Profile",
+        });
+      }
+      return;
+    }
 
     try {
       setSwitchingRole(true);
@@ -317,7 +336,9 @@ const SettingsScreen = ({ navigation }) => {
           <View style={styles.switchDivider} />
           <View style={styles.switchRow}>
             <Text style={styles.switchLabel}>
-              {hasBothProfiles ? `Switch to ${nextRole === "CLIENT" ? "Client" : "Freelancer"}` : "Switch role"}
+              {hasBothProfiles
+                ? `Switch to ${nextRole === "CLIENT" ? "Client" : "Freelancer"}`
+                : `Setup ${nextRole === "CLIENT" ? "Client" : "Freelancer"} Profile`}
             </Text>
             {switchingRole ? (
               <SafeSpinner size="small" color="#FFFFFF" />
@@ -325,7 +346,6 @@ const SettingsScreen = ({ navigation }) => {
               <Switch
                 value={role === "FREELANCER"}
                 onValueChange={handleRoleSwitch}
-                disabled={!hasBothProfiles}
                 trackColor={{ false: "#46454D", true: "#7B2CFF" }}
                 thumbColor="#FFFFFF"
                 ios_backgroundColor="#46454D"
