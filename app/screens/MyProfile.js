@@ -103,6 +103,11 @@ const getBadgeLabel = (level) => {
   return "Beginner Badge";
 };
 
+const formatRating = (rating) => {
+  const value = Number(rating || 0);
+  return value ? value.toFixed(1).replace(".0", "") : "0.0";
+};
+
 export default function ProfileScreen({ navigation }) {
   const {
     user,
@@ -123,8 +128,11 @@ export default function ProfileScreen({ navigation }) {
   const [images, setImages] = useState([]);
   const [modalVisiblet, setModalVisiblet] = useState(false);
   const [switchingRole, setSwitchingRole] = useState(false);
+  const [activeTab, setActiveTab] = useState("About");
   const animationProgress = useRef(new Animated.Value(0));
   const [userServices, setUserServices] = useState([]);
+  const [reviews, setReviews] = useState([]);
+  const [reviewStats, setReviewStats] = useState(null);
 
   const role = userData?.role;
 
@@ -147,6 +155,32 @@ export default function ProfileScreen({ navigation }) {
   useEffect(() => {
     refreshUserData();
   }, []);
+
+  useEffect(() => {
+    const loadReviews = async () => {
+      const targetUserId = userProfile?.userId || userData?.id;
+      if (!targetUserId) return;
+      try {
+        const [reviewsResponse, statsResponse] = await Promise.all([
+          apiService.getReviewsByUserId(targetUserId),
+          apiService.getReviewStats(targetUserId),
+        ]);
+
+        const reviewList = Array.isArray(reviewsResponse)
+          ? reviewsResponse
+          : reviewsResponse?.data || reviewsResponse?.reviews || [];
+        const statsObj = statsResponse?.data || (statsResponse?.totalReviews !== undefined ? statsResponse : null);
+
+        setReviews(reviewList);
+        setReviewStats(statsObj);
+      } catch (err) {
+        console.warn("Failed to load user reviews:", err.message);
+        setReviews([]);
+        setReviewStats(null);
+      }
+    };
+    loadReviews();
+  }, [userProfile?.userId, userData?.id]);
 
   useEffect(() => {
     const loadServices = async () => {
@@ -408,8 +442,8 @@ export default function ProfileScreen({ navigation }) {
           <View style={styles.ratingRow}>
             {role === "FREELANCER" ? (
               <>
-                <Text style={styles.ratingText}>{formatXP(data?.xp || 0)} xp</Text>
-                <Text style={styles.reviewCount}>Lev. {data?.level || 1}</Text>
+                <Text style={styles.ratingText}>{formatRating(data?.rating || 0)}</Text>
+                <Text style={styles.reviewCount}>({data?.totalReviews || 0})</Text>
                 <View style={styles.badge}>
                   <MaterialIcons name="workspace-premium" size={20} color={PURPLE} />
                   <Text style={styles.badgeText}>{getBadgeLabel(data?.level)}</Text>
@@ -424,151 +458,416 @@ export default function ProfileScreen({ navigation }) {
           </View>
         </View>
 
-        <View style={styles.tabShell}>
-          <TouchableOpacity style={styles.profileTabButton} activeOpacity={0.85}>
-            <Text style={styles.profileTabTextActive}>My Profile</Text>
-            <View style={styles.profileTabIndicatorActive} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.profileTabButton}
-            activeOpacity={0.85}
-            onPress={() => navigation.navigate("MyReview", { profileData: data })}
-          >
-            <Text style={styles.profileTabText}>My Reviews</Text>
-            <View style={styles.profileTabIndicator} />
-          </TouchableOpacity>
-        </View>
+        {role === "FREELANCER" ? (
+          <View style={styles.freelancerTabShell}>
+            {["About", "Services", "Reviews", "Portfolio"].map((tab) => {
+              const active = activeTab === tab;
+              return (
+                <TouchableOpacity
+                  key={tab}
+                  style={styles.freelancerTabButton}
+                  onPress={() => setActiveTab(tab)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.freelancerTabText, active && styles.freelancerTabTextActive]}>
+                    {tab}
+                  </Text>
+                  {active && <View style={styles.freelancerTabIndicatorActive} />}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        ) : (
+          <View style={styles.tabShell}>
+            <TouchableOpacity style={styles.profileTabButton} activeOpacity={0.85}>
+              <Text style={styles.profileTabTextActive}>My Profile</Text>
+              <View style={styles.profileTabIndicatorActive} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.profileTabButton}
+              activeOpacity={0.85}
+              onPress={() => navigation.navigate("MyReview", { profileData: data })}
+            >
+              <Text style={styles.profileTabText}>My Reviews</Text>
+              <View style={styles.profileTabIndicator} />
+            </TouchableOpacity>
+          </View>
+        )}
 
         <View style={styles.profileContent}>
-          <Text style={styles.sectionTitleLeft}>About me</Text>
-          <Text style={styles.aboutDescription}>
-            {data?.profileDescription || "No description available"}
-          </Text>
-
-          <View style={styles.infoList}>
-            {role === "FREELANCER" ? (
-              <>
-                <InfoRow
-                  styles={styles}
-                  icon="work-outline"
-                  label="Experience"
-                  value={formatExperience(data?.experience)}
-                />
-                <InfoRow
-                  styles={styles}
-                  icon="leaderboard"
-                  label="Level"
-                  value={`Lev. ${data?.level || 1} ${getBadgeLabel(data?.level).replace(" Badge", "")}`}
-                />
-                <InfoRow
-                  styles={styles}
-                  icon="public"
-                  label="Freelancer category"
-                  value={
-                    userServices?.[0]?.category === "HOUSEHOLD"
-                      ? "On-site"
-                      : "Remote"
-                  }
-                />
-              </>
-            ) : (
-              <InfoRow
-                styles={styles}
-                icon="business"
-                label="Company"
-                value={data?.companyName || data?.company_name || "Not added"}
-              />
-            )}
-            <InfoRow
-              styles={styles}
-              icon="place"
-              label="From"
-              value={formatLocation(data, userData)}
-            />
-            <InfoRow
-              styles={styles}
-              icon="calendar-today"
-              label="Member Since"
-              value={formattedDate}
-            />
-          </View>
-
-          {role === "FREELANCER" && (
+          {role === "FREELANCER" ? (
             <>
-              <Text style={styles.sectionTitleLeft}>Skills</Text>
-              <View style={styles.chips}>
-                {userServices.length ? (
-                  userServices.map((service) => (
-                    <View key={service.id || service.name} style={styles.skillChip}>
-                      <Text style={styles.skillText}>{service.name}</Text>
-                    </View>
-                  ))
-                ) : (
-                  <Text style={styles.emptyText}>No skills added yet</Text>
-                )}
-              </View>
+              {activeTab === "About" && (
+                <View>
+                  <Text style={styles.sectionTitleLeft}>About me</Text>
+                  <Text style={styles.aboutDescription}>
+                    {data?.profileDescription || "No description available"}
+                  </Text>
 
-              <Text style={styles.sectionTitleLeft}>Portfolio</Text>
-              <View style={styles.portfolioGrid}>
-                {portfolioImages.length ? (
-                  portfolioImages.map((image, index) => (
-                    <TouchableOpacity
-                      key={`${getImageUri(image)}-${index}`}
-                      style={[
-                        styles.portfolioTile,
-                        index === 0 && styles.portfolioTileLarge,
-                      ]}
-                      onPress={() => openImageModal(image, portfolioImages)}
-                      activeOpacity={0.85}
-                    >
-                      <Image
-                        source={{ uri: getImageUri(image) }}
-                        style={styles.portfolioTileImage}
-                      />
-                    </TouchableOpacity>
-                  ))
-                ) : (
-                  [0, 1, 2, 3].map((item) => (
-                    <View
-                      key={item}
-                      style={[
-                        styles.portfolioPlaceholder,
-                        item === 0 && styles.portfolioPlaceholderLarge,
-                      ]}
-                    >
-                      <Text style={styles.plus}>+</Text>
-                    </View>
-                  ))
-                )}
-              </View>
+                  <View style={styles.infoList}>
+                    <InfoRow
+                      styles={styles}
+                      icon="work-outline"
+                      label="Experience"
+                      value={formatExperience(data?.experience)}
+                    />
+                    <InfoRow
+                      styles={styles}
+                      icon="leaderboard"
+                      label="Level"
+                      value={`Lev. ${data?.level || 1} ${getBadgeLabel(data?.level).replace(" Badge", "")}`}
+                    />
+                    <InfoRow
+                      styles={styles}
+                      icon="public"
+                      label="Freelancer category"
+                      value={
+                        userServices?.[0]?.category === "HOUSEHOLD"
+                          ? "On-site"
+                          : "Remote"
+                      }
+                    />
+                    <InfoRow
+                      styles={styles}
+                      icon="place"
+                      label="From"
+                      value={formatLocation(data, userData)}
+                    />
+                    <InfoRow
+                      styles={styles}
+                      icon="calendar-today"
+                      label="Member Since"
+                      value={formattedDate}
+                    />
+                  </View>
 
-              <Text style={styles.sectionTitleLeft}>Certification</Text>
-              {certifications.length ? (
-                certifications.map((cert, index) => (
-                  <View key={`${cert}-${index}`} style={styles.certCard}>
-                    <View style={styles.certTextWrap}>
-                      <Text style={styles.certTitle}>{cert}</Text>
-                      <Text style={styles.certSubtitle}>
-                        {data?.highestQualification || "Qualification added"}
-                      </Text>
+                  {parseArray(data?.languages).length > 0 && (
+                    <>
+                      <Text style={styles.sectionTitleLeft}>Languages</Text>
+                      <View style={styles.languageList}>
+                        {parseArray(data?.languages).map((lang, idx) => (
+                          <View key={idx} style={styles.infoRow}>
+                            <MaterialIcons name="g-translate" size={22} color={PURPLE} />
+                            <Text style={styles.infoLabel}>
+                              {typeof lang === 'string' ? lang : lang.name || lang.language || 'English'}
+                            </Text>
+                            <Text style={styles.infoValue}>
+                              {typeof lang === 'object' && lang.proficiency ? lang.proficiency : 'Fluent'}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                    </>
+                  )}
+
+                  <Text style={styles.sectionTitleLeft}>Skills</Text>
+                  <View style={styles.chips}>
+                    {userServices.length ? (
+                      userServices.map((service) => (
+                        <View key={service.id || service.name} style={styles.skillChip}>
+                          <Text style={styles.skillText}>{service.name}</Text>
+                        </View>
+                      ))
+                    ) : parseArray(data?.skills).length ? (
+                      parseArray(data?.skills).map((skill, idx) => (
+                        <View key={idx} style={styles.skillChip}>
+                          <Text style={styles.skillText}>{typeof skill === 'string' ? skill : skill.name}</Text>
+                        </View>
+                      ))
+                    ) : (
+                      <Text style={styles.emptyText}>No skills added yet</Text>
+                    )}
+                  </View>
+
+                  <Text style={styles.sectionTitleLeft}>Certification</Text>
+                  {certifications.length ? (
+                    certifications.map((cert, index) => (
+                      <View key={`${cert}-${index}`} style={styles.certCard}>
+                        <MaterialIcons name="workspace-premium" size={30} color={PURPLE} />
+                        <View style={styles.certTextWrap}>
+                          <Text style={styles.certTitle}>{typeof cert === 'string' ? cert : cert.name || 'Certification'}</Text>
+                          <Text style={styles.certSubtitle}>
+                            {data?.highestQualification || "Qualification added"}
+                          </Text>
+                        </View>
+                      </View>
+                    ))
+                  ) : data?.highestQualification ? (
+                    <View style={styles.certCard}>
+                      <MaterialIcons name="workspace-premium" size={30} color={PURPLE} />
+                      <View style={styles.certTextWrap}>
+                        <Text style={styles.certTitle}>{data.highestQualification}</Text>
+                      </View>
                     </View>
-                  </View>
-                ))
-              ) : (
-                <View style={styles.certCard}>
-                  <View style={styles.certTextWrap}>
-                    <Text style={styles.certTitle}>
-                      {data?.highestQualification || "No certification added"}
-                    </Text>
-                  </View>
+                  ) : (
+                    <Text style={styles.emptyText}>No certifications added yet</Text>
+                  )}
                 </View>
               )}
+
+              {activeTab === "Services" && (
+                <View>
+                  {userServices.length ? (
+                    userServices.map((service) => (
+                      <View key={service.id || service.name} style={styles.serviceCard}>
+                        <View style={styles.serviceImageWrap}>
+                          {service.imageUrl ? (
+                            <Image
+                              source={{ uri: getImageUri(service.imageUrl) }}
+                              style={styles.serviceImage}
+                            />
+                          ) : (
+                            <Text style={styles.serviceImageText}>Image here</Text>
+                          )}
+                        </View>
+                        <View style={styles.serviceBody}>
+                          <Text style={styles.serviceTitle} numberOfLines={2}>{service.name}</Text>
+                          <View style={styles.servicePriceRow}>
+                            <Text style={styles.fromPrefix}>From </Text>
+                            <Text style={styles.priceText}>
+                              ${service.price || service.pricing?.price || service.startingPrice || service.budget || 0}
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+                    ))
+                  ) : (
+                    <Text style={styles.emptyText}>No services added yet</Text>
+                  )}
+                </View>
+              )}
+
+              {activeTab === "Reviews" && (
+                <View>
+                  {/* Summary Card */}
+                  <View style={styles.summaryCard}>
+                    <View style={styles.summaryTop}>
+                      <View>
+                        <Text style={styles.summaryRating}>
+                          {formatRating(reviewStats?.averageRating || data?.rating || 0)}
+                        </Text>
+                        <View style={styles.summaryStars}>
+                          {[1, 2, 3, 4, 5].map((item) => (
+                            <FontAwesome
+                              key={item}
+                              name={
+                                item <= Math.round(Number(reviewStats?.averageRating || data?.rating || 0))
+                                  ? "star"
+                                  : "star-o"
+                              }
+                              size={18}
+                              color="#A855F7"
+                            />
+                          ))}
+                        </View>
+                      </View>
+
+                      <View style={styles.summaryCountBox}>
+                        <Text style={styles.summaryCount}>
+                          {reviewStats?.totalReviews || data?.totalReviews || reviews.length || 0}
+                        </Text>
+                        <Text style={styles.summaryLabel}>Total Reviews</Text>
+                      </View>
+                    </View>
+
+                    {/* Rating Breakdown Bars */}
+                    <View style={styles.ratingBars}>
+                      {[5, 4, 3, 2, 1].map((star) => {
+                        const count =
+                          reviewStats?.ratingDistribution?.[star] !== undefined
+                            ? Number(reviewStats.ratingDistribution[star])
+                            : reviews.filter((r) => Math.round(Number(r.rating || 0)) === star).length;
+                        const total = reviewStats?.totalReviews || data?.totalReviews || reviews.length || 0;
+                        const percentage = total ? `${(count / total) * 100}%` : "0%";
+                        return (
+                          <View key={star} style={styles.ratingBarRow}>
+                            <Text style={styles.ratingBarLabel}>{star}</Text>
+                            <View style={styles.ratingBarTrack}>
+                              <View style={[styles.ratingBarFill, { width: percentage }]} />
+                            </View>
+                            <Text style={styles.ratingBarCount}>{count}</Text>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  </View>
+
+                  {/* Section Header */}
+                  <View style={styles.recentReviewsHeader}>
+                    <Text style={styles.recentReviewsTitle}>Recent Reviews</Text>
+                    <Text style={styles.recentReviewsMeta}>
+                      {reviewStats?.totalReviews || data?.totalReviews || reviews.length || 0} total
+                    </Text>
+                  </View>
+
+                  {/* Review items or Empty Card */}
+                  {reviews.length > 0 ? (
+                    reviews.map((review) => (
+                      <View key={review.id} style={styles.reviewCard}>
+                        <View style={styles.reviewHeader}>
+                          <Image
+                            source={
+                              review.reviewer?.profilePhoto
+                                ? { uri: getImageUri(review.reviewer.profilePhoto) }
+                                : require("../assets/profile.png")
+                            }
+                            style={styles.reviewAvatar}
+                          />
+                          <View style={styles.reviewMeta}>
+                            <Text style={styles.reviewerName}>
+                              {review.reviewer?.user?.fullName || "Bird Earner user"}
+                            </Text>
+                            <View style={styles.reviewStars}>
+                              {[1, 2, 3, 4, 5].map((item) => (
+                                <FontAwesome
+                                  key={item}
+                                  name={item <= Number(review.rating || 0) ? "star" : "star-o"}
+                                  size={15}
+                                  color="#A855F7"
+                                />
+                              ))}
+                            </View>
+                          </View>
+                          <Text style={styles.reviewDate}>
+                            {formatMemberSince(review.createdAt)}
+                          </Text>
+                        </View>
+                        <Text style={styles.reviewText}>
+                          {review.reviewText || "No review text provided"}
+                        </Text>
+                      </View>
+                    ))
+                  ) : (
+                    <View style={styles.reviewEmptyCard}>
+                      <View style={styles.purpleIconBox}>
+                        <MaterialIcons name="rate-review" size={26} color="#FFFFFF" />
+                      </View>
+                      <Text style={styles.reviewEmptyTitle}>No reviews yet</Text>
+                      <Text style={styles.reviewEmptySubtitle}>
+                        Reviews from completed work will appear here.
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              )}
+
+              {activeTab === "Portfolio" && (
+                <View style={styles.portfolioContainer}>
+                  <View style={styles.portfolioTopRow}>
+                    <TouchableOpacity
+                      style={styles.portfolioTallBox}
+                      onPress={() => portfolioImages[0] && openImageModal(portfolioImages[0], portfolioImages)}
+                    >
+                      {portfolioImages[0] ? (
+                        <Image source={{ uri: getImageUri(portfolioImages[0]) }} style={styles.portfolioImage} />
+                      ) : (
+                        <Text style={styles.plusIcon}>+</Text>
+                      )}
+                    </TouchableOpacity>
+
+                    <View style={styles.portfolioRightCol}>
+                      <TouchableOpacity
+                        style={styles.portfolioSmallBox}
+                        onPress={() => portfolioImages[1] && openImageModal(portfolioImages[1], portfolioImages)}
+                      >
+                        {portfolioImages[1] ? (
+                          <Image source={{ uri: getImageUri(portfolioImages[1]) }} style={styles.portfolioImage} />
+                        ) : (
+                          <Text style={styles.plusIcon}>+</Text>
+                        )}
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={styles.portfolioSmallBox}
+                        onPress={() => portfolioImages[2] && openImageModal(portfolioImages[2], portfolioImages)}
+                      >
+                        {portfolioImages[2] ? (
+                          <Image source={{ uri: getImageUri(portfolioImages[2]) }} style={styles.portfolioImage} />
+                        ) : (
+                          <Text style={styles.plusIcon}>+</Text>
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  <View style={styles.portfolioThreeRow}>
+                    {[3, 4, 5].map((idx) => (
+                      <TouchableOpacity
+                        key={idx}
+                        style={styles.portfolioSquareBox}
+                        onPress={() => portfolioImages[idx] && openImageModal(portfolioImages[idx], portfolioImages)}
+                      >
+                        {portfolioImages[idx] ? (
+                          <Image source={{ uri: getImageUri(portfolioImages[idx]) }} style={styles.portfolioImage} />
+                        ) : (
+                          <Text style={styles.plusIcon}>+</Text>
+                        )}
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  <View style={styles.portfolioThreeRow}>
+                    {[6, 7, 8].map((idx) => (
+                      <TouchableOpacity
+                        key={idx}
+                        style={styles.portfolioSquareBox}
+                        onPress={() => portfolioImages[idx] && openImageModal(portfolioImages[idx], portfolioImages)}
+                      >
+                        {portfolioImages[idx] ? (
+                          <Image source={{ uri: getImageUri(portfolioImages[idx]) }} style={styles.portfolioImage} />
+                        ) : (
+                          <Text style={styles.plusIcon}>+</Text>
+                        )}
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  <TouchableOpacity
+                    style={styles.portfolioFullBar}
+                    onPress={() => portfolioImages[9] && openImageModal(portfolioImages[9], portfolioImages)}
+                  >
+                    {portfolioImages[9] ? (
+                      <Image source={{ uri: getImageUri(portfolioImages[9]) }} style={styles.portfolioImage} />
+                    ) : (
+                      <Text style={styles.plusIcon}>+</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              )}
+            </>
+          ) : (
+            <>
+              <Text style={styles.sectionTitleLeft}>About me</Text>
+              <Text style={styles.aboutDescription}>
+                {data?.profileDescription || "No description available"}
+              </Text>
+
+              <View style={styles.infoList}>
+                <InfoRow
+                  styles={styles}
+                  icon="business"
+                  label="Company"
+                  value={data?.companyName || data?.company_name || "Not added"}
+                />
+                <InfoRow
+                  styles={styles}
+                  icon="place"
+                  label="From"
+                  value={formatLocation(data, userData)}
+                />
+                <InfoRow
+                  styles={styles}
+                  icon="calendar-today"
+                  label="Member Since"
+                  value={formattedDate}
+                />
+              </View>
             </>
           )}
         </View>
 
-        {/* TODO */}
-        {userData && (
+        {/* Role switch button (Only for non-freelancer profile view) */}
+        {role !== "FREELANCER" && userData && (
           <>
             {userData.freelancer && userData.client ? (
               <TouchableOpacity
@@ -624,60 +923,29 @@ export default function ProfileScreen({ navigation }) {
           }}
         >
           <View style={[styles.modalContainer, {}]}>
-            {/* <LottieView
-              autoPlay
-              ref={animation}
-              style={{
-                width: 200,
-                height: 200,
-                backgroundColor: "#eee",
-              }}
-              // Find more Lottie files at https://lottiefiles.com/featured
-              source={require("../../assets/birdy.json")}
-            /> */}
             <AnimatedLottieView
               source={require("../../assets/loader-bird.json")}
               progress={animationProgress.current}
               style={[styles.modalContent]}
             />
-            {/* <AnimatedLottieView
-              style={[styles.modalContent, { transform: [{ translateX }] }]}
-            >
-              <Image
-                source={require("../../assets/birdy.json")} // Replace with the path to your logo
-                style={styles.logo}
-              />
-              <Text style={styles.modalText}>{transitionText}</Text>
-            </AnimatedLottieView> */}
           </View>
         </Modal>
 
-        {/* <TouchableOpacity
-          style={styles.editProfileButton}
-          onPress={() => {
-            navigation.navigate("Settings");
-          }}
-        >
-          <Text style={styles.buttonText}>Edit Your Profile</Text>
-        </TouchableOpacity> */}
-
-        {/* Deactivate Account Link */}
-        <TouchableOpacity
-          onPress={async () => {
-            try {
-              await logout();
-              showToast("success", "Logged out successfully!");
-              // navigation.reset({
-              //   index: 0,
-              //   routes: [{ name: "Login" }],
-              // });
-            } catch (error) {
-              showToast("error", "Logout Failed", error.message);
-            }
-          }}
-        >
-          <Text style={styles.deactivateLink}>Log out</Text>
-        </TouchableOpacity>
+        {/* Log out button (Only for non-freelancer profile view) */}
+        {role !== "FREELANCER" && (
+          <TouchableOpacity
+            onPress={async () => {
+              try {
+                await logout();
+                showToast("success", "Logged out successfully!");
+              } catch (error) {
+                showToast("error", "Logout Failed", error.message);
+              }
+            }}
+          >
+            <Text style={styles.deactivateLink}>Log out</Text>
+          </TouchableOpacity>
+        )}
         <Toast />
       </ScrollView>
     </SafeAreaView>
@@ -818,6 +1086,322 @@ const getStyles = (currentTheme) => {
       color: PURPLE,
       fontSize: 16,
       fontWeight: "700",
+    },
+    freelancerTabShell: {
+      marginHorizontal: 16,
+      marginVertical: 14,
+      borderRadius: 16,
+      backgroundColor: "#181528",
+      flexDirection: "row",
+      alignItems: "center",
+      height: 50,
+      paddingHorizontal: 4,
+    },
+    freelancerTabButton: {
+      flex: 1,
+      height: "100%",
+      alignItems: "center",
+      justifyContent: "center",
+      position: "relative",
+    },
+    freelancerTabText: {
+      color: "#94A3B8",
+      fontSize: 14,
+      fontWeight: "500",
+    },
+    freelancerTabTextActive: {
+      color: "#C36DFF",
+      fontWeight: "600",
+    },
+    freelancerTabIndicatorActive: {
+      position: "absolute",
+      bottom: 4,
+      width: "70%",
+      height: 2.5,
+      borderRadius: 2,
+      backgroundColor: "#B65CFF",
+    },
+    languageList: {
+      borderTopWidth: 1,
+      borderTopColor: border,
+      marginBottom: 8,
+    },
+    serviceCard: {
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: border,
+      backgroundColor: card,
+      padding: 12,
+      marginBottom: 12,
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    serviceImageWrap: {
+      width: 90,
+      height: 90,
+      borderRadius: 10,
+      backgroundColor: "#F4F5F7",
+      alignItems: "center",
+      justifyContent: "center",
+      overflow: "hidden",
+    },
+    serviceImageText: {
+      color: "#9CA3AF",
+      fontSize: 13,
+      textAlign: "center",
+    },
+    serviceBody: {
+      flex: 1,
+      marginLeft: 14,
+      justifyContent: "space-between",
+      height: 85,
+    },
+    serviceTitle: {
+      color: text,
+      fontSize: 14,
+      fontWeight: "600",
+      lineHeight: 19,
+    },
+    servicePriceRow: {
+      alignSelf: "flex-end",
+      flexDirection: "row",
+      alignItems: "baseline",
+    },
+    fromPrefix: {
+      color: muted,
+      fontSize: 13,
+      fontWeight: "400",
+    },
+    priceText: {
+      color: PURPLE,
+      fontSize: 16,
+      fontWeight: "700",
+    },
+    summaryCard: {
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: border,
+      backgroundColor: card,
+      padding: 18,
+      marginBottom: 20,
+    },
+    summaryTop: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      justifyContent: "space-between",
+      borderBottomWidth: 1,
+      borderBottomColor: border,
+      paddingBottom: 16,
+      marginBottom: 16,
+    },
+    summaryRating: {
+      color: "#8B5CF6",
+      fontSize: 46,
+      fontWeight: "900",
+      lineHeight: 52,
+    },
+    summaryStars: {
+      flexDirection: "row",
+      gap: 4,
+      marginTop: 4,
+    },
+    summaryCountBox: {
+      alignItems: "flex-end",
+    },
+    summaryCount: {
+      color: text,
+      fontSize: 32,
+      fontWeight: "800",
+    },
+    summaryLabel: {
+      color: muted,
+      fontSize: 14,
+      fontWeight: "600",
+      marginTop: 2,
+    },
+    ratingBars: {
+      gap: 10,
+    },
+    ratingBarRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+    },
+    ratingBarLabel: {
+      width: 14,
+      color: text,
+      fontSize: 14,
+      fontWeight: "700",
+    },
+    ratingBarTrack: {
+      flex: 1,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: "#F3F4F6",
+      overflow: "hidden",
+    },
+    ratingBarFill: {
+      height: "100%",
+      borderRadius: 4,
+      backgroundColor: "#8B5CF6",
+    },
+    ratingBarCount: {
+      width: 20,
+      color: muted,
+      fontSize: 14,
+      textAlign: "right",
+      fontWeight: "600",
+    },
+    recentReviewsHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginTop: 6,
+      marginBottom: 14,
+    },
+    recentReviewsTitle: {
+      color: text,
+      fontSize: 22,
+      fontWeight: "800",
+    },
+    recentReviewsMeta: {
+      color: muted,
+      fontSize: 15,
+      fontWeight: "600",
+    },
+    reviewCard: {
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: border,
+      padding: 16,
+      marginBottom: 12,
+      backgroundColor: card,
+    },
+    reviewHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    reviewerAvatar: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: "#F3EAFF",
+    },
+    reviewMeta: {
+      flex: 1,
+      marginLeft: 12,
+    },
+    reviewerName: {
+      color: text,
+      fontSize: 15,
+      fontWeight: "700",
+    },
+    reviewStars: {
+      flexDirection: "row",
+      gap: 3,
+      marginTop: 3,
+    },
+    reviewDate: {
+      color: muted,
+      fontSize: 12,
+    },
+    reviewText: {
+      color: muted,
+      fontSize: 14,
+      lineHeight: 20,
+      marginTop: 10,
+    },
+    reviewEmptyCard: {
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: border,
+      backgroundColor: card,
+      paddingVertical: 36,
+      paddingHorizontal: 20,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    purpleIconBox: {
+      width: 48,
+      height: 48,
+      borderRadius: 14,
+      backgroundColor: "#8B5CF6",
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: 14,
+    },
+    reviewEmptyTitle: {
+      color: text,
+      fontSize: 18,
+      fontWeight: "800",
+      marginBottom: 6,
+    },
+    reviewEmptySubtitle: {
+      color: muted,
+      fontSize: 14,
+      textAlign: "center",
+      lineHeight: 20,
+    },
+    portfolioContainer: {
+      backgroundColor: card,
+      borderRadius: 16,
+      padding: 14,
+    },
+    portfolioTopRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginBottom: 10,
+    },
+    portfolioTallBox: {
+      width: "48.5%",
+      height: 200,
+      borderRadius: 12,
+      backgroundColor: "#F5F3FA",
+      alignItems: "center",
+      justifyContent: "center",
+      overflow: "hidden",
+    },
+    portfolioRightCol: {
+      width: "48.5%",
+      height: 200,
+      justifyContent: "space-between",
+    },
+    portfolioSmallBox: {
+      width: "100%",
+      height: 95,
+      borderRadius: 12,
+      backgroundColor: "#F5F3FA",
+      alignItems: "center",
+      justifyContent: "center",
+      overflow: "hidden",
+    },
+    portfolioThreeRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginBottom: 10,
+    },
+    portfolioSquareBox: {
+      width: "31.5%",
+      aspectRatio: 1,
+      borderRadius: 12,
+      backgroundColor: "#F5F3FA",
+      alignItems: "center",
+      justifyContent: "center",
+      overflow: "hidden",
+    },
+    portfolioFullBar: {
+      width: "100%",
+      height: 56,
+      borderRadius: 12,
+      backgroundColor: "#F5F3FA",
+      alignItems: "center",
+      justifyContent: "center",
+      overflow: "hidden",
+    },
+    plusIcon: {
+      color: "#A855F7",
+      fontSize: 28,
+      fontWeight: "300",
     },
     tabShell: {
       marginHorizontal: 20,

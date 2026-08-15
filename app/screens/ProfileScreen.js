@@ -186,8 +186,13 @@ export default function ProfileScreen({ route, navigation }) {
         apiService.getReviewStats(reviewUserId),
       ]);
 
-      setReviews(reviewsResponse?.success ? reviewsResponse.data || [] : []);
-      setReviewStats(statsResponse?.success ? statsResponse.data : null);
+      const reviewList = Array.isArray(reviewsResponse)
+        ? reviewsResponse
+        : reviewsResponse?.data || reviewsResponse?.reviews || [];
+      const statsObj = statsResponse?.data || (statsResponse?.totalReviews !== undefined ? statsResponse : null);
+
+      setReviews(reviewList);
+      setReviewStats(statsObj);
     } catch (error) {
       console.warn("Failed to load reviews:", error.message);
       setReviews([]);
@@ -417,10 +422,10 @@ function ProfileHero({
     <View style={uiStyles.hero}>
       <View style={uiStyles.topBar}>
         <TouchableOpacity style={uiStyles.iconButton} onPress={onBack}>
-          <MaterialIcons name="arrow-back" size={28} color={uiStyles.iconColor.color} />
+          <MaterialIcons name="arrow-back" size={24} color="#101114" />
         </TouchableOpacity>
         <TouchableOpacity style={uiStyles.shareButton} onPress={onShare}>
-          <MaterialIcons name="share" size={24} color={PURPLE} />
+          <MaterialIcons name="share" size={20} color={PURPLE} />
           <Text style={uiStyles.shareText}>Share profile</Text>
         </TouchableOpacity>
       </View>
@@ -447,7 +452,7 @@ function ProfileHero({
         <Text style={uiStyles.ratingText}>{formatRating(rating)}</Text>
         <Text style={uiStyles.reviewCount}>({totalReviews})</Text>
         <View style={uiStyles.badge}>
-          <MaterialIcons name="workspace-premium" size={20} color={PURPLE} />
+          <MaterialIcons name="workspace-premium" size={16} color={PURPLE} />
           <Text style={uiStyles.badgeText}>{getBadgeLabel(profileData?.level)}</Text>
         </View>
       </View>
@@ -470,7 +475,7 @@ function ProfileTabs({ uiStyles, activeTab, onTabPress }) {
             <Text style={[uiStyles.tabText, active && uiStyles.tabTextActive]}>
               {tab}
             </Text>
-            <View style={[uiStyles.tabIndicator, active && uiStyles.tabIndicatorActive]} />
+            {active && <View style={uiStyles.tabIndicatorActive} />}
           </TouchableOpacity>
         );
       })}
@@ -483,11 +488,15 @@ function AboutTab({ uiStyles, profileData, services, certifications, selectedSer
     ? services[0].category === "FREELANCE"
       ? "Remote"
       : "On-site"
-    : "Remote";
+    : profileData?.category || "Remote";
 
   const skills = services.length
     ? services.map((service) => service.name)
-    : selectedServices.map((serviceId) => `Service ${serviceId.slice(0, 6)}`);
+    : selectedServices.length
+    ? selectedServices.map((serviceId) => typeof serviceId === "string" ? serviceId : serviceId.name || `Skill`)
+    : parseArray(profileData?.skills);
+
+  const languages = parseArray(profileData?.languages);
 
   return (
     <View style={uiStyles.section}>
@@ -529,11 +538,30 @@ function AboutTab({ uiStyles, profileData, services, certifications, selectedSer
         />
       </View>
 
+      {languages.length > 0 && (
+        <>
+          <Text style={uiStyles.sectionTitle}>Languages</Text>
+          <View style={uiStyles.languageList}>
+            {languages.map((lang, idx) => (
+              <View key={idx} style={uiStyles.infoRow}>
+                <MaterialIcons name="g-translate" size={22} color={PURPLE} />
+                <Text style={uiStyles.infoLabel}>
+                  {typeof lang === 'string' ? lang : lang.name || lang.language || 'English'}
+                </Text>
+                <Text style={uiStyles.infoValue}>
+                  {typeof lang === 'object' && lang.proficiency ? lang.proficiency : 'Fluent'}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </>
+      )}
+
       <Text style={uiStyles.sectionTitle}>Skills</Text>
       <View style={uiStyles.chips}>
         {skills.length ? (
-          skills.map((skill) => (
-            <View key={skill} style={uiStyles.skillChip}>
+          skills.map((skill, idx) => (
+            <View key={`${skill}-${idx}`} style={uiStyles.skillChip}>
               <Text style={uiStyles.skillText}>{skill}</Text>
             </View>
           ))
@@ -546,22 +574,24 @@ function AboutTab({ uiStyles, profileData, services, certifications, selectedSer
       {certifications.length ? (
         certifications.map((cert, index) => (
           <View key={`${cert}-${index}`} style={uiStyles.certCard}>
+            <MaterialIcons name="workspace-premium" size={30} color={PURPLE} />
             <View style={uiStyles.certTextWrap}>
-              <Text style={uiStyles.certTitle}>{cert}</Text>
+              <Text style={uiStyles.certTitle}>{typeof cert === 'string' ? cert : cert.name || 'Certification'}</Text>
               <Text style={uiStyles.certSubtitle}>
                 {profileData?.highestQualification || "Qualification added"}
               </Text>
             </View>
           </View>
         ))
-      ) : (
+      ) : profileData?.highestQualification ? (
         <View style={uiStyles.certCard}>
+          <MaterialIcons name="workspace-premium" size={30} color={PURPLE} />
           <View style={uiStyles.certTextWrap}>
-            <Text style={uiStyles.certTitle}>
-              {profileData?.highestQualification || "No certification added"}
-            </Text>
+            <Text style={uiStyles.certTitle}>{profileData.highestQualification}</Text>
           </View>
         </View>
+      ) : (
+        <Text style={uiStyles.emptyText}>No certifications added yet</Text>
       )}
     </View>
   );
@@ -570,7 +600,7 @@ function AboutTab({ uiStyles, profileData, services, certifications, selectedSer
 function InfoRow({ uiStyles, icon, label, value }) {
   return (
     <View style={uiStyles.infoRow}>
-      <MaterialIcons name={icon} size={28} color={PURPLE} />
+      <MaterialIcons name={icon} size={22} color={PURPLE} />
       <Text style={uiStyles.infoLabel}>{label}</Text>
       <Text style={uiStyles.infoValue}>{value}</Text>
     </View>
@@ -583,7 +613,7 @@ function ServicesTab({ uiStyles, services, onServicePress }) {
       {services.length ? (
         services.map((service) => (
           <TouchableOpacity
-            key={service.id}
+            key={service.id || service.name}
             style={uiStyles.serviceCard}
             onPress={() => onServicePress(service)}
             activeOpacity={0.85}
@@ -602,38 +632,83 @@ function ServicesTab({ uiStyles, services, onServicePress }) {
               <Text style={uiStyles.serviceTitle} numberOfLines={2}>
                 {service.name}
               </Text>
-              <Text style={uiStyles.serviceDescription} numberOfLines={2}>
-                {service.description || "Service details available on request"}
-              </Text>
-            </View>
-            <View style={uiStyles.serviceMeta}>
-              <Text style={uiStyles.fromText}>
-                {service.category === "FREELANCE" ? "Remote" : "On-site"}
-              </Text>
-              <MaterialIcons name="chevron-right" size={24} color={PURPLE} />
+              <View style={uiStyles.servicePriceRow}>
+                <Text style={uiStyles.fromPrefix}>From </Text>
+                <Text style={uiStyles.priceText}>
+                  ${service.price || service.pricing?.price || service.startingPrice || service.budget || 0}
+                </Text>
+              </View>
             </View>
           </TouchableOpacity>
         ))
       ) : (
-        <EmptyState uiStyles={uiStyles} icon="design-services" title="No services yet" />
+        <EmptyState uiStyles={uiStyles} icon="design-services" title="No services added yet" />
       )}
     </View>
   );
 }
 
-function ReviewsTab({ uiStyles, reviews, stats }) {
-  const average = stats?.averageRating || 0;
-  const total = stats?.totalReviews || reviews.length || 0;
+function ReviewsTab({ uiStyles, reviews = [], stats, profileData }) {
+  const average = Number(stats?.averageRating || profileData?.rating || 0);
+  const total = stats?.totalReviews || profileData?.totalReviews || reviews.length || 0;
+  const distribution = stats?.ratingDistribution || {};
+
+  const getCountForRating = (star) => {
+    if (distribution[star] !== undefined) return Number(distribution[star]);
+    return reviews.filter((r) => Math.round(Number(r.rating || 0)) === star).length;
+  };
 
   return (
     <View style={uiStyles.section}>
-      <View style={uiStyles.reviewSummary}>
-        <Text style={uiStyles.summaryRating}>{formatRating(average)}</Text>
-        <Text style={uiStyles.summaryLabel}>Average rating</Text>
-        <Text style={uiStyles.summaryCount}>{total} review{total === 1 ? "" : "s"}</Text>
+      {/* 1. Summary Card */}
+      <View style={uiStyles.summaryCard}>
+        <View style={uiStyles.summaryTop}>
+          <View>
+            <Text style={uiStyles.summaryRating}>{formatRating(average)}</Text>
+            <View style={uiStyles.summaryStars}>
+              {[1, 2, 3, 4, 5].map((item) => (
+                <FontAwesome
+                  key={item}
+                  name={item <= Math.round(average) ? "star" : "star-o"}
+                  size={18}
+                  color="#A855F7"
+                />
+              ))}
+            </View>
+          </View>
+
+          <View style={uiStyles.summaryCountBox}>
+            <Text style={uiStyles.summaryCount}>{total}</Text>
+            <Text style={uiStyles.summaryLabel}>Total Reviews</Text>
+          </View>
+        </View>
+
+        {/* Rating Breakdown Bars */}
+        <View style={uiStyles.ratingBars}>
+          {[5, 4, 3, 2, 1].map((star) => {
+            const count = getCountForRating(star);
+            const percentage = total ? `${(count / total) * 100}%` : "0%";
+            return (
+              <View key={star} style={uiStyles.ratingBarRow}>
+                <Text style={uiStyles.ratingBarLabel}>{star}</Text>
+                <View style={uiStyles.ratingBarTrack}>
+                  <View style={[uiStyles.ratingBarFill, { width: percentage }]} />
+                </View>
+                <Text style={uiStyles.ratingBarCount}>{count}</Text>
+              </View>
+            );
+          })}
+        </View>
       </View>
 
-      {reviews.length ? (
+      {/* 2. Section Header */}
+      <View style={uiStyles.recentReviewsHeader}>
+        <Text style={uiStyles.recentReviewsTitle}>Recent Reviews</Text>
+        <Text style={uiStyles.recentReviewsMeta}>{total} total</Text>
+      </View>
+
+      {/* 3. Review items or Empty Card */}
+      {reviews.length > 0 ? (
         reviews.map((review) => (
           <View key={review.id} style={uiStyles.reviewCard}>
             <View style={uiStyles.reviewHeader}>
@@ -655,7 +730,7 @@ function ReviewsTab({ uiStyles, reviews, stats }) {
                       key={item}
                       name={item <= Number(review.rating || 0) ? "star" : "star-o"}
                       size={15}
-                      color={PURPLE}
+                      color="#A855F7"
                     />
                   ))}
                 </View>
@@ -670,59 +745,114 @@ function ReviewsTab({ uiStyles, reviews, stats }) {
           </View>
         ))
       ) : (
-        <EmptyState uiStyles={uiStyles} icon="rate-review" title="No reviews yet" />
+        <View style={uiStyles.reviewEmptyCard}>
+          <View style={uiStyles.purpleIconBox}>
+            <MaterialIcons name="rate-review" size={26} color="#FFFFFF" />
+          </View>
+          <Text style={uiStyles.reviewEmptyTitle}>No reviews yet</Text>
+          <Text style={uiStyles.reviewEmptySubtitle}>
+            Reviews from completed work will appear here.
+          </Text>
+        </View>
       )}
     </View>
   );
 }
 
 function PortfolioTab({ uiStyles, images, onImagePress, isFreelancerProfile }) {
-  if (!isFreelancerProfile) {
-    return (
-      <View style={uiStyles.section}>
-        <EmptyState uiStyles={uiStyles} icon="collections" title="Portfolio is available for freelancers" />
-      </View>
-    );
-  }
-
   return (
     <View style={uiStyles.portfolioPanel}>
-      {images.length ? (
-        <>
-          <View style={uiStyles.portfolioGrid}>
-            {images.map((image, index) => (
-              <TouchableOpacity
-                key={`${getImageUri(image)}-${index}`}
-                style={[
-                  uiStyles.portfolioTile,
-                  index === 0 && uiStyles.portfolioTileLarge,
-                ]}
-                onPress={() => onImagePress(image, images)}
-                activeOpacity={0.85}
-              >
-                <Image
-                  source={{ uri: getImageUri(image) }}
-                  style={uiStyles.portfolioImage}
-                />
-              </TouchableOpacity>
-            ))}
-          </View>
-        </>
-      ) : (
-        <View style={uiStyles.portfolioGrid}>
-          {[0, 1, 2, 3, 4, 5, 6, 7].map((item) => (
-            <View
-              key={item}
-              style={[
-                uiStyles.portfolioPlaceholder,
-                item === 0 && uiStyles.portfolioPlaceholderLarge,
-              ]}
+      <View style={uiStyles.portfolioContainer}>
+        {/* Top Section: Tall box on left, 2 stacked boxes on right */}
+        <View style={uiStyles.portfolioTopRow}>
+          <TouchableOpacity
+            style={uiStyles.portfolioTallBox}
+            onPress={() => images[0] && onImagePress(images[0], images)}
+            activeOpacity={images[0] ? 0.85 : 1}
+          >
+            {images[0] ? (
+              <Image source={{ uri: getImageUri(images[0]) }} style={uiStyles.portfolioImage} />
+            ) : (
+              <Text style={uiStyles.plusIcon}>+</Text>
+            )}
+          </TouchableOpacity>
+
+          <View style={uiStyles.portfolioRightCol}>
+            <TouchableOpacity
+              style={uiStyles.portfolioSmallBox}
+              onPress={() => images[1] && onImagePress(images[1], images)}
+              activeOpacity={images[1] ? 0.85 : 1}
             >
-              <Text style={uiStyles.plus}>+</Text>
-            </View>
+              {images[1] ? (
+                <Image source={{ uri: getImageUri(images[1]) }} style={uiStyles.portfolioImage} />
+              ) : (
+                <Text style={uiStyles.plusIcon}>+</Text>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={uiStyles.portfolioSmallBox}
+              onPress={() => images[2] && onImagePress(images[2], images)}
+              activeOpacity={images[2] ? 0.85 : 1}
+            >
+              {images[2] ? (
+                <Image source={{ uri: getImageUri(images[2]) }} style={uiStyles.portfolioImage} />
+              ) : (
+                <Text style={uiStyles.plusIcon}>+</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Row 3: 3 equal square boxes */}
+        <View style={uiStyles.portfolioThreeRow}>
+          {[3, 4, 5].map((idx) => (
+            <TouchableOpacity
+              key={idx}
+              style={uiStyles.portfolioSquareBox}
+              onPress={() => images[idx] && onImagePress(images[idx], images)}
+              activeOpacity={images[idx] ? 0.85 : 1}
+            >
+              {images[idx] ? (
+                <Image source={{ uri: getImageUri(images[idx]) }} style={uiStyles.portfolioImage} />
+              ) : (
+                <Text style={uiStyles.plusIcon}>+</Text>
+              )}
+            </TouchableOpacity>
           ))}
         </View>
-      )}
+
+        {/* Row 4: 3 equal square boxes */}
+        <View style={uiStyles.portfolioThreeRow}>
+          {[6, 7, 8].map((idx) => (
+            <TouchableOpacity
+              key={idx}
+              style={uiStyles.portfolioSquareBox}
+              onPress={() => images[idx] && onImagePress(images[idx], images)}
+              activeOpacity={images[idx] ? 0.85 : 1}
+            >
+              {images[idx] ? (
+                <Image source={{ uri: getImageUri(images[idx]) }} style={uiStyles.portfolioImage} />
+              ) : (
+                <Text style={uiStyles.plusIcon}>+</Text>
+              )}
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Row 5: 1 full-width horizontal bar box */}
+        <TouchableOpacity
+          style={uiStyles.portfolioFullBar}
+          onPress={() => images[9] && onImagePress(images[9], images)}
+          activeOpacity={images[9] ? 0.85 : 1}
+        >
+          {images[9] ? (
+            <Image source={{ uri: getImageUri(images[9]) }} style={uiStyles.portfolioImage} />
+          ) : (
+            <Text style={uiStyles.plusIcon}>+</Text>
+          )}
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -747,7 +877,7 @@ const getStyles = (currentTheme) =>
       backgroundColor: currentTheme.background || "#FFFFFF",
     },
     scrollContent: {
-      paddingBottom: 28,
+      paddingBottom: 32,
     },
     centered: {
       flex: 1,
@@ -770,444 +900,555 @@ const getProfileStyles = (currentTheme) => {
   const card = currentTheme.cardBackground || surface;
   const text = currentTheme.text || TEXT;
   const muted = currentTheme.subText || MUTED;
-  const border = currentTheme.border || BORDER;
-  const softSurface = currentTheme.background3 || "#F6F3FA";
-  const badgeSurface = currentTheme.background2 || SOFT_PURPLE;
-  const tabSurface = surface === "#000000" ? "#13091F" : DEEP_PURPLE;
+  const border = currentTheme.border || "#E5E7EB";
 
   return StyleSheet.create({
-  iconColor: {
-    color: text,
-  },
-  hero: {
-    paddingHorizontal: 22,
-    paddingTop: 8,
-    paddingBottom: 24,
-    alignItems: "center",
-    backgroundColor: surface,
-  },
-  topBar: {
-    width: "100%",
-    minHeight: 44,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 8,
-  },
-  iconButton: {
-    width: 44,
-    height: 44,
-    justifyContent: "center",
-    alignItems: "flex-start",
-  },
-  shareButton: {
-    minHeight: 44,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  shareText: {
-    color: PURPLE,
-    fontSize: 18,
-    fontWeight: "700",
-  },
-  avatarButton: {
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  avatarRing: {
-    width: 146,
-    height: 146,
-    borderRadius: 73,
-    borderWidth: 3,
-    borderColor: "#B05CFF",
-    padding: 5,
-    backgroundColor: surface,
-    shadowColor: PURPLE,
-    shadowOpacity: 0.22,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 5,
-  },
-  avatar: {
-    width: "100%",
-    height: "100%",
-    borderRadius: 68,
-    backgroundColor: softSurface,
-  },
-  statusDot: {
-    position: "absolute",
-    right: 13,
-    bottom: 12,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "#A857F4",
-    borderWidth: 5,
-    borderColor: surface,
-  },
-  statusDotMuted: {
-    backgroundColor: "#B9B1C6",
-  },
-  name: {
-    marginTop: 18,
-    color: text,
-    fontSize: 34,
-    fontWeight: "800",
-    textAlign: "center",
-  },
-  title: {
-    marginTop: 8,
-    color: muted,
-    fontSize: 19,
-    textAlign: "center",
-    textTransform: "capitalize",
-  },
-  ratingRow: {
-    marginTop: 18,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    flexWrap: "wrap",
-  },
-  ratingText: {
-    color: text,
-    fontSize: 19,
-    fontWeight: "800",
-  },
-  reviewCount: {
-    color: muted,
-    fontSize: 18,
-  },
-  badge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 7,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 18,
-    backgroundColor: badgeSurface,
-    borderWidth: 1,
-    borderColor: "#E4CAFF",
-  },
-  badgeText: {
-    color: PURPLE,
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  tabShell: {
-    marginHorizontal: 20,
-    marginTop: 2,
-    borderRadius: 18,
-    backgroundColor: tabSurface,
-    flexDirection: "row",
-    paddingHorizontal: 10,
-    paddingTop: 10,
-    height: 60,
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 5,
-  },
-  tabButton: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "flex-start",
-  },
-  tabText: {
-    color: "#A8A6B0",
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  tabTextActive: {
-    color: "#C36DFF",
-  },
-  tabIndicator: {
-    height: 4,
-    width: "78%",
-    borderRadius: 3,
-    backgroundColor: "transparent",
-    marginTop: 8,
-  },
-  tabIndicatorActive: {
-    backgroundColor: "#B65CFF",
-  },
-  section: {
-    paddingHorizontal: 26,
-    paddingTop: 28,
-  },
-  sectionTitle: {
-    color: text,
-    fontSize: 23,
-    fontWeight: "800",
-    marginBottom: 18,
-    marginTop: 6,
-  },
-  description: {
-    color: muted,
-    fontSize: 17,
-    lineHeight: 25,
-    marginBottom: 22,
-  },
-  infoList: {
-    borderTopWidth: 1,
-    borderTopColor: border,
-    marginBottom: 26,
-  },
-  infoRow: {
-    minHeight: 72,
-    borderBottomWidth: 1,
-    borderBottomColor: border,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 16,
-  },
-  infoLabel: {
-    flex: 1.2,
-    color: muted,
-    fontSize: 16,
-  },
-  infoValue: {
-    flex: 1.45,
-    color: text,
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  chips: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-    marginBottom: 30,
-  },
-  skillChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 11,
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: "#C995FF",
-    backgroundColor: card,
-  },
-  skillText: {
-    color: PURPLE,
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  certCard: {
-    borderWidth: 1,
-    borderColor: border,
-    borderRadius: 12,
-    padding: 18,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 16,
-    marginBottom: 12,
-    backgroundColor: card,
-  },
-  certTextWrap: {
-    flex: 1,
-  },
-  certTitle: {
-    color: text,
-    fontSize: 16,
-    fontWeight: "800",
-  },
-  certSubtitle: {
-    color: muted,
-    fontSize: 15,
-    marginTop: 6,
-  },
-  serviceCard: {
-    minHeight: 144,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: border,
-    backgroundColor: card,
-    padding: 12,
-    marginBottom: 14,
-    flexDirection: "row",
-    alignItems: "center",
-    shadowColor: "#2C1B3F",
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 2,
-  },
-  serviceImageWrap: {
-    width: 112,
-    height: 112,
-    borderRadius: 10,
-    backgroundColor: softSurface,
-    borderWidth: 1,
-    borderColor: border,
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
-  },
-  serviceImage: {
-    width: "100%",
-    height: "100%",
-  },
-  serviceImageText: {
-    color: muted,
-    fontSize: 16,
-    textAlign: "center",
-  },
-  serviceBody: {
-    flex: 1,
-    paddingHorizontal: 16,
-  },
-  serviceTitle: {
-    color: text,
-    fontSize: 19,
-    fontWeight: "800",
-    lineHeight: 25,
-  },
-  serviceDescription: {
-    color: muted,
-    fontSize: 14,
-    lineHeight: 20,
-    marginTop: 6,
-  },
-  serviceMeta: {
-    alignItems: "flex-end",
-    justifyContent: "center",
-    gap: 8,
-  },
-  fromText: {
-    color: muted,
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  reviewSummary: {
-    borderRadius: 16,
-    backgroundColor: badgeSurface,
-    alignItems: "center",
-    paddingVertical: 22,
-    marginBottom: 18,
-  },
-  summaryRating: {
-    color: PURPLE,
-    fontSize: 46,
-    fontWeight: "900",
-  },
-  summaryLabel: {
-    color: text,
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  summaryCount: {
-    color: muted,
-    fontSize: 15,
-    marginTop: 4,
-  },
-  reviewCard: {
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: border,
-    padding: 16,
-    marginBottom: 14,
-    backgroundColor: card,
-  },
-  reviewHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  reviewAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: softSurface,
-  },
-  reviewMeta: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  reviewerName: {
-    color: text,
-    fontSize: 16,
-    fontWeight: "800",
-  },
-  reviewStars: {
-    flexDirection: "row",
-    gap: 3,
-    marginTop: 4,
-  },
-  reviewDate: {
-    color: muted,
-    fontSize: 12,
-  },
-  reviewText: {
-    color: muted,
-    fontSize: 15,
-    lineHeight: 22,
-    marginTop: 14,
-  },
-  portfolioPanel: {
-    marginTop: -1,
-    paddingHorizontal: 24,
-    paddingTop: 30,
-    paddingBottom: 26,
-    backgroundColor: card,
-  },
-  portfolioGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-  },
-  portfolioTile: {
-    width: "31.6%",
-    aspectRatio: 1,
-    borderRadius: 10,
-    overflow: "hidden",
-    backgroundColor: softSurface,
-  },
-  portfolioTileLarge: {
-    width: "64.8%",
-    aspectRatio: 1,
-  },
-  portfolioImage: {
-    width: "100%",
-    height: "100%",
-  },
-  portfolioPlaceholder: {
-    width: "31.6%",
-    aspectRatio: 1,
-    borderRadius: 10,
-    backgroundColor: softSurface,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  portfolioPlaceholderLarge: {
-    width: "64.8%",
-    aspectRatio: 1,
-  },
-  plus: {
-    color: "#8E73C6",
-    fontSize: 36,
-    fontWeight: "300",
-  },
-  emptyState: {
-    minHeight: 220,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: border,
-    backgroundColor: card,
-    padding: 18,
-  },
-  emptyTitle: {
-    color: muted,
-    fontSize: 16,
-    fontWeight: "700",
-    marginTop: 10,
-    textAlign: "center",
-  },
-  emptyText: {
-    color: muted,
-    fontSize: 16,
-  },
-});
+    iconColor: {
+      color: text,
+    },
+    hero: {
+      paddingHorizontal: 20,
+      paddingTop: 8,
+      paddingBottom: 16,
+      alignItems: "center",
+      backgroundColor: surface,
+    },
+    topBar: {
+      width: "100%",
+      height: 44,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 12,
+    },
+    iconButton: {
+      width: 40,
+      height: 40,
+      alignItems: "flex-start",
+      justifyContent: "center",
+    },
+    shareButton: {
+      height: 40,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
+    shareText: {
+      color: PURPLE,
+      fontSize: 15,
+      fontWeight: "600",
+    },
+    avatarButton: {
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    avatarRing: {
+      width: 124,
+      height: 124,
+      borderRadius: 62,
+      borderWidth: 2.5,
+      borderColor: "#B05CFF",
+      padding: 3,
+      backgroundColor: surface,
+    },
+    avatar: {
+      width: "100%",
+      height: "100%",
+      borderRadius: 58,
+      backgroundColor: "#F3EAFF",
+    },
+    statusDot: {
+      position: "absolute",
+      right: 4,
+      bottom: 4,
+      width: 22,
+      height: 22,
+      borderRadius: 11,
+      backgroundColor: "#A857F4",
+      borderWidth: 3,
+      borderColor: surface,
+    },
+    statusDotMuted: {
+      backgroundColor: "#B9B1C6",
+    },
+    name: {
+      marginTop: 14,
+      color: text,
+      fontSize: 24,
+      fontWeight: "700",
+      textAlign: "center",
+    },
+    title: {
+      marginTop: 4,
+      color: muted,
+      fontSize: 15,
+      textAlign: "center",
+      textTransform: "lowercase",
+    },
+    ratingRow: {
+      marginTop: 12,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+    },
+    ratingText: {
+      color: text,
+      fontSize: 15,
+      fontWeight: "700",
+    },
+    reviewCount: {
+      color: muted,
+      fontSize: 14,
+    },
+    badge: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      paddingHorizontal: 12,
+      paddingVertical: 5,
+      borderRadius: 16,
+      backgroundColor: "#F3EAFF",
+      borderWidth: 1,
+      borderColor: "#E4CAFF",
+    },
+    badgeText: {
+      color: PURPLE,
+      fontSize: 13,
+      fontWeight: "600",
+    },
+    tabShell: {
+      marginHorizontal: 16,
+      marginVertical: 14,
+      borderRadius: 16,
+      backgroundColor: "#181528",
+      flexDirection: "row",
+      alignItems: "center",
+      height: 50,
+      paddingHorizontal: 4,
+    },
+    tabButton: {
+      flex: 1,
+      height: "100%",
+      alignItems: "center",
+      justifyContent: "center",
+      position: "relative",
+    },
+    tabText: {
+      color: "#94A3B8",
+      fontSize: 14,
+      fontWeight: "500",
+    },
+    tabTextActive: {
+      color: "#C36DFF",
+      fontWeight: "600",
+    },
+    tabIndicatorActive: {
+      position: "absolute",
+      bottom: 4,
+      width: "70%",
+      height: 2.5,
+      borderRadius: 2,
+      backgroundColor: "#B65CFF",
+    },
+    section: {
+      paddingHorizontal: 20,
+      paddingTop: 12,
+    },
+    sectionTitle: {
+      color: text,
+      fontSize: 18,
+      fontWeight: "700",
+      marginBottom: 8,
+      marginTop: 18,
+    },
+    description: {
+      color: muted,
+      fontSize: 14,
+      lineHeight: 21,
+      marginBottom: 16,
+    },
+    infoList: {
+      borderTopWidth: 1,
+      borderTopColor: border,
+    },
+    infoRow: {
+      paddingVertical: 14,
+      borderBottomWidth: 1,
+      borderBottomColor: border,
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    infoLabel: {
+      flex: 1.2,
+      color: muted,
+      fontSize: 14,
+      marginLeft: 14,
+    },
+    infoValue: {
+      flex: 1.5,
+      color: text,
+      fontSize: 14,
+      fontWeight: "500",
+    },
+    languageList: {
+      borderTopWidth: 1,
+      borderTopColor: border,
+      marginBottom: 8,
+    },
+    chips: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 10,
+      marginBottom: 12,
+    },
+    skillChip: {
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: "#E9D5FF",
+      backgroundColor: card,
+    },
+    skillText: {
+      color: PURPLE,
+      fontSize: 13,
+      fontWeight: "500",
+    },
+    certCard: {
+      borderWidth: 1,
+      borderColor: border,
+      borderRadius: 12,
+      padding: 16,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 14,
+      marginBottom: 12,
+      backgroundColor: card,
+    },
+    certTextWrap: {
+      flex: 1,
+    },
+    certTitle: {
+      color: text,
+      fontSize: 14,
+      fontWeight: "700",
+    },
+    certSubtitle: {
+      color: muted,
+      fontSize: 13,
+      marginTop: 4,
+    },
+    serviceCard: {
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: border,
+      backgroundColor: card,
+      padding: 12,
+      marginBottom: 12,
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    serviceImageWrap: {
+      width: 90,
+      height: 90,
+      borderRadius: 10,
+      backgroundColor: "#F4F5F7",
+      alignItems: "center",
+      justifyContent: "center",
+      overflow: "hidden",
+    },
+    serviceImage: {
+      width: "100%",
+      height: "100%",
+    },
+    serviceImageText: {
+      color: "#9CA3AF",
+      fontSize: 13,
+      textAlign: "center",
+    },
+    serviceBody: {
+      flex: 1,
+      marginLeft: 14,
+      justifyContent: "space-between",
+      height: 85,
+    },
+    serviceTitle: {
+      color: text,
+      fontSize: 14,
+      fontWeight: "600",
+      lineHeight: 19,
+    },
+    servicePriceRow: {
+      alignSelf: "flex-end",
+      flexDirection: "row",
+      alignItems: "baseline",
+    },
+    fromPrefix: {
+      color: muted,
+      fontSize: 13,
+      fontWeight: "400",
+    },
+    priceText: {
+      color: PURPLE,
+      fontSize: 16,
+      fontWeight: "700",
+    },
+    summaryCard: {
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: border,
+      backgroundColor: card,
+      padding: 18,
+      marginBottom: 20,
+    },
+    summaryTop: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      justifyContent: "space-between",
+      borderBottomWidth: 1,
+      borderBottomColor: border,
+      paddingBottom: 16,
+      marginBottom: 16,
+    },
+    summaryRating: {
+      color: "#8B5CF6",
+      fontSize: 46,
+      fontWeight: "900",
+      lineHeight: 52,
+    },
+    summaryStars: {
+      flexDirection: "row",
+      gap: 4,
+      marginTop: 4,
+    },
+    summaryCountBox: {
+      alignItems: "flex-end",
+    },
+    summaryCount: {
+      color: text,
+      fontSize: 32,
+      fontWeight: "800",
+    },
+    summaryLabel: {
+      color: muted,
+      fontSize: 14,
+      fontWeight: "600",
+      marginTop: 2,
+    },
+    ratingBars: {
+      gap: 10,
+    },
+    ratingBarRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+    },
+    ratingBarLabel: {
+      width: 14,
+      color: text,
+      fontSize: 14,
+      fontWeight: "700",
+    },
+    ratingBarTrack: {
+      flex: 1,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: "#F3F4F6",
+      overflow: "hidden",
+    },
+    ratingBarFill: {
+      height: "100%",
+      borderRadius: 4,
+      backgroundColor: "#8B5CF6",
+    },
+    ratingBarCount: {
+      width: 20,
+      color: muted,
+      fontSize: 14,
+      textAlign: "right",
+      fontWeight: "600",
+    },
+    recentReviewsHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginTop: 6,
+      marginBottom: 14,
+    },
+    recentReviewsTitle: {
+      color: text,
+      fontSize: 22,
+      fontWeight: "800",
+    },
+    recentReviewsMeta: {
+      color: muted,
+      fontSize: 15,
+      fontWeight: "600",
+    },
+    reviewEmptyCard: {
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: border,
+      backgroundColor: card,
+      paddingVertical: 36,
+      paddingHorizontal: 20,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    purpleIconBox: {
+      width: 48,
+      height: 48,
+      borderRadius: 14,
+      backgroundColor: "#8B5CF6",
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: 14,
+    },
+    reviewEmptyTitle: {
+      color: text,
+      fontSize: 18,
+      fontWeight: "800",
+      marginBottom: 6,
+    },
+    reviewEmptySubtitle: {
+      color: muted,
+      fontSize: 14,
+      textAlign: "center",
+      lineHeight: 20,
+    },
+    reviewCard: {
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: border,
+      padding: 16,
+      marginBottom: 12,
+      backgroundColor: card,
+    },
+    reviewHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    reviewAvatar: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: "#F3EAFF",
+    },
+    reviewMeta: {
+      flex: 1,
+      marginLeft: 12,
+    },
+    reviewerName: {
+      color: text,
+      fontSize: 15,
+      fontWeight: "700",
+    },
+    reviewStars: {
+      flexDirection: "row",
+      gap: 3,
+      marginTop: 3,
+    },
+    reviewDate: {
+      color: muted,
+      fontSize: 12,
+    },
+    reviewText: {
+      color: muted,
+      fontSize: 14,
+      lineHeight: 20,
+      marginTop: 12,
+    },
+    portfolioPanel: {
+      paddingHorizontal: 16,
+      paddingTop: 12,
+    },
+    portfolioContainer: {
+      backgroundColor: card,
+      borderRadius: 16,
+      padding: 14,
+    },
+    portfolioTopRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginBottom: 10,
+    },
+    portfolioTallBox: {
+      width: "48.5%",
+      height: 200,
+      borderRadius: 12,
+      backgroundColor: "#F5F3FA",
+      alignItems: "center",
+      justifyContent: "center",
+      overflow: "hidden",
+    },
+    portfolioRightCol: {
+      width: "48.5%",
+      height: 200,
+      justifyContent: "space-between",
+    },
+    portfolioSmallBox: {
+      width: "100%",
+      height: 95,
+      borderRadius: 12,
+      backgroundColor: "#F5F3FA",
+      alignItems: "center",
+      justifyContent: "center",
+      overflow: "hidden",
+    },
+    portfolioThreeRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginBottom: 10,
+    },
+    portfolioSquareBox: {
+      width: "31.5%",
+      aspectRatio: 1,
+      borderRadius: 12,
+      backgroundColor: "#F5F3FA",
+      alignItems: "center",
+      justifyContent: "center",
+      overflow: "hidden",
+    },
+    portfolioFullBar: {
+      width: "100%",
+      height: 56,
+      borderRadius: 12,
+      backgroundColor: "#F5F3FA",
+      alignItems: "center",
+      justifyContent: "center",
+      overflow: "hidden",
+    },
+    plusIcon: {
+      color: "#A855F7",
+      fontSize: 28,
+      fontWeight: "300",
+    },
+    portfolioImage: {
+      width: "100%",
+      height: "100%",
+    },
+    emptyState: {
+      minHeight: 180,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: border,
+      backgroundColor: card,
+      padding: 16,
+    },
+    emptyTitle: {
+      color: muted,
+      fontSize: 15,
+      fontWeight: "600",
+      marginTop: 10,
+      textAlign: "center",
+    },
+    emptyText: {
+      color: muted,
+      fontSize: 14,
+    },
+  });
 };
+
