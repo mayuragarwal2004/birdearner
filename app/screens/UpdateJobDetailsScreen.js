@@ -31,11 +31,8 @@ const UpdateJobDetailsScreen = ({ route, navigation }) => {
   const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
   const [portfolioImages, setPortfolioImages] = useState([]);
   
-  // Budget and wallet management
-  const [walletData, setWalletData] = useState(null);
-  const [walletLoading, setWalletLoading] = useState(false);
+  // Budget management
   const [budgetError, setBudgetError] = useState("");
-  const [showWalletInfo, setShowWalletInfo] = useState(false);
   const [budgetValidating, setBudgetValidating] = useState(false);
   
   // Skills management
@@ -83,23 +80,6 @@ const UpdateJobDetailsScreen = ({ route, navigation }) => {
     }
   };
 
-  const fetchWalletData = async () => {
-    try {
-      setWalletLoading(true);
-      await apiService.init();
-      const response = await apiService.getClientWalletInfo();
-      console.log("Wallet data fetched:", response);
-      if (response.success) {
-                setWalletData(response.data);
-      }
-    } catch (error) {
-      console.error("Error fetching wallet data:", error);
-      setWalletData(null);
-    } finally {
-      setWalletLoading(false);
-    }
-  };
-
   const validateBudget = (budgetValue) => {
     const budgetNum = parseFloat(budgetValue);
     setBudgetError("");
@@ -110,30 +90,13 @@ const UpdateJobDetailsScreen = ({ route, navigation }) => {
       return false;
     }
 
-    if (!walletData || !job) {
-      setBudgetError("Unable to verify wallet balance. Please try again.");
-      return false;
-    }
-
-    // Calculate max allowed budget: available balance + current job budget
-    const currentJobBudget = parseFloat(job.budget) || 0;
-    const maxAllowedBudget = walletData.availableBalance + currentJobBudget;
-
-    if (budgetNum > maxAllowedBudget) {
-      setBudgetError(
-        `Maximum budget allowed: ₹${maxAllowedBudget.toFixed(2)} (Available: ₹${walletData.availableBalance?.toFixed(2)} + Current: ₹${currentJobBudget.toFixed(2)})`
-      );
-      return false;
-    }
-
     return true;
   };
 
   const handleBudgetChange = (value) => {
     setUpdatedJob({ ...updatedJob, budget: value });
-    if (value && walletData) {
+    if (value) {
       setBudgetValidating(true);
-      // Add a slight delay to show loading state
       setTimeout(() => {
         validateBudget(value);
       }, 300);
@@ -164,12 +127,13 @@ const UpdateJobDetailsScreen = ({ route, navigation }) => {
   
   useEffect(() => {
     fetchJobDetails();
-    fetchWalletData();
   }, [jobId]);
 
   useEffect(() => {
     if (isEditing) {
-      fetchWalletData();
+      // Reset budget validation state when entering edit mode
+      setBudgetError("");
+      setBudgetValidating(false);
     }
   }, [isEditing]);
 
@@ -253,22 +217,8 @@ const UpdateJobDetailsScreen = ({ route, navigation }) => {
       setIsEditing(false);
       setBudgetError("");
       
-      // Show success message with wallet update info if present
-      let successMessage = "Job updated successfully!";
-      if (response.walletUpdate) {
-        const { budgetDifference, newAvailableBalance } = response.walletUpdate;
-        if (budgetDifference > 0) {
-          successMessage += `\n\nBudget increased by ₹${budgetDifference.toFixed(2)}`;
-        } else if (budgetDifference < 0) {
-          successMessage += `\n\nBudget decreased by ₹${Math.abs(budgetDifference).toFixed(2)}`;
-        }
-        successMessage += `\nNew available balance: ₹${newAvailableBalance.toFixed(2)}`;
-      }
+      Alert.alert("Success", "Job updated successfully!");
       
-      Alert.alert("Success", successMessage);
-      
-      // Refresh wallet data to reflect changes
-      fetchWalletData();
       fetchJobDetails();
     } catch (error) {
       console.error("Error updating job:", error);
@@ -361,55 +311,11 @@ const UpdateJobDetailsScreen = ({ route, navigation }) => {
 
       {/* Budget */}
       <View style={styles.budgetSection}>
-        <View style={styles.budgetHeader}>
-          <Text style={styles.label1}>Budget</Text>
-          <TouchableOpacity
-            onPress={() => setShowWalletInfo(!showWalletInfo)}
-            style={styles.walletToggle}
-          >
-            <Ionicons
-              name={showWalletInfo ? "wallet" : "wallet-outline"}
-              size={18}
-              color="#6A0DAD"
-            />
-            <Text style={styles.walletToggleText}>
-              {walletLoading ? "Loading..." : "Wallet Info"}
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {showWalletInfo && walletData && (
-          <View style={styles.walletInfoContainer}>
-            <View style={styles.walletInfoRow}>
-              <Text style={styles.walletInfoLabel}>Available Balance:</Text>
-              <Text style={styles.walletInfoAmount}>
-                ₹{walletData.availableBalance?.toFixed(2) || "0.00"}
-              </Text>
-            </View>
-            {walletData.reservedAmount > 0 && (
-              <View style={styles.walletInfoRow}>
-                <Text style={styles.walletInfoLabel}>Reserved:</Text>
-                <Text style={styles.walletInfoReserved}>
-                  ₹{walletData.reservedAmount?.toFixed(2)}
-                </Text>
-              </View>
-            )}
-            <View style={styles.walletInfoRow}>
-              <Text style={styles.walletInfoLabel}>Total Balance:</Text>
-              <Text style={styles.walletInfoTotal}>
-                ₹{walletData.totalBalance?.toFixed(2) || "0.00"}
-              </Text>
-            </View>
-          </View>
-        )}
+        <Text style={styles.label1}>Budget</Text>
 
         <TextInput
           style={[styles.input1, budgetError ? styles.inputError : null]}
-          placeholder={
-            walletData && job
-              ? `Max: ₹${(walletData.availableBalance + parseFloat(job.budget || 0)).toFixed(2)}`
-              : "Enter budget amount"
-          }
+          placeholder="Enter budget amount"
           keyboardType="numeric"
           value={updatedJob.budget?.toString()}
           onChangeText={handleBudgetChange}
@@ -427,15 +333,6 @@ const UpdateJobDetailsScreen = ({ route, navigation }) => {
         {budgetError ? (
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>{budgetError}</Text>
-            {walletData && job && parseFloat(updatedJob.budget || 0) > (walletData.availableBalance + parseFloat(job.budget || 0)) && (
-              <TouchableOpacity
-                style={styles.addMoneyButton}
-                onPress={() => navigation.navigate('Wallet')}
-              >
-                <Ionicons name="add-circle-outline" size={16} color="#6A0DAD" />
-                <Text style={styles.addMoneyText}>Add Money to Wallet</Text>
-              </TouchableOpacity>
-            )}
           </View>
         ) : null}
       </View>
@@ -974,54 +871,6 @@ const getStyles = (currentTheme) =>
       alignItems: "center",
       marginBottom: 8,
     },
-    walletToggle: {
-      flexDirection: "row",
-      alignItems: "center",
-      paddingVertical: 4,
-      paddingHorizontal: 8,
-      backgroundColor: "#f0f0f0",
-      borderRadius: 12,
-      gap: 4,
-    },
-    walletToggleText: {
-      fontSize: 12,
-      color: "#6A0DAD",
-      fontWeight: "500",
-    },
-    walletInfoContainer: {
-      backgroundColor: "#f8f9fa",
-      padding: 12,
-      borderRadius: 8,
-      marginBottom: 10,
-      borderWidth: 1,
-      borderColor: "#e9ecef",
-    },
-    walletInfoRow: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
-      marginBottom: 6,
-    },
-    walletInfoLabel: {
-      fontSize: 14,
-      color: "#6c757d",
-      fontWeight: "500",
-    },
-    walletInfoAmount: {
-      fontSize: 14,
-      color: "#28A745",
-      fontWeight: "600",
-    },
-    walletInfoReserved: {
-      fontSize: 14,
-      color: "#FFC107",
-      fontWeight: "600",
-    },
-    walletInfoTotal: {
-      fontSize: 14,
-      color: "#343a40",
-      fontWeight: "600",
-    },
     inputError: {
       borderColor: "#DC3545",
       borderWidth: 1.5,
@@ -1035,21 +884,6 @@ const getStyles = (currentTheme) =>
       fontSize: 12,
       color: "#DC3545",
       marginBottom: 5,
-    },
-    addMoneyButton: {
-      flexDirection: "row",
-      alignItems: "center",
-      paddingVertical: 6,
-      paddingHorizontal: 12,
-      backgroundColor: "#f8f9ff",
-      borderRadius: 12,
-      alignSelf: "flex-start",
-      gap: 4,
-    },
-    addMoneyText: {
-      fontSize: 12,
-      color: "#6A0DAD",
-      fontWeight: "600",
     },
     budgetValidationContainer: {
       marginTop: 5,
