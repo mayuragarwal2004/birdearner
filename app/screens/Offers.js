@@ -125,6 +125,8 @@ const OffersScreen = ({ navigation }) => {
       .map(() => new Animated.Value(0))
   ).current;
 
+  const claimedOfferIds = useRef(new Set());
+
   useEffect(() => {
     const checkRules = async () => {
       const rulePopUpShown = await AsyncStorage.getItem("offer-rules-shown");
@@ -154,6 +156,7 @@ const OffersScreen = ({ navigation }) => {
       const response = await apiService.getOffersData();
       console.log({ response });
 
+      claimedOfferIds.current.clear();
       setAvailableOffers(response.availableOffers || []);
       const { discoveredOffers } = response;
 
@@ -208,7 +211,6 @@ const OffersScreen = ({ navigation }) => {
 
     if (firstAvailableEggIndex !== index || availableOffers.length == 0) {
       startShakeAnimation(index);
-      // timeout and stop
       await wait(2000);
       stopShakeAnimation(index);
       return;
@@ -219,41 +221,47 @@ const OffersScreen = ({ navigation }) => {
     try {
       if (firstAvailableEggIndex === index && availableOffers.length > 0) {
         startShakeAnimation(index);
-        // timeout and stop
         waitingPromise = wait(2000);
 
-        if (availableOffers.keys()) {
-          const offer =
-            availableOffers[Math.floor(Math.random() * availableOffers.length)];
-
-          const response = await apiService.updateOfferData({
-            offerId: offer.id,
-            index,
-          });
-
-          console.log({ updatedresponse: response });
-
+        const unclaimedOffers = availableOffers.filter(o => !claimedOfferIds.current.has(o.id));
+        if (unclaimedOffers.length === 0) {
           Promise.resolve(waitingPromise);
           stopShakeAnimation(index);
+          return;
+        }
 
-          if (response.success && offer) {
-            if (offer.amount > 0) {
-              const updatedBrokenEggs = [...brokenEggs];
-              updatedBrokenEggs[index] = true;
-              setBrokenEggs(updatedBrokenEggs);
-              setShowOfferPopup(true);
-              setSelectedOffer(offer);
-            } else {
-              setShowVideoPopup(true);
-            }
+        const offer = unclaimedOffers[Math.floor(Math.random() * unclaimedOffers.length)];
+        claimedOfferIds.current.add(offer.id);
+
+        const response = await apiService.updateOfferData({
+          offerId: offer.id,
+          index,
+        });
+
+        console.log({ updatedresponse: response });
+
+        Promise.resolve(waitingPromise);
+        stopShakeAnimation(index);
+
+        if (response.success && offer) {
+          setAvailableOffers((prev) => prev.filter((o) => o.id !== offer.id));
+          if (offer.amount > 0) {
+            const updatedBrokenEggs = [...brokenEggs];
+            updatedBrokenEggs[index] = true;
+            setBrokenEggs(updatedBrokenEggs);
+            setShowOfferPopup(true);
+            setSelectedOffer(offer);
           } else {
-            console.log({ error: response.error });
-            Toast.show({
-              type: "error",
-              text1: "Error updating offer data",
-              text2: "Please try again later",
-            });
+            setShowVideoPopup(true);
           }
+        } else {
+          claimedOfferIds.current.delete(offer.id);
+          console.log({ error: response.error });
+          Toast.show({
+            type: "error",
+            text1: "Error updating offer data",
+            text2: "Please try again later",
+          });
         }
       }
     } catch (error) {
@@ -357,9 +365,9 @@ const OffersScreen = ({ navigation }) => {
             <Text style={styles.popupTitle}>Congratulations!</Text>
             <Text style={styles.popupText}>
               {selectedOffer?.amountType === "LUMPSUM"
-                ? `You have earned a cashback of ₹${selectedOffer.amount}`
+                ? `You have earned cashback of ₹${selectedOffer.amount} on minimum job booking ₹${selectedOffer.minBooking}+`
                 : selectedOffer?.amountType === "PERCENT"
-                ? `You have won cashback of ${selectedOffer.amount}% on your next job!`
+                ? `You have earned ${selectedOffer.amount}% cashback (up to ₹${selectedOffer.maxDiscount}) on minimum job booking ₹${selectedOffer.minBooking}+`
                 : null}
             </Text>
             <TouchableOpacity style={styles.popupButton} onPress={closePopup}>
