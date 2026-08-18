@@ -52,9 +52,20 @@ export const calculateBirdFee = (budget, birdFee) => {
   }
 
   // If no rule matched, fallback to the last bracket (consistent with server behavior)
-  if (!applicableRule) {
+  if (!applicableRule && birdFee.feeStructure.length > 0) {
     const last = birdFee.feeStructure[birdFee.feeStructure.length - 1];
     applicableRule = last;
+  }
+
+  // If still no rule, return zero fee
+  if (!applicableRule || !applicableRule.feeType) {
+    return {
+      feeAmount: 0,
+      applicableRule: null,
+      isValid: true,
+      error: null,
+      displayText: 'No service fee'
+    };
   }
 
   // Calculate fee based on type

@@ -1086,9 +1086,10 @@ const ClientChat = ({ route, navigation }) => {
             onViewProposalDetails={() => {
               navigation.navigate("JobDetailsChat", { jobId: job?.id || route.params.jobId });
             }}
+            jobId={job?.id || route.params.jobId}
           />
 
-          <View style={{ flex: 1 }}>
+          <View style={{ flex: 2 }}>
             {renderDeadlineSection()}
 
             <FlatList

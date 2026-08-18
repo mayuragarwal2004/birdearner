@@ -66,6 +66,8 @@ const JobRequirementsScreen = ({ navigation }) => {
   const [budget, setBudget] = useState("");
   const [budgetError, setBudgetError] = useState("");
   const [budgetValidating, setBudgetValidating] = useState(false);
+  const [availableCoupons, setAvailableCoupons] = useState([]);
+  const [selectedCoupon, setSelectedCoupon] = useState(null);
   const [datePickerMode, setDatePickerMode] = useState(null); // 'start' | 'end'
   const [skills, setSkills] = useState([""]);
   const [jobDes, setJobDes] = useState("");
@@ -212,7 +214,17 @@ const JobRequirementsScreen = ({ navigation }) => {
 
   useEffect(() => {
     loadDraft();
+    fetchAvailableCoupons();
   }, []);
+
+  const fetchAvailableCoupons = async () => {
+    try {
+      const response = await apiService.getOffersData();
+      setAvailableCoupons(response.discoveredOffers || []);
+    } catch (error) {
+      console.error("Error fetching coupons:", error);
+    }
+  };
 
   const loadDraft = async () => {
     try {
@@ -262,22 +274,26 @@ const JobRequirementsScreen = ({ navigation }) => {
       if (budgetNum < minBudget || budgetNum > maxBudget) {
         const rangeMessage =
           maxBudget === Infinity
-            ? `Budget must be at least ₹${minBudget.toFixed(2)}`
+            ? `Budget must be at least ₹${minBudget}`
             : minBudget === 0
-            ? `Budget must be ₹${maxBudget.toFixed(2)} or less`
-            : `Budget must be between ₹${minBudget.toFixed(2)} and ₹${maxBudget.toFixed(2)}`;
+            ? `Budget must be ₹${maxBudget} or less`
+            : `Budget must be between ₹${minBudget} and ₹${maxBudget}`;
 
         setBudgetError(rangeMessage);
         return false;
       }
 
-      const feeResult = calculateBirdFee(budgetNum, birdFee);
-      if (!feeResult.isValid) {
-        setBudgetError(feeResult.error);
+      if (birdFee && birdFee.feeStructure && birdFee.feeStructure.length > 0) {
+        const feeResult = calculateBirdFee(budgetNum, birdFee);
+        if (!feeResult.isValid) {
+          setBudgetError(feeResult.error);
+          setCalculatedBirdFee(null);
+          return false;
+        }
+        setCalculatedBirdFee(feeResult);
+      } else {
         setCalculatedBirdFee(null);
-        return false;
       }
-      setCalculatedBirdFee(feeResult);
       return true;
     }
 
@@ -625,7 +641,7 @@ const JobRequirementsScreen = ({ navigation }) => {
     if (jobType === "On-site") {
       if (latitude && longitude) {
         await AsyncStorage.removeItem(DRAFT_KEY);
-        navigation.navigate("JobDetails", { formData });
+        navigation.navigate("JobDetails", { formData: { ...formData, selectedCoupon } });
       } else {
         Alert.alert("Validation Error", "Please set the job location coordinates.");
       }
@@ -636,6 +652,7 @@ const JobRequirementsScreen = ({ navigation }) => {
         jobLocation: "Remote Work",
         latitude: 0,
         longitude: 0,
+        selectedCoupon,
       };
       await AsyncStorage.removeItem(DRAFT_KEY);
       navigation.navigate("JobDetails", { formData: updatedFormData });
@@ -973,6 +990,56 @@ const JobRequirementsScreen = ({ navigation }) => {
           ) : budgetValidating ? (
             <Text style={styles.validatingText}>Validating budget...</Text>
           ) : null}
+
+          {budget && parseFloat(budget) > 0 && availableCoupons.length > 0 && (
+            <View style={styles.couponSection}>
+              <Text style={styles.couponTitle}>Available Coupons</Text>
+              {availableCoupons.map((coupon) => {
+                const budgetNum = parseFloat(budget);
+                const isEligible = budgetNum >= coupon.minBooking;
+                const discountText = coupon.amountType === "LUMPSUM"
+                  ? `₹${coupon.amount} OFF`
+                  : `${coupon.amount}% OFF (max ₹${coupon.maxDiscount})`;
+                return (
+                  <TouchableOpacity
+                    key={coupon.id}
+                    style={[
+                      styles.couponCard,
+                      !isEligible && styles.couponCardDisabled,
+                      selectedCoupon?.id === coupon.id && styles.couponCardSelected,
+                    ]}
+                    onPress={() => {
+                      if (isEligible) {
+                        setSelectedCoupon(selectedCoupon?.id === coupon.id ? null : coupon);
+                      }
+                    }}
+                    disabled={!isEligible}
+                  >
+                    <View style={styles.couponLeft}>
+                      <Text style={[styles.couponDiscount, !isEligible && styles.couponTextDisabled]}>
+                        {discountText}
+                      </Text>
+                      <Text style={[styles.couponMinBooking, !isEligible && styles.couponTextDisabled]}>
+                        Min booking ₹{coupon.minBooking}+
+                      </Text>
+                    </View>
+                    {isEligible && (
+                      <View style={styles.couponRadio}>
+                        {selectedCoupon?.id === coupon.id && <View style={styles.couponRadioDot} />}
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+              {selectedCoupon && (
+                <View style={styles.couponSummary}>
+                  <Text style={styles.couponSummaryText}>
+                    Coupon applied: You pay ₹{(parseFloat(budget) - (selectedCoupon.amountType === "LUMPSUM" ? selectedCoupon.amount : Math.min((parseFloat(budget) * selectedCoupon.amount) / 100, selectedCoupon.maxDiscount || Infinity))).toFixed(2)} | BirdEarner pays ₹{selectedCoupon.amountType === "LUMPSUM" ? selectedCoupon.amount : Math.min((parseFloat(budget) * selectedCoupon.amount) / 100, selectedCoupon.maxDiscount || Infinity)}
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
         </View>
 
         {/* Job title */}
@@ -1829,6 +1896,75 @@ const getStyles = (currentTheme, isDark) => {
       fontSize: 13,
       textAlign: "center",
       marginBottom: 6,
+    },
+    couponSection: {
+      marginTop: 12,
+    },
+    couponTitle: {
+      color: text,
+      fontSize: 14,
+      fontWeight: "700",
+      marginBottom: 8,
+    },
+    couponCard: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      borderWidth: 1,
+      borderColor: border,
+      borderRadius: 10,
+      padding: 12,
+      marginBottom: 8,
+      backgroundColor: card,
+    },
+    couponCardDisabled: {
+      opacity: 0.5,
+    },
+    couponCardSelected: {
+      borderColor: PURPLE,
+      backgroundColor: soft,
+    },
+    couponLeft: {
+      flex: 1,
+    },
+    couponDiscount: {
+      color: PURPLE,
+      fontSize: 14,
+      fontWeight: "800",
+    },
+    couponMinBooking: {
+      color: muted,
+      fontSize: 12,
+      marginTop: 2,
+    },
+    couponTextDisabled: {
+      color: muted,
+    },
+    couponRadio: {
+      width: 20,
+      height: 20,
+      borderRadius: 10,
+      borderWidth: 2,
+      borderColor: PURPLE,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    couponRadioDot: {
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+      backgroundColor: PURPLE,
+    },
+    couponSummary: {
+      backgroundColor: soft,
+      borderRadius: 8,
+      padding: 10,
+      marginTop: 4,
+    },
+    couponSummaryText: {
+      color: PURPLE,
+      fontSize: 12,
+      fontWeight: "600",
     },
   });
 };

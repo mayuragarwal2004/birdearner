@@ -2,7 +2,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 
-const DEV_API_BASE_URL = "https://coalition-minnesota-beneficial-sharing.trycloudflare.com/api"
+const DEV_API_BASE_URL = "https://hygiene-parts-comparisons-declaration.trycloudflare.com/api"
 // const DEV_API_BASE_URL = "https://api.birdearner.com/api";
 
 const PROD_API_BASE_URL = "https://api.birdearner.com/api";
@@ -1453,9 +1453,10 @@ class ApiService {
     }
   }
 
-  async getOffersData() {
+  async getOffersData(jobId) {
     try {
-      const response = await this.makeRequest("/cashback-offers");
+      const url = jobId ? `/cashback-offers?jobId=${jobId}` : "/cashback-offers";
+      const response = await this.makeRequest(url);
       return response;
     } catch (error) {
       throw new Error(`Failed to get offers data: ${error.message}`);
@@ -1471,6 +1472,30 @@ class ApiService {
       return response.data;
     } catch (error) {
       throw new Error(`Failed to update offer data: ${error.message}`);
+    }
+  }
+
+  async applyCoupon(jobId, offerId) {
+    try {
+      const response = await this.makeRequest("/cashback-offers/apply", {
+        method: "POST",
+        body: JSON.stringify({ jobId, offerId }),
+      });
+      return response;
+    } catch (error) {
+      throw new Error(`Failed to apply coupon: ${error.message}`);
+    }
+  }
+
+  async removeCoupon(jobId) {
+    try {
+      const response = await this.makeRequest("/cashback-offers/remove", {
+        method: "POST",
+        body: JSON.stringify({ jobId }),
+      });
+      return response;
+    } catch (error) {
+      throw new Error(`Failed to remove coupon: ${error.message}`);
     }
   }
 
