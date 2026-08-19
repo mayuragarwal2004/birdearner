@@ -320,13 +320,14 @@ export const useChatData = (role, params) => {
     }
   }, [role, thread?.id, job?.id, mutateMessages, mutateJob]);
 
-  const handleJobCancel = useCallback(async () => {
+  const handleJobCancel = useCallback(async (reason) => {
     try {
       const api = ApiService;
       await api.init();
 
       const res = await api.makeRequest(`/jobs/${job?.id}/cancel`, {
         method: 'PATCH',
+        body: JSON.stringify({ reason: reason || undefined }),
       });
 
       if (res.success) {

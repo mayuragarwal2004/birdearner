@@ -10,6 +10,7 @@ import MessageItem from "../components/MessageItem";
 import ChatHeader from "../components/chat/ChatHeader";
 import ChatInput from "../components/chat/ChatInput";
 import AssignmentBanner from "../components/chat/freelancer/AssignmentBanner";
+import FreelancerCancelJobModal from "../components/chat/freelancer/FreelancerCancelJobModal";
 import ReportModal from "../components/chat/ReportModal";
 import NegotiationPanel from "../components/chat/NegotiationPanel";
 import { useChatData } from "../hooks/useChatSWR";
@@ -308,6 +309,7 @@ const FreelancerChat = ({ route, navigation }) => {
   const [reviewModalVisible, setReviewModalVisible] = useState(false);
   const [reviewMessageId, setReviewMessageId] = useState(null);
   const [reportModalVisible, setReportModalVisible] = useState(false);
+  const [cancelModalVisible, setCancelModalVisible] = useState(false);
   const [selectedReportReason, setSelectedReportReason] = useState(null);
   const [fileInfo, setFileInfo] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -335,6 +337,7 @@ const FreelancerChat = ({ route, navigation }) => {
     isLoading,
     sendMessage,
     handleRequestCompletion: swrHandleRequestCompletion,
+    handleJobCancel,
     mutateMessages,
     mutateJob,
     mutateThread,
@@ -561,10 +564,22 @@ const FreelancerChat = ({ route, navigation }) => {
       case "Write Review":
         setReviewModalVisible(true);
         break;
+      case "Cancel Job":
+        setCancelModalVisible(true);
+        break;
       default:
         break;
     }
     setShowMenu(false);
+  };
+
+  const handleCancelJob = async (reason) => {
+    try {
+      await handleJobCancel(reason);
+      setCancelModalVisible(false);
+    } catch (error) {
+      console.error("Error cancelling job:", error);
+    }
   };
 
   return (
@@ -586,7 +601,7 @@ const FreelancerChat = ({ route, navigation }) => {
           menuOptions={
             (job?.assignedFreelancer?.user?.id === userData?.id || job?.assignedFreelancerId === userData?.id || job?.assignedFreelancerId === userData?.freelancer?.id) &&
               (chatStatus === 'IN_PROGRESS' || chatStatus === 'ACCEPTED') && job?.jobStatus !== 'COMPLETED'
-              ? ["View Profile", "Block", "Report", "Request Project Completion"]
+              ? ["View Profile", "Block", "Report", "Request Project Completion", "Cancel Job"]
               : job?.jobStatus === "COMPLETED"
                 ? ["View Profile", "Block", "Report", "Write Review"]
                 : ["View Profile", "Block", "Report"]
@@ -725,6 +740,13 @@ const FreelancerChat = ({ route, navigation }) => {
           onSubmit={handleReport}
           selectedReason={selectedReportReason}
           onSelectReason={setSelectedReportReason}
+        />
+
+        <FreelancerCancelJobModal
+          visible={cancelModalVisible}
+          onConfirm={handleCancelJob}
+          onCancel={() => setCancelModalVisible(false)}
+          jobBudget={job?.budgetAmount}
         />
 
         <ReviewFormModal

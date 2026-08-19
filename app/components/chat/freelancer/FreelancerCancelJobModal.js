@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, Modal, TouchableOpacity, StyleSheet, TextInput } from 'react-native';
 
-const CancelJobModal = ({ visible, onConfirm, onCancel, jobBudget }) => {
+const FreelancerCancelJobModal = ({ visible, onConfirm, onCancel, jobBudget }) => {
   const [reason, setReason] = useState('');
   const penaltyAmount = jobBudget ? (parseFloat(jobBudget) * 0.02).toFixed(2) : '0.00';
 
@@ -29,7 +29,7 @@ const CancelJobModal = ({ visible, onConfirm, onCancel, jobBudget }) => {
           <View style={styles.warningBox}>
             <Text style={styles.warningIcon}>⚠️</Text>
             <Text style={styles.warningText}>
-              Warning: A 2% penalty of ₹{penaltyAmount} will be added to your next job. The freelancer assigned to your next job will pay this penalty to BirdEarner on your behalf.
+              Warning: Cancelling this job will result in a 2% penalty of ₹{penaltyAmount} being deducted from your wallet.
             </Text>
           </View>
 
@@ -155,4 +155,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default CancelJobModal;
+export default FreelancerCancelJobModal;

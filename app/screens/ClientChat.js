@@ -371,7 +371,6 @@ const ClientChat = ({ route, navigation }) => {
   // Local state for UI interactions
   const [modalVisible, setModalVisible] = useState(false);
   const [cancelModalVisible, setCancelModalVisible] = useState(false);
-  const [countdown, setCountdown] = useState(30);
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [reportModalVisible, setReportModalVisible] = useState(false);
@@ -418,20 +417,6 @@ const ClientChat = ({ route, navigation }) => {
 
   console.log({ messages });
 
-
-  // Countdown timer for cancel modal
-  useEffect(() => {
-    let timer;
-    if (cancelModalVisible && countdown > 0) {
-      timer = setInterval(() => {
-        setCountdown(prev => prev - 1);
-      }, 1000);
-    } else if (countdown === 0) {
-      setCancelModalVisible(false);
-      setCountdown(30);
-    }
-    return () => clearInterval(timer);
-  }, [cancelModalVisible, countdown]);
 
   const handleViewProfile = () => {
     navigation.navigate("ProfileScreen", { userId: route.params.freelancer.user.id });
@@ -720,13 +705,13 @@ const ClientChat = ({ route, navigation }) => {
     }
   };
 
-  const handleCancelJob = async () => {
+  const handleCancelJob = async (reason) => {
     try {
       await api.init();
       const res = await api.makeRequest(`/jobs/${route.params.jobId || route.params.projectId}/cancel`, {
         method: "PATCH",
         body: JSON.stringify({
-          userRole: "client",
+          reason: reason || undefined,
         }),
       });
 
@@ -1162,7 +1147,7 @@ const ClientChat = ({ route, navigation }) => {
           visible={cancelModalVisible}
           onConfirm={handleCancelJob}
           onCancel={() => setCancelModalVisible(false)}
-          countdown={countdown}
+          jobBudget={job?.budgetAmount}
         />
 
         <ReportModal
