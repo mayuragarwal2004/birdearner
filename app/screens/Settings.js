@@ -94,7 +94,7 @@ const SettingsScreen = ({ navigation }) => {
     };
   }, [role, userProfile]);
 
-  const walletRoute = role === "CLIENT" ? null : "WalletFreelancer";
+  const walletRoute = role === "CLIENT" ? "WalletClient" : "WalletFreelancer";
 
   const navigateTo = (routeName, params) => {
     if (!routeName) return;
@@ -203,20 +203,16 @@ const SettingsScreen = ({ navigation }) => {
           icon: "card-outline",
           route: "Bank Account details",
         },
-        ...(isFreelancer
-          ? [
-              {
-                label: "Wallet",
-                icon: "wallet-outline",
-                route: walletRoute,
-              },
-              {
-                label: "Transaction History",
-                icon: "receipt-outline",
-                route: walletRoute,
-              },
-            ]
-          : []),
+        {
+          label: "Wallet",
+          icon: "wallet-outline",
+          route: walletRoute,
+        },
+        {
+          label: "Transaction History",
+          icon: "receipt-outline",
+          route: walletRoute,
+        },
       ],
     },
     {

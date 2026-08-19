@@ -64,7 +64,10 @@ const JobRequirementsScreen = ({ navigation }) => {
   const [startDate, setStartDate] = useState(new Date());
   const [deadline, setDeadline] = useState(null);
   const [budget, setBudget] = useState("");
+  const [walletData, setWalletData] = useState(null);
+  const [walletLoading, setWalletLoading] = useState(false);
   const [budgetError, setBudgetError] = useState("");
+  const [showWalletInfo, setShowWalletInfo] = useState(false);
   const [budgetValidating, setBudgetValidating] = useState(false);
   const [availableCoupons, setAvailableCoupons] = useState([]);
   const [selectedCoupon, setSelectedCoupon] = useState(null);
@@ -83,7 +86,7 @@ const JobRequirementsScreen = ({ navigation }) => {
   const [isOnSite, setIsOnSite] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [locationLoading, setLocationLoading] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState("CASH");
+  const [paymentMethod, setPaymentMethod] = useState("PLATFORM");
   const [showMapModal, setShowMapModal] = useState(false);
   const [mapRegion, setMapRegion] = useState({
     latitude: 37.78825,
@@ -213,9 +216,29 @@ const JobRequirementsScreen = ({ navigation }) => {
   );
 
   useEffect(() => {
+    fetchWalletData();
     loadDraft();
     fetchAvailableCoupons();
-  }, []);
+
+    const unsubscribe = navigation.addListener("focus", fetchWalletData);
+    return unsubscribe;
+  }, [navigation]);
+
+  const fetchWalletData = async () => {
+    setWalletLoading(true);
+    try {
+      const response = await apiService.getClientWalletInfo();
+      if (response.success) setWalletData(response.data);
+    } catch (error) {
+      // Session expiry is handled globally (toast + logout)
+      if (!error?.isAuthError) {
+        console.error("Error fetching wallet data:", error);
+      }
+    } finally {
+      setWalletLoading(false);
+    }
+  };
+
 
   const fetchAvailableCoupons = async () => {
     try {
@@ -297,12 +320,25 @@ const JobRequirementsScreen = ({ navigation }) => {
       return true;
     }
 
+    if (paymentMethod === "PLATFORM") {
+      if (!walletData) {
+        setBudgetError("Unable to verify wallet balance. Please try again.");
+        return false;
+      }
+      if (budgetNum > walletData.availableBalance) {
+        setBudgetError(
+          `Insufficient balance. \nRequired: ₹${budgetNum.toFixed(2)}. \nAvailable: ₹${walletData.availableBalance?.toFixed(2)}`
+        );
+        return false;
+      }
+    }
+
     return true;
   };
 
   const handleBudgetChange = (value) => {
     setBudget(value);
-    if (value) {
+    if (value && walletData) {
       setBudgetValidating(true);
       setTimeout(() => validateBudget(value), 300);
     } else {
@@ -310,6 +346,8 @@ const JobRequirementsScreen = ({ navigation }) => {
       setBudgetValidating(false);
     }
   };
+
+  const navigateToWallet = () => navigation.navigate("WalletClient");
 
   const setJobMode = (onSite) => {
     setIsOnSite(onSite);
@@ -388,6 +426,7 @@ const JobRequirementsScreen = ({ navigation }) => {
       const category = isOnSite ? "HOUSEHOLD" : "FREELANCE";
       const nextServices = await apiService.getServicesByCategory(category);
       setServices(nextServices);
+      await fetchWalletData();
     } catch (error) {
       console.error("Error refreshing data:", error);
       Alert.alert("Error", "Failed to refresh data. Please try again.");
@@ -896,16 +935,49 @@ const JobRequirementsScreen = ({ navigation }) => {
           <Text style={styles.label}>Payment Method</Text>
           <View style={styles.paymentRow}>
             <TouchableOpacity
-              style={[styles.paymentCard, styles.paymentCardActive]}
+              style={[
+                styles.paymentCard,
+                paymentMethod === "PLATFORM" && styles.paymentCardActive,
+              ]}
+              onPress={() => setPaymentMethod("PLATFORM")}
               activeOpacity={0.88}
             >
               <View style={styles.paymentCardTop}>
-                <View style={[styles.radio, styles.radioActive]}>
-                  <View style={styles.radioDot} />
+                <View
+                  style={[
+                    styles.radio,
+                    paymentMethod === "PLATFORM" && styles.radioActive,
+                  ]}
+                >
+                  {paymentMethod === "PLATFORM" && <View style={styles.radioDot} />}
+                </View>
+                <ShieldCheck
+                  size={22}
+                  color={paymentMethod === "PLATFORM" ? accent : currentTheme.subText}
+                  weight="fill"
+                />
+              </View>
+              <Text style={styles.paymentTitle}>Platform Payment</Text>
+              <Text style={styles.paymentSub}>Pay through BirdEarner</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.paymentCard,
+                paymentMethod === "CASH" && styles.paymentCardActive,
+              ]}
+              onPress={() => setPaymentMethod("CASH")}
+              activeOpacity={0.88}
+            >
+              <View style={styles.paymentCardTop}>
+                <View
+                  style={[styles.radio, paymentMethod === "CASH" && styles.radioActive]}
+                >
+                  {paymentMethod === "CASH" && <View style={styles.radioDot} />}
                 </View>
                 <Wallet
                   size={22}
-                  color={accent}
+                  color={paymentMethod === "CASH" ? accent : currentTheme.subText}
                   weight="fill"
                 />
               </View>
@@ -970,7 +1042,43 @@ const JobRequirementsScreen = ({ navigation }) => {
 
         {/* Budget */}
         <View style={styles.section}>
-          <Text style={styles.label}>Budget</Text>
+          <View style={styles.budgetHeader}>
+            <Text style={[styles.label, styles.labelInline]}>Budget</Text>
+            <TouchableOpacity
+              style={styles.walletLink}
+              onPress={() => setShowWalletInfo(!showWalletInfo)}
+            >
+              <Wallet size={16} color={accent} weight="fill" />
+              <Text style={styles.walletLinkText}>
+                {walletLoading ? "Loading..." : "Wallet Info"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {showWalletInfo && walletData && (
+            <View style={styles.walletCard}>
+              <View style={styles.walletRow}>
+                <Text style={styles.walletLabel}>Available Balance</Text>
+                <Text style={styles.walletAmount}>
+                  ₹{walletData.availableBalance?.toFixed(2) || "0.00"}
+                </Text>
+              </View>
+              {walletData.reservedAmount > 0 && (
+                <View style={styles.walletRow}>
+                  <Text style={styles.walletLabel}>Reserved</Text>
+                  <Text style={styles.walletReserved}>
+                    ₹{walletData.reservedAmount?.toFixed(2)}
+                  </Text>
+                </View>
+              )}
+              <View style={styles.walletRow}>
+                <Text style={styles.walletLabel}>Total Balance</Text>
+                <Text style={styles.walletTotal}>
+                  ₹{walletData.totalBalance?.toFixed(2) || "0.00"}
+                </Text>
+              </View>
+            </View>
+          )}
 
           <View style={[styles.inputRow, budgetError ? styles.inputRowError : null]}>
             <Text style={styles.currencyPrefix}>₹</Text>
@@ -986,6 +1094,12 @@ const JobRequirementsScreen = ({ navigation }) => {
           {budgetError ? (
             <View style={styles.errorBlock}>
               <Text style={styles.errorText}>{budgetError}</Text>
+              {budgetError.includes("Insufficient balance") && (
+                <TouchableOpacity onPress={navigateToWallet} style={styles.addMoneyBtn}>
+                  <Ionicons name="add-circle-outline" size={16} color={PURPLE} />
+                  <Text style={styles.addMoneyText}>Add Money</Text>
+                </TouchableOpacity>
+              )}
             </View>
           ) : budgetValidating ? (
             <Text style={styles.validatingText}>Validating budget...</Text>
@@ -1039,6 +1153,15 @@ const JobRequirementsScreen = ({ navigation }) => {
                 </View>
               )}
             </View>
+          )}
+
+          {budget &&
+            walletData &&
+            paymentMethod === "PLATFORM" && (
+              <Text style={styles.validText}>
+                Valid amount. Remaining: ₹
+                {(walletData.availableBalance - parseFloat(budget || 0)).toFixed(2)}
+              </Text>
           )}
         </View>
 
@@ -1595,6 +1718,49 @@ const getStyles = (currentTheme, isDark) => {
       alignItems: "center",
       justifyContent: "space-between",
       marginBottom: 8,
+    },
+    walletLink: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
+    walletLinkText: {
+      color: PURPLE,
+      fontSize: 13,
+      fontWeight: "800",
+    },
+    walletCard: {
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: border,
+      backgroundColor: card,
+      padding: 12,
+      marginBottom: 10,
+      gap: 8,
+    },
+    walletRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+    },
+    walletLabel: {
+      color: muted,
+      fontSize: 13,
+      fontWeight: "600",
+    },
+    walletAmount: {
+      color: "#22C55E",
+      fontSize: 13,
+      fontWeight: "800",
+    },
+    walletReserved: {
+      color: "#F59E0B",
+      fontSize: 13,
+      fontWeight: "800",
+    },
+    walletTotal: {
+      color: text,
+      fontSize: 13,
+      fontWeight: "800",
     },
     currencyPrefix: {
       color: text,

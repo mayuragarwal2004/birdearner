@@ -158,11 +158,12 @@ const OffersScreen = ({ navigation }) => {
 
       claimedOfferIds.current.clear();
       setAvailableOffers(response.availableOffers || []);
-      const discoveredOffers = response.discoveredOffers || [];
+      const { discoveredOffers } = response;
 
-      const updatedBrokenEggs = [false, false, false, false, false];
-      for (let i = 0; i < discoveredOffers.length && i < 5; i++) {
-        updatedBrokenEggs[i] = true;
+      let updatedBrokenEggs = [...brokenEggs];
+
+      for (let i = 0; i < updatedBrokenEggs.length; i++) {
+        if (discoveredOffers[i]) updatedBrokenEggs[i] = true;
       }
       setBrokenEggs(updatedBrokenEggs);
       setEggStatus(updatedBrokenEggs);

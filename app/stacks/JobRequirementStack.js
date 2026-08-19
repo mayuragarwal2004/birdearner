@@ -21,6 +21,11 @@ const JobRequirementStack = () => (
       options={{ headerShown: false }}
     />
     <Stack.Screen
+      name="WalletClient"
+      getComponent={() => require('../screens/WalletClient').default}
+      options={{ headerShown: false }}
+    />
+    <Stack.Screen
       name="Payment"
       getComponent={() => require('../screens/PaymentScreen').default}
       options={{ headerShown: false }}

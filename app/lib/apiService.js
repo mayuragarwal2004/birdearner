@@ -1171,6 +1171,16 @@ class ApiService {
 
   // ==================== WALLET MANAGEMENT ====================
 
+  // Get client wallet information
+  async getClientWallet(userId) {
+    try {
+      const response = await this.makeRequest(`/clients/user/${userId}/wallet`);
+      return response.data;
+    } catch (error) {
+      throw new Error(`Failed to fetch wallet information: ${error.message}`);
+    }
+  }
+
   // Get client payment history
   async getClientPaymentHistory(userId, page = 1, limit = 20, status = null) {
     try {
@@ -1219,6 +1229,24 @@ class ApiService {
   }
 
   // ==================== ENHANCED WALLET API ====================
+
+  // Get current client wallet information (using auth token)
+  async getClientWalletInfo() {
+    try {
+      const response = await this.makeRequest("/wallet/balance");
+      if (response && response.success && response.data) {
+        return { success: true, data: response.data.client };
+      }
+      return response;
+    } catch (error) {
+      // Session expiry is handled globally — don't wrap/noise further
+      if (error?.isAuthError) {
+        throw error;
+      }
+      console.error("Wallet info fetch error:", error);
+      throw new Error(`Failed to fetch client wallet info: ${error.message}`);
+    }
+  }
 
   // Get freelancer wallet information
   async getFreelancerWalletInfo() {
@@ -1311,6 +1339,20 @@ class ApiService {
       return response;
     } catch (error) {
       throw new Error(`Failed to fetch withdrawal request: ${error.message}`);
+    }
+  }
+
+  // Get client transaction history
+  async getClientTransactionHistory(page = 1, limit = 20) {
+    try {
+      const response = await this.makeRequest(
+        `/wallet/transactions?page=${page}&limit=${limit}&userType=CLIENT`
+      );
+      return response;
+    } catch (error) {
+      throw new Error(
+        `Failed to fetch client transaction history: ${error.message}`
+      );
     }
   }
 
