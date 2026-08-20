@@ -751,6 +751,7 @@ const getStyles = (currentTheme, isDark) => {
     eggImage: {
       width: 30,
       height: 30,
+      transform: [{ rotate: "90deg" }],
     },
     scrollContent: {
       paddingBottom: Platform.OS === "ios" ? 140 : 120,

@@ -374,7 +374,7 @@ export const useChatData = (role, params) => {
         Toast.show({
           type: 'success',
           text1: 'Offer Updated',
-          text2: `Your offer has been updated to $${amount}`,
+          text2: `Your offer has been updated to ₹${amount}`,
         });
         await mutateThread();
         await mutateMessages();
