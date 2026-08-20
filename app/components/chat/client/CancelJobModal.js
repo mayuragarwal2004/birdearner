@@ -29,7 +29,7 @@ const CancelJobModal = ({ visible, onConfirm, onCancel, jobBudget }) => {
           <View style={styles.warningBox}>
             <Text style={styles.warningIcon}>⚠️</Text>
             <Text style={styles.warningText}>
-              Warning: A 2% penalty of ₹{penaltyAmount} will be added to your next job. The freelancer assigned to your next job will pay this penalty to BirdEarner on your behalf.
+              Warning: A 2% penalty of ₹{penaltyAmount} will be added to your next job. You will need to pay this penalty amount directly to the freelancer you assign to your next job as a token of cancellation penalty.
             </Text>
           </View>
 

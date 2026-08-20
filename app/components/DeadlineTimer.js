@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, StyleSheet } from "react-native";
 
-const DeadlineTimer = ({ deadline, jobCompleted, style }) => {
-  const [timeLeft, setTimeLeft] = useState("00d 00h 00m 00s");  
+const DeadlineTimer = ({ deadline, jobCompleted, jobCancelled, style }) => {
+  const [timeLeft, setTimeLeft] = useState("00d 00h 00m 00s");
 
   useEffect(() => {
-    if (!deadline) return;
+    if (!deadline || jobCompleted || jobCancelled) return;
 
     const timer = setInterval(() => {
       const deadlineDate = new Date(deadline);
@@ -27,13 +27,23 @@ const DeadlineTimer = ({ deadline, jobCompleted, style }) => {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [deadline]);
+  }, [deadline, jobCompleted, jobCancelled]);
 
   if (jobCompleted) {
     return (
       <View style={[styles.timeContainer, style?.timeContainer]}>
         <Text style={[styles.completedText, style?.completedText]}>
           Project Completed
+        </Text>
+      </View>
+    );
+  }
+
+  if (jobCancelled) {
+    return (
+      <View style={[styles.timeContainer, style?.timeContainer]}>
+        <Text style={[styles.cancelledText, style?.cancelledText]}>
+          Job Cancelled
         </Text>
       </View>
     );
@@ -107,6 +117,11 @@ const styles = StyleSheet.create({
   },
   completedText: {
     color: "#4C0183",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  cancelledText: {
+    color: "#DC2626",
     fontSize: 16,
     fontWeight: "bold",
   },

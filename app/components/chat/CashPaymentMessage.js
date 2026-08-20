@@ -22,7 +22,10 @@ const CashPaymentMessage = ({ message, onUpdate, currentUserId, userRole }) => {
     amount = '0', 
     clientConfirmed = false, 
     freelancerConfirmed = false, 
-    step = 'initial' 
+    step = 'initial',
+    budgetAmount,
+    discountAmount,
+    penaltyAmount,
   } = messageData;
   
   // Ensure amount is always a string and handle edge cases
@@ -124,6 +127,31 @@ const CashPaymentMessage = ({ message, onUpdate, currentUserId, userRole }) => {
       <View style={styles.container}>
         <Text style={styles.titleText}>💰 Cash Payment Required</Text>
         <Text style={styles.amountText}>Amount to pay: ₹{safeAmount}</Text>
+
+        {budgetAmount && (
+          <View style={styles.breakdownContainer}>
+            <View style={styles.breakdownRow}>
+              <Text style={styles.breakdownLabel}>Budget:</Text>
+              <Text style={styles.breakdownValue}>₹{budgetAmount}</Text>
+            </View>
+            {parseFloat(penaltyAmount || '0') > 0 && (
+              <View style={styles.breakdownRow}>
+                <Text style={[styles.breakdownLabel, { color: '#D32F2F' }]}>Penalty (previous cancel):</Text>
+                <Text style={[styles.breakdownValue, { color: '#D32F2F' }]}>+₹{penaltyAmount}</Text>
+              </View>
+            )}
+            {parseFloat(discountAmount || '0') > 0 && (
+              <View style={styles.breakdownRow}>
+                <Text style={[styles.breakdownLabel, { color: '#2E7D32' }]}>BirdEarner cashback:</Text>
+                <Text style={[styles.breakdownValue, { color: '#2E7D32' }]}>-₹{discountAmount}</Text>
+              </View>
+            )}
+            <View style={[styles.breakdownRow, styles.breakdownTotal]}>
+              <Text style={styles.breakdownTotalLabel}>Total to pay:</Text>
+              <Text style={styles.breakdownTotalValue}>₹{safeAmount}</Text>
+            </View>
+          </View>
+        )}
         
         <View style={styles.stepContainer}>
           <View style={[styles.step, clientConfirmed && styles.stepCompleted]}>
@@ -290,6 +318,45 @@ const getStyles = (currentTheme) => StyleSheet.create({
     color: '#2E7D32',
     textAlign: 'center',
     marginTop: 4,
+  },
+  breakdownContainer: {
+    backgroundColor: '#FFF8E1',
+    borderRadius: 8,
+    padding: 10,
+    marginTop: 8,
+    marginBottom: 4,
+    borderWidth: 1,
+    borderColor: '#FFB74D',
+  },
+  breakdownRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 3,
+  },
+  breakdownLabel: {
+    fontSize: 13,
+    color: '#5D4037',
+  },
+  breakdownValue: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#5D4037',
+  },
+  breakdownTotal: {
+    borderTopWidth: 1,
+    borderTopColor: '#FFB74D',
+    marginTop: 6,
+    paddingTop: 8,
+  },
+  breakdownTotalLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#E65100',
+  },
+  breakdownTotalValue: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#E65100',
   },
 });
 

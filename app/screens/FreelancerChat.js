@@ -665,6 +665,7 @@ const FreelancerChat = ({ route, navigation }) => {
                     <DeadlineTimer
                       deadline={job?.deadlineDate}
                       jobCompleted={job?.jobStatus === "COMPLETED"}
+                      jobCancelled={job?.jobStatus === "CANCELLED"}
                       style={{
                         timeBox: styles.timeBox,
                         timeText: styles.timeText,

@@ -893,6 +893,7 @@ const ClientChat = ({ route, navigation }) => {
               <DeadlineTimer
                 deadline={job?.deadlineDate}
                 jobCompleted={isCompleted}
+                jobCancelled={job?.jobStatus === "CANCELLED"}
                 style={{
                   timeBox: styles.timeBox,
                   timeText: styles.timeText,
