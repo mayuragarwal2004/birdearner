@@ -1167,18 +1167,6 @@ const FreelancerSignup = ({ navigation, route }) => {
         colors={["#2B0855", "#3B0A75", "#160233"]}
         style={{ flex: 1 }}
       >
-        {/* Background Dot Matrix Decorative Elements */}
-        <View style={styles.dotMatrixLeft} pointerEvents="none">
-          {[...Array(15)].map((_, i) => (
-            <View key={i} style={styles.dotItem} />
-          ))}
-        </View>
-        <View style={styles.dotMatrixRight} pointerEvents="none">
-          {[...Array(15)].map((_, i) => (
-            <View key={i} style={styles.dotItem} />
-          ))}
-        </View>
-
         <KeyboardAvoidingView
           style={{ flex: 1 }}
           behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -2363,34 +2351,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 16,
     paddingBottom: 40,
-  },
-  dotMatrixLeft: {
-    position: "absolute",
-    left: 8,
-    top: 80,
-    width: 36,
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 6,
-    opacity: 0.18,
-    zIndex: 0,
-  },
-  dotMatrixRight: {
-    position: "absolute",
-    right: 8,
-    top: 260,
-    width: 36,
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 6,
-    opacity: 0.18,
-    zIndex: 0,
-  },
-  dotItem: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "#FFFFFF",
   },
   headerSection: {
     alignItems: "center",
