@@ -146,6 +146,11 @@ const WithdrawalEarningScreen = ({ navigation }) => {
 
     const withdrawalAmount = parseFloat(amount);
 
+    if (totalAmountInWallet < MIN_WITHDRAWAL_BALANCE) {
+      handleError(`Minimum balance of ₹${MIN_WITHDRAWAL_BALANCE} required to withdraw`);
+      return;
+    }
+
     if (withdrawalAmount > totalAmountInWallet) {
       handleError("Insufficient withdrawable balance");
       return;
@@ -206,7 +211,8 @@ const WithdrawalEarningScreen = ({ navigation }) => {
     });
   };
 
-  const isButtonDisabled = isLoading || !amount || parseFloat(amount) <= 0;
+  const MIN_WITHDRAWAL_BALANCE = 99;
+  const isButtonDisabled = isLoading || !amount || parseFloat(amount) <= 0 || totalAmountInWallet < MIN_WITHDRAWAL_BALANCE;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -254,6 +260,11 @@ const WithdrawalEarningScreen = ({ navigation }) => {
                 <Text style={styles.walletAmount}>
                   ₹{totalAmountInWallet.toFixed(2)}
                 </Text>
+                {totalAmountInWallet < MIN_WITHDRAWAL_BALANCE && (
+                  <Text style={[styles.warning, { marginTop: 8, textAlign: 'center' }]}>
+                    Minimum balance of ₹{MIN_WITHDRAWAL_BALANCE} required to withdraw
+                  </Text>
+                )}
               </View>
 
               {/* Info Note */}
