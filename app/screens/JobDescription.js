@@ -96,7 +96,7 @@ const JobDescriptionScreen = ({ route, navigation }) => {
     try {
       const response = await apiService.isJobBookmarked(job.id);
       if (response.success) {
-        setFlagged(response.data.isBookmarked);
+        setFlagged(response.data.bookmarked);
       }
     } catch (error) {
       // Silent fail
@@ -108,8 +108,8 @@ const JobDescriptionScreen = ({ route, navigation }) => {
     try {
       const response = await apiService.toggleJobBookmark(job.id);
       if (response.success) {
-        setFlagged(response.data.isBookmarked);
-        const message = response.data.isBookmarked
+        setFlagged(response.data.bookmarked);
+        const message = response.data.bookmarked
           ? "Job bookmarked successfully!"
           : "Bookmark removed successfully!";
         Alert.alert("Success", message);

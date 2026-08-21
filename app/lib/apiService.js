@@ -1424,7 +1424,7 @@ class ApiService {
           method: "POST",
         }
       );
-      return response.data;
+      return response;
     } catch (error) {
       throw new Error(`Failed to toggle job bookmark: ${error.message}`);
     }
@@ -1436,7 +1436,7 @@ class ApiService {
       const response = await this.makeRequest(
         `/bookmarks/jobs/${jobId}/status`
       );
-      return response.data.bookmarked;
+      return response;
     } catch (error) {
       throw new Error(`Failed to check bookmark status: ${error.message}`);
     }
