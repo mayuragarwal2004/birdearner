@@ -355,7 +355,7 @@ export const useChatData = (role, params) => {
   }, [job?.id, mutateJob, mutateThread, mutateMessages]);
 
   // Handle updating offer during negotiation
-  const updateOffer = useCallback(async (amount) => {
+  const updateOffer = useCallback(async (amount, days) => {
     const activeThreadId = params?.threadId || thread?.id;
     if (!activeThreadId) {
       Toast.show({
@@ -369,12 +369,12 @@ export const useChatData = (role, params) => {
     try {
       const api = ApiService;
       await api.init();
-      const res = await api.updateNegotiationOffer(activeThreadId, amount, role);
+      const res = await api.updateNegotiationOffer(activeThreadId, amount, role, days);
       if (res.success) {
         Toast.show({
           type: 'success',
           text1: 'Offer Updated',
-          text2: `Your offer has been updated to ₹${amount}`,
+          text2: `Your offer has been updated to ₹${amount}${days ? ` with ${days} day${days > 1 ? 's' : ''}` : ''}`,
         });
         await mutateThread();
         await mutateMessages();
@@ -455,6 +455,9 @@ export const useChatData = (role, params) => {
     clientOffer: thread?.clientOffer || job?.budgetAmount?.toString() || "0",
     freelancerOffer: thread?.freelancerOffer || job?.budgetAmount?.toString() || "0",
     agreedAmount: thread?.agreedAmount || (thread?.isAccepted ? job?.budgetAmount?.toString() : null),
+    clientDays: thread?.clientDays || null,
+    freelancerDays: thread?.freelancerDays || null,
+    agreedDays: thread?.agreedDays || (thread?.isAccepted ? thread?.agreedDays || null : null),
     isNegotiable: !thread?.isAccepted && thread?.status !== 'ACCEPTED' && thread?.status !== 'REJECTED',
 
     // Computed values

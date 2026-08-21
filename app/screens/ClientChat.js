@@ -404,6 +404,9 @@ const ClientChat = ({ route, navigation }) => {
     clientOffer,
     freelancerOffer,
     agreedAmount,
+    clientDays,
+    freelancerDays,
+    agreedDays,
     isNegotiable,
     updateOffer,
     isLoading,
@@ -1063,6 +1066,9 @@ const ClientChat = ({ route, navigation }) => {
             clientOffer={clientOffer}
             freelancerOffer={freelancerOffer}
             agreedAmount={agreedAmount}
+            clientDays={clientDays}
+            freelancerDays={freelancerDays}
+            agreedDays={agreedDays}
             isNegotiable={isNegotiable}
             onUpdateOffer={updateOffer}
             onRefresh={() => {

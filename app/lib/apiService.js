@@ -302,16 +302,20 @@ class ApiService {
   }
 
   // Update negotiation offer amount
-  async updateNegotiationOffer(threadId, amount, userRole) {
+  async updateNegotiationOffer(threadId, amount, userRole, days = null) {
+    const body = { threadId, amount, userRole };
+    if (days !== null && days !== undefined) {
+      body.days = days;
+    }
     const response = await this.makeRequest("/chats/negotiate/update", {
       method: "POST",
-      body: JSON.stringify({ threadId, amount, userRole }),
+      body: JSON.stringify(body),
     });
     return response;
   }
 
-  async updateOffer(threadId, amount, userRole) {
-    return this.updateNegotiationOffer(threadId, amount, userRole);
+  async updateOffer(threadId, amount, userRole, days = null) {
+    return this.updateNegotiationOffer(threadId, amount, userRole, days);
   }
 
   // Signup client

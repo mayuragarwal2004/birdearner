@@ -17,6 +17,9 @@ const NegotiationPanel = ({
   clientOffer = "0",
   freelancerOffer = "0",
   agreedAmount = null,
+  clientDays = null,
+  freelancerDays = null,
+  agreedDays = null,
   isNegotiable = true,
   onUpdateOffer,
   onRefresh,
@@ -27,14 +30,18 @@ const NegotiationPanel = ({
 
   const topTitle = isClient ? `${otherPartyName}'s Offer` : "Client's Offer";
   const topAmount = isClient ? freelancerOffer : clientOffer;
+  const topDays = isClient ? freelancerDays : clientDays;
   const topColor = isClient ? "#6D28D9" : "#EF4444";
 
   const bottomTitle = "Your Offer";
   const bottomAmount = isClient ? clientOffer : freelancerOffer;
+  const bottomDays = isClient ? clientDays : freelancerDays;
   const bottomColor = isClient ? "#EF4444" : "#6D28D9";
 
   const [bottomInput, setBottomInput] = useState(bottomAmount ? String(bottomAmount) : "0");
+  const [bottomDaysInput, setBottomDaysInput] = useState(bottomDays ? String(bottomDays) : "");
   const [topInput, setTopInput] = useState(topAmount ? String(topAmount) : "0");
+  const [topDaysInput, setTopDaysInput] = useState(topDays ? String(topDays) : "");
   const [isUpdating, setIsUpdating] = useState(false);
 
   const [availableCoupons, setAvailableCoupons] = useState([]);
@@ -50,8 +57,16 @@ const NegotiationPanel = ({
   }, [bottomAmount]);
 
   useEffect(() => {
+    setBottomDaysInput(bottomDays ? String(bottomDays) : "");
+  }, [bottomDays]);
+
+  useEffect(() => {
     setTopInput(topAmount ? String(topAmount) : "0");
   }, [topAmount]);
+
+  useEffect(() => {
+    setTopDaysInput(topDays ? String(topDays) : "");
+  }, [topDays]);
 
   useEffect(() => {
     if (isClient && jobId) {
@@ -123,10 +138,12 @@ const NegotiationPanel = ({
   const handleUpdateOwnOffer = async () => {
     const val = parseFloat(bottomInput);
     if (isNaN(val) || val <= 0) return;
+    const daysVal = bottomDaysInput ? parseInt(bottomDaysInput, 10) : undefined;
+    if (bottomDaysInput && (isNaN(daysVal) || daysVal <= 0)) return;
     setIsUpdating(true);
     try {
       if (onUpdateOffer) {
-        await onUpdateOffer(val);
+        await onUpdateOffer(val, daysVal);
       }
     } finally {
       setIsUpdating(false);
@@ -139,7 +156,7 @@ const NegotiationPanel = ({
       <View style={styles.headerRow}>
         <View>
           <Text style={styles.title}>Negotiation</Text>
-          <Text style={styles.subtitle}>Discuss and agree on the budget</Text>
+          <Text style={styles.subtitle}>Discuss budget & timeline</Text>
         </View>
         <TouchableOpacity onPress={onRefresh} style={styles.refreshButton}>
           <Ionicons name="refresh-outline" size={20} color="#6D28D9" />
@@ -155,6 +172,11 @@ const NegotiationPanel = ({
         <Text style={[styles.amountDisplay, { color: topColor }]}>
           ₹{topAmount || "0"}
         </Text>
+        {topDays ? (
+          <Text style={[styles.daysDisplay, { color: topColor }]}>
+            {topDays} day{topDays > 1 ? 's' : ''}
+          </Text>
+        ) : null}
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.textInput}
@@ -164,6 +186,19 @@ const NegotiationPanel = ({
             editable={false}
           />
         </View>
+        {topDays !== null && topDays !== undefined ? (
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={styles.textInput}
+              value={topDaysInput}
+              onChangeText={setTopDaysInput}
+              keyboardType="numeric"
+              editable={false}
+              placeholder="Days"
+              placeholderTextColor="#9CA3AF"
+            />
+          </View>
+        ) : null}
         <TouchableOpacity
           style={[styles.updateButton, { borderColor: topColor }]}
           disabled={true}
@@ -192,6 +227,11 @@ const NegotiationPanel = ({
         <Text style={[styles.amountDisplay, { color: bottomColor }]}>
           ₹{bottomAmount || "0"}
         </Text>
+        {bottomDays ? (
+          <Text style={[styles.daysDisplay, { color: bottomColor }]}>
+            {bottomDays} day{bottomDays > 1 ? 's' : ''}
+          </Text>
+        ) : null}
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.textInput}
@@ -199,6 +239,17 @@ const NegotiationPanel = ({
             onChangeText={setBottomInput}
             keyboardType="numeric"
             editable={isNegotiable}
+          />
+        </View>
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.textInput}
+            value={bottomDaysInput}
+            onChangeText={setBottomDaysInput}
+            keyboardType="numeric"
+            editable={isNegotiable}
+            placeholder="Days to complete"
+            placeholderTextColor="#9CA3AF"
           />
         </View>
         <TouchableOpacity
@@ -225,8 +276,8 @@ const NegotiationPanel = ({
         <Ionicons name="information-circle-outline" size={18} color="#6D28D9" style={{ marginRight: 6 }} />
         <Text style={styles.infoText}>
           {isNegotiable
-            ? "Agree on a budget to continue the project."
-            : `Agreed final amount: ₹${agreedAmount || bottomAmount}`}
+            ? "Agree on budget & timeline to continue the project."
+            : `Agreed: ₹${agreedAmount || bottomAmount}${agreedDays ? ` in ${agreedDays} day${agreedDays > 1 ? 's' : ''}` : ''}`}
         </Text>
       </View>
 
@@ -379,6 +430,12 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     textAlign: "center",
     marginVertical: 4,
+  },
+  daysDisplay: {
+    fontSize: 13,
+    fontWeight: "600",
+    textAlign: "center",
+    marginBottom: 4,
   },
   inputContainer: {
     backgroundColor: "#FFFFFF",
