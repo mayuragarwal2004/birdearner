@@ -99,7 +99,7 @@ const JobDetailsScreen = ({ route, navigation }) => {
                     style={styles.paymentIcon}
                   />
                   <Text style={styles.paymentMethodText}>
-                    {formData.paymentMethod === 'PLATFORM' ? 'Platform Payment' : 'Direct Cash Payment'}
+                    {formData.paymentMethod === 'PLATFORM' ? 'Platform Payment' : 'Cash Payment'}
                   </Text>
                 </View>
               </View>

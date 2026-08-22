@@ -387,7 +387,7 @@ const JobDescriptionScreen = ({ route, navigation }) => {
               </View>
               <View style={styles.paymentTextCol}>
                 <Text style={styles.paymentTitle}>
-                  {isPlatformPayment ? "Platform Payment" : "Cash Payment"}
+                  {isPlatformPayment ? "Platform Payment" : "Cash/Platform Payment"}
                 </Text>
                 <Text style={styles.paymentSubtitle}>
                   {isPlatformPayment
