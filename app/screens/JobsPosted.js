@@ -218,11 +218,11 @@ const JobsPostedScreen = ({ navigation }) => {
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={28} color={currentTheme.text || "#000"} />
+          <Ionicons name="arrow-back" size={24} color={currentTheme.text || "#000"} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Jobs Posted</Text>
         <TouchableOpacity style={styles.refreshButton} onPress={onRefresh}>
-          <Ionicons name="refresh" size={22} color={PURPLE} />
+          <Ionicons name="refresh" size={20} color={PURPLE} />
         </TouchableOpacity>
       </View>
 
@@ -395,12 +395,12 @@ function ActionRow({ styles, icon, label, danger, onPress }) {
   return (
     <TouchableOpacity style={styles.actionRow} onPress={onPress}>
       {typeof icon === "string" ? (
-        <Ionicons name={icon} size={23} color={danger ? "#EF4444" : PURPLE} />
+        <Ionicons name={icon} size={20} color={danger ? "#EF4444" : PURPLE} />
       ) : (
         icon
       )}
       <Text style={[styles.actionText, danger && styles.actionTextDanger]}>{label}</Text>
-      <Ionicons name="chevron-forward" size={20} color={styles.chevronColor.color} />
+      <Ionicons name="chevron-forward" size={16} color={styles.chevronColor.color} />
     </TouchableOpacity>
   );
 }
@@ -423,8 +423,8 @@ const getStyles = (currentTheme, isDark) => {
       backgroundColor: surface,
     },
     header: {
-      minHeight: 68,
-      paddingHorizontal: 22,
+      minHeight: 52,
+      paddingHorizontal: 16,
       paddingTop: 4,
       flexDirection: "row",
       alignItems: "center",
@@ -432,27 +432,27 @@ const getStyles = (currentTheme, isDark) => {
       backgroundColor: surface,
     },
     backButton: {
-      width: 44,
-      height: 44,
+      width: 36,
+      height: 36,
       justifyContent: "center",
       alignItems: "flex-start",
     },
     headerTitle: {
       color: text,
-      fontSize: 24,
-      fontWeight: "900",
+      fontSize: 18,
+      fontWeight: "700",
       textAlign: "center",
     },
     refreshButton: {
-      width: 44,
-      height: 44,
-      borderRadius: 22,
+      width: 36,
+      height: 36,
+      borderRadius: 18,
       alignItems: "center",
       justifyContent: "center",
       backgroundColor: accentSoft,
     },
     listContainer: {
-      paddingHorizontal: 20,
+      paddingHorizontal: 16,
       paddingBottom: 110,
     },
     summaryRow: {
@@ -647,18 +647,18 @@ const getStyles = (currentTheme, isDark) => {
       marginBottom: 12,
     },
     actionRow: {
-      minHeight: 56,
+      minHeight: 48,
       borderBottomWidth: 1,
       borderBottomColor: border,
       flexDirection: "row",
       alignItems: "center",
-      gap: 14,
+      gap: 12,
     },
     actionText: {
       flex: 1,
       color: text,
-      fontSize: 16,
-      fontWeight: "700",
+      fontSize: 14,
+      fontWeight: "500",
     },
     actionTextDanger: {
       color: isDark ? "#F87171" : "#EF4444",

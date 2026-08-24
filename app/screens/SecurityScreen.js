@@ -26,17 +26,18 @@ const SecurityScreen = ({ navigation }) => {
                     <Ionicons name="arrow-back" size={24} color={currentTheme.text || "black"} />
                 </TouchableOpacity>
                 <Text style={styles.header}>Security</Text>
+                <View style={styles.headerSpacer} />
             </View>
 
             {/* Security Options */}
             <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
                 {dummyData.map((item, index) => (
                     <TouchableOpacity key={index} style={styles.optionContainer}>
-                        <View>
+                        <View style={{ flex: 1, marginRight: 12 }}>
                             <Text style={styles.optionTitle}>{item.title}</Text>
                             <Text style={styles.optionDescription}>{item.description}</Text>
                         </View>
-                        <Text style={styles.arrowIcon}>›</Text>
+                        <Ionicons name="chevron-forward" size={16} color="#888" />
                     </TouchableOpacity>
                 ))}
             </ScrollView>
@@ -48,26 +49,34 @@ const getStyles = (currentTheme) =>
     StyleSheet.create({
         container: {
             flex: 1,
-            padding: 20,
             backgroundColor: currentTheme.background2 || "#f9f9f9",
         },
         main: {
-            marginTop: 45,
-            marginBottom: 50,
-            display: "flex",
+            minHeight: 52,
+            paddingHorizontal: 16,
+            paddingTop: 8,
+            paddingBottom: 12,
             flexDirection: "row",
-            gap: 100,
             alignItems: "center",
+            justifyContent: "space-between",
+        },
+        backButton: {
+            width: 36,
+            height: 36,
+            justifyContent: "center",
+            alignItems: "flex-start",
         },
         header: {
-            fontSize: 24,
-            fontWeight: "bold",
-            // marginBottom: 20,
+            fontSize: 18,
+            fontWeight: "700",
             textAlign: "center",
-            color: currentTheme.text || "black"
+            color: currentTheme.text || "black",
+        },
+        headerSpacer: {
+            width: 36,
         },
         scrollView: {
-            padding: 16,
+            paddingHorizontal: 16,
         },
     
         optionContainer: {

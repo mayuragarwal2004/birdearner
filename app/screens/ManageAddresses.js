@@ -82,7 +82,7 @@ const ManageAddressesScreen = ({ navigation }) => {
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={26} color={currentTheme.text} />
+          <Ionicons name="arrow-back" size={24} color={currentTheme.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Manage Addresses</Text>
         <TouchableOpacity style={styles.refreshBtn} onPress={refresh}>
@@ -216,14 +216,14 @@ const getStyles = (theme, isDark) => {
   return StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: surface },
     header: {
-      minHeight: 64,
-      paddingHorizontal: 18,
+      minHeight: 52,
+      paddingHorizontal: 16,
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
     },
-    backBtn: { width: 40, height: 40, justifyContent: "center" },
-    headerTitle: { color: text, fontSize: 20, fontWeight: "900" },
+    backBtn: { width: 36, height: 36, justifyContent: "center" },
+    headerTitle: { color: text, fontSize: 18, fontWeight: "700" },
     refreshBtn: {
       width: 40,
       height: 40,

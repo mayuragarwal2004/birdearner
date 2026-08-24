@@ -337,44 +337,44 @@ const getStyles = (currentTheme, buttonColor) => StyleSheet.create({
     alignItems: "center",
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
+    fontSize: 18,
+    fontWeight: "700",
     color: currentTheme.text || "#000000",
   },
   rightPlaceholder: {
-    width: 40,
+    width: 36,
   },
   formContainer: {
     marginTop: 10,
   },
   inputGroup: {
-    marginBottom: 20,
+    marginBottom: 16,
   },
   label: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "500",
     color: currentTheme.text || "#000000",
-    marginBottom: 8,
+    marginBottom: 6,
   },
   inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
-    height: 56,
+    height: 48,
     borderWidth: 1,
     borderColor: currentTheme.border || "#E5E7EB",
     borderRadius: 12,
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     backgroundColor: currentTheme.background || "#FFFFFF",
   },
   inputError: {
     borderColor: "#ff4757",
   },
   inputIcon: {
-    marginRight: 12,
+    marginRight: 10,
   },
   input: {
     flex: 1,
-    fontSize: 15,
+    fontSize: 14,
     color: currentTheme.text || "#000000",
     height: "100%",
   },
@@ -386,7 +386,7 @@ const getStyles = (currentTheme, buttonColor) => StyleSheet.create({
   },
   updateButton: {
     width: "100%",
-    height: 56,
+    height: 48,
     backgroundColor: buttonColor,
     borderRadius: 12,
     alignItems: "center",
@@ -398,7 +398,7 @@ const getStyles = (currentTheme, buttonColor) => StyleSheet.create({
   },
   updateButtonText: {
     color: "white",
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "600",
   },
   loadingContainer: {

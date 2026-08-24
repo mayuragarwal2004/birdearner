@@ -437,12 +437,12 @@ const getStyles = (currentTheme, primaryColor, buttonColor) =>
       alignItems: "center",
     },
     headerTitle: {
-      fontSize: 20,
-      fontWeight: "bold",
+      fontSize: 18,
+      fontWeight: "700",
       color: currentTheme.text || "#000000",
     },
     rightPlaceholder: {
-      width: 40,
+      width: 36,
     },
     loadingContainer: {
       flex: 1,
@@ -495,19 +495,19 @@ const getStyles = (currentTheme, primaryColor, buttonColor) =>
     inputWrapper: {
       flexDirection: "row",
       alignItems: "center",
-      height: 56,
+      height: 48,
       borderWidth: 1,
       borderColor: currentTheme.border || "#E5E7EB",
       borderRadius: 12,
-      paddingHorizontal: 16,
+      paddingHorizontal: 14,
       backgroundColor: currentTheme.background || "#FFFFFF",
     },
     inputIcon: {
-      marginRight: 12,
+      marginRight: 10,
     },
     input: {
       flex: 1,
-      fontSize: 16,
+      fontSize: 14,
       color: currentTheme.text || "#000000",
       height: "100%",
     },
@@ -518,7 +518,7 @@ const getStyles = (currentTheme, primaryColor, buttonColor) =>
       textAlign: "center",
     },
     submitButton: {
-      height: 56,
+      height: 48,
       backgroundColor: buttonColor,
       borderRadius: 12,
       alignItems: "center",

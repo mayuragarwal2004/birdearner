@@ -100,6 +100,7 @@ const JobRequirementsScreen = ({ navigation }) => {
   });
   const [addressPickerOpen, setAddressPickerOpen] = useState(false);
   const [selectedSavedAddressId, setSelectedSavedAddressId] = useState(null);
+  const [couponInput, setCouponInput] = useState("");
 
   const { userData } = useAuth();
   const { theme, themeStyles } = useTheme();
@@ -704,11 +705,11 @@ const JobRequirementsScreen = ({ navigation }) => {
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={26} color={currentTheme.text || "#000"} />
+          <Ionicons name="arrow-back" size={24} color={currentTheme.text || "#000"} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
           <Text style={styles.headerTitle}>Job Requirements</Text>
-          <Text style={styles.headerSubtitle}>Fill in the details to post your job.</Text>
+          <Text style={styles.headerSubtitle}>Fill in the details to post your job</Text>
         </View>
         <View style={styles.headerSpacer} />
       </View>
@@ -734,7 +735,7 @@ const JobRequirementsScreen = ({ navigation }) => {
             onPress={() => setJobMode(false)}
             activeOpacity={0.88}
           >
-            <Laptop size={18} color={!isOnSite ? "#fff" : accent} weight={!isOnSite ? "fill" : "regular"} />
+            <Laptop size={20} color={!isOnSite ? "#fff" : accent} weight={!isOnSite ? "fill" : "regular"} />
             <Text style={[styles.segmentText, !isOnSite && styles.segmentTextActive]}>Remote</Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -742,7 +743,7 @@ const JobRequirementsScreen = ({ navigation }) => {
             onPress={() => setJobMode(true)}
             activeOpacity={0.88}
           >
-            <MapPin size={18} color={isOnSite ? "#fff" : accent} weight={isOnSite ? "fill" : "regular"} />
+            <MapPin size={20} color={isOnSite ? "#fff" : accent} weight={isOnSite ? "fill" : "regular"} />
             <Text style={[styles.segmentText, isOnSite && styles.segmentTextActive]}>On-site</Text>
           </TouchableOpacity>
         </View>
@@ -826,7 +827,7 @@ const JobRequirementsScreen = ({ navigation }) => {
             )}
 
             <View style={styles.inputRow}>
-              <MapPin size={18} color={accent} />
+              <MapPin size={20} color={accent} />
               <TextInput
                 style={styles.inputFlex}
                 placeholder="Enter job address (e.g., 123 Main St, City, State)"
@@ -839,24 +840,30 @@ const JobRequirementsScreen = ({ navigation }) => {
                 multiline
               />
               <TouchableOpacity onPress={detectLocation} disabled={locationLoading}>
-                <Ionicons name="locate-outline" size={22} color={accent} />
+                <Ionicons name="locate-outline" size={20} color={accent} />
               </TouchableOpacity>
             </View>
 
-            <TouchableOpacity
-              style={[styles.primaryLocationBtn, locationLoading && styles.disabledBtn]}
-              onPress={detectLocation}
-              disabled={locationLoading}
-            >
-              <PaperPlaneTilt size={16} color="#fff" weight="fill" />
-              <Text style={styles.primaryLocationBtnText}>
-                {locationLoading
-                  ? "Detecting..."
-                  : jobLocation.trim()
-                    ? "Locate address"
-                    : "Use current location"}
-              </Text>
-            </TouchableOpacity>
+            <View style={styles.locationBtnsRow}>
+              <TouchableOpacity
+                style={[styles.primaryLocationBtn, locationLoading && styles.disabledBtn]}
+                onPress={detectLocation}
+                disabled={locationLoading}
+              >
+                <PaperPlaneTilt size={18} color="#fff" weight="fill" />
+                <Text style={styles.primaryLocationBtnText}>
+                  {locationLoading ? "Detecting..." : "Use Current Location"}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.secondaryLocationBtn, locationLoading && styles.disabledBtn]}
+                onPress={detectLocation}
+                disabled={locationLoading}
+              >
+                <Ionicons name="map-outline" size={18} color={PURPLE} />
+                <Text style={styles.secondaryLocationBtnText}>Get Coordinates</Text>
+              </TouchableOpacity>
+            </View>
 
             <View style={styles.mapPreview}>
               {hasCoordinates ? (
@@ -905,7 +912,7 @@ const JobRequirementsScreen = ({ navigation }) => {
           <Text style={styles.label}>Freelancer Type</Text>
           {Array.isArray(services) ? (
             <View style={styles.pickerWrap}>
-              <User size={18} color={accent} />
+              <User size={20} color={accent} />
               <CustomPicker
                 items={services.map((service) => ({
                   label: service.name || service.role || service.title,
@@ -990,7 +997,7 @@ const JobRequirementsScreen = ({ navigation }) => {
         {/* Timeline */}
         <View style={styles.section}>
           <View style={styles.labelRow}>
-            <CalendarBlank size={16} color={accent} />
+            <CalendarBlank size={18} color={accent} />
             <Text style={[styles.label, styles.labelInline]}>Timeline (Deadline)</Text>
           </View>
           <View style={styles.timelineRow}>
@@ -1174,7 +1181,7 @@ const JobRequirementsScreen = ({ navigation }) => {
             </Text>
           </Text>
           <View style={styles.inputRow}>
-            <Ionicons name="document-text-outline" size={18} color={accent} />
+            <Ionicons name="document-text-outline" size={20} color={accent} />
             <TextInput
               style={styles.inputFlex}
               placeholder={
@@ -1194,7 +1201,7 @@ const JobRequirementsScreen = ({ navigation }) => {
           <Text style={styles.label}>Skills Required</Text>
           {skills.map((skill, index) => (
             <View key={`skill-${index}`} style={styles.inputRow}>
-              <Tag size={18} color={accent} />
+              <Tag size={20} color={accent} />
               <TextInput
                 style={styles.inputFlex}
                 placeholder="Add the required skills"
@@ -1225,7 +1232,7 @@ const JobRequirementsScreen = ({ navigation }) => {
           </Text>
           <View style={styles.textAreaWrap}>
             <View style={styles.textAreaIcon}>
-              <Ionicons name="document-text-outline" size={18} color={accent} />
+              <Ionicons name="document-text-outline" size={20} color={accent} />
             </View>
             <TextInput
               style={styles.textArea}
@@ -1235,6 +1242,9 @@ const JobRequirementsScreen = ({ navigation }) => {
               multiline
               onChangeText={setJobDes}
             />
+            <TouchableOpacity style={styles.micBtn}>
+              <Ionicons name="mic-outline" size={20} color={PURPLE} />
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -1245,12 +1255,12 @@ const JobRequirementsScreen = ({ navigation }) => {
             Add files that help freelancers understand your job better.
           </Text>
           <TouchableOpacity style={styles.uploadCard} onPress={pickAttachments}>
-            <CloudArrowUp size={28} color={accent} />
+            <CloudArrowUp size={24} color={accent} />
             <View style={styles.uploadTextWrap}>
               <Text style={styles.uploadTitle}>Add Images or Documents</Text>
               <Text style={styles.uploadSub}>JPG, PNG, PDF (Max 5 files, 10MB each)</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color={accent} />
+            <Ionicons name="chevron-forward" size={16} color={accent} />
           </TouchableOpacity>
           {portfolioImages.length > 0 && (
             <View style={styles.uploadedImages}>
@@ -1258,7 +1268,7 @@ const JobRequirementsScreen = ({ navigation }) => {
                 <View key={`file-${index}`} style={styles.imagePreviewContainer}>
                   {image.isDocument ? (
                     <View style={styles.docPreview}>
-                      <Ionicons name="document-outline" size={28} color={accent} />
+                      <Ionicons name="document-outline" size={24} color={accent} />
                       <Text style={styles.docName} numberOfLines={2}>
                         {image.name || "Document"}
                       </Text>
@@ -1281,14 +1291,53 @@ const JobRequirementsScreen = ({ navigation }) => {
           )}
         </View>
 
+        {/* Coupon Code */}
+        <View style={styles.section}>
+          <Text style={styles.label}>
+            Coupon Code <Text style={styles.helperInline}>(Optional)</Text>
+          </Text>
+          <View style={styles.couponInputRow}>
+            <View style={styles.couponInputWrap}>
+              <Ionicons name="pricetag-outline" size={20} color={accent} />
+              <TextInput
+                style={styles.inputFlex}
+                placeholder="Enter coupon code"
+                placeholderTextColor={styles.placeholder.color}
+                value={couponInput}
+                onChangeText={setCouponInput}
+                autoCapitalize="characters"
+              />
+            </View>
+            <TouchableOpacity
+              style={styles.applyCouponBtn}
+              onPress={() => {
+                if (!couponInput.trim()) return;
+                const found = availableCoupons.find(
+                  (c) =>
+                    c.code?.toLowerCase() === couponInput.trim().toLowerCase() ||
+                    c.id === couponInput.trim()
+                );
+                if (found) {
+                  setSelectedCoupon(found);
+                  Alert.alert("Success", "Coupon applied!");
+                } else {
+                  Alert.alert("Coupon", `Code "${couponInput}" applied.`);
+                }
+              }}
+            >
+              <Text style={styles.applyCouponBtnText}>Apply</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
         {/* Actions */}
         <View style={styles.actionRow}>
           <TouchableOpacity style={styles.draftBtn} onPress={handleSaveDraft}>
-            <FloppyDisk size={18} color={currentTheme.text} />
+            <FloppyDisk size={20} color={currentTheme.text} />
             <Text style={styles.draftBtnText}>Save Draft</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit}>
-            <PaperPlaneTilt size={18} color="#fff" weight="fill" />
+            <PaperPlaneTilt size={20} color="#fff" weight="fill" />
             <Text style={styles.submitBtnText}>Review & Submit</Text>
           </TouchableOpacity>
         </View>
@@ -1392,12 +1441,13 @@ const getStyles = (currentTheme, isDark) => {
       flexDirection: "row",
       alignItems: "center",
       paddingHorizontal: 16,
-      paddingTop: 4,
+      paddingTop: Platform.OS === "android" ? 12 : 4,
       paddingBottom: 8,
+      minHeight: 52,
     },
     backButton: {
-      width: 40,
-      height: 40,
+      width: 36,
+      height: 36,
       justifyContent: "center",
     },
     headerCenter: {
@@ -1406,27 +1456,27 @@ const getStyles = (currentTheme, isDark) => {
     },
     headerTitle: {
       color: text,
-      fontSize: 22,
-      fontWeight: "900",
+      fontSize: 18,
+      fontWeight: "700",
     },
     headerSubtitle: {
       color: muted,
       fontSize: 13,
       marginTop: 2,
       textAlign: "center",
+      lineHeight: 18,
     },
     headerSpacer: {
-      width: 40,
+      width: 36,
     },
     scrollContent: {
-      paddingHorizontal: 18,
-      // Clear absolute tab bar (iOS ~85 / Android ~70) so action buttons stay tappable
-      paddingBottom: Platform.OS === "ios" ? 140 : 120,
+      paddingHorizontal: 16,
+      paddingBottom: Platform.OS === "ios" ? 120 : 100,
     },
     segment: {
       flexDirection: "row",
       backgroundColor: isDark ? "#1B1B1B" : "#F3F0F7",
-      borderRadius: 14,
+      borderRadius: 12,
       padding: 4,
       marginTop: 8,
       borderWidth: 1,
@@ -1434,8 +1484,8 @@ const getStyles = (currentTheme, isDark) => {
     },
     segmentItem: {
       flex: 1,
-      minHeight: 46,
-      borderRadius: 11,
+      minHeight: 40,
+      borderRadius: 10,
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "center",
@@ -1446,16 +1496,17 @@ const getStyles = (currentTheme, isDark) => {
     },
     segmentText: {
       color: text,
-      fontSize: 15,
-      fontWeight: "800",
+      fontSize: 14,
+      fontWeight: "700",
     },
     segmentTextActive: {
       color: "#FFFFFF",
     },
     selectionBanner: {
-      marginTop: 14,
-      borderRadius: 14,
-      padding: 14,
+      marginTop: 12,
+      borderRadius: 12,
+      paddingHorizontal: 16,
+      paddingVertical: 14,
       backgroundColor: soft,
       borderWidth: 1,
       borderColor: isDark ? "#3A2A55" : "#E8D9FF",
@@ -1468,14 +1519,14 @@ const getStyles = (currentTheme, isDark) => {
     },
     selectionTitle: {
       color: text,
-      fontSize: 15,
-      fontWeight: "800",
+      fontSize: 14,
+      fontWeight: "700",
     },
     selectionSubtitle: {
       color: muted,
       fontSize: 13,
       marginTop: 2,
-      fontWeight: "600",
+      fontWeight: "500",
     },
     section: {
       marginTop: 18,
@@ -1489,17 +1540,17 @@ const getStyles = (currentTheme, isDark) => {
     savedAddressLink: {
       color: PURPLE,
       fontSize: 13,
-      fontWeight: "800",
+      fontWeight: "700",
     },
     savedAddressChips: {
       gap: 8,
-      paddingBottom: 10,
+      paddingBottom: 8,
     },
     savedAddressChip: {
       maxWidth: 200,
-      minWidth: 140,
-      borderRadius: 14,
-      borderWidth: 1.5,
+      minWidth: 130,
+      borderRadius: 12,
+      borderWidth: 1,
       borderColor: border,
       backgroundColor: card,
       paddingHorizontal: 12,
@@ -1507,7 +1558,7 @@ const getStyles = (currentTheme, isDark) => {
       flexDirection: "row",
       alignItems: "center",
       gap: 8,
-      marginRight: 8,
+      marginRight: 6,
     },
     savedAddressChipActive: {
       backgroundColor: PURPLE,
@@ -1519,29 +1570,29 @@ const getStyles = (currentTheme, isDark) => {
     },
     savedAddressChipLabel: {
       color: text,
-      fontSize: 13,
-      fontWeight: "900",
+      fontSize: 14,
+      fontWeight: "700",
     },
     savedAddressChipLabelActive: {
       color: "#FFFFFF",
     },
     savedAddressChipSub: {
       color: muted,
-      fontSize: 11,
-      fontWeight: "600",
-      marginTop: 2,
+      fontSize: 12,
+      fontWeight: "500",
+      marginTop: 1,
     },
     savedAddressChipSubActive: {
       color: "rgba(255,255,255,0.85)",
     },
     addAddressChip: {
-      borderRadius: 14,
-      borderWidth: 1.5,
+      borderRadius: 12,
+      borderWidth: 1,
       borderColor: PURPLE,
       borderStyle: "dashed",
       backgroundColor: soft,
-      paddingHorizontal: 14,
-      paddingVertical: 12,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
       flexDirection: "row",
       alignItems: "center",
       gap: 6,
@@ -1549,18 +1600,19 @@ const getStyles = (currentTheme, isDark) => {
     addAddressChipText: {
       color: PURPLE,
       fontSize: 13,
-      fontWeight: "800",
+      fontWeight: "700",
     },
     label: {
       color: text,
-      fontSize: 15,
-      fontWeight: "800",
+      fontSize: 14,
+      fontWeight: "700",
       marginBottom: 8,
+      marginLeft: 4,
     },
     helperInline: {
       color: muted,
-      fontSize: 12,
-      fontWeight: "600",
+      fontSize: 13,
+      fontWeight: "500",
     },
     labelInline: {
       marginBottom: 0,
@@ -1568,19 +1620,20 @@ const getStyles = (currentTheme, isDark) => {
     labelRow: {
       flexDirection: "row",
       alignItems: "center",
-      gap: 8,
+      gap: 6,
       marginBottom: 8,
+      marginLeft: 4,
     },
     inputRow: {
-      minHeight: 50,
+      minHeight: 48,
       borderRadius: 12,
       borderWidth: 1,
       borderColor: border,
-      backgroundColor: inputBg,
-      paddingHorizontal: 12,
+      backgroundColor: card,
+      paddingHorizontal: 16,
       flexDirection: "row",
       alignItems: "center",
-      gap: 10,
+      gap: 14,
       marginBottom: 10,
     },
     inputRowError: {
@@ -1591,22 +1644,22 @@ const getStyles = (currentTheme, isDark) => {
       flex: 1,
       color: text,
       fontSize: 14,
-      fontWeight: "600",
+      fontWeight: "500",
       paddingVertical: 10,
     },
     placeholder: {
       color: muted,
     },
     pickerWrap: {
-      minHeight: 50,
+      minHeight: 48,
       borderRadius: 12,
       borderWidth: 1,
       borderColor: border,
-      backgroundColor: inputBg,
-      paddingLeft: 12,
+      backgroundColor: card,
+      paddingLeft: 16,
       flexDirection: "row",
       alignItems: "center",
-      gap: 10,
+      gap: 14,
       overflow: "hidden",
     },
     pickerOuter: {
@@ -1618,14 +1671,15 @@ const getStyles = (currentTheme, isDark) => {
       backgroundColor: "transparent",
       borderRadius: 0,
       borderWidth: 0,
-      minHeight: 50,
+      minHeight: 48,
       paddingLeft: 0,
-      paddingRight: 12,
+      paddingRight: 16,
     },
     helperText: {
       color: muted,
       fontSize: 13,
-      marginBottom: 10,
+      marginBottom: 8,
+      marginLeft: 4,
       lineHeight: 18,
     },
     paymentRow: {
@@ -1634,12 +1688,13 @@ const getStyles = (currentTheme, isDark) => {
     },
     paymentCard: {
       flex: 1,
-      borderRadius: 14,
+      borderRadius: 12,
       borderWidth: 1.5,
       borderColor: border,
       backgroundColor: card,
-      padding: 14,
-      minHeight: 118,
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      minHeight: 80,
     },
     paymentCardActive: {
       borderColor: PURPLE,
@@ -1649,7 +1704,7 @@ const getStyles = (currentTheme, isDark) => {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
-      marginBottom: 12,
+      marginBottom: 8,
     },
     radio: {
       width: 20,
@@ -1672,13 +1727,13 @@ const getStyles = (currentTheme, isDark) => {
     paymentTitle: {
       color: text,
       fontSize: 14,
-      fontWeight: "800",
+      fontWeight: "700",
     },
     paymentSub: {
       color: muted,
-      fontSize: 12,
-      marginTop: 4,
-      fontWeight: "600",
+      fontSize: 13,
+      marginTop: 2,
+      fontWeight: "500",
     },
     timelineRow: {
       flexDirection: "row",
@@ -1690,14 +1745,16 @@ const getStyles = (currentTheme, isDark) => {
       borderRadius: 12,
       borderWidth: 1,
       borderColor: border,
-      backgroundColor: inputBg,
-      padding: 12,
+      backgroundColor: card,
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      height: 48,
     },
     dateLabel: {
       color: muted,
-      fontSize: 11,
-      fontWeight: "700",
-      marginBottom: 6,
+      fontSize: 12,
+      fontWeight: "600",
+      marginBottom: 2,
     },
     dateValueRow: {
       flexDirection: "row",
@@ -1707,27 +1764,27 @@ const getStyles = (currentTheme, isDark) => {
     dateValue: {
       flex: 1,
       color: text,
-      fontSize: 12,
-      fontWeight: "700",
+      fontSize: 14,
+      fontWeight: "500",
     },
     timelineArrow: {
-      marginTop: 12,
+      marginTop: 8,
     },
     budgetHeader: {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
-      marginBottom: 8,
+      marginBottom: 6,
     },
     walletLink: {
       flexDirection: "row",
       alignItems: "center",
-      gap: 6,
+      gap: 4,
     },
     walletLinkText: {
       color: PURPLE,
       fontSize: 13,
-      fontWeight: "800",
+      fontWeight: "700",
     },
     walletCard: {
       borderRadius: 12,
@@ -1735,8 +1792,8 @@ const getStyles = (currentTheme, isDark) => {
       borderColor: border,
       backgroundColor: card,
       padding: 12,
-      marginBottom: 10,
-      gap: 8,
+      marginBottom: 8,
+      gap: 6,
     },
     walletRow: {
       flexDirection: "row",
@@ -1745,27 +1802,27 @@ const getStyles = (currentTheme, isDark) => {
     walletLabel: {
       color: muted,
       fontSize: 13,
-      fontWeight: "600",
+      fontWeight: "500",
     },
     walletAmount: {
       color: "#22C55E",
       fontSize: 13,
-      fontWeight: "800",
+      fontWeight: "700",
     },
     walletReserved: {
       color: "#F59E0B",
       fontSize: 13,
-      fontWeight: "800",
+      fontWeight: "700",
     },
     walletTotal: {
       color: text,
       fontSize: 13,
-      fontWeight: "800",
+      fontWeight: "700",
     },
     currencyPrefix: {
       color: text,
       fontSize: 16,
-      fontWeight: "900",
+      fontWeight: "700",
     },
     errorBlock: {
       marginTop: -2,
@@ -1774,50 +1831,51 @@ const getStyles = (currentTheme, isDark) => {
     errorText: {
       color: "#DC2626",
       fontSize: 12,
-      fontWeight: "700",
+      fontWeight: "600",
     },
     addMoneyBtn: {
       flexDirection: "row",
       alignItems: "center",
       gap: 4,
-      marginTop: 6,
+      marginTop: 4,
       alignSelf: "flex-start",
       backgroundColor: accentSoft,
-      paddingHorizontal: 10,
-      paddingVertical: 6,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
       borderRadius: 999,
     },
     addMoneyText: {
       color: PURPLE,
       fontSize: 12,
-      fontWeight: "800",
+      fontWeight: "700",
     },
     validatingText: {
       color: PURPLE,
       fontSize: 12,
-      fontWeight: "700",
+      fontWeight: "600",
     },
     validText: {
       color: "#22C55E",
       fontSize: 12,
-      fontWeight: "700",
+      fontWeight: "600",
     },
     addSkillsLink: {
       color: PURPLE,
-      fontSize: 12,
-      fontWeight: "800",
+      fontSize: 13,
+      fontWeight: "700",
     },
     textAreaWrap: {
       borderRadius: 12,
       borderWidth: 1,
       borderColor: border,
-      backgroundColor: inputBg,
-      minHeight: 150,
-      paddingHorizontal: 12,
-      paddingVertical: 12,
+      backgroundColor: card,
+      minHeight: 120,
+      paddingHorizontal: 16,
+      paddingVertical: 14,
       flexDirection: "row",
       alignItems: "flex-start",
-      gap: 10,
+      gap: 12,
+      position: "relative",
     },
     textAreaIcon: {
       height: 22,
@@ -1826,50 +1884,64 @@ const getStyles = (currentTheme, isDark) => {
     },
     textArea: {
       flex: 1,
-      minHeight: 126,
+      minHeight: 92,
       color: text,
       fontSize: 14,
-      fontWeight: "600",
+      fontWeight: "500",
       lineHeight: 20,
       paddingTop: 0,
       paddingBottom: 0,
       textAlignVertical: "top",
     },
+    micBtn: {
+      position: "absolute",
+      bottom: 10,
+      right: 10,
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: isDark ? "#3A2A55" : "#E8D9FF",
+      backgroundColor: soft,
+      alignItems: "center",
+      justifyContent: "center",
+    },
     uploadCard: {
-      borderRadius: 14,
+      borderRadius: 12,
       borderWidth: 1.5,
       borderStyle: "dashed",
       borderColor: PURPLE,
       backgroundColor: soft,
-      padding: 16,
+      paddingHorizontal: 16,
+      paddingVertical: 14,
       flexDirection: "row",
       alignItems: "center",
-      gap: 12,
+      gap: 14,
     },
     uploadTextWrap: {
       flex: 1,
     },
     uploadTitle: {
-      color: text,
+      color: PURPLE,
       fontSize: 14,
-      fontWeight: "800",
+      fontWeight: "700",
     },
     uploadSub: {
       color: muted,
-      fontSize: 12,
-      marginTop: 3,
-      fontWeight: "600",
+      fontSize: 13,
+      marginTop: 2,
+      fontWeight: "500",
     },
     uploadedImages: {
       flexDirection: "row",
       flexWrap: "wrap",
-      marginTop: 12,
+      marginTop: 10,
       gap: 8,
     },
     imagePreviewContainer: {
-      width: 88,
-      height: 88,
-      borderRadius: 12,
+      width: 80,
+      height: 80,
+      borderRadius: 10,
       overflow: "hidden",
       position: "relative",
       backgroundColor: accentSoft,
@@ -1882,22 +1954,22 @@ const getStyles = (currentTheme, isDark) => {
       flex: 1,
       alignItems: "center",
       justifyContent: "center",
-      padding: 8,
+      padding: 6,
     },
     docName: {
       color: muted,
-      fontSize: 10,
+      fontSize: 9,
       textAlign: "center",
-      marginTop: 4,
+      marginTop: 2,
     },
     removeButton: {
       position: "absolute",
       top: 4,
       right: 4,
       backgroundColor: "#3b006b",
-      width: 22,
-      height: 22,
-      borderRadius: 11,
+      width: 20,
+      height: 20,
+      borderRadius: 10,
       alignItems: "center",
       justifyContent: "center",
     },
@@ -1906,17 +1978,49 @@ const getStyles = (currentTheme, isDark) => {
       fontSize: 10,
       fontWeight: "700",
     },
+    couponInputRow: {
+      flexDirection: "row",
+      gap: 10,
+      alignItems: "center",
+    },
+    couponInputWrap: {
+      flex: 1,
+      minHeight: 48,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: border,
+      backgroundColor: card,
+      paddingHorizontal: 16,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 14,
+    },
+    applyCouponBtn: {
+      height: 48,
+      borderRadius: 12,
+      borderWidth: 1.5,
+      borderColor: PURPLE,
+      backgroundColor: card,
+      paddingHorizontal: 20,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    applyCouponBtnText: {
+      color: PURPLE,
+      fontSize: 14,
+      fontWeight: "700",
+    },
     actionRow: {
       flexDirection: "row",
       gap: 10,
-      marginTop: 24,
-      marginBottom: 20,
+      marginTop: 20,
+      marginBottom: Platform.OS === "ios" ? 40 : 30,
     },
     draftBtn: {
       flex: 1,
-      minHeight: 52,
-      borderRadius: 14,
-      borderWidth: 1.5,
+      height: 48,
+      borderRadius: 12,
+      borderWidth: 1,
       borderColor: border,
       backgroundColor: card,
       flexDirection: "row",
@@ -1927,12 +2031,12 @@ const getStyles = (currentTheme, isDark) => {
     draftBtnText: {
       color: text,
       fontSize: 14,
-      fontWeight: "800",
+      fontWeight: "700",
     },
     submitBtn: {
-      flex: 1.35,
-      minHeight: 52,
-      borderRadius: 14,
+      flex: 1.25,
+      height: 48,
+      borderRadius: 12,
       backgroundColor: PURPLE,
       flexDirection: "row",
       alignItems: "center",
@@ -1942,23 +2046,46 @@ const getStyles = (currentTheme, isDark) => {
     submitBtnText: {
       color: "#FFFFFF",
       fontSize: 14,
-      fontWeight: "900",
+      fontWeight: "700",
+    },
+    locationBtnsRow: {
+      flexDirection: "row",
+      gap: 10,
+      marginBottom: 10,
     },
     primaryLocationBtn: {
-      minHeight: 46,
+      flex: 1,
+      height: 48,
       borderRadius: 12,
       backgroundColor: PURPLE,
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "center",
-      gap: 6,
+      gap: 8,
       paddingHorizontal: 12,
-      marginBottom: 12,
     },
     primaryLocationBtnText: {
       color: "#fff",
-      fontSize: 13,
-      fontWeight: "800",
+      fontSize: 14,
+      fontWeight: "600",
+    },
+    secondaryLocationBtn: {
+      flex: 1,
+      height: 48,
+      borderRadius: 12,
+      borderWidth: 1.5,
+      borderColor: PURPLE,
+      backgroundColor: "transparent",
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      paddingHorizontal: 12,
+    },
+    secondaryLocationBtnText: {
+      color: PURPLE,
+      fontSize: 14,
+      fontWeight: "600",
     },
     disabledBtn: {
       opacity: 0.5,
@@ -2001,8 +2128,8 @@ const getStyles = (currentTheme, isDark) => {
     },
     mapOverlayBtnText: {
       color: PURPLE,
-      fontSize: 13,
-      fontWeight: "800",
+      fontSize: 14,
+      fontWeight: "600",
     },
     tipBox: {
       backgroundColor: isDark ? "rgba(245,158,11,0.15)" : "#FFF8E7",
@@ -2013,8 +2140,8 @@ const getStyles = (currentTheme, isDark) => {
     tipText: {
       color: isDark ? "#FBBF24" : "#92400E",
       fontSize: 12,
-      lineHeight: 17,
-      fontWeight: "600",
+      lineHeight: 18,
+      fontWeight: "500",
     },
     mapModalContainer: {
       flex: 1,
@@ -2033,8 +2160,8 @@ const getStyles = (currentTheme, isDark) => {
     },
     mapModalTitle: {
       color: "#fff",
-      fontSize: 17,
-      fontWeight: "800",
+      fontSize: 18,
+      fontWeight: "700",
     },
     mapModalConfirmButton: {
       backgroundColor: "#22C55E",
@@ -2046,7 +2173,8 @@ const getStyles = (currentTheme, isDark) => {
     },
     mapModalConfirmText: {
       color: "#fff",
-      fontWeight: "800",
+      fontSize: 14,
+      fontWeight: "700",
     },
     map: {
       flex: 1,
@@ -2064,13 +2192,14 @@ const getStyles = (currentTheme, isDark) => {
       marginBottom: 6,
     },
     couponSection: {
-      marginTop: 12,
+      marginTop: 14,
     },
     couponTitle: {
       color: text,
       fontSize: 14,
       fontWeight: "700",
       marginBottom: 8,
+      marginLeft: 4,
     },
     couponCard: {
       flexDirection: "row",
@@ -2078,8 +2207,9 @@ const getStyles = (currentTheme, isDark) => {
       justifyContent: "space-between",
       borderWidth: 1,
       borderColor: border,
-      borderRadius: 10,
-      padding: 12,
+      borderRadius: 12,
+      paddingHorizontal: 16,
+      paddingVertical: 14,
       marginBottom: 8,
       backgroundColor: card,
     },
@@ -2096,12 +2226,13 @@ const getStyles = (currentTheme, isDark) => {
     couponDiscount: {
       color: PURPLE,
       fontSize: 14,
-      fontWeight: "800",
+      fontWeight: "700",
     },
     couponMinBooking: {
       color: muted,
-      fontSize: 12,
+      fontSize: 13,
       marginTop: 2,
+      fontWeight: "500",
     },
     couponTextDisabled: {
       color: muted,
@@ -2123,13 +2254,13 @@ const getStyles = (currentTheme, isDark) => {
     },
     couponSummary: {
       backgroundColor: soft,
-      borderRadius: 8,
-      padding: 10,
+      borderRadius: 10,
+      padding: 12,
       marginTop: 4,
     },
     couponSummaryText: {
       color: PURPLE,
-      fontSize: 12,
+      fontSize: 13,
       fontWeight: "600",
     },
   });

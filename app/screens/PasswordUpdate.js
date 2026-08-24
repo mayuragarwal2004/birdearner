@@ -334,41 +334,41 @@ const getStyles = (currentTheme, buttonColor) =>
       alignItems: "center",
     },
     headerTitle: {
-      fontSize: 20,
-      fontWeight: "bold",
+      fontSize: 18,
+      fontWeight: "700",
       color: currentTheme.text || "#000000",
     },
     rightPlaceholder: {
-      width: 40,
+      width: 36,
     },
     content: {
       flex: 1,
       paddingTop: 10,
     },
     subtitle: {
-      fontSize: 15,
+      fontSize: 14,
       color: currentTheme.subText || "#666666",
       textAlign: "center",
-      marginBottom: 30,
-      lineHeight: 22,
+      marginBottom: 24,
+      lineHeight: 20,
     },
     inputGroup: {
-      marginBottom: 20,
+      marginBottom: 16,
     },
     label: {
-      fontSize: 15,
+      fontSize: 14,
       fontWeight: "500",
       color: currentTheme.text || "#000000",
-      marginBottom: 8,
+      marginBottom: 6,
     },
     inputWrapper: {
       flexDirection: "row",
       alignItems: "center",
-      height: 56,
+      height: 48,
       borderWidth: 1,
       borderColor: currentTheme.border || "#E5E7EB",
       borderRadius: 12,
-      paddingHorizontal: 16,
+      paddingHorizontal: 14,
       backgroundColor: currentTheme.background || "#FFFFFF",
     },
     inputIcon: {
@@ -421,7 +421,7 @@ const getStyles = (currentTheme, buttonColor) =>
       color: "#F44336",
     },
     updateButton: {
-      height: 56,
+      height: 48,
       backgroundColor: buttonColor,
       borderRadius: 12,
       alignItems: "center",
@@ -434,7 +434,7 @@ const getStyles = (currentTheme, buttonColor) =>
     updateButtonText: {
       color: "#fff",
       fontWeight: "600",
-      fontSize: 16,
+      fontSize: 15,
     },
   });
 

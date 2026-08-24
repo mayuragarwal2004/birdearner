@@ -286,7 +286,7 @@ const SettingsScreen = ({ navigation }) => {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={30} color={currentTheme.text || "#000"} />
+          <Ionicons name="arrow-back" size={24} color={currentTheme.text || "#000"} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Settings</Text>
         <View style={styles.headerSpacer} />
@@ -328,7 +328,7 @@ const SettingsScreen = ({ navigation }) => {
             </View>
 
             <TouchableOpacity style={styles.editShortcut} onPress={handleEditProfile}>
-              <Ionicons name="create-outline" size={30} color="#FFFFFF" />
+              <Ionicons name="create-outline" size={20} color="#FFFFFF" />
               <Text style={styles.editShortcutText}>Edit Profile</Text>
             </TouchableOpacity>
           </View>
@@ -386,14 +386,14 @@ function SettingsRow({ item, isLast, styles, onPress }) {
       <View style={styles.rowLeft}>
         <Ionicons
           name={item.icon}
-          size={28}
+          size={20}
           color={item.danger ? "#FF1F1F" : PURPLE}
         />
         <Text style={[styles.rowText, item.danger && styles.rowTextDanger]}>
           {item.label}
         </Text>
       </View>
-      <Ionicons name="chevron-forward" size={22} color={styles.chevronColor.color} />
+      <Ionicons name="chevron-forward" size={16} color={styles.chevronColor.color} />
     </TouchableOpacity>
   );
 }
@@ -412,43 +412,43 @@ const getStyles = (currentTheme) => {
       backgroundColor: surface,
     },
     header: {
-      minHeight: 64,
-      paddingHorizontal: 24,
-      paddingTop: Platform.OS === "android" ? 24 : 6,
+      minHeight: 52,
+      paddingHorizontal: 16,
+      paddingTop: Platform.OS === "android" ? 12 : 4,
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
       backgroundColor: surface,
     },
     backButton: {
-      width: 44,
-      height: 44,
+      width: 36,
+      height: 36,
       justifyContent: "center",
       alignItems: "flex-start",
     },
     headerTitle: {
       color: text,
-      fontSize: 25,
-      fontWeight: "900",
+      fontSize: 18,
+      fontWeight: "700",
       textAlign: "center",
     },
     headerSpacer: {
-      width: 44,
+      width: 36,
     },
     scrollView: {
       flex: 1,
       backgroundColor: surface,
     },
     scrollContent: {
-      paddingHorizontal: 18,
-      paddingBottom: Platform.OS === "ios" ? 112 : 96,
+      paddingHorizontal: 16,
+      paddingBottom: Platform.OS === "ios" ? 80 : 64,
     },
     profileCard: {
       borderRadius: 12,
       overflow: "hidden",
       backgroundColor: DEEP,
       marginTop: 8,
-      marginBottom: 26,
+      marginBottom: 18,
       borderWidth: 1,
       borderColor: isDark ? "#2A2634" : "#1F1B29",
     },
@@ -457,35 +457,35 @@ const getStyles = (currentTheme) => {
       resizeMode: "cover",
     },
     profileTop: {
-      paddingHorizontal: 18,
-      paddingTop: 20,
-      paddingBottom: 20,
+      paddingHorizontal: 16,
+      paddingTop: 16,
+      paddingBottom: 16,
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
-      gap: 10,
+      gap: 12,
       backgroundColor: "rgba(17, 16, 22, 0.94)",
     },
     profileIdentity: {
       flex: 1,
       flexDirection: "row",
       alignItems: "center",
-      gap: 14,
+      gap: 12,
       minWidth: 0,
     },
     avatarRing: {
-      width: 92,
-      height: 92,
-      borderRadius: 46,
-      borderWidth: 3,
+      width: 64,
+      height: 64,
+      borderRadius: 32,
+      borderWidth: 2,
       borderColor: "#B070FF",
-      padding: 4,
+      padding: 2,
       backgroundColor: "#F7F4FB",
     },
     avatar: {
       width: "100%",
       height: "100%",
-      borderRadius: 41,
+      borderRadius: 28,
       backgroundColor: "#ECE7F3",
     },
     profileText: {
@@ -494,33 +494,33 @@ const getStyles = (currentTheme) => {
     },
     profileName: {
       color: "#FFFFFF",
-      fontSize: 23,
-      fontWeight: "900",
-      marginBottom: 6,
+      fontSize: 17,
+      fontWeight: "700",
+      marginBottom: 3,
     },
     profileMeta: {
-      color: "#FFFFFF",
-      fontSize: 15,
-      lineHeight: 21,
+      color: "rgba(255, 255, 255, 0.8)",
+      fontSize: 13,
+      lineHeight: 18,
     },
     editShortcut: {
-      width: 62,
+      width: 64,
       alignItems: "center",
-      gap: 5,
+      gap: 4,
     },
     editShortcutText: {
       color: "#FFFFFF",
-      fontSize: 12,
-      fontWeight: "700",
+      fontSize: 11,
+      fontWeight: "600",
       textAlign: "center",
     },
     switchDivider: {
       height: 1,
-      backgroundColor: "rgba(255,255,255,0.16)",
+      backgroundColor: "rgba(255,255,255,0.14)",
     },
     switchRow: {
-      minHeight: 82,
-      paddingHorizontal: 20,
+      minHeight: 50,
+      paddingHorizontal: 16,
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
@@ -528,18 +528,18 @@ const getStyles = (currentTheme) => {
     },
     switchLabel: {
       color: "#FFFFFF",
-      fontSize: 23,
-      fontWeight: "900",
+      fontSize: 15,
+      fontWeight: "700",
     },
     section: {
-      marginBottom: 26,
+      marginBottom: 18,
     },
     sectionTitle: {
       color: text,
-      fontSize: 19,
-      fontWeight: "900",
-      marginBottom: 12,
-      marginLeft: 18,
+      fontSize: 14,
+      fontWeight: "700",
+      marginBottom: 8,
+      marginLeft: 4,
     },
     sectionCard: {
       borderWidth: 1,
@@ -549,8 +549,8 @@ const getStyles = (currentTheme) => {
       backgroundColor: isDark ? card : "#FFFFFF",
     },
     row: {
-      minHeight: 68,
-      paddingHorizontal: 24,
+      minHeight: 48,
+      paddingHorizontal: 16,
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
@@ -566,19 +566,19 @@ const getStyles = (currentTheme) => {
       minWidth: 0,
       flexDirection: "row",
       alignItems: "center",
-      gap: 24,
+      gap: 14,
     },
     rowText: {
       flex: 1,
       color: text,
-      fontSize: 18,
-      fontWeight: "600",
+      fontSize: 14,
+      fontWeight: "500",
     },
     rowTextDanger: {
       color: "#FF1F1F",
     },
     chevronColor: {
-      color: text,
+      color: muted,
     },
   });
 };

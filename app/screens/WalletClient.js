@@ -247,9 +247,9 @@ const getStyles = (currentTheme, primaryColor) =>
       justifyContent: "space-between",
     },
     backButton: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
+      width: 36,
+      height: 36,
+      borderRadius: 18,
       borderWidth: 1,
       borderColor: currentTheme.border || "#E5E7EB",
       justifyContent: "center",
@@ -261,16 +261,16 @@ const getStyles = (currentTheme, primaryColor) =>
       alignItems: "center",
     },
     headerTitle: {
-      fontSize: 20,
-      fontWeight: "bold",
+      fontSize: 18,
+      fontWeight: "700",
       color: currentTheme.text || "#000000",
     },
     rightPlaceholder: {
-      width: 40,
+      width: 36,
     },
     content: {
       flex: 1,
-      paddingHorizontal: 24,
+      paddingHorizontal: 16,
     },
     loadingContainer: {
       flex: 1,

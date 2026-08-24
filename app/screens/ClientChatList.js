@@ -244,14 +244,14 @@ const ClientChatList = () => {
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={28} color={currentTheme.text || "#000"} />
+          <Ionicons name="arrow-back" size={24} color={currentTheme.text || "#000"} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
           <Text style={styles.headerTitle}>Client Inbox</Text>
           <Text style={styles.headerSubtitle}>Your job conversations</Text>
         </View>
         <TouchableOpacity style={styles.refreshButton} onPress={onRefresh}>
-          <Ionicons name="refresh" size={22} color={PURPLE} />
+          <Ionicons name="refresh" size={20} color={PURPLE} />
         </TouchableOpacity>
       </View>
 
@@ -340,8 +340,8 @@ const getStyles = (currentTheme, isDark) => {
       backgroundColor: surface,
     },
     header: {
-      minHeight: 68,
-      paddingHorizontal: 22,
+      minHeight: 52,
+      paddingHorizontal: 16,
       paddingTop: 4,
       flexDirection: "row",
       alignItems: "center",
@@ -349,8 +349,8 @@ const getStyles = (currentTheme, isDark) => {
       backgroundColor: surface,
     },
     backButton: {
-      width: 44,
-      height: 44,
+      width: 36,
+      height: 36,
       justifyContent: "center",
       alignItems: "flex-start",
     },
@@ -361,27 +361,27 @@ const getStyles = (currentTheme, isDark) => {
     },
     headerTitle: {
       color: text,
-      fontSize: 24,
-      fontWeight: "900",
+      fontSize: 18,
+      fontWeight: "700",
       textAlign: "center",
     },
     headerSubtitle: {
       color: muted,
-      fontSize: 13,
-      fontWeight: "600",
-      marginTop: 2,
+      fontSize: 12,
+      fontWeight: "500",
+      marginTop: 1,
       textAlign: "center",
     },
     refreshButton: {
-      width: 44,
-      height: 44,
-      borderRadius: 22,
+      width: 36,
+      height: 36,
+      borderRadius: 18,
       alignItems: "center",
       justifyContent: "center",
       backgroundColor: accentSoft,
     },
     listContainer: {
-      paddingHorizontal: 20,
+      paddingHorizontal: 16,
       paddingBottom: 110,
       flexGrow: 1,
     },

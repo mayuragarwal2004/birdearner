@@ -123,7 +123,7 @@ const BankAccountDetailsScreen = ({ navigation }) => {
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Select your bank</Text>
             <View style={styles.inputWrapper}>
-              <Bank size={24} color={iconColor} style={styles.inputIcon} />
+              <Bank size={20} color={iconColor} style={styles.inputIcon} />
               <TextInput
                 placeholderTextColor="#9ca3af"
                 style={styles.input}
@@ -138,7 +138,7 @@ const BankAccountDetailsScreen = ({ navigation }) => {
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Account holder name</Text>
             <View style={styles.inputWrapper}>
-              <User size={24} color={iconColor} style={styles.inputIcon} />
+              <User size={20} color={iconColor} style={styles.inputIcon} />
               <TextInput
                 placeholderTextColor="#9ca3af"
                 style={styles.input}
@@ -153,7 +153,7 @@ const BankAccountDetailsScreen = ({ navigation }) => {
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Enter your account number</Text>
             <View style={styles.inputWrapper}>
-              <CreditCard size={24} color={iconColor} style={styles.inputIcon} />
+              <CreditCard size={20} color={iconColor} style={styles.inputIcon} />
               <TextInput
                 placeholderTextColor="#9ca3af"
                 style={styles.input}
@@ -175,7 +175,7 @@ const BankAccountDetailsScreen = ({ navigation }) => {
             <Text style={styles.label}>Confirm your account number</Text>
             <View style={styles.inputWrapper}>
               <View style={styles.iconWithBadge}>
-                <CreditCard size={24} color={iconColor} style={styles.inputIcon} />
+                <CreditCard size={20} color={iconColor} style={styles.inputIcon} />
                 <View style={styles.badgeContainer}>
                    <CheckCircle size={12} color={iconColor} weight="fill" />
                 </View>
@@ -196,7 +196,7 @@ const BankAccountDetailsScreen = ({ navigation }) => {
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Enter your bank IFSC code</Text>
             <View style={styles.inputWrapper}>
-              <ShieldCheck size={24} color={iconColor} style={styles.inputIcon} />
+              <ShieldCheck size={20} color={iconColor} style={styles.inputIcon} />
               <TextInput
                 placeholderTextColor="#9ca3af"
                 style={styles.input}
@@ -235,20 +235,20 @@ const getStyles = (currentTheme, buttonColor) => StyleSheet.create({
     flex: 1,
   },
   contentContainer: {
-    paddingHorizontal: 24,
-    paddingTop: 20,
+    paddingHorizontal: 16,
+    paddingTop: 16,
     paddingBottom: 40,
   },
   headerContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 32,
+    marginBottom: 20,
     justifyContent: "space-between",
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: currentTheme.border || "#E5E7EB",
     justifyContent: "center",
@@ -260,38 +260,38 @@ const getStyles = (currentTheme, buttonColor) => StyleSheet.create({
     alignItems: "center",
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
+    fontSize: 18,
+    fontWeight: "700",
     color: currentTheme.text || "#000000",
   },
   rightPlaceholder: {
-    width: 40,
+    width: 36,
   },
   inputGroup: {
-    marginBottom: 20,
+    marginBottom: 16,
   },
   label: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "500",
     color: currentTheme.text || "#000000",
-    marginBottom: 8,
+    marginBottom: 6,
   },
   inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
-    height: 56,
+    height: 48,
     borderWidth: 1,
     borderColor: currentTheme.border || "#E5E7EB",
     borderRadius: 12,
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     backgroundColor: currentTheme.background || "#FFFFFF",
   },
   inputIcon: {
-    marginRight: 12,
+    marginRight: 10,
   },
   iconWithBadge: {
     position: "relative",
-    marginRight: 12,
+    marginRight: 10,
   },
   badgeContainer: {
     position: "absolute",
@@ -303,13 +303,13 @@ const getStyles = (currentTheme, buttonColor) => StyleSheet.create({
   },
   input: {
     flex: 1,
-    fontSize: 15,
+    fontSize: 14,
     color: currentTheme.text || "#000000",
     height: "100%",
   },
   saveButton: {
     width: "100%",
-    height: 56,
+    height: 48,
     backgroundColor: buttonColor,
     borderRadius: 12,
     alignItems: "center",
@@ -318,7 +318,7 @@ const getStyles = (currentTheme, buttonColor) => StyleSheet.create({
   },
   saveButtonText: {
     color: "white",
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "600",
   },
 });
