@@ -10,11 +10,14 @@ import {
   SafeAreaView,
   StatusBar,
   Platform,
+  TextInput,
+  ActivityIndicator,
 } from "react-native";
 import SafeSpinner from "../components/SafeSpinner";
 import { Ionicons } from "@expo/vector-icons";
 import ImageViewer from "react-native-image-zoom-viewer";
 import { useTheme } from "../context/ThemeContext";
+import { useAuth } from "../context/NewAuthContext";
 import apiService from "../lib/apiService";
 
 const JobDetailsChatScreen = ({ route, navigation }) => {
@@ -28,6 +31,11 @@ const JobDetailsChatScreen = ({ route, navigation }) => {
   const [error, setError] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [images, setImages] = useState([]);
+  const [otpInput, setOtpInput] = useState("");
+  const [actionLoading, setActionLoading] = useState(false);
+
+  const { userData } = useAuth();
+  const isClient = userData?.userType === "CLIENT" || userData?.client?.id === job?.client?.id;
 
   useEffect(() => {
     fetchJobDetails();
@@ -53,6 +61,33 @@ const JobDetailsChatScreen = ({ route, navigation }) => {
   const openImageModal = (imageUri) => {
     if (images.length > 0) {
       setModalVisible(true);
+    }
+  };
+
+  const handlePhysicalProgress = async (action, otpCode = "") => {
+    try {
+      setActionLoading(true);
+      const res = await apiService.updatePhysicalJobProgress(job.id, action, { otpCode });
+      Alert.alert("Success", `Status updated: ${action}`);
+      if (res) setJob({ ...job, ...res });
+      setOtpInput("");
+    } catch (err) {
+      Alert.alert("Error", err.message || "Failed to update progress");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleExtendDeadline = async () => {
+    try {
+      setActionLoading(true);
+      await apiService.extendApplicationDeadline(job.id);
+      Alert.alert("Success", "Application deadline extended by 24 hours.");
+      fetchJobDetails();
+    } catch (err) {
+      Alert.alert("Error", err.message || "Failed to extend deadline");
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -83,23 +118,47 @@ const JobDetailsChatScreen = ({ route, navigation }) => {
   };
 
   const getStatusColor = (status) => {
-    switch (status?.toLowerCase()) {
-      case "open": return "#22C55E";
-      case "in_progress": return "#2563EB";
-      case "completed": return "#22C55E";
-      case "cancelled": return "#EF4444";
-      case "paused": return "#F59E0B";
+    switch (status?.toUpperCase()) {
+      case "OPEN": return "#22C55E";
+      case "CONFIRMED": return "#3B82F6";
+      case "FREELANCER_TRAVELLING": return "#F59E0B";
+      case "ARRIVED": return "#F59E0B";
+      case "JOB_STARTED": return "#6B21A8";
+      case "WORK_ACCEPTED": return "#22C55E";
+      case "COMPLETED": return "#22C55E";
+      case "WORK_SUBMITTED": return "#3B82F6";
+      case "AUTO_ACCEPTED": return "#22C55E";
+      case "CANCELLED_BY_CLIENT":
+      case "CANCELLED_BY_FREELANCER":
+      case "CANCELLED":
+      case "CANCELLED_SCOPE_MISMATCH": return "#EF4444";
+      case "EXPIRED":
+      case "DEADLINE_EXPIRED": return "#EF4444";
+      case "DISPUTE_OPEN": return "#EF4444";
+      case "IN_PROGRESS": return "#3B82F6";
       default: return "#6B7280";
     }
   };
 
   const getStatusBg = (status) => {
-    switch (status?.toLowerCase()) {
-      case "open": return "#DCFCE7";
-      case "in_progress": return "#EAF1FF";
-      case "completed": return "#DCFCE7";
-      case "cancelled": return "#FDECEC";
-      case "paused": return "#FFF6DF";
+    switch (status?.toUpperCase()) {
+      case "OPEN": return "#DCFCE7";
+      case "CONFIRMED": return "#EFF6FF";
+      case "FREELANCER_TRAVELLING": return "#FFF7ED";
+      case "ARRIVED": return "#FFF7ED";
+      case "JOB_STARTED": return "#F5F3FF";
+      case "WORK_ACCEPTED": return "#DCFCE7";
+      case "COMPLETED": return "#DCFCE7";
+      case "WORK_SUBMITTED": return "#EFF6FF";
+      case "AUTO_ACCEPTED": return "#DCFCE7";
+      case "CANCELLED_BY_CLIENT":
+      case "CANCELLED_BY_FREELANCER":
+      case "CANCELLED":
+      case "CANCELLED_SCOPE_MISMATCH": return "#FDECEC";
+      case "EXPIRED":
+      case "DEADLINE_EXPIRED": return "#FDECEC";
+      case "DISPUTE_OPEN": return "#FDECEC";
+      case "IN_PROGRESS": return "#EFF6FF";
       default: return "#F3F4F6";
     }
   };
@@ -271,9 +330,10 @@ const JobDetailsChatScreen = ({ route, navigation }) => {
           <View style={[styles.card, styles.gridCard]}>
             <View style={styles.gridCardHeader}>
               <View style={styles.smallIconCircle}><Ionicons name="calendar-outline" size={15} color="#6B21A8" /></View>
-              <Text style={styles.gridCardLabel}>Deadline</Text>
+              <Text style={styles.gridCardLabel}>Work Duration</Text>
             </View>
-            <Text style={styles.gridCardValue}>{formatDate(job.deadlineDate || job.deadline)}</Text>
+            <Text style={styles.gridCardValue}>{job.workDurationDays || 1} Day{(job.workDurationDays || 1) > 1 ? "s" : ""}</Text>
+            <Text style={styles.gridCardSubtext}>After booking confirmed</Text>
           </View>
         </View>
         <View style={styles.gridRow}>
@@ -324,6 +384,164 @@ const JobDetailsChatScreen = ({ route, navigation }) => {
         </View>
 
         <View style={styles.actionsContainer}>
+          {actionLoading && <ActivityIndicator size="large" color="#6B21A8" style={{ marginBottom: 12 }} />}
+
+          {/* Timeline info */}
+          {job.applicationDeadline && statusText === "OPEN" && (
+            <View style={{ backgroundColor: "#EFF6FF", padding: 12, borderRadius: 12, marginBottom: 14 }}>
+              <Text style={{ fontSize: 12, color: "#1D4ED8", fontWeight: "600" }}>
+                Application Deadline: {formatDate(job.applicationDeadline)}
+              </Text>
+            </View>
+          )}
+          {job.workDeadline && (
+            <View style={{ backgroundColor: "#F0FDF4", padding: 12, borderRadius: 12, marginBottom: 14 }}>
+              <Text style={{ fontSize: 12, color: "#166534", fontWeight: "600" }}>
+                Work Deadline: {formatDate(job.workDeadline)} ({job.workDurationDays || 1} Day{job.workDurationDays > 1 ? "s" : ""})
+              </Text>
+            </View>
+          )}
+
+          {/* OPEN Job: Client option to Extend Application Deadline (+24h) */}
+          {statusText === "OPEN" && isClient && !job.applicationExtended && (
+            <TouchableOpacity style={styles.primaryActionBtn} onPress={handleExtendDeadline} activeOpacity={0.8}>
+              <Ionicons name="time-outline" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+              <Text style={styles.primaryActionBtnText}>Extend Application Deadline (+24h)</Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Freelancer: "I'm On My Way" — CONFIRMED status */}
+          {!isRemote && !isClient && (statusText === "CONFIRMED" || statusText === "IN_PROGRESS") && (
+            <TouchableOpacity style={styles.primaryActionBtn} onPress={() => handlePhysicalProgress("TRAVELLING")} activeOpacity={0.8}>
+              <Ionicons name="navigate-outline" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+              <Text style={styles.primaryActionBtnText}>I'm On My Way</Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Freelancer: "Arrived at Location" — FREELANCER_TRAVELLING status */}
+          {!isRemote && !isClient && statusText === "FREELANCER_TRAVELLING" && (
+            <TouchableOpacity style={styles.primaryActionBtn} onPress={() => handlePhysicalProgress("ARRIVED")} activeOpacity={0.8}>
+              <Ionicons name="location-outline" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+              <Text style={styles.primaryActionBtnText}>Arrived at Location</Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Freelancer: "Request OTP from Client" — ARRIVED status */}
+          {!isRemote && !isClient && statusText === "ARRIVED" && (
+            <TouchableOpacity style={styles.primaryActionBtn} onPress={() => handlePhysicalProgress("REQUEST_OTP")} activeOpacity={0.8}>
+              <Ionicons name="key-outline" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+              <Text style={styles.primaryActionBtnText}>Request OTP from Client</Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Client: OTP Display — ARRIVED status, otpCode exists */}
+          {!isRemote && isClient && statusText === "ARRIVED" && (
+            <View style={{ marginBottom: 14, backgroundColor: "#FFF8E7", padding: 14, borderRadius: 12, borderWidth: 1, borderColor: "#FCD34D" }}>
+              <Text style={{ fontSize: 12, color: "#92400E", fontWeight: "600", marginBottom: 6 }}>
+                The freelancer has requested the OTP. Share it verbally after verifying their physical presence.
+              </Text>
+              {job.otpCode ? (
+                <View style={{ backgroundColor: "#FFFFFF", borderRadius: 10, padding: 14, alignItems: "center", marginTop: 8, borderWidth: 1, borderColor: "#E5E7EB" }}>
+                  <Text style={{ fontSize: 11, color: "#6B7280", marginBottom: 4 }}>Your OTP Code</Text>
+                  <Text style={{ fontSize: 26, fontWeight: "800", color: "#6B21A8", letterSpacing: 6 }}>
+                    {job.otpCode}
+                  </Text>
+                </View>
+              ) : (
+                <Text style={{ fontSize: 12, color: "#78716C", marginTop: 4 }}>
+                  Waiting for freelancer to request OTP...
+                </Text>
+              )}
+            </View>
+          )}
+
+          {/* Freelancer: OTP Input — ARRIVED status */}
+          {!isRemote && !isClient && statusText === "ARRIVED" && (
+            <View style={{ flexDirection: "row", gap: 10, marginBottom: 14 }}>
+              <TextInput
+                style={{ flex: 1, borderWidth: 1, borderColor: "#D1D5DB", borderRadius: 10, paddingHorizontal: 14, fontSize: 16, backgroundColor: "#FFFFFF" }}
+                placeholder="Enter 6-digit OTP"
+                keyboardType="number-pad"
+                maxLength={6}
+                value={otpInput}
+                onChangeText={setOtpInput}
+              />
+              <TouchableOpacity
+                style={{ backgroundColor: "#22C55E", paddingHorizontal: 18, borderRadius: 10, justifyContent: "center" }}
+                onPress={() => handlePhysicalProgress("VERIFY_OTP", otpInput)}
+              >
+                <Text style={{ color: "#FFF", fontWeight: "700" }}>Verify</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Post-OTP Emergency Cancellation Window (5 min after OTP verify) */}
+          {!isRemote && statusText === "JOB_STARTED" && job.postOtpCancellationWindowExpiresAt && (
+            (() => {
+              const expiresAt = new Date(job.postOtpCancellationWindowExpiresAt);
+              const now = new Date();
+              if (now < expiresAt) {
+                return (
+                  <View style={{ backgroundColor: "#FEF3C7", padding: 14, borderRadius: 12, marginBottom: 14, borderWidth: 1, borderColor: "#FCD34D" }}>
+                    <Text style={{ fontSize: 12, color: "#92400E", fontWeight: "600", marginBottom: 4 }}>
+                      Emergency Cancellation Window Active
+                    </Text>
+                    <Text style={{ fontSize: 11, color: "#78716C", marginBottom: 10 }}>
+                      Either party may cancel without penalty within 5 minutes of OTP verification.
+                    </Text>
+                    <TouchableOpacity
+                      style={{ backgroundColor: "#EF4444", paddingVertical: 10, borderRadius: 8, alignItems: "center" }}
+                      onPress={() => {
+                        Alert.alert("Emergency Cancel", "Cancel this job without penalty?", [
+                          { text: "No", style: "cancel" },
+                          { text: "Yes, Cancel", style: "destructive", onPress: () => handlePhysicalProgress("EMERGENCY_CANCEL") },
+                        ]);
+                      }}
+                    >
+                      <Text style={{ color: "#FFF", fontWeight: "700", fontSize: 13 }}>Cancel Job (No Penalty)</Text>
+                    </TouchableOpacity>
+                  </View>
+                );
+              }
+              return null;
+            })()
+          )}
+
+          {/* Client: Confirm Work Completed — JOB_STARTED status */}
+          {!isRemote && isClient && statusText === "JOB_STARTED" && (
+            <TouchableOpacity
+              style={styles.primaryActionBtn}
+              onPress={() => {
+                Alert.alert("Confirm Completion", "Confirm that the freelancer has completed the work?", [
+                  { text: "No", style: "cancel" },
+                  { text: "Yes, Work Done", onPress: () => handlePhysicalProgress("CONFIRM_WORK_COMPLETED") },
+                ]);
+              }}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="checkmark-done-circle" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+              <Text style={styles.primaryActionBtnText}>Confirm Work Completed</Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Dispute Button — on-site jobs in progress */}
+          {!isRemote && ["JOB_STARTED", "IN_PROGRESS", "FREELANCER_TRAVELLING", "ARRIVED"].includes(statusText) && (
+            <TouchableOpacity
+              style={[styles.secondaryActionBtn, { borderColor: "#EF4444", marginBottom: 10 }]}
+              onPress={() => {
+                Alert.alert("Raise Dispute", "This will initiate a dispute resolution process. A team member will review the case.", [
+                  { text: "Cancel", style: "cancel" },
+                  { text: "Raise Dispute", onPress: () => handlePhysicalProgress("RAISE_DISPUTE") },
+                ]);
+              }}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="flag-outline" size={18} color="#EF4444" style={{ marginRight: 8 }} />
+              <Text style={[styles.secondaryActionBtnText, { color: "#EF4444" }]}>Raise Dispute</Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Existing buttons */}
           {job.assignedFreelancer && (
             <TouchableOpacity style={styles.primaryMessageButton} onPress={() => { navigation.navigate("ClientChat", { jobId, freelancer: job.assignedFreelancer, receiverId: job.assignedFreelancer.userId }); }} activeOpacity={0.8}>
               <Ionicons name="chatbubble-ellipses" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
@@ -400,6 +618,10 @@ const getStyles = (currentTheme = {}) =>
     urgentBadge: { backgroundColor: "#FEE2E2", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
     urgentText: { fontSize: 11, fontWeight: "700", color: "#DC2626" },
     actionsContainer: { marginTop: 16, marginBottom: 40 },
+    primaryActionBtn: { backgroundColor: "#6B21A8", borderRadius: 12, paddingVertical: 14, flexDirection: "row", justifyContent: "center", alignItems: "center", marginBottom: 12 },
+    primaryActionBtnText: { color: "#FFFFFF", fontSize: 15, fontWeight: "700" },
+    secondaryActionBtn: { backgroundColor: "#FFFFFF", borderRadius: 12, borderWidth: 1, borderColor: "#DDD6FE", paddingVertical: 14, flexDirection: "row", justifyContent: "center", alignItems: "center", marginBottom: 12 },
+    secondaryActionBtnText: { color: "#6B21A8", fontSize: 15, fontWeight: "700" },
     primaryMessageButton: { backgroundColor: "#008744", borderRadius: 12, paddingVertical: 14, flexDirection: "row", justifyContent: "center", alignItems: "center", marginBottom: 12 },
     primaryMessageButtonText: { color: "#FFFFFF", fontSize: 16, fontWeight: "700" },
     secondaryBackButton: { backgroundColor: "#FFFFFF", borderRadius: 12, borderWidth: 1, borderColor: "#DDD6FE", paddingVertical: 14, flexDirection: "row", justifyContent: "center", alignItems: "center" },

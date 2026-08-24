@@ -69,9 +69,7 @@ const JobSubmissionTimmerScreen = ({ route, navigation }) => {
         projectType: formData.jobType,
         budgetType: "Fixed",
         budgetAmount: parseFloat(formData.budget),
-        deadlineDate: formData.deadline
-          ? new Date(formData.deadline).toISOString()
-          : undefined,
+        workDurationDays: parseInt(formData.workDurationDays || 1, 10),
         attachedFiles: uploadedUrls,
         location: formData.jobLocation,
         latitude: formData.latitude,

@@ -11,8 +11,7 @@ export function getJobFormValidationError({
   freelancerType,
   serviceId,
   jobType,
-  deadline,
-  startDate,
+  workDurationDays,
   budget,
   budgetError,
   skills,
@@ -33,10 +32,8 @@ export function getJobFormValidationError({
 
   if (!jobType) return "Please select a job type.";
 
-  if (!deadline) return "Please select an end date.";
-  if (deadline < new Date()) return "Deadline must be a future date.";
-  if (startDate && deadline < startDate) {
-    return "End date must be after the start date.";
+  if (!workDurationDays || workDurationDays < 1 || workDurationDays > 3) {
+    return "Please select a valid work duration (1-3 days).";
   }
 
   if (typeof validateBudget === "function") {

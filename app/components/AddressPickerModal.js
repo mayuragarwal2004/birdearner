@@ -203,9 +203,12 @@ const AddressPickerModal = ({
       Alert.alert("Add details", "Enter house/street and city first.");
       return;
     }
+    const ok = await requestPermission();
+    if (!ok) return;
     setPinLoading(true);
     try {
-      const [result] = await Location.geocodeAsync(query);
+      const results = await Location.geocodeAsync(query);
+      const result = results?.[0];
       if (!result) {
         Alert.alert("Not found", "Could not locate that address. Try adjusting the text.");
         return;
@@ -216,7 +219,10 @@ const AddressPickerModal = ({
         longitude: result.longitude,
       }));
     } catch (error) {
-      Alert.alert("Locate error", error.message || "Could not find coordinates.");
+      Alert.alert(
+        "Locate error",
+        "Could not find coordinates for this address. Try using current location or tap the map to drop a pin."
+      );
     } finally {
       setPinLoading(false);
     }
@@ -382,8 +388,9 @@ const AddressPickerModal = ({
 
               <View style={styles.mapWrap}>
                 <MapView
+                  key={`addr-map-${form.latitude}-${form.longitude}`}
                   style={StyleSheet.absoluteFill}
-                  region={mapRegion}
+                  initialRegion={mapRegion}
                   onPress={onMapPress}
                   provider={Platform.OS === "android" ? PROVIDER_GOOGLE : undefined}
                 >

@@ -2,7 +2,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 
-const DEV_API_BASE_URL = "https://gathered-priest-nine-coordinate.trycloudflare.com/api";
+const DEV_API_BASE_URL = "https://tent-mold-value-happen.trycloudflare.com/api";
 // const DEV_API_BASE_URL = "https://api.birdearner.com/api";
 
 const PROD_API_BASE_URL = "https://api.birdearner.com/api";
@@ -660,6 +660,83 @@ class ApiService {
       return response.data;
     } catch (error) {
       throw new Error(`Failed to create job: ${error.message}`);
+    }
+  }
+
+  // Extend application deadline by +24 hours
+  async extendApplicationDeadline(jobId) {
+    try {
+      const response = await this.makeRequest(`/jobs/${jobId}/extend-deadline`, {
+        method: "POST",
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(`Failed to extend application deadline: ${error.message}`);
+    }
+  }
+
+  // Update physical job progress (TRAVELLING, ARRIVED, REQUEST_OTP, VERIFY_OTP)
+  async updatePhysicalJobProgress(jobId, action, payload = {}) {
+    try {
+      const response = await this.makeRequest(`/jobs/${jobId}/progress`, {
+        method: "POST",
+        body: JSON.stringify({ action, ...payload }),
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(`Failed to update job progress: ${error.message}`);
+    }
+  }
+
+  // Submit digital work preview
+  async submitDigitalWork(jobId, workData) {
+    try {
+      const response = await this.makeRequest(`/jobs/${jobId}/work-submission`, {
+        method: "POST",
+        body: JSON.stringify({ type: "SUBMIT", ...workData }),
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(`Failed to submit work: ${error.message}`);
+    }
+  }
+
+  // Respond to digital work (ACCEPT or REQUEST_REVISION)
+  async respondToDigitalWork(jobId, decision, notes = "") {
+    try {
+      const response = await this.makeRequest(`/jobs/${jobId}/work-submission`, {
+        method: "POST",
+        body: JSON.stringify({ type: "RESPOND", decision, notes }),
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(`Failed to respond to work: ${error.message}`);
+    }
+  }
+
+  // Request scope mismatch price change
+  async requestScopePriceChange(jobId, requestedAmount, reason) {
+    try {
+      const response = await this.makeRequest(`/jobs/${jobId}/price-change`, {
+        method: "POST",
+        body: JSON.stringify({ type: "REQUEST", requestedAmount, reason }),
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(`Failed to request price change: ${error.message}`);
+    }
+  }
+
+  // Respond to scope mismatch price change (accept boolean)
+  async respondToScopePriceChange(jobId, accept) {
+    try {
+      const response = await this.makeRequest(`/jobs/${jobId}/price-change`, {
+        method: "POST",
+        body: JSON.stringify({ type: "RESPOND", accept }),
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(`Failed to respond to price change: ${error.message}`);
     }
   }
 

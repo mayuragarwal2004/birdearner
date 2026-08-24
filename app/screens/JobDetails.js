@@ -10,17 +10,31 @@ import {
   SafeAreaView,
   StatusBar,
   Platform,
+  TextInput,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import ImageViewer from "react-native-image-zoom-viewer";
 import { useTheme } from "../context/ThemeContext";
 import { useAuth } from "../context/NewAuthContext";
+import apiService from "../lib/apiService";
 
 const JobDetailsScreen = ({ route, navigation }) => {
   const { formData } = route.params;
   const [modalVisible, setModalVisible] = useState(false);
   const [images, setImages] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [currentJob, setCurrentJob] = useState(formData);
+  const [otpInput, setOtpInput] = useState("");
+  const [workFileUrl, setWorkFileUrl] = useState("");
+  const [workNotes, setWorkNotes] = useState("");
+  const [showWorkModal, setShowWorkModal] = useState(false);
+  const [priceModalVisible, setPriceModalVisible] = useState(false);
+  const [requestedPrice, setRequestedPrice] = useState("");
+  const [priceReason, setPriceReason] = useState("");
+
   const { userData } = useAuth();
+  const isClient = userData?.userType === "CLIENT" || userData?.client?.id === (currentJob.clientId || currentJob.client?.id);
 
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme] || themeStyles.light;
@@ -32,7 +46,99 @@ const JobDetailsScreen = ({ route, navigation }) => {
   };
 
   const handleSubmit = () => {
-    navigation.navigate("JobSubmissionTimmer", { formData });
+    navigation.navigate("JobSubmissionTimmer", { formData: currentJob });
+  };
+
+  const handleExtendDeadline = async () => {
+    try {
+      setLoading(true);
+      const res = await apiService.extendApplicationDeadline(currentJob.id);
+      Alert.alert("Success", "Application deadline extended by +24 hours.");
+      if (res) setCurrentJob({ ...currentJob, ...res });
+    } catch (err) {
+      Alert.alert("Error", err.message || "Failed to extend deadline");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePhysicalProgress = async (action, otpCode = "") => {
+    try {
+      setLoading(true);
+      const res = await apiService.updatePhysicalJobProgress(currentJob.id, action, { otpCode });
+      Alert.alert("Success", `Status updated: ${action}`);
+      if (res?.data) setCurrentJob({ ...currentJob, ...res.data });
+    } catch (err) {
+      Alert.alert("Error", err.message || "Failed to update progress");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmitWork = async () => {
+    if (!workFileUrl.trim()) {
+      Alert.alert("Validation Error", "Please provide a valid file URL/link for submission.");
+      return;
+    }
+    try {
+      setLoading(true);
+      const res = await apiService.submitDigitalWork(currentJob.id, {
+        fileUrl: workFileUrl.trim(),
+        notes: workNotes.trim(),
+      });
+      Alert.alert("Success", "Work submitted for review successfully.");
+      setShowWorkModal(false);
+      if (res?.data) setCurrentJob({ ...currentJob, ...res.data });
+    } catch (err) {
+      Alert.alert("Error", err.message || "Failed to submit work");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRespondWork = async (decision, notes = "") => {
+    try {
+      setLoading(true);
+      const res = await apiService.respondToDigitalWork(currentJob.id, decision, notes);
+      Alert.alert("Success", decision === "ACCEPT" ? "Work accepted! Payment released." : "Revision requested.");
+      if (res?.data) setCurrentJob({ ...currentJob, ...res.data });
+    } catch (err) {
+      Alert.alert("Error", err.message || "Failed to respond");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRequestPriceChange = async () => {
+    const num = parseFloat(requestedPrice);
+    if (isNaN(num) || num <= 0 || !priceReason.trim()) {
+      Alert.alert("Validation Error", "Please enter a valid requested price and reason.");
+      return;
+    }
+    try {
+      setLoading(true);
+      const res = await apiService.requestScopePriceChange(currentJob.id, num, priceReason.trim());
+      Alert.alert("Success", "Price change request sent to client.");
+      setPriceModalVisible(false);
+      if (res?.data) setCurrentJob({ ...currentJob, ...res.data });
+    } catch (err) {
+      Alert.alert("Error", err.message || "Failed to request price change");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRespondPriceChange = async (accept) => {
+    try {
+      setLoading(true);
+      const res = await apiService.respondToScopePriceChange(currentJob.id, accept);
+      Alert.alert("Notice", accept ? "Price change accepted." : "Booking cancelled due to scope mismatch.");
+      if (res?.data) setCurrentJob({ ...currentJob, ...res.data });
+    } catch (err) {
+      Alert.alert("Error", err.message || "Failed to respond to price change");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const formatDate = (dateString) => {
@@ -234,11 +340,12 @@ const JobDetailsScreen = ({ route, navigation }) => {
               <View style={styles.smallIconCircle}>
                 <Ionicons name="calendar-outline" size={15} color="#6B21A8" />
               </View>
-              <Text style={styles.gridCardLabel}>Deadline</Text>
+              <Text style={styles.gridCardLabel}>Work Duration</Text>
             </View>
             <Text style={styles.gridCardValue}>
-              {formatDate(formData.deadline)}
+              {formData.workDurationDays || 1} {formData.workDurationDays === 1 ? "Day" : "Days"}
             </Text>
+            <Text style={styles.gridCardSubtext}>After booking confirmed</Text>
           </View>
         </View>
 
@@ -305,51 +412,363 @@ const JobDetailsScreen = ({ route, navigation }) => {
         <View style={styles.card}>
           <View style={styles.statusCardRow}>
             <View style={styles.iconCircle}>
-              <Ionicons name="checkmark-circle-outline" size={20} color="#6B21A8" />
+              <Ionicons name="time-outline" size={20} color="#6B21A8" />
             </View>
             <View style={styles.statusContentCol}>
-              <Text style={styles.statusLabelText}>Status</Text>
+              <Text style={styles.statusLabelText}>Job Status & Timelines</Text>
               <View style={styles.statusBadgeRow}>
                 <View style={styles.statusPill}>
-                  <Text style={styles.statusPillText}>READY TO POST</Text>
+                  <Text style={styles.statusPillText}>
+                    {currentJob.jobStatus || "OPEN"}
+                  </Text>
                 </View>
-                <Text style={styles.statusNoticeText}>
-                  Confirm to publish this job
-                </Text>
               </View>
+              {currentJob.jobStatus === "OPEN" && (
+                <Text style={styles.statusNoticeText}>
+                  Application Deadline: 24 Hours from posting.
+                </Text>
+              )}
+              {currentJob.workDeadline && (
+                <Text style={styles.statusNoticeText}>
+                  Work Deadline: {formatDate(currentJob.workDeadline)} ({currentJob.workDurationDays || 1} Day{currentJob.workDurationDays > 1 ? "s" : ""})
+                </Text>
+              )}
             </View>
           </View>
         </View>
 
+        {/* Dynamic Action Controls for Complete Booking Flow */}
         <View style={styles.actionsContainer}>
-          <TouchableOpacity
-            style={styles.primaryConfirmButton}
-            onPress={handleSubmit}
-            activeOpacity={0.8}
-          >
-            <Ionicons
-              name="checkmark-circle"
-              size={18}
-              color="#FFFFFF"
-              style={{ marginRight: 8 }}
-            />
-            <Text style={styles.primaryConfirmButtonText}>Confirm Job</Text>
-          </TouchableOpacity>
+          {loading && <ActivityIndicator size="large" color="#6B21A8" style={{ marginBottom: 12 }} />}
+
+          {/* OPEN Job: Client option to Extend Application Deadline (+24h) */}
+          {currentJob.jobStatus === "OPEN" && isClient && !currentJob.applicationExtended && (
+            <TouchableOpacity
+              style={styles.primaryConfirmButton}
+              onPress={handleExtendDeadline}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="time-outline" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+              <Text style={styles.primaryConfirmButtonText}>Extend Application Deadline (+24h)</Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Physical Service Flow Buttons */}
+          {!isRemote && (currentJob.jobStatus === "CONFIRMED" || currentJob.jobStatus === "IN_PROGRESS") && !isClient && (
+            <TouchableOpacity
+              style={styles.primaryConfirmButton}
+              onPress={() => handlePhysicalProgress("TRAVELLING")}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="navigate-outline" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+              <Text style={styles.primaryConfirmButtonText}>I'm On My Way</Text>
+            </TouchableOpacity>
+          )}
+
+          {!isRemote && currentJob.jobStatus === "FREELANCER_TRAVELLING" && !isClient && (
+            <TouchableOpacity
+              style={styles.primaryConfirmButton}
+              onPress={() => handlePhysicalProgress("ARRIVED")}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="location-outline" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+              <Text style={styles.primaryConfirmButtonText}>Arrived at Location</Text>
+            </TouchableOpacity>
+          )}
+
+          {!isRemote && currentJob.jobStatus === "ARRIVED" && !isClient && (
+            <TouchableOpacity
+              style={styles.primaryConfirmButton}
+              onPress={() => handlePhysicalProgress("REQUEST_OTP")}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="key-outline" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+              <Text style={styles.primaryConfirmButtonText}>Request OTP from Client</Text>
+            </TouchableOpacity>
+          )}
+
+          {!isRemote && currentJob.jobStatus === "ARRIVED" && isClient && (
+            <View style={{ marginBottom: 14, backgroundColor: "#FFF8E7", padding: 12, borderRadius: 12, borderWidth: 1, borderColor: "#FCD34D" }}>
+              <Text style={{ fontSize: 12, color: "#92400E", fontWeight: "600", marginBottom: 6 }}>
+                The freelancer has requested the OTP. Share it verbally only after verifying their physical presence.
+              </Text>
+              {currentJob.otpCode ? (
+                <View style={{ backgroundColor: "#FFFFFF", borderRadius: 10, padding: 12, alignItems: "center", marginTop: 6, borderWidth: 1, borderColor: "#E5E7EB" }}>
+                  <Text style={{ fontSize: 11, color: "#6B7280", marginBottom: 4 }}>Your OTP Code</Text>
+                  <Text style={{ fontSize: 24, fontWeight: "800", color: "#6B21A8", letterSpacing: 6 }}>
+                    {currentJob.otpCode}
+                  </Text>
+                </View>
+              ) : (
+                <Text style={{ fontSize: 12, color: "#78716C", marginTop: 4 }}>
+                  Waiting for freelancer to request OTP...
+                </Text>
+              )}
+            </View>
+          )}
+
+          {!isRemote && currentJob.jobStatus === "ARRIVED" && !isClient && (
+            <View style={{ flexDirection: "row", gap: 10, marginBottom: 12 }}>
+              <TextInput
+                style={{ flex: 1, borderWidth: 1, borderColor: "#DDD", borderRadius: 10, paddingHorizontal: 12, fontSize: 16 }}
+                placeholder="Enter 6-digit OTP"
+                keyboardType="number-pad"
+                value={otpInput}
+                onChangeText={setOtpInput}
+              />
+              <TouchableOpacity
+                style={{ backgroundColor: "#22C55E", paddingHorizontal: 16, borderRadius: 10, justifyContent: "center" }}
+                onPress={() => handlePhysicalProgress("VERIFY_OTP", otpInput)}
+              >
+                <Text style={{ color: "#FFF", fontWeight: "700" }}>Verify</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Post-OTP Emergency Cancellation Window (5 min after OTP verify) */}
+          {!isRemote && currentJob.jobStatus === "JOB_STARTED" && currentJob.postOtpCancellationWindowExpiresAt && (
+            (() => {
+              const expiresAt = new Date(currentJob.postOtpCancellationWindowExpiresAt);
+              const now = new Date();
+              if (now < expiresAt) {
+                return (
+                  <View style={{ backgroundColor: "#FEF3C7", padding: 12, borderRadius: 12, marginBottom: 14, borderWidth: 1, borderColor: "#FCD34D" }}>
+                    <Text style={{ fontSize: 12, color: "#92400E", fontWeight: "600", marginBottom: 6 }}>
+                      Emergency Cancellation Window Active
+                    </Text>
+                    <Text style={{ fontSize: 11, color: "#78716C", marginBottom: 8 }}>
+                      Either party may cancel without penalty within 5 minutes of OTP verification.
+                    </Text>
+                    <TouchableOpacity
+                      style={{ backgroundColor: "#EF4444", paddingVertical: 8, borderRadius: 8, alignItems: "center" }}
+                      onPress={() => {
+                        Alert.alert("Emergency Cancel", "Cancel this job without penalty?", [
+                          { text: "No", style: "cancel" },
+                          { text: "Yes, Cancel", style: "destructive", onPress: () => handlePhysicalProgress("EMERGENCY_CANCEL") },
+                        ]);
+                      }}
+                    >
+                      <Text style={{ color: "#FFF", fontWeight: "700", fontSize: 13 }}>Cancel Job (No Penalty)</Text>
+                    </TouchableOpacity>
+                  </View>
+                );
+              }
+              return null;
+            })()
+          )}
+
+          {/* Dispute Button - available after emergency window expires and work is in progress */}
+          {!isRemote && ["JOB_STARTED", "IN_PROGRESS", "TRAVELLING", "ARRIVED"].includes(currentJob.jobStatus) && (
+            <TouchableOpacity
+              style={[styles.secondaryCancelButton, { marginBottom: 10 }]}
+              onPress={() => {
+                Alert.alert("Raise Dispute", "This will initiate a dispute resolution process. A team member will review the case.", [
+                  { text: "Cancel", style: "cancel" },
+                  { text: "Raise Dispute", onPress: () => handlePhysicalProgress("RAISE_DISPUTE") },
+                ]);
+              }}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="flag-outline" size={18} color="#EF4444" style={{ marginRight: 8 }} />
+              <Text style={[styles.secondaryCancelButtonText, { color: "#EF4444" }]}>Raise Dispute</Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Client: Confirm Work Completed (on-site, after OTP verified) */}
+          {!isRemote && isClient && currentJob.jobStatus === "JOB_STARTED" && (
+            <TouchableOpacity
+              style={styles.primaryConfirmButton}
+              onPress={() => {
+                Alert.alert("Confirm Completion", "Confirm that the freelancer has completed the work?", [
+                  { text: "No", style: "cancel" },
+                  { text: "Yes, Work Done", onPress: () => handlePhysicalProgress("CONFIRM_WORK_COMPLETED") },
+                ]);
+              }}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="checkmark-done-circle" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+              <Text style={styles.primaryConfirmButtonText}>Confirm Work Completed</Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Scope Mismatch Price Change Request */}
+          {!isClient && (currentJob.jobStatus === "CONFIRMED" || currentJob.jobStatus === "ARRIVED" || currentJob.jobStatus === "JOB_STARTED") && (
+            <TouchableOpacity
+              style={[styles.secondaryCancelButton, { marginBottom: 10 }]}
+              onPress={() => setPriceModalVisible(true)}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="pricetag-outline" size={18} color="#6B21A8" style={{ marginRight: 8 }} />
+              <Text style={styles.secondaryCancelButtonText}>Request Price Change (Scope Mismatch)</Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Pending Scope Price Change Notification for Client */}
+          {currentJob.priceChangeRequested && isClient && (
+            <View style={{ backgroundColor: "#EFF6FF", padding: 12, borderRadius: 12, marginBottom: 14 }}>
+              <Text style={{ fontSize: 14, fontWeight: "700", color: "#1D4ED8", marginBottom: 4 }}>
+                Price Change Requested: ₹{currentJob.priceChangeRequested}
+              </Text>
+              <Text style={{ fontSize: 12, color: "#374151", marginBottom: 8 }}>
+                Reason: {currentJob.priceChangeReason}
+              </Text>
+              <View style={{ flexDirection: "row", gap: 10 }}>
+                <TouchableOpacity
+                  style={{ flex: 1, backgroundColor: "#22C55E", paddingVertical: 10, borderRadius: 8, alignItems: "center" }}
+                  onPress={() => handleRespondPriceChange(true)}
+                >
+                  <Text style={{ color: "#FFF", fontWeight: "700" }}>Accept New Price</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={{ flex: 1, backgroundColor: "#EF4444", paddingVertical: 10, borderRadius: 8, alignItems: "center" }}
+                  onPress={() => handleRespondPriceChange(false)}
+                >
+                  <Text style={{ color: "#FFF", fontWeight: "700" }}>Cancel Job (No Penalty)</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
+          {/* Digital Work Submission Flow */}
+          {isRemote && !isClient && (currentJob.jobStatus === "CONFIRMED" || currentJob.jobStatus === "IN_PROGRESS" || currentJob.jobStatus === "REVISION_REQUESTED") && (
+            <TouchableOpacity
+              style={styles.primaryConfirmButton}
+              onPress={() => setShowWorkModal(true)}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="cloud-upload-outline" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+              <Text style={styles.primaryConfirmButtonText}>Submit Work Preview for Review</Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Work Submitted Review Banner for Client */}
+          {currentJob.jobStatus === "WORK_SUBMITTED" && isClient && (
+            <View style={{ backgroundColor: "#F3E8FF", padding: 14, borderRadius: 12, marginBottom: 14 }}>
+              <Text style={{ fontSize: 14, fontWeight: "700", color: "#6B21A8", marginBottom: 4 }}>
+                Work Submitted for Review
+              </Text>
+              <Text style={{ fontSize: 12, color: "#4B5563", marginBottom: 10 }}>
+                Please review the submitted work. If no response within 12 hours, the work will be automatically accepted according to BirdEarner completion policy.
+              </Text>
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                <TouchableOpacity
+                  style={{ flex: 1, backgroundColor: "#22C55E", paddingVertical: 10, borderRadius: 8, alignItems: "center" }}
+                  onPress={() => handleRespondWork("ACCEPT")}
+                >
+                  <Text style={{ color: "#FFF", fontWeight: "700" }}>Accept Work</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={{ flex: 1, backgroundColor: "#6B21A8", paddingVertical: 10, borderRadius: 8, alignItems: "center" }}
+                  onPress={() => handleRespondWork("REQUEST_REVISION", "Minor changes requested")}
+                >
+                  <Text style={{ color: "#FFF", fontWeight: "700" }}>Request Revisions</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
+          {!currentJob.id && (
+            <TouchableOpacity
+              style={styles.primaryConfirmButton}
+              onPress={handleSubmit}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="checkmark-circle" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+              <Text style={styles.primaryConfirmButtonText}>Confirm Job</Text>
+            </TouchableOpacity>
+          )}
 
           <TouchableOpacity
             style={styles.secondaryCancelButton}
             onPress={() => navigation.goBack()}
             activeOpacity={0.8}
           >
-            <Ionicons
-              name="arrow-back"
-              size={18}
-              color="#6B21A8"
-              style={{ marginRight: 8 }}
-            />
-            <Text style={styles.secondaryCancelButtonText}>Go Back & Edit</Text>
+            <Ionicons name="arrow-back" size={18} color="#6B21A8" style={{ marginRight: 8 }} />
+            <Text style={styles.secondaryCancelButtonText}>Go Back</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Modal for Digital Work Upload */}
+        <Modal visible={showWorkModal} transparent animationType="slide">
+          <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", padding: 20 }}>
+            <View style={{ backgroundColor: "#FFF", borderRadius: 16, padding: 20 }}>
+              <Text style={{ fontSize: 18, fontWeight: "700", color: "#1F192F", marginBottom: 12 }}>
+                Submit Work Preview
+              </Text>
+              <Text style={{ fontSize: 12, color: "#6B7280", marginBottom: 10 }}>
+                Provide file preview URL or watermarked video link:
+              </Text>
+              <TextInput
+                style={{ borderWidth: 1, borderColor: "#DDD", borderRadius: 10, padding: 12, fontSize: 14, marginBottom: 12 }}
+                placeholder="https://preview.birdearner.com/file.mp4"
+                value={workFileUrl}
+                onChangeText={setWorkFileUrl}
+              />
+              <TextInput
+                style={{ borderWidth: 1, borderColor: "#DDD", borderRadius: 10, padding: 12, fontSize: 14, marginBottom: 16 }}
+                placeholder="Notes / instructions for client"
+                multiline
+                numberOfLines={3}
+                value={workNotes}
+                onChangeText={setWorkNotes}
+              />
+              <View style={{ flexDirection: "row", gap: 10 }}>
+                <TouchableOpacity
+                  style={{ flex: 1, paddingVertical: 12, borderWidth: 1, borderColor: "#DDD", borderRadius: 10, alignItems: "center" }}
+                  onPress={() => setShowWorkModal(false)}
+                >
+                  <Text style={{ color: "#666", fontWeight: "700" }}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={{ flex: 1, paddingVertical: 12, backgroundColor: "#6B21A8", borderRadius: 10, alignItems: "center" }}
+                  onPress={handleSubmitWork}
+                >
+                  <Text style={{ color: "#FFF", fontWeight: "700" }}>Submit Preview</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Modal for Scope Mismatch Price Change */}
+        <Modal visible={priceModalVisible} transparent animationType="slide">
+          <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", padding: 20 }}>
+            <View style={{ backgroundColor: "#FFF", borderRadius: 16, padding: 20 }}>
+              <Text style={{ fontSize: 18, fontWeight: "700", color: "#1F192F", marginBottom: 12 }}>
+                Request Price Change (Scope Mismatch)
+              </Text>
+              <TextInput
+                style={{ borderWidth: 1, borderColor: "#DDD", borderRadius: 10, padding: 12, fontSize: 14, marginBottom: 12 }}
+                placeholder="New requested price (₹)"
+                keyboardType="numeric"
+                value={requestedPrice}
+                onChangeText={setRequestedPrice}
+              />
+              <TextInput
+                style={{ borderWidth: 1, borderColor: "#DDD", borderRadius: 10, padding: 12, fontSize: 14, marginBottom: 16 }}
+                placeholder="Reason for additional work discovered"
+                multiline
+                numberOfLines={3}
+                value={priceReason}
+                onChangeText={setPriceReason}
+              />
+              <View style={{ flexDirection: "row", gap: 10 }}>
+                <TouchableOpacity
+                  style={{ flex: 1, paddingVertical: 12, borderWidth: 1, borderColor: "#DDD", borderRadius: 10, alignItems: "center" }}
+                  onPress={() => setPriceModalVisible(false)}
+                >
+                  <Text style={{ color: "#666", fontWeight: "700" }}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={{ flex: 1, paddingVertical: 12, backgroundColor: "#6B21A8", borderRadius: 10, alignItems: "center" }}
+                  onPress={handleRequestPriceChange}
+                >
+                  <Text style={{ color: "#FFF", fontWeight: "700" }}>Send Request</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </ScrollView>
     </SafeAreaView>
   );

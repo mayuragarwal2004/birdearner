@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Image,
@@ -16,7 +16,6 @@ import SafeSpinner from "../components/SafeSpinner";
 import CustomPicker from "../components/CustomPicker";
 import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
-import DateTimePicker from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
 import {
   Briefcase,
@@ -36,7 +35,6 @@ import * as Location from "expo-location";
 import MapView, { PROVIDER_GOOGLE, Marker } from "react-native-maps";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
-import { format } from "date-fns";
 import apiService from "../lib/apiService";
 import { useTheme } from "../context/ThemeContext";
 import { useAuth } from "../context/NewAuthContext";
@@ -50,19 +48,9 @@ const { calculateBirdFee } = require("../utils/feeCalculator");
 const PURPLE = "#7B2CFF";
 const DRAFT_KEY = "jobRequirementsDraft";
 
-const formatDisplayDate = (date) => {
-  if (!date) return "";
-  try {
-    return format(date, "EEE, MMM d, yyyy");
-  } catch {
-    return date.toDateString?.() || "";
-  }
-};
-
 const JobRequirementsScreen = ({ navigation }) => {
   const [jobLocation, setJobLocation] = useState("");
-  const [startDate, setStartDate] = useState(new Date());
-  const [deadline, setDeadline] = useState(null);
+  const [workDurationDays, setWorkDurationDays] = useState(1); // 1, 2, or 3 days
   const [budget, setBudget] = useState("");
   const [walletData, setWalletData] = useState(null);
   const [walletLoading, setWalletLoading] = useState(false);
@@ -71,7 +59,6 @@ const JobRequirementsScreen = ({ navigation }) => {
   const [budgetValidating, setBudgetValidating] = useState(false);
   const [availableCoupons, setAvailableCoupons] = useState([]);
   const [selectedCoupon, setSelectedCoupon] = useState(null);
-  const [datePickerMode, setDatePickerMode] = useState(null); // 'start' | 'end'
   const [skills, setSkills] = useState([""]);
   const [jobDes, setJobDes] = useState("");
   const [calculatedBirdFee, setCalculatedBirdFee] = useState(null);
@@ -89,14 +76,14 @@ const JobRequirementsScreen = ({ navigation }) => {
   const [paymentMethod, setPaymentMethod] = useState("PLATFORM");
   const [showMapModal, setShowMapModal] = useState(false);
   const [mapRegion, setMapRegion] = useState({
-    latitude: 37.78825,
-    longitude: -122.4324,
-    latitudeDelta: 0.0922,
-    longitudeDelta: 0.0421,
+    latitude: 19.0760,
+    longitude: 72.8777,
+    latitudeDelta: 0.05,
+    longitudeDelta: 0.05,
   });
   const [tempLocation, setTempLocation] = useState({
-    latitude: 37.78825,
-    longitude: -122.4324,
+    latitude: 19.0760,
+    longitude: 72.8777,
   });
   const [addressPickerOpen, setAddressPickerOpen] = useState(false);
   const [selectedSavedAddressId, setSelectedSavedAddressId] = useState(null);
@@ -269,8 +256,7 @@ const JobRequirementsScreen = ({ navigation }) => {
       if (draft.longitude != null) setLongitude(draft.longitude);
       if (draft.serviceId) setServiceId(draft.serviceId);
       if (draft.freelancerType) setFrelancerType(draft.freelancerType);
-      if (draft.startDate) setStartDate(new Date(draft.startDate));
-      if (draft.deadline) setDeadline(new Date(draft.deadline));
+      if (draft.workDurationDays) setWorkDurationDays(Number(draft.workDurationDays));
       if (draft.selectedSavedAddressId) {
         setSelectedSavedAddressId(draft.selectedSavedAddressId);
       }
@@ -381,8 +367,7 @@ const JobRequirementsScreen = ({ navigation }) => {
 
   const formData = {
     jobLocation,
-    startDate: startDate?.toISOString?.() || new Date().toISOString(),
-    deadline: deadline ? deadline.toISOString() : null,
+    workDurationDays,
     budget,
     skills: skills.map((s) => String(s || "").trim()).filter(Boolean),
     jobDes: jobDes.trim(),
@@ -503,22 +488,40 @@ const JobRequirementsScreen = ({ navigation }) => {
   const openMapModal = async () => {
     let lat = latitude;
     let lng = longitude;
-    if (!(lat && lng) && jobLocation.trim()) {
-      const coords = await detectLocation();
-      if (!coords) return;
-      lat = coords.latitude;
-      lng = coords.longitude;
+
+    if (!(lat && lng)) {
+      if (jobLocation.trim()) {
+        const coords = await detectLocation();
+        if (coords) {
+          lat = coords.latitude;
+          lng = coords.longitude;
+        }
+      } else {
+        try {
+          const { status } = await Location.requestForegroundPermissionsAsync();
+          if (status === "granted") {
+            const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+            lat = parseFloat(loc.coords.latitude);
+            lng = parseFloat(loc.coords.longitude);
+          }
+        } catch (e) {
+          console.log("GPS fetch skipped, using default region");
+        }
+      }
     }
-    if (lat && lng) {
-      const newRegion = {
-        latitude: lat,
-        longitude: lng,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
-      };
-      setMapRegion(newRegion);
-      setTempLocation({ latitude: lat, longitude: lng });
-    }
+
+    const finalLat = lat || mapRegion.latitude || 19.0760;
+    const finalLng = lng || mapRegion.longitude || 72.8777;
+
+    const newRegion = {
+      latitude: finalLat,
+      longitude: finalLng,
+      latitudeDelta: 0.01,
+      longitudeDelta: 0.01,
+    };
+
+    setMapRegion(newRegion);
+    setTempLocation({ latitude: finalLat, longitude: finalLng });
     setShowMapModal(true);
   };
 
@@ -530,23 +533,39 @@ const JobRequirementsScreen = ({ navigation }) => {
     setLocationLoading(true);
     try {
       const { latitude: lat, longitude: lng } = tempLocation;
-      setLatitude(parseFloat(lat));
-      setLongitude(parseFloat(lng));
-      const addressResponse = await Location.reverseGeocodeAsync({
-        latitude: lat,
-        longitude: lng,
+      const latNum = parseFloat(lat);
+      const lngNum = parseFloat(lng);
+      setLatitude(latNum);
+      setLongitude(lngNum);
+      setMapRegion({
+        latitude: latNum,
+        longitude: lngNum,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
       });
-      if (addressResponse.length > 0) {
+
+      const addressResponse = await Location.reverseGeocodeAsync({
+        latitude: latNum,
+        longitude: lngNum,
+      });
+
+      if (addressResponse && addressResponse.length > 0) {
         const address = addressResponse[0];
-        setJobLocation(
-          `${address.street || ""} ${address.city || ""} ${address.region || ""} ${address.country || ""}`.trim()
-        );
+        const formatted = [
+          address.name || address.street,
+          address.subregion || address.district || address.city,
+          address.region,
+          address.postalCode,
+        ]
+          .filter(Boolean)
+          .join(", ");
+
+        setJobLocation(formatted || "Selected map location");
       } else {
-        setJobLocation("Selected map location");
+        setJobLocation(`Location (${latNum.toFixed(4)}, ${lngNum.toFixed(4)})`);
       }
       setShowMapModal(false);
     } catch (error) {
-      Alert.alert("Error", `Failed to get address: ${error.message}`);
       setLatitude(parseFloat(tempLocation.latitude));
       setLongitude(parseFloat(tempLocation.longitude));
       setJobLocation("Selected map location");
@@ -557,18 +576,6 @@ const JobRequirementsScreen = ({ navigation }) => {
   };
 
   const addSkills = () => setSkills([...skills, ""]);
-
-  const onChangeDate = (event, selectedDate) => {
-    const mode = datePickerMode;
-    setDatePickerMode(null);
-    if (event?.type === "dismissed" || !selectedDate) return;
-    if (mode === "start") {
-      setStartDate(selectedDate);
-      if (deadline && selectedDate > deadline) setDeadline(null);
-    } else if (mode === "end") {
-      setDeadline(selectedDate);
-    }
-  };
 
   const pickAttachments = async () => {
     Alert.alert("Add Attachment", "Choose a file type", [
@@ -635,8 +642,7 @@ const JobRequirementsScreen = ({ navigation }) => {
       freelancerType,
       serviceId,
       jobType,
-      deadline,
-      startDate,
+      workDurationDays,
       budget,
       budgetError,
       skills,
@@ -701,6 +707,17 @@ const JobRequirementsScreen = ({ navigation }) => {
 
   const hasCoordinates = !!(latitude && longitude && latitude !== 0 && longitude !== 0);
 
+  const mapPreviewRef = useRef(null);
+
+  useEffect(() => {
+    if (hasCoordinates && mapPreviewRef.current) {
+      mapPreviewRef.current.animateToRegion(
+        { latitude, longitude, latitudeDelta: 0.01, longitudeDelta: 0.01 },
+        300
+      );
+    }
+  }, [latitude, longitude, hasCoordinates]);
+
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
       <View style={styles.header}>
@@ -712,6 +729,16 @@ const JobRequirementsScreen = ({ navigation }) => {
           <Text style={styles.headerSubtitle}>Fill in the details to post your job</Text>
         </View>
         <View style={styles.headerSpacer} />
+      </View>
+
+      {/* Pre-warm MapView: off-screen with real dimensions so Google Maps SDK initializes eagerly */}
+      <View style={styles.preWarmContainer} pointerEvents="none">
+        <MapView
+          style={styles.preWarmMap}
+          provider={Platform.OS === "android" ? PROVIDER_GOOGLE : undefined}
+          initialRegion={mapRegion}
+          cacheEnabled
+        />
       </View>
 
       <ScrollView
@@ -856,43 +883,32 @@ const JobRequirementsScreen = ({ navigation }) => {
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.secondaryLocationBtn, locationLoading && styles.disabledBtn]}
-                onPress={detectLocation}
-                disabled={locationLoading}
+                style={styles.secondaryLocationBtn}
+                onPress={openMapModal}
               >
                 <Ionicons name="map-outline" size={18} color={PURPLE} />
-                <Text style={styles.secondaryLocationBtnText}>Get Coordinates</Text>
+                <Text style={styles.secondaryLocationBtnText}>Pick on Map</Text>
               </TouchableOpacity>
             </View>
 
             <View style={styles.mapPreview}>
-              {hasCoordinates ? (
-                <MapView
-                  style={StyleSheet.absoluteFill}
-                  region={{
-                    latitude,
-                    longitude,
-                    latitudeDelta: 0.01,
-                    longitudeDelta: 0.01,
-                  }}
-                  pointerEvents="none"
-                  provider={Platform.OS === "android" ? PROVIDER_GOOGLE : undefined}
-                >
-                  <Marker coordinate={{ latitude, longitude }} />
-                </MapView>
-              ) : (
-                <View style={styles.mapPlaceholder}>
-                  <MapPin size={28} color={accent} />
-                  <Text style={styles.mapPlaceholderText}>Map preview appears after coordinates are set</Text>
-                </View>
-              )}
+              <MapView
+                ref={mapPreviewRef}
+                style={StyleSheet.absoluteFill}
+                initialRegion={
+                  hasCoordinates
+                    ? { latitude, longitude, latitudeDelta: 0.01, longitudeDelta: 0.01 }
+                    : mapRegion
+                }
+                pointerEvents="none"
+                provider={Platform.OS === "android" ? PROVIDER_GOOGLE : undefined}
+                cacheEnabled
+              >
+                {hasCoordinates && <Marker coordinate={{ latitude, longitude }} />}
+              </MapView>
               <TouchableOpacity
-                style={[
-                  styles.mapOverlayBtn,
-                  !hasCoordinates && !jobLocation.trim() && styles.disabledBtn,
-                ]}
+                style={styles.mapOverlayBtn}
                 onPress={openMapModal}
-                disabled={!hasCoordinates && !jobLocation.trim()}
               >
                 <Ionicons name="scan-outline" size={16} color={PURPLE} />
                 <Text style={styles.mapOverlayBtnText}>View & Adjust on Map</Text>
@@ -994,57 +1010,36 @@ const JobRequirementsScreen = ({ navigation }) => {
           </View>
         </View>
 
-        {/* Timeline */}
+        {/* Work Duration */}
         <View style={styles.section}>
           <View style={styles.labelRow}>
             <CalendarBlank size={18} color={accent} />
-            <Text style={[styles.label, styles.labelInline]}>Timeline (Deadline)</Text>
+            <Text style={[styles.label, styles.labelInline]}>Work Duration</Text>
           </View>
-          <View style={styles.timelineRow}>
-            <TouchableOpacity
-              style={styles.dateField}
-              onPress={() => setDatePickerMode("start")}
-            >
-              <Text style={styles.dateLabel}>Start Date</Text>
-              <View style={styles.dateValueRow}>
-                <CalendarBlank size={16} color={accent} />
-                <Text style={styles.dateValue} numberOfLines={1}>
-                  {formatDisplayDate(startDate)}
-                </Text>
-              </View>
-            </TouchableOpacity>
-
-            <Ionicons name="arrow-forward" size={18} color={accent} style={styles.timelineArrow} />
-
-            <TouchableOpacity
-              style={styles.dateField}
-              onPress={() => setDatePickerMode("end")}
-            >
-              <Text style={styles.dateLabel}>End Date</Text>
-              <View style={styles.dateValueRow}>
-                <CalendarBlank size={16} color={accent} />
+          <Text style={[styles.helperText, { marginBottom: 12 }]}>
+            Application deadline: 24 hours. Work deadline starts after freelancer booking is confirmed.
+          </Text>
+          <View style={styles.durationRow}>
+            {[1, 2, 3].map((days) => (
+              <TouchableOpacity
+                key={days}
+                style={[
+                  styles.durationOption,
+                  workDurationDays === days && styles.durationOptionActive,
+                ]}
+                onPress={() => setWorkDurationDays(days)}
+              >
                 <Text
-                  style={[styles.dateValue, !deadline && styles.placeholder]}
-                  numberOfLines={1}
+                  style={[
+                    styles.durationOptionText,
+                    workDurationDays === days && styles.durationOptionTextActive,
+                  ]}
                 >
-                  {deadline ? formatDisplayDate(deadline) : "Select end date"}
+                  {days} {days === 1 ? "Day" : "Days"}
                 </Text>
-              </View>
-            </TouchableOpacity>
+              </TouchableOpacity>
+            ))}
           </View>
-          {datePickerMode && (
-            <DateTimePicker
-              value={
-                datePickerMode === "start"
-                  ? startDate || new Date()
-                  : deadline || startDate || new Date()
-              }
-              mode="date"
-              display={Platform.OS === "ios" ? "spinner" : "default"}
-              minimumDate={datePickerMode === "end" ? startDate || new Date() : new Date()}
-              onChange={onChangeDate}
-            />
-          )}
         </View>
 
         {/* Budget */}
@@ -1368,12 +1363,14 @@ const JobRequirementsScreen = ({ navigation }) => {
           </View>
 
           <MapView
+            key={`modal-${showMapModal}-${mapRegion.latitude}-${mapRegion.longitude}`}
             style={styles.map}
-            region={mapRegion}
+            initialRegion={mapRegion}
             provider={Platform.OS === "android" ? PROVIDER_GOOGLE : undefined}
             onPress={handleMapPress}
             showsUserLocation
             showsMyLocationButton
+            cacheEnabled
           >
             <Marker
               coordinate={tempLocation}
@@ -1530,6 +1527,25 @@ const getStyles = (currentTheme, isDark) => {
     },
     section: {
       marginTop: 18,
+    },
+    hiddenSection: {
+      height: 0,
+      overflow: "hidden",
+      marginTop: 0,
+      padding: 0,
+      borderWidth: 0,
+    },
+    preWarmContainer: {
+      position: "absolute",
+      top: -300,
+      left: 0,
+      width: 300,
+      height: 300,
+      overflow: "hidden",
+    },
+    preWarmMap: {
+      width: 300,
+      height: 300,
     },
     locationHeaderRow: {
       flexDirection: "row",
@@ -1735,40 +1751,30 @@ const getStyles = (currentTheme, isDark) => {
       marginTop: 2,
       fontWeight: "500",
     },
-    timelineRow: {
+    durationRow: {
       flexDirection: "row",
-      alignItems: "center",
-      gap: 8,
+      gap: 10,
     },
-    dateField: {
+    durationOption: {
       flex: 1,
       borderRadius: 12,
-      borderWidth: 1,
+      borderWidth: 1.5,
       borderColor: border,
       backgroundColor: card,
-      paddingHorizontal: 14,
-      paddingVertical: 8,
-      height: 48,
-    },
-    dateLabel: {
-      color: muted,
-      fontSize: 12,
-      fontWeight: "600",
-      marginBottom: 2,
-    },
-    dateValueRow: {
-      flexDirection: "row",
+      paddingVertical: 14,
       alignItems: "center",
-      gap: 6,
     },
-    dateValue: {
-      flex: 1,
-      color: text,
+    durationOptionActive: {
+      borderColor: PURPLE,
+      backgroundColor: isDark ? "rgba(123,44,191,0.15)" : "rgba(123,44,191,0.06)",
+    },
+    durationOptionText: {
       fontSize: 14,
-      fontWeight: "500",
+      fontWeight: "600",
+      color: muted,
     },
-    timelineArrow: {
-      marginTop: 8,
+    durationOptionTextActive: {
+      color: PURPLE,
     },
     budgetHeader: {
       flexDirection: "row",
