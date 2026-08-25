@@ -653,7 +653,7 @@ const FreelancerChat = ({ route, navigation }) => {
           />
 
           <View style={{ flex: 2 }}>
-            {(chatStatus === "ACCEPTED" || chatStatus === "IN_PROGRESS") && (
+            {(chatStatus === "ACCEPTED" || chatStatus === "IN_PROGRESS") && !["CANCELLED", "CANCELLED_BY_CLIENT", "CANCELLED_BY_FREELANCER", "CANCELLED_SCOPE_MISMATCH"].includes(job?.jobStatus) && (
               <View style={styles.deadlineContainer}>
                 {chatStatus !== "COMPLETED" && chatStatus !== "IN_PROGRESS" && (
                   <Text style={styles.deadline}>
@@ -671,7 +671,7 @@ const FreelancerChat = ({ route, navigation }) => {
                     <DeadlineTimer
                       deadline={job?.deadlineDate}
                       jobCompleted={job?.jobStatus === "COMPLETED"}
-                      jobCancelled={job?.jobStatus === "CANCELLED"}
+                      jobCancelled={["CANCELLED", "CANCELLED_BY_CLIENT", "CANCELLED_BY_FREELANCER", "CANCELLED_SCOPE_MISMATCH"].includes(job?.jobStatus)}
                       style={{
                         timeBox: styles.timeBox,
                         timeText: styles.timeText,

@@ -382,13 +382,45 @@ const JobRequirementsScreen = ({ navigation }) => {
     birdFeeAmount: calculatedBirdFee ? calculatedBirdFee.feeAmount : null,
   };
 
+  const withTimeout = (promise, ms = 15000) =>
+    Promise.race([
+      promise,
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Location request timed out")), ms)
+      ),
+    ]);
+
   const requestPermission = async () => {
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== "granted") {
-      Alert.alert("Permission denied", "Location access is needed to use this feature.");
+    try {
+      const { status: existing } = await Location.getForegroundPermissionsAsync();
+      if (existing === "granted") return true;
+
+      if (existing === "denied") {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === "granted") return true;
+        Alert.alert(
+          "Permission required",
+          "Location permission was denied. Please enable it from your device Settings > Apps > Bird Earner > Permissions > Location."
+        );
+        return false;
+      }
+
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status === "granted") return true;
+
+      Alert.alert(
+        "Permission required",
+        "Location access is needed to detect your current location. Please enable it in Settings."
+      );
+      return false;
+    } catch (err) {
+      console.warn("Permission request error:", err);
+      Alert.alert(
+        "Permission error",
+        `Could not request location permission: ${err?.message || "unknown error"}. Please go to Settings > Apps > Bird Earner > Permissions and enable Location.`
+      );
       return false;
     }
-    return true;
   };
 
   useEffect(() => {
@@ -421,16 +453,104 @@ const JobRequirementsScreen = ({ navigation }) => {
     }
   };
 
-  /** One action: geocode typed address, or use GPS if the field is empty. */
-  const detectLocation = async () => {
-    const hasPermission = await requestPermission();
-    if (!hasPermission) return null;
+  /** Always use GPS to get current location (used by "Use Current Location" button). */
+  const useCurrentLocationOnly = async () => {
     setLocationLoading(true);
     try {
+      const hasPermission = await requestPermission();
+      if (!hasPermission) return null;
+
+      console.log("[Location] Permission granted, checking services...");
+      const servicesEnabled = await Location.hasServicesEnabledAsync();
+      console.log("[Location] Services enabled:", servicesEnabled);
+      if (!servicesEnabled) {
+        Alert.alert(
+          "Location services off",
+          "Please turn on GPS / Location Services on your device and try again."
+        );
+        return null;
+      }
+
+      let location = null;
+      try {
+        console.log("[Location] Requesting current position (Balanced)...");
+        location = await withTimeout(
+          Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
+          15000
+        );
+        console.log("[Location] Got position:", location?.coords);
+      } catch (posError) {
+        console.warn("[Location] getCurrentPositionAsync failed:", posError?.message);
+        try {
+          console.log("[Location] Trying last known position...");
+          location = await withTimeout(Location.getLastKnownPositionAsync({}), 5000);
+          console.log("[Location] Got last known:", location?.coords);
+        } catch (lastErr) {
+          console.warn("[Location] getLastKnownPositionAsync failed:", lastErr?.message);
+        }
+      }
+
+      if (!location) {
+        Alert.alert(
+          "Location unavailable",
+          "Could not determine your current location. Make sure GPS is enabled and you have a clear sky view, then try again."
+        );
+        return null;
+      }
+
+      const coords = {
+        latitude: parseFloat(location.coords.latitude),
+        longitude: parseFloat(location.coords.longitude),
+      };
+      setLatitude(coords.latitude);
+      setLongitude(coords.longitude);
+      setMapRegion({
+        ...coords,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      });
+      setTempLocation(coords);
+
+      try {
+        const addressResponse = await withTimeout(
+          Location.reverseGeocodeAsync(coords),
+          10000
+        );
+        if (addressResponse.length > 0) {
+          const address = addressResponse[0];
+          setJobLocation(
+            `${address.street || ""} ${address.city || ""} ${address.region || ""} ${address.country || ""}`.trim()
+          );
+        }
+      } catch (geoErr) {
+        console.warn("Reverse geocode failed:", geoErr?.message);
+      }
+      return coords;
+    } catch (error) {
+      Alert.alert("Error", `Failed to detect location: ${error.message}`);
+      return null;
+    } finally {
+      setLocationLoading(false);
+    }
+  };
+
+  /** Geocode typed address, or use GPS if the field is empty. */
+  const detectLocation = async () => {
+    setLocationLoading(true);
+    try {
+      const hasPermission = await requestPermission();
+      if (!hasPermission) return null;
+
       const trimmed = jobLocation.trim();
 
       if (trimmed) {
-        const [result] = await Location.geocodeAsync(trimmed);
+        let result = null;
+        try {
+          const results = await withTimeout(Location.geocodeAsync(trimmed), 10000);
+          result = results?.[0] || null;
+        } catch (geoErr) {
+          console.warn("geocodeAsync failed:", geoErr?.message);
+        }
         if (!result) {
           Alert.alert(
             "Address not found",
@@ -453,9 +573,38 @@ const JobRequirementsScreen = ({ navigation }) => {
         return coords;
       }
 
-      const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      });
+      const servicesEnabled = await Location.hasServicesEnabledAsync();
+      if (!servicesEnabled) {
+        Alert.alert(
+          "Location services off",
+          "Please turn on GPS / Location Services on your device and try again."
+        );
+        return null;
+      }
+
+      let location = null;
+      try {
+        location = await withTimeout(
+          Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
+          15000
+        );
+      } catch (posError) {
+        console.warn("getCurrentPositionAsync failed:", posError?.message);
+        try {
+          location = await withTimeout(Location.getLastKnownPositionAsync({}), 5000);
+        } catch (lastErr) {
+          console.warn("getLastKnownPositionAsync failed:", lastErr?.message);
+        }
+      }
+
+      if (!location) {
+        Alert.alert(
+          "Location unavailable",
+          "Could not determine your current location. Make sure GPS is enabled and you have a clear sky view, then try again."
+        );
+        return null;
+      }
+
       const coords = {
         latitude: parseFloat(location.coords.latitude),
         longitude: parseFloat(location.coords.longitude),
@@ -469,12 +618,19 @@ const JobRequirementsScreen = ({ navigation }) => {
       });
       setTempLocation(coords);
 
-      const addressResponse = await Location.reverseGeocodeAsync(coords);
-      if (addressResponse.length > 0) {
-        const address = addressResponse[0];
-        setJobLocation(
-          `${address.street || ""} ${address.city || ""} ${address.region || ""} ${address.country || ""}`.trim()
+      try {
+        const addressResponse = await withTimeout(
+          Location.reverseGeocodeAsync(coords),
+          10000
         );
+        if (addressResponse.length > 0) {
+          const address = addressResponse[0];
+          setJobLocation(
+            `${address.street || ""} ${address.city || ""} ${address.region || ""} ${address.country || ""}`.trim()
+          );
+        }
+      } catch (geoErr) {
+        console.warn("Reverse geocode failed:", geoErr?.message);
       }
       return coords;
     } catch (error) {
@@ -498,11 +654,31 @@ const JobRequirementsScreen = ({ navigation }) => {
         }
       } else {
         try {
-          const { status } = await Location.requestForegroundPermissionsAsync();
-          if (status === "granted") {
-            const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-            lat = parseFloat(loc.coords.latitude);
-            lng = parseFloat(loc.coords.longitude);
+          const servicesEnabled = await Location.hasServicesEnabledAsync();
+          if (!servicesEnabled) {
+            console.log("GPS services not enabled, using default region");
+          } else {
+            const { status } = await withTimeout(
+              Location.requestForegroundPermissionsAsync(),
+              10000
+            );
+            if (status === "granted") {
+              let loc = null;
+              try {
+                loc = await withTimeout(
+                  Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
+                  15000
+                );
+              } catch (posErr) {
+                try {
+                  loc = await withTimeout(Location.getLastKnownPositionAsync({}), 5000);
+                } catch (_) {}
+              }
+              if (loc) {
+                lat = parseFloat(loc.coords.latitude);
+                lng = parseFloat(loc.coords.longitude);
+              }
+            }
           }
         } catch (e) {
           console.log("GPS fetch skipped, using default region");
@@ -866,7 +1042,7 @@ const JobRequirementsScreen = ({ navigation }) => {
                 }}
                 multiline
               />
-              <TouchableOpacity onPress={detectLocation} disabled={locationLoading}>
+              <TouchableOpacity onPress={useCurrentLocationOnly} disabled={locationLoading}>
                 <Ionicons name="locate-outline" size={20} color={accent} />
               </TouchableOpacity>
             </View>
@@ -874,7 +1050,7 @@ const JobRequirementsScreen = ({ navigation }) => {
             <View style={styles.locationBtnsRow}>
               <TouchableOpacity
                 style={[styles.primaryLocationBtn, locationLoading && styles.disabledBtn]}
-                onPress={detectLocation}
+                onPress={useCurrentLocationOnly}
                 disabled={locationLoading}
               >
                 <PaperPlaneTilt size={18} color="#fff" weight="fill" />

@@ -58,6 +58,7 @@ export default {
     plugins: [
       "expo-router",
       "expo-font",
+      "expo-location",
       "react-native-video",
       [
         "expo-splash-screen",

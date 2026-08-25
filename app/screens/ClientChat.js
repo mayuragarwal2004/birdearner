@@ -719,6 +719,11 @@ const ClientChat = ({ route, navigation }) => {
       });
 
       if (res.success) {
+        await Promise.all([
+          mutateJob?.(),
+          mutateThread?.(),
+          mutateMessages?.(),
+        ]);
         Toast.show({
           type: "success",
           text1: "Success",
@@ -865,6 +870,9 @@ const ClientChat = ({ route, navigation }) => {
 
     const isDeadlineOver = job?.deadlineDate && new Date(job.deadlineDate) < new Date();
     const isCompleted = job?.jobStatus === "COMPLETED";
+    const isCancelled = ["CANCELLED", "CANCELLED_BY_CLIENT", "CANCELLED_BY_FREELANCER", "CANCELLED_SCOPE_MISMATCH"].includes(job?.jobStatus);
+
+    if (isCancelled) return null;
 
     return (
       <View style={styles.deadlineContainer}>
@@ -896,7 +904,7 @@ const ClientChat = ({ route, navigation }) => {
               <DeadlineTimer
                 deadline={job?.deadlineDate}
                 jobCompleted={isCompleted}
-                jobCancelled={job?.jobStatus === "CANCELLED"}
+                jobCancelled={["CANCELLED", "CANCELLED_BY_CLIENT", "CANCELLED_BY_FREELANCER", "CANCELLED_SCOPE_MISMATCH"].includes(job?.jobStatus)}
                 style={{
                   timeBox: styles.timeBox,
                   timeText: styles.timeText,
