@@ -15,6 +15,11 @@ const ClientActions = ({
   const currentTheme = themeStyles[theme];
   const styles = getStyles(currentTheme);
 
+  const isCancelled = ["CANCELLED", "CANCELLED_BY_CLIENT", "CANCELLED_BY_FREELANCER", "CANCELLED_SCOPE_MISMATCH"].includes(job?.jobStatus);
+
+  // Don't show any actions if job is cancelled
+  if (isCancelled) return null;
+
   // Show accept/reject buttons only when job is unassigned
   if (!job?.assignedFreelancerId) {
     return (

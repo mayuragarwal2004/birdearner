@@ -461,7 +461,13 @@ export const useChatData = (role, params) => {
     isNegotiable: !thread?.isAccepted && thread?.status !== 'ACCEPTED' && thread?.status !== 'REJECTED',
 
     // Computed values
-    chatStatus: thread?.status || 'PENDING',
+    chatStatus: (() => {
+      const jobSt = job?.jobStatus?.toUpperCase();
+      if (["CANCELLED", "CANCELLED_BY_CLIENT", "CANCELLED_BY_FREELANCER", "CANCELLED_SCOPE_MISMATCH", "COMPLETED"].includes(jobSt)) {
+        return jobSt;
+      }
+      return thread?.status || 'PENDING';
+    })(),
     jobStatus: job?.jobStatus?.toUpperCase() || 'PENDING',
     characterLimit: (job?.jobStatus?.toUpperCase() === 'OPEN')
       ? (thread?.characterLimit || job?.characterLimit || 200)

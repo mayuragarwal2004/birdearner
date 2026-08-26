@@ -7,6 +7,10 @@ const StatusBadge = ({ status }) => {
       case 'ACCEPTED':
         return styles.statusAccepted;
       case 'REJECTED':
+      case 'CANCELLED':
+      case 'CANCELLED_BY_CLIENT':
+      case 'CANCELLED_BY_FREELANCER':
+      case 'CANCELLED_SCOPE_MISMATCH':
         return styles.statusRejected;
       case 'COMPLETED':
         return styles.statusCompleted;

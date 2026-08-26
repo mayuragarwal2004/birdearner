@@ -602,12 +602,15 @@ const FreelancerChat = ({ route, navigation }) => {
           setShowMenu={setShowMenu}
           onMenuAction={handleMenuAction}
           menuOptions={
-            (job?.assignedFreelancer?.user?.id === userData?.id || job?.assignedFreelancerId === userData?.id || job?.assignedFreelancerId === userData?.freelancer?.id) &&
-              (chatStatus === 'IN_PROGRESS' || chatStatus === 'ACCEPTED') && job?.jobStatus !== 'COMPLETED'
-              ? ["View Profile", "Block", "Report", "Request Project Completion", "Cancel Job"]
-              : job?.jobStatus === "COMPLETED"
-                ? ["View Profile", "Block", "Report", "Write Review"]
-                : ["View Profile", "Block", "Report"]
+            (() => {
+              const isMyJob = job?.assignedFreelancer?.user?.id === userData?.id || job?.assignedFreelancerId === userData?.id || job?.assignedFreelancerId === userData?.freelancer?.id;
+              const isCompleted = job?.jobStatus === 'COMPLETED';
+              const isOnSite = job?.projectType === 'On-site' && job?.location?.toLowerCase() !== 'remote';
+              const canRequestCompletion = isMyJob && !isCompleted && (chatStatus === 'IN_PROGRESS' || chatStatus === 'ACCEPTED') && (!isOnSite || ['JOB_STARTED', 'WORK_COMPLETED', 'PAYMENT_RELEASED'].includes(job?.jobStatus));
+              if (isCompleted) return ["View Profile", "Block", "Report", "Write Review"];
+              if (canRequestCompletion) return ["View Profile", "Block", "Report", "Request Project Completion", "Cancel Job"];
+              return ["View Profile", "Block", "Report"];
+            })()
           }
         />
 
@@ -616,7 +619,7 @@ const FreelancerChat = ({ route, navigation }) => {
           currentFreelancerId={userData?.freelancer?.id}
         />
 
-        {!job?.assignedFreelancerId && chatStatus !== "ACCEPTED" && (
+        {!job?.assignedFreelancerId && chatStatus !== "ACCEPTED" && !["CANCELLED", "CANCELLED_BY_CLIENT", "CANCELLED_BY_FREELANCER", "CANCELLED_SCOPE_MISMATCH"].includes(job?.jobStatus) && (
           <View style={styles.reviewBanner}>
             <Ionicons name="information-circle-outline" size={20} color="#6D28D9" style={{ marginRight: 8 }} />
             <Text style={styles.reviewBannerText}>
@@ -653,25 +656,29 @@ const FreelancerChat = ({ route, navigation }) => {
           />
 
           <View style={{ flex: 2 }}>
-            {(chatStatus === "ACCEPTED" || chatStatus === "IN_PROGRESS") && !["CANCELLED", "CANCELLED_BY_CLIENT", "CANCELLED_BY_FREELANCER", "CANCELLED_SCOPE_MISMATCH"].includes(job?.jobStatus) && (
+            {((chatStatus === "ACCEPTED" || chatStatus === "IN_PROGRESS") || ["CANCELLED", "CANCELLED_BY_CLIENT", "CANCELLED_BY_FREELANCER", "CANCELLED_SCOPE_MISMATCH"].includes(job?.jobStatus)) && (
               <View style={styles.deadlineContainer}>
-                {chatStatus !== "COMPLETED" && chatStatus !== "IN_PROGRESS" && (
-                  <Text style={styles.deadline}>
-                    {job?.deadlineDate && new Date(job.deadlineDate) < new Date()
-                      ? "Deadline Over"
-                      : null}
-                  </Text>
-                )}
                 <View style={styles.deadlineTimerContainer}>
-                  {job?.jobStatus === "COMPLETED" ? (
+                  {["CANCELLED", "CANCELLED_BY_CLIENT", "CANCELLED_BY_FREELANCER", "CANCELLED_SCOPE_MISMATCH"].includes(job?.jobStatus) ? (
+                    <DeadlineTimer
+                      jobCancelled={true}
+                      style={{
+                        timeBox: styles.timeBox,
+                        timeText: styles.timeText,
+                        unitText: styles.unitText,
+                        completedText: styles.conColorc,
+                        timeContainer: styles.timeContainer,
+                      }}
+                    />
+                  ) : job?.jobStatus === "COMPLETED" ? (
                     <View style={styles.conColorc}>
                       <Text style={styles.completedText}>Project Completed ✓</Text>
                     </View>
                   ) : (
                     <DeadlineTimer
                       deadline={job?.deadlineDate}
-                      jobCompleted={job?.jobStatus === "COMPLETED"}
-                      jobCancelled={["CANCELLED", "CANCELLED_BY_CLIENT", "CANCELLED_BY_FREELANCER", "CANCELLED_SCOPE_MISMATCH"].includes(job?.jobStatus)}
+                      jobCompleted={false}
+                      jobCancelled={false}
                       style={{
                         timeBox: styles.timeBox,
                         timeText: styles.timeText,
