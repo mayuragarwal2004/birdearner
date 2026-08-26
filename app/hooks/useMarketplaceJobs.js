@@ -17,7 +17,7 @@ export const useMarketplaceJobs = () => {
     Toast.show({ type, text1, text2, position: "top" });
   };
 
-  const fetchJobs = async (filterByLocation = false, location = null, distance = 20, currentUserRole = 'FREELANCER', userServices = [], isInitialLoad = false) => {
+  const fetchJobs = async (filterByLocation = false, location = null, distance = 20, currentUserRole = 'FREELANCER', userServices = [], isInitialLoad = false, currentFreelancerId = null) => {
     try {
       // Only show main loading on initial load, use filter loading for updates
       if (isInitialLoad) {
@@ -37,6 +37,11 @@ export const useMarketplaceJobs = () => {
         filters.latitude = location.latitude;
         filters.longitude = location.longitude;
         filters.maxDistance = distance;
+      }
+
+      // Add freelancer ID to check application status
+      if (currentFreelancerId) {
+        filters.currentFreelancerId = currentFreelancerId;
       }
 
       // Get jobs categorized by priority from the new backend

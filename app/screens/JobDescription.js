@@ -207,7 +207,7 @@ const JobDescriptionScreen = ({ route, navigation }) => {
     );
   }
 
-  const canApply = job.client?.user?.id !== userData?.id;
+  const canApply = job.client?.user?.id !== userData?.id && !job.hasApplied;
   const isRemote =
     job.jobType === "Remote" ||
     job.projectType === "Remote" ||
@@ -520,6 +520,7 @@ const JobDescriptionScreen = ({ route, navigation }) => {
             style={[
               styles.primaryApplyButton,
               { opacity: canApply && !isCheckingBalance ? 1 : 0.6 },
+              job.hasApplied && { backgroundColor: '#10B981' },
             ]}
             onPress={handleApply}
             disabled={!canApply || isCheckingBalance}
@@ -530,12 +531,14 @@ const JobDescriptionScreen = ({ route, navigation }) => {
             ) : (
               <>
                 <Ionicons
-                  name="paper-plane"
+                  name={job.hasApplied ? "checkmark-circle" : "paper-plane"}
                   size={18}
                   color="#FFFFFF"
                   style={{ marginRight: 8 }}
                 />
-                <Text style={styles.primaryApplyButtonText}>Apply for Job</Text>
+                <Text style={styles.primaryApplyButtonText}>
+                  {job.hasApplied ? "Already Applied" : "Apply for Job"}
+                </Text>
               </>
             )}
           </TouchableOpacity>

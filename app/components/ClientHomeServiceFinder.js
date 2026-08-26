@@ -125,7 +125,7 @@ const ClientHomeServiceFinder = forwardRef(({ search = "" }, ref) => {
     <View>
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Freelance Services</Text>
-        <TouchableOpacity onPress={() => navigation.navigate("Job Requirements")}>
+        <TouchableOpacity onPress={() => navigation.navigate("ServiceListing", { category: "FREELANCE" })}>
           <Text style={styles.viewAll}>View all</Text>
         </TouchableOpacity>
       </View>
@@ -143,7 +143,7 @@ const ClientHomeServiceFinder = forwardRef(({ search = "" }, ref) => {
 
       <View style={[styles.sectionHeader, styles.sectionHeaderSpaced]}>
         <Text style={styles.sectionTitle}>Household Services</Text>
-        <TouchableOpacity onPress={() => navigation.navigate("Job Requirements")}>
+        <TouchableOpacity onPress={() => navigation.navigate("ServiceListing", { category: "HOUSEHOLD" })}>
           <Text style={styles.viewAll}>View all</Text>
         </TouchableOpacity>
       </View>

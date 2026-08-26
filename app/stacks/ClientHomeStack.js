@@ -30,6 +30,11 @@ const ClientHomeStack = () => (
       getComponent={() => require("../screens/Inbox").default}
       options={{ headerShown: false }}
     />
+    <Stack.Screen
+      name="ServiceListing"
+      getComponent={() => require("../screens/ServiceListing").default}
+      options={{ headerShown: false }}
+    />
   </Stack.Navigator>
 );
 

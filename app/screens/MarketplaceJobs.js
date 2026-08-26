@@ -20,6 +20,7 @@ import {
 
 import { useTheme } from "../context/ThemeContext";
 import { useMarketplaceJobs } from "../hooks/marketplace";
+import { useAuth } from "../context/NewAuthContext";
 
 // Module-level cache: survives all navigations, re-renders, and remounts
 let _cachedFreelancerServices = null;
@@ -28,6 +29,7 @@ const MarketplaceJobs = ({ navigation, route }) => {
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
   const styles = getStyles(currentTheme);
+  const { userData } = useAuth();
 
   const {
     jobs,
@@ -68,7 +70,8 @@ const MarketplaceJobs = ({ navigation, route }) => {
       distance || 20,
       currentUserRole || "FREELANCER",
       routeUserServices || [],
-      true
+      true,
+      userData?.freelancer?.id || null
     );
   }, []);
 
@@ -156,7 +159,8 @@ const MarketplaceJobs = ({ navigation, route }) => {
       distance || 20,
       currentUserRole || "FREELANCER",
       routeUserServices || [],
-      false
+      false,
+      userData?.freelancer?.id || null
     );
   };
 
@@ -259,6 +263,11 @@ const MarketplaceJobs = ({ navigation, route }) => {
           <Text style={styles.jobDescription} numberOfLines={2}>
             {jobDescription}
           </Text>
+          {job.hasApplied && (
+            <View style={styles.appliedBadge}>
+              <Text style={styles.appliedBadgeText}>Already Applied</Text>
+            </View>
+          )}
         </View>
       </TouchableOpacity>
     );
@@ -530,6 +539,19 @@ const getStyles = (currentTheme) =>
     jobDescription: {
       fontSize: 12,
       color: currentTheme.subText || "#999",
+    },
+    appliedBadge: {
+      backgroundColor: '#10B981',
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 10,
+      alignSelf: 'flex-start',
+      marginTop: 6,
+    },
+    appliedBadgeText: {
+      color: '#fff',
+      fontSize: 11,
+      fontWeight: '600',
     },
     emptyContainer: {
       flex: 1,
