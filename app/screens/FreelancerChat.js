@@ -351,6 +351,15 @@ const FreelancerChat = ({ route, navigation }) => {
   };
 
   const handleRequestCompletion = () => {
+    const isOnSite = job?.projectType === 'On-site' && job?.location?.toLowerCase() !== 'remote';
+    if (isOnSite && !job?.otpVerifiedAt) {
+      Alert.alert(
+        'OTP Not Verified',
+        'You must complete the OTP verification flow before requesting project completion.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
     setShowConfirmationModal(true);
   };
 

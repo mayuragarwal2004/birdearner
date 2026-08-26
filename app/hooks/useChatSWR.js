@@ -1,5 +1,6 @@
 import useSWR from 'swr';
 import { useCallback } from 'react';
+import { Alert } from 'react-native';
 import ApiService from '../lib/apiService';
 import { useAuth } from '../context/NewAuthContext';
 import Toast from 'react-native-toast-message';
@@ -298,7 +299,15 @@ export const useChatData = (role, params) => {
       });
 
       if (res.success) {
-        // Mutate both messages and job data
+        if (res.otpPending) {
+          Toast.show({
+            type: 'error',
+            text1: 'OTP Not Verified',
+            text2: res.message,
+          });
+          return;
+        }
+
         await Promise.all([
           mutateMessages(),
           mutateJob(),
@@ -312,11 +321,12 @@ export const useChatData = (role, params) => {
       }
     } catch (error) {
       console.error('Error sending completion request:', error);
-      Toast.show({
-        type: 'error',
-        text1: 'Error',
-        text2: 'Failed to send completion request',
-      });
+      const errorMessage = error?.message || 'Failed to send completion request';
+      Alert.alert(
+        'Cannot Request Completion',
+        errorMessage,
+        [{ text: 'OK' }]
+      );
     }
   }, [role, thread?.id, job?.id, mutateMessages, mutateJob]);
 
