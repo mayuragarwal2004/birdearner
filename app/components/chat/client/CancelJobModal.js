@@ -1,17 +1,35 @@
 import React, { useState } from 'react';
-import { View, Text, Modal, TouchableOpacity, StyleSheet, TextInput } from 'react-native';
+import { View, Text, Modal, TouchableOpacity, StyleSheet, TextInput, ScrollView } from 'react-native';
+
+const CANCELLATION_REASONS = [
+  'Budget constraints',
+  'No longer needed',
+  'Found another freelancer',
+  'Project requirements changed',
+  'Communication issues',
+  'Freelancer not responding',
+  'Quality concerns',
+  'Timeline no longer works',
+];
 
 const CancelJobModal = ({ visible, onConfirm, onCancel, jobBudget }) => {
-  const [reason, setReason] = useState('');
+  const [selectedReason, setSelectedReason] = useState(null);
+  const [customReason, setCustomReason] = useState('');
   const penaltyAmount = jobBudget ? (parseFloat(jobBudget) * 0.02).toFixed(2) : '0.00';
 
+  const finalReason = selectedReason === 'Other' ? customReason.trim() : selectedReason;
+  const canConfirm = finalReason && finalReason.length > 0;
+
   const handleConfirm = () => {
-    onConfirm(reason);
-    setReason('');
+    if (!canConfirm) return;
+    onConfirm(finalReason);
+    setSelectedReason(null);
+    setCustomReason('');
   };
 
   const handleCancel = () => {
-    setReason('');
+    setSelectedReason(null);
+    setCustomReason('');
     onCancel();
   };
 
@@ -24,42 +42,95 @@ const CancelJobModal = ({ visible, onConfirm, onCancel, jobBudget }) => {
     >
       <View style={styles.modalContainer}>
         <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>Cancel Job</Text>
+          <ScrollView showsVerticalScrollIndicator={false}>
+            <Text style={styles.modalTitle}>Cancel Job</Text>
 
-          <View style={styles.warningBox}>
-            <Text style={styles.warningIcon}>⚠️</Text>
-            <Text style={styles.warningText}>
-              Warning: A 2% penalty of ₹{penaltyAmount} will be added to your next job. You will need to pay this penalty amount directly to the freelancer you assign to your next job as a token of cancellation penalty.
-            </Text>
-          </View>
+            <View style={styles.warningBox}>
+              <Text style={styles.warningIcon}>⚠️</Text>
+              <Text style={styles.warningText}>
+                Warning: A 2% penalty of ₹{penaltyAmount} will be added to your next job. You will need to pay this penalty amount directly to the freelancer you assign to your next job as a token of cancellation penalty.
+              </Text>
+            </View>
 
-          <Text style={styles.label}>Reason for cancellation *</Text>
-          <TextInput
-            style={styles.reasonInput}
-            placeholder="Please enter the reason for cancellation..."
-            placeholderTextColor="#999"
-            value={reason}
-            onChangeText={setReason}
-            multiline
-            numberOfLines={4}
-            textAlignVertical="top"
-          />
+            <Text style={styles.label}>Reason for cancellation *</Text>
 
-          <View style={styles.modalActions}>
+            {CANCELLATION_REASONS.map((item) => (
+              <TouchableOpacity
+                key={item}
+                style={[
+                  styles.reasonOption,
+                  selectedReason === item && styles.reasonOptionSelected,
+                ]}
+                onPress={() => {
+                  setSelectedReason(item);
+                  setCustomReason('');
+                }}
+              >
+                <View style={[
+                  styles.radio,
+                  selectedReason === item && styles.radioSelected,
+                ]}>
+                  {selectedReason === item && <View style={styles.radioInner} />}
+                </View>
+                <Text style={[
+                  styles.reasonText,
+                  selectedReason === item && styles.reasonTextSelected,
+                ]}>
+                  {item}
+                </Text>
+              </TouchableOpacity>
+            ))}
+
             <TouchableOpacity
-              style={[styles.confirmButton, !reason.trim() && styles.disabledButton]}
-              onPress={handleConfirm}
-              disabled={!reason.trim()}
+              style={[
+                styles.reasonOption,
+                selectedReason === 'Other' && styles.reasonOptionSelected,
+              ]}
+              onPress={() => setSelectedReason('Other')}
             >
-              <Text style={styles.buttonText}>Yes, Cancel Job</Text>
+              <View style={[
+                styles.radio,
+                selectedReason === 'Other' && styles.radioSelected,
+              ]}>
+                {selectedReason === 'Other' && <View style={styles.radioInner} />}
+              </View>
+              <Text style={[
+                styles.reasonText,
+                selectedReason === 'Other' && styles.reasonTextSelected,
+              ]}>
+                Other
+              </Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.cancelButton}
-              onPress={handleCancel}
-            >
-              <Text style={styles.buttonText}>Go Back</Text>
-            </TouchableOpacity>
-          </View>
+
+            {selectedReason === 'Other' && (
+              <TextInput
+                style={styles.customInput}
+                placeholder="Please specify your reason..."
+                placeholderTextColor="#999"
+                value={customReason}
+                onChangeText={setCustomReason}
+                multiline
+                numberOfLines={3}
+                textAlignVertical="top"
+              />
+            )}
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.confirmButton, !canConfirm && styles.disabledButton]}
+                onPress={handleConfirm}
+                disabled={!canConfirm}
+              >
+                <Text style={styles.buttonText}>Yes, Cancel Job</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={handleCancel}
+              >
+                <Text style={styles.buttonText}>Go Back</Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
         </View>
       </View>
     </Modal>
@@ -78,7 +149,7 @@ const styles = StyleSheet.create({
     padding: 20,
     borderRadius: 12,
     width: '85%',
-    alignItems: 'center',
+    maxHeight: '80%',
   },
   modalTitle: {
     fontSize: 20,
@@ -111,24 +182,69 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
     alignSelf: 'flex-start',
-    marginBottom: 8,
+    marginBottom: 10,
   },
-  reasonInput: {
+  reasonOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    marginBottom: 6,
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  reasonOptionSelected: {
+    backgroundColor: '#EEF2FF',
+    borderColor: '#6366F1',
+  },
+  radio: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 2,
+    borderColor: '#9CA3AF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  radioSelected: {
+    borderColor: '#6366F1',
+  },
+  radioInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#6366F1',
+  },
+  reasonText: {
+    fontSize: 14,
+    color: '#374151',
+    flex: 1,
+  },
+  reasonTextSelected: {
+    color: '#4F46E5',
+    fontWeight: '600',
+  },
+  customInput: {
     borderWidth: 1,
     borderColor: '#DDD',
     borderRadius: 8,
     padding: 12,
     fontSize: 14,
     width: '100%',
-    minHeight: 100,
+    minHeight: 70,
     backgroundColor: '#F9FAFB',
-    marginBottom: 20,
+    marginBottom: 15,
+    marginTop: 4,
     color: '#333',
   },
   modalActions: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     width: '100%',
+    marginTop: 10,
   },
   confirmButton: {
     backgroundColor: '#dc3545',
