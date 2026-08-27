@@ -2,7 +2,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 
-const DEV_API_BASE_URL = "https://trading-brake-fifty-significant.trycloudflare.com/api";
+const DEV_API_BASE_URL = "https://junction-chef-viewpicture-prayer.trycloudflare.com/api";
 // const DEV_API_BASE_URL = "https://api.birdearner.com/api";
 
 const PROD_API_BASE_URL = "https://api.birdearner.com/api";
@@ -152,9 +152,42 @@ class ApiService {
     }
 
     try {
-      const response = await fetch(url, config);
+      let response;
+      let responseText = "";
+      let isHtmlOrBadGateway = false;
 
-      const responseText = await response.text();
+      try {
+        response = await fetch(url, config);
+        responseText = await response.text();
+        isHtmlOrBadGateway = !response.ok || responseText.trim().startsWith("<") || responseText.includes("502 Bad Gateway");
+      } catch (netErr) {
+        isHtmlOrBadGateway = true;
+      }
+
+      // If Cloudflare URL returned HTML or failed in dev mode, try local API port 3001 fallback
+      if (isHtmlOrBadGateway && __DEV__ && !url.includes(":3001")) {
+        const fallbackHosts = Platform.OS === 'android'
+          ? ["http://10.0.2.2:3001/api", "http://192.168.1.106:3001/api", "http://192.168.1.106:3000/api", "http://localhost:3001/api"]
+          : ["http://localhost:3001/api", "http://192.168.1.106:3001/api", "http://192.168.1.106:3000/api", "http://10.0.2.2:3001/api"];
+
+        for (const fallbackHost of fallbackHosts) {
+          try {
+            const fallbackUrl = `${fallbackHost}${endpoint}`;
+            const fallbackRes = await fetch(fallbackUrl, config);
+            const fallbackText = await fallbackRes.text();
+            if (fallbackRes.ok && !fallbackText.trim().startsWith("<")) {
+              return JSON.parse(fallbackText);
+            }
+          } catch (fbErr) {
+            // Ignore fallback failure
+          }
+        }
+      }
+
+      if (!response) {
+        throw new Error(`Network request failed for ${endpoint}`);
+      }
+
       let data;
       try {
         data = JSON.parse(responseText);
@@ -1058,6 +1091,103 @@ class ApiService {
   async getServiceById(serviceId) {
     const response = await this.makeRequest(`/services/${serviceId}`);
     return response.data;
+  }
+
+  // Resolve freelancer's selectedServices (handles IDs, suggested:<id>, names, and objects)
+  async loadServicesFromSelected(rawSelectedServices) {
+    const parseArray = (value) => {
+      if (!value) return [];
+      if (Array.isArray(value)) return value.filter(Boolean);
+      if (typeof value === "object" && value !== null) {
+        if (value.selectedServices) return parseArray(value.selectedServices);
+        if (value.freelancer?.selectedServices) return parseArray(value.freelancer.selectedServices);
+        if (value.services) return parseArray(value.services);
+      }
+      if (typeof value === "string") {
+        try {
+          const parsed = JSON.parse(value);
+          return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+        } catch {
+          return value ? [value] : [];
+        }
+      }
+      return [];
+    };
+
+    const items = parseArray(rawSelectedServices);
+
+    let catalog = [];
+    let catalogMap = new Map();
+    try {
+      catalog = await this.getAllServices();
+      if (Array.isArray(catalog)) {
+        catalog.forEach((s) => {
+          if (s?.id) catalogMap.set(String(s.id), s);
+          if (s?.name) catalogMap.set(String(s.name).toLowerCase().trim(), s);
+        });
+      }
+    } catch (err) {
+      console.warn("Could not load full service catalog for lookup:", err.message);
+    }
+
+    // If freelancer has no specific selectedServices array, return all catalog services
+    if (!items.length && catalog.length > 0) {
+      return catalog;
+    }
+
+    if (!items.length) return [];
+
+    const results = await Promise.all(
+      items.map(async (item) => {
+        if (!item) return null;
+
+        // Item is already a service object
+        if (typeof item === "object" && item.name) {
+          return {
+            id: item.id || item.name,
+            name: item.name,
+            category: item.category || "FREELANCE",
+            description: item.description || "",
+            imageUrl: item.imageUrl || item.image || null,
+            price: item.price || item.startingPrice || 0,
+          };
+        }
+
+        const rawId = typeof item === "object" ? (item.id || item.name) : String(item).trim();
+        if (!rawId) return null;
+
+        // Lookup in catalog map by ID or case-insensitive name
+        if (catalogMap.has(rawId)) return catalogMap.get(rawId);
+        if (catalogMap.has(rawId.toLowerCase())) return catalogMap.get(rawId.toLowerCase());
+
+        // Try API fetch by ID
+        try {
+          const fetched = await this.getServiceById(rawId);
+          if (fetched && !fetched.isMissing) return fetched;
+        } catch (err) {
+          console.warn(`Failed to fetch service by ID ${rawId}:`, err.message);
+        }
+
+        // Check if rawId is a UUID or suggested ID
+        const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawId) || rawId.startsWith("suggested:");
+
+        const displayName = isUUID
+          ? (typeof item === "object" && item.name ? item.name : "Service")
+          : (typeof item === "string" ? item : (item.name || "Service"));
+
+        // Fallback object so service is not lost
+        return {
+          id: rawId,
+          name: displayName,
+          category: "FREELANCE",
+          description: "",
+          imageUrl: typeof item === "object" ? (item.imageUrl || item.image || null) : null,
+          price: typeof item === "object" ? (item.price || item.startingPrice || 0) : 0,
+        };
+      })
+    );
+
+    return results.filter(Boolean);
   }
 
   async createService(serviceData) {

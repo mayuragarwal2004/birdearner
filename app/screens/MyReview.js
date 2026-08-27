@@ -75,17 +75,12 @@ const getDisplayName = (profileData, userData) =>
   userData?.fullName ||
   "Bird Earner";
 
-const getProfileTitle = (role, profileData, services) => {
-  if (role === "CLIENT") {
-    return (
-      profileData?.companyName ||
-      profileData?.company_name ||
-      profileData?.organizationType ||
-      "Client"
-    );
+const getProfileTitle = (role, profileData) => {
+  const currentRole = role || profileData?.role;
+  if (currentRole === "CLIENT") {
+    return "Client";
   }
-
-  return profileData?.profileHeading || services?.[0]?.name || "Freelancer";
+  return "Freelancer";
 };
 
 const getBadgeLabel = (level) => {

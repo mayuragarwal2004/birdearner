@@ -63,12 +63,12 @@ const getImageUri = (image) => {
 const getDisplayName = (data, userData) =>
   data?.fullName || data?.user?.fullName || userData?.fullName || "Bird Earner";
 
-const getProfileTitle = (role, data, services) => {
-  if (role === "CLIENT") {
-    return data?.companyName || data?.company_name || data?.organizationType || "Client";
+const getProfileTitle = (role, data) => {
+  const currentRole = role || data?.role;
+  if (currentRole === "CLIENT") {
+    return "Client";
   }
-
-  return data?.profileHeading || services?.[0]?.name || "Freelancer";
+  return "Freelancer";
 };
 
 const formatMemberSince = (dateValue) => {
@@ -184,24 +184,9 @@ export default function ProfileScreen({ navigation }) {
 
   useEffect(() => {
     const loadServices = async () => {
-      const serviceIds = parseArray(userProfile?.selectedServices);
-      if (!serviceIds.length) {
-        setUserServices([]);
-        return;
-      }
-
       try {
-        const serviceResults = await Promise.all(
-          serviceIds.map(async (serviceId) => {
-            try {
-              return await apiService.getServiceById(serviceId);
-            } catch (error) {
-              console.warn(`Failed to load service ${serviceId}:`, error.message);
-              return null;
-            }
-          })
-        );
-        setUserServices(serviceResults.filter(s => s && !s.isMissing));
+        const services = await apiService.loadServicesFromSelected(userProfile || userData);
+        setUserServices(services);
       } catch (error) {
         console.error("Error loading services:", error);
         setUserServices([]);
@@ -625,7 +610,7 @@ export default function ProfileScreen({ navigation }) {
                           <View style={styles.servicePriceRow}>
                             <Text style={styles.fromPrefix}>From </Text>
                             <Text style={styles.priceText}>
-                              ${service.price || service.pricing?.price || service.startingPrice || service.budget || 0}
+                              ₹{service.price || service.pricing?.price || service.startingPrice || service.budget || 0}
                             </Text>
                           </View>
                         </View>

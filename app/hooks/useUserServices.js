@@ -17,52 +17,8 @@ export const useUserServices = () => {
   useEffect(() => {
     const loadUserInfo = async () => {
       try {
-        if (userData && userData.role === 'FREELANCER' && userProfile?.selectedServices) {
-
-          let servicesList = userProfile.selectedServices;
-          if (typeof servicesList === 'string') {
-            try {
-              servicesList = JSON.parse(servicesList);
-            } catch (e) {
-              servicesList = [];
-            }
-          }
-          if (!Array.isArray(servicesList)) servicesList = [];
-
-          if (servicesList.length > 0) {
-            console.log('Loading services for user:', userData.id);
-            console.log('Selected services:', servicesList);
-
-            // Load service details for the user's selected services
-            const services = await Promise.all(
-              servicesList.map(async (serviceId) => {
-                try {
-                  const service = await apiService.getServiceById(serviceId);
-                  return service;
-                } catch (error) {
-                  console.error(`Error loading service ${serviceId}:`, error.message);
-                  return null;
-                }
-              })
-            );
-
-            // Filter out null services (failed to load) and missing suggested services
-            const validServices = services.filter(s => s !== null && !s.isMissing);
-            setUserServices(validServices);
-
-            // Show warning if some services failed to load
-            if (validServices.length < servicesList.length) {
-              const failedCount = servicesList.length - validServices.length;
-              console.warn(`${failedCount} service(s) failed to load`);
-              showToast("warning", "Warning", `Some services could not be loaded (${failedCount} failed)`);
-            }
-          } else {
-            setUserServices([]);
-          }
-        } else {
-          // Clear services if user is not a freelancer or has no selected services
-          setUserServices([]);
-        }
+        const validServices = await apiService.loadServicesFromSelected(userProfile || userData);
+        setUserServices(validServices);
         setCurrentUserRole(userData?.role || 'FREELANCER');
       } catch (error) {
         console.error('Error loading user info:', error);

@@ -60,21 +60,12 @@ const getImageUri = (image) => {
 const getDisplayName = (profileData) =>
   profileData?.fullName || profileData?.user?.fullName || "Bird Earner";
 
-const getProfileTitle = (profileData, services) => {
-  if (profileData?.role === "CLIENT") {
-    return (
-      profileData?.companyName ||
-      profileData?.company_name ||
-      profileData?.organizationType ||
-      "Client"
-    );
+const getProfileTitle = (profileData) => {
+  const role = typeof profileData === "string" ? profileData : (profileData?.role || profileData?.user?.role);
+  if (role === "CLIENT") {
+    return "Client";
   }
-
-  return (
-    profileData?.profileHeading ||
-    services?.[0]?.name ||
-    "Freelancer"
-  );
+  return "Freelancer";
 };
 
 const formatMemberSince = (dateValue) => {
@@ -155,23 +146,13 @@ export default function ProfileScreen({ route, navigation }) {
     reviewStats?.totalReviews ?? reviews.length ?? 0;
 
   const fetchRelatedData = useCallback(async (profile) => {
-    const nextServices = [];
-    const serviceIds = parseArray(profile?.selectedServices);
-
-    if (serviceIds.length) {
-      const serviceResults = await Promise.all(
-        serviceIds.map(async (serviceId) => {
-          try {
-            return await apiService.getServiceById(serviceId);
-          } catch (error) {
-            console.warn(`Failed to load service ${serviceId}:`, error.message);
-            return null;
-          }
-        })
-      );
-      nextServices.push(...serviceResults.filter(s => s && !s.isMissing));
+    try {
+      const nextServices = await apiService.loadServicesFromSelected(profile);
+      setServices(nextServices);
+    } catch (error) {
+      console.warn("Failed to load services for profile:", error.message);
+      setServices([]);
     }
-    setServices(nextServices);
 
     const reviewUserId = profile?.userId || profile?.user?.id;
     if (!reviewUserId) {
@@ -490,11 +471,11 @@ function AboutTab({ uiStyles, profileData, services, certifications, selectedSer
       : "On-site"
     : profileData?.category || "Remote";
 
-  const skills = services.length
-    ? services.map((service) => service.name)
-    : selectedServices.length
-    ? selectedServices.map((serviceId) => typeof serviceId === "string" ? serviceId : serviceId.name || `Skill`)
-    : parseArray(profileData?.skills);
+  const skills = (
+    services.length
+      ? services.map((service) => service.name)
+      : parseArray(profileData?.skills)
+  ).filter((s) => s && typeof s === "string" && !isUUIDString(s));
 
   const languages = parseArray(profileData?.languages);
 
@@ -635,7 +616,7 @@ function ServicesTab({ uiStyles, services, onServicePress }) {
               <View style={uiStyles.servicePriceRow}>
                 <Text style={uiStyles.fromPrefix}>From </Text>
                 <Text style={uiStyles.priceText}>
-                  ${service.price || service.pricing?.price || service.startingPrice || service.budget || 0}
+                  ₹{service.price || service.pricing?.price || service.startingPrice || service.budget || 0}
                 </Text>
               </View>
             </View>
