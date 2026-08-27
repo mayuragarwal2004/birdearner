@@ -655,6 +655,8 @@ const FreelancerSignup = ({ navigation, route }) => {
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         quality: 0.8,
         allowsMultipleSelection: false,
+        allowsEditing: true,
+        aspect: [1, 1],
       });
       if (!pickerResult.canceled && pickerResult.assets?.length > 0) {
         setSuggestedServiceForm((prev) => ({

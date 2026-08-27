@@ -1145,6 +1145,10 @@ const getStyles = (currentTheme) => {
       justifyContent: "center",
       overflow: "hidden",
     },
+    serviceImage: {
+      width: "100%",
+      height: "100%",
+    },
     serviceImageText: {
       color: "#9CA3AF",
       fontSize: 13,
