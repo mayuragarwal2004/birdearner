@@ -106,7 +106,7 @@ const getBadgeLabel = (level) => {
 };
 
 export default function ProfileScreen({ route, navigation }) {
-  const { receiverId, userId } = route.params || {};
+  const { receiverId, userId, role: paramRole, isFreelancer } = route.params || {};
   const profileUserId = userId || receiverId;
   const { userData } = useAuth();
   const { theme, themeStyles } = useTheme();
@@ -200,12 +200,27 @@ export default function ProfileScreen({ route, navigation }) {
     setLoading(true);
     try {
       let response;
-      if (userData?.role === "CLIENT") {
+      const targetRole = paramRole || (isFreelancer ? "FREELANCER" : null);
+
+      if (targetRole === "FREELANCER") {
         response = await apiService.getFreelancerProfile(profileUserId);
         response.role = "FREELANCER";
-      } else {
+      } else if (targetRole === "CLIENT") {
         response = await apiService.getClientProfile(profileUserId);
         response.role = "CLIENT";
+      } else {
+        // Attempt freelancer profile lookup first
+        try {
+          response = await apiService.getFreelancerProfile(profileUserId);
+          if (response && (response.id || response.userId || response.selectedServices || response.experience !== undefined)) {
+            response.role = "FREELANCER";
+          } else {
+            throw new Error("Not a freelancer profile");
+          }
+        } catch {
+          response = await apiService.getClientProfile(profileUserId);
+          response.role = "CLIENT";
+        }
       }
 
       setProfileData(response);
@@ -224,7 +239,7 @@ export default function ProfileScreen({ route, navigation }) {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [fetchRelatedData, navigation, profileUserId, userData]);
+  }, [fetchRelatedData, isFreelancer, navigation, paramRole, profileUserId, userData]);
 
   useEffect(() => {
     fetchProfile();

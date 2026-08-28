@@ -2,7 +2,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 
-const DEV_API_BASE_URL = "https://junction-chef-viewpicture-prayer.trycloudflare.com/api";
+const DEV_API_BASE_URL = "https://virgin-palestinian-coding-prepared.trycloudflare.com/api";
 // const DEV_API_BASE_URL = "https://api.birdearner.com/api";
 
 const PROD_API_BASE_URL = "https://api.birdearner.com/api";
@@ -1099,14 +1099,18 @@ class ApiService {
       if (!value) return [];
       if (Array.isArray(value)) return value.filter(Boolean);
       if (typeof value === "object" && value !== null) {
-        if (value.selectedServices) return parseArray(value.selectedServices);
-        if (value.freelancer?.selectedServices) return parseArray(value.freelancer.selectedServices);
-        if (value.services) return parseArray(value.services);
+        if (value.selectedServices !== undefined) return parseArray(value.selectedServices);
+        if (value.selected_services !== undefined) return parseArray(value.selected_services);
+        if (value.freelancer?.selectedServices !== undefined) return parseArray(value.freelancer.selectedServices);
+        if (value.freelancer?.selected_services !== undefined) return parseArray(value.freelancer.selected_services);
+        if (value.services !== undefined) return parseArray(value.services);
       }
       if (typeof value === "string") {
         try {
           const parsed = JSON.parse(value);
-          return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+          if (Array.isArray(parsed)) return parsed.filter(Boolean);
+          if (typeof parsed === "string") return parseArray(parsed);
+          return parsed ? [parsed] : [];
         } catch {
           return value ? [value] : [];
         }
@@ -1119,7 +1123,7 @@ class ApiService {
     let catalog = [];
     let catalogMap = new Map();
     try {
-      catalog = await this.getAllServices();
+      catalog = await this.getAllServices(null, undefined);
       if (Array.isArray(catalog)) {
         catalog.forEach((s) => {
           if (s?.id) catalogMap.set(String(s.id), s);
