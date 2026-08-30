@@ -26,21 +26,10 @@ const CashPaymentMessage = ({ message, onUpdate, currentUserId, userRole }) => {
     budgetAmount,
     discountAmount,
     penaltyAmount,
-  } = messageData;
+  } = messageData || {};
   
   // Ensure amount is always a string and handle edge cases
   const safeAmount = typeof amount === 'string' ? amount : String(amount || '0');
-  
-  console.log('CashPaymentMessage debug:', {
-    messageId: message.id,
-    messageType: message.messageType,
-    rawAmount: amount,
-    safeAmount,
-    clientConfirmed,
-    freelancerConfirmed,
-    step,
-    userRole
-  });
 
   const handleClientConfirmPayment = async () => {
     if (isProcessing) return;
@@ -118,7 +107,7 @@ const CashPaymentMessage = ({ message, onUpdate, currentUserId, userRole }) => {
         <View style={styles.completedContainer}>
           <Text style={styles.completedText}>✅ Payment Completed</Text>
           <Text style={styles.amountText}>Amount: ₹{safeAmount}</Text>
-          <Text style={styles.statusText}>Both parties have confirmed the cash payment</Text>
+          <Text style={styles.statusText}>Both parties confirmed the cash payment</Text>
         </View>
       );
     }
@@ -136,13 +125,13 @@ const CashPaymentMessage = ({ message, onUpdate, currentUserId, userRole }) => {
             </View>
             {parseFloat(penaltyAmount || '0') > 0 && (
               <View style={styles.breakdownRow}>
-                <Text style={[styles.breakdownLabel, { color: '#D32F2F' }]}>Penalty (previous cancel):</Text>
+                <Text style={[styles.breakdownLabel, { color: '#D32F2F' }]}>Penalty:</Text>
                 <Text style={[styles.breakdownValue, { color: '#D32F2F' }]}>+₹{penaltyAmount}</Text>
               </View>
             )}
             {parseFloat(discountAmount || '0') > 0 && (
               <View style={styles.breakdownRow}>
-                <Text style={[styles.breakdownLabel, { color: '#2E7D32' }]}>BirdEarner cashback:</Text>
+                <Text style={[styles.breakdownLabel, { color: '#2E7D32' }]}>Discount:</Text>
                 <Text style={[styles.breakdownValue, { color: '#2E7D32' }]}>-₹{discountAmount}</Text>
               </View>
             )}
@@ -211,54 +200,55 @@ const CashPaymentMessage = ({ message, onUpdate, currentUserId, userRole }) => {
 
 const getStyles = (currentTheme) => StyleSheet.create({
   messageContainer: {
-    marginVertical: 8,
-    marginHorizontal: 15,
+    marginVertical: 6,
+    marginHorizontal: 4,
+    maxWidth: '100%',
   },
   container: {
     backgroundColor: '#FFF3E0',
-    padding: 15,
-    borderRadius: 12,
+    padding: 10,
+    borderRadius: 10,
     borderLeftWidth: 4,
     borderLeftColor: '#FF9800',
   },
   completedContainer: {
     backgroundColor: '#E8F5E8',
-    padding: 15,
-    borderRadius: 12,
+    padding: 10,
+    borderRadius: 10,
     borderLeftWidth: 4,
     borderLeftColor: '#4CAF50',
     alignItems: 'center',
   },
   titleText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
     color: '#E65100',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   completedText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
     color: '#2E7D32',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   amountText: {
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: 'bold',
     color: '#D84315',
-    marginBottom: 12,
+    marginBottom: 8,
     textAlign: 'center',
   },
   stepContainer: {
-    marginVertical: 12,
+    marginVertical: 8,
   },
   step: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    marginVertical: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    marginVertical: 3,
     backgroundColor: '#FFF8E1',
-    borderRadius: 8,
+    borderRadius: 6,
     borderWidth: 1,
     borderColor: '#FFB74D',
   },
@@ -267,33 +257,33 @@ const getStyles = (currentTheme) => StyleSheet.create({
     borderColor: '#81C784',
   },
   stepNumber: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     backgroundColor: '#FF9800',
     color: 'white',
     textAlign: 'center',
-    lineHeight: 24,
-    fontSize: 12,
+    lineHeight: 20,
+    fontSize: 11,
     fontWeight: 'bold',
-    marginRight: 12,
+    marginRight: 8,
   },
   stepText: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 12,
     color: '#5D4037',
   },
   checkmark: {
-    fontSize: 18,
+    fontSize: 16,
     color: '#4CAF50',
     fontWeight: 'bold',
   },
   button: {
-    paddingVertical: 12,
-    paddingHorizontal: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     borderRadius: 8,
     alignItems: 'center',
-    marginTop: 12,
+    marginTop: 8,
   },
   clientButton: {
     backgroundColor: '#4CAF50',
@@ -303,27 +293,27 @@ const getStyles = (currentTheme) => StyleSheet.create({
   },
   buttonText: {
     color: 'white',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: 'bold',
   },
   waitingText: {
-    fontSize: 13,
+    fontSize: 11,
     color: '#757575',
     textAlign: 'center',
-    marginTop: 12,
+    marginTop: 8,
     fontStyle: 'italic',
   },
   statusText: {
-    fontSize: 13,
+    fontSize: 11,
     color: '#2E7D32',
     textAlign: 'center',
     marginTop: 4,
   },
   breakdownContainer: {
     backgroundColor: '#FFF8E1',
-    borderRadius: 8,
-    padding: 10,
-    marginTop: 8,
+    borderRadius: 6,
+    padding: 8,
+    marginTop: 4,
     marginBottom: 4,
     borderWidth: 1,
     borderColor: '#FFB74D',
@@ -331,30 +321,30 @@ const getStyles = (currentTheme) => StyleSheet.create({
   breakdownRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 3,
+    paddingVertical: 2,
   },
   breakdownLabel: {
-    fontSize: 13,
+    fontSize: 11,
     color: '#5D4037',
   },
   breakdownValue: {
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: '600',
     color: '#5D4037',
   },
   breakdownTotal: {
     borderTopWidth: 1,
     borderTopColor: '#FFB74D',
-    marginTop: 6,
-    paddingTop: 8,
+    marginTop: 4,
+    paddingTop: 6,
   },
   breakdownTotalLabel: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '700',
     color: '#E65100',
   },
   breakdownTotalValue: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '700',
     color: '#E65100',
   },

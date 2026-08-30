@@ -95,6 +95,35 @@ const MessageItem = ({ messageItem, message, isCurrentUser, media = [], onMessag
     return "insert-drive-file";
   };
 
+  if (['cash_payment', 'completion_request', 'review_request'].includes(messageItem?.messageType)) {
+    return (
+      <View style={{ width: "100%", marginVertical: 4, paddingHorizontal: 2 }}>
+        {messageItem?.messageType === 'cash_payment' ? (
+          <CashPaymentMessage 
+            message={messageItem} 
+            onUpdate={onMessageUpdate}
+            currentUserId={currentUserId}
+            userRole={userRole}
+          />
+        ) : messageItem?.messageType === 'completion_request' ? (
+          <CompletionRequestMessage 
+            message={messageItem} 
+            onUpdate={onMessageUpdate}
+            currentUserId={currentUserId}
+            userRole={userRole}
+          />
+        ) : (
+          <ReviewRequestMessage
+            message={messageItem}
+            onReviewPress={(msg) => onMessageUpdate && onMessageUpdate('review_press', msg)}
+            currentUserId={currentUserId}
+            userRole={userRole}
+          />
+        )}
+      </View>
+    );
+  }
+
   return (
     <View
       style={[
@@ -130,28 +159,7 @@ const MessageItem = ({ messageItem, message, isCurrentUser, media = [], onMessag
         </View>
       </Modal>
 
-      {messageItem?.messageType === 'cash_payment' ? (
-        <CashPaymentMessage 
-          message={messageItem} 
-          onUpdate={onMessageUpdate}
-          currentUserId={currentUserId}
-          userRole={userRole}
-        />
-      ) : messageItem?.messageType === 'completion_request' ? (
-        <CompletionRequestMessage 
-          message={messageItem} 
-          onUpdate={onMessageUpdate}
-          currentUserId={currentUserId}
-          userRole={userRole}
-        />
-      ) : messageItem?.messageType === 'review_request' ? (
-        <ReviewRequestMessage
-          message={messageItem}
-          onReviewPress={(msg) => onMessageUpdate && onMessageUpdate('review_press', msg)}
-          currentUserId={currentUserId}
-          userRole={userRole}
-        />
-      ) : messageItem?.messageType === 'ATTACHMENT' && messageItem?.attachments?.length > 0 ? (
+      {messageItem?.messageType === 'ATTACHMENT' && messageItem?.attachments?.length > 0 ? (
         <View>
           {/* Display caption if present */}
           {message && (

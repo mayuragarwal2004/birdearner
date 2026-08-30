@@ -1,8 +1,9 @@
 // API service for communicating with the Bird Earner Node.js backend
+
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 
-const DEV_API_BASE_URL = "https://attitude-recent-researcher-initially.trycloudflare.com/api";
+const DEV_API_BASE_URL = "https://nobody-openings-manufactured-packs.trycloudflare.com/api";
 // const DEV_API_BASE_URL = "https://api.birdearner.com/api";
 
 const PROD_API_BASE_URL = "https://api.birdearner.com/api";
