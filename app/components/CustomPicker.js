@@ -34,18 +34,22 @@ export default function PickerModal({
       >
         <View style={styles.leftContent}>
           {leftIcon ? <View style={styles.leftIconContainer}>{leftIcon}</View> : null}
-          <Text style={[
-            styles.selectedText, 
-            !value && styles.placeholderText, 
-            disabled && styles.disabledText,
-            textStyle
-          ]}>
+          <Text
+            numberOfLines={1}
+            ellipsizeMode="tail"
+            style={[
+              styles.selectedText, 
+              !value && styles.placeholderText, 
+              disabled && styles.disabledText,
+              textStyle
+            ]}
+          >
             {selectedLabel || placeholder}
           </Text>
         </View>
         <AntDesign 
           name="down" 
-          size={16} 
+          size={14} 
           color={disabled ? "#ccc" : "#7C3AED"} 
         />
       </TouchableOpacity>
@@ -103,7 +107,8 @@ export default function PickerModal({
 
 const styles = StyleSheet.create({
   wrapper: {
-    marginVertical: 10,
+    marginVertical: 0,
+    marginBottom: 14,
   },
   searchContainer: {
     flexDirection: 'row',
@@ -120,7 +125,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     height: 40,
-    fontSize: 16,
+    fontSize: 15,
     color: '#333',
   },
   clearButton: {
@@ -131,39 +136,41 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyText: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#666',
   },
   label: {
-    fontSize: 14,
+    fontSize: 13,
+    fontWeight: '600',
     marginBottom: 6,
-    color: '#444',
+    color: '#1F1D2B',
   },
   inputBox: {
     borderWidth: 1,
     borderColor: '#E9E3F4',
-    borderRadius: 14,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     backgroundColor: '#FAFAFC',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    minHeight: 52,
+    minHeight: 48,
   },
   leftContent: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
+    minWidth: 0,
   },
   leftIconContainer: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
+    width: 32,
+    height: 32,
+    borderRadius: 8,
     backgroundColor: '#F3E8FF',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 10,
+    marginRight: 8,
   },
   disabledBox: {
     backgroundColor: '#F3F0F8',
@@ -171,7 +178,7 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   selectedText: {
-    fontSize: 14,
+    fontSize: 13.5,
     color: '#1F1D2B',
     fontWeight: '500',
     flex: 1,
@@ -195,13 +202,13 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   option: {
-    paddingVertical: 14,
-    paddingHorizontal: 20,
+    paddingVertical: 12,
+    paddingHorizontal: 18,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
   },
   optionText: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#333',
   },
 });
