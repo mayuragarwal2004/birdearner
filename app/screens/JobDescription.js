@@ -208,11 +208,9 @@ const JobDescriptionScreen = ({ route, navigation }) => {
   }
 
   const canApply = job.client?.user?.id !== userData?.id && !job.hasApplied;
-  const isRemote =
-    job.jobType === "Remote" ||
-    job.projectType === "Remote" ||
-    job.location?.toLowerCase() === "remote" ||
-    (!job.latitude && !job.longitude);
+  const pType = (job.projectType || job.jobType || "").toLowerCase();
+  const loc = (job.location || "").toLowerCase();
+  const isRemote = pType.includes("remote") || (loc.includes("remote") && !pType.includes("on-site"));
 
   const attachedFilesList = job.attachedFiles || job.attached_files || [];
   const filesCount = attachedFilesList.length;
@@ -222,22 +220,22 @@ const JobDescriptionScreen = ({ route, navigation }) => {
   const clientName =
     job.client?.user?.fullName ||
     job.client?.companyName ||
-    "Mayur Agarwal";
+    "Client";
   const clientType = `Client • ${job.client?.organizationType || "Individual"}`;
-  const companyName = job.client?.companyName || job.client?.address || "Simplium Technologies";
+  const companyName = job.client?.companyName || job.client?.address || "Company";
 
   const jobDescriptionText =
-    job.jobDescription || job.description || "8tc8ctc c 4d4x84c4";
+    job.jobDescription || job.description || "";
 
-  const rawCategory = job.jobCategory || job.category || job.freelancerType || "Graphic Designer";
+  const rawCategory = job.jobCategory || job.category || job.freelancerType || "Service";
   const subCategoryText =
     job.subcategory ||
     job.categoryDescription ||
     (rawCategory.toLowerCase().includes("household") || rawCategory.toLowerCase().includes("plumber")
       ? "Home Services"
-      : "Design & Creative");
+      : "Professional Services");
 
-  const locationText = job.location || (isRemote ? "Remote" : "123, MG Road, Connaught Place, New Delhi - 110001");
+  const locationText = job.location || (isRemote ? "Remote Work" : "On-site Location");
   const locationSubtext = isRemote ? "Work from anywhere" : "On-site Work";
 
   const statusText = (job.jobStatus || job.status || "OPEN").toUpperCase();

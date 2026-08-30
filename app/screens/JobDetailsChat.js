@@ -221,7 +221,9 @@ const JobDetailsChatScreen = ({ route, navigation }) => {
   const companyName = job.client?.address || job.client?.city || "";
   const clientLocation = [job.client?.city, job.client?.state].filter(Boolean).join(", ");
   const isPlatformPayment = job.budgetType === "PLATFORM";
-  const isRemote = job.location?.toLowerCase() === "remote" || !job.location;
+  const pType = (job.projectType || job.jobType || "").toLowerCase();
+  const loc = (job.location || "").toLowerCase();
+  const isRemote = pType.includes("remote") || (loc.includes("remote") && !pType.includes("on-site"));
   const attachedFilesList = job.attachedFiles || job.attached_files || [];
   const filesCount = attachedFilesList.length;
   const skillsList = job.skillsRequired || job.skills || [];

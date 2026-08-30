@@ -742,7 +742,8 @@ const ClientChat = ({ route, navigation }) => {
   };
 
   const handleRequestCompletion = () => {
-    const isOnSite = job?.projectType === 'On-site' && job?.location?.toLowerCase() !== 'remote';
+    const pType = (job?.projectType || job?.jobType || '').toLowerCase();
+    const isOnSite = pType === 'on-site' || (pType !== 'remote' && job?.location?.toLowerCase() !== 'remote');
     if (isOnSite && !job?.otpVerifiedAt) {
       Alert.alert(
         'OTP Not Verified',
@@ -1044,7 +1045,8 @@ const ClientChat = ({ route, navigation }) => {
           menuOptions={
             (() => {
               const baseOptions = ["View Profile", "Block", "Report"];
-              const isOnSite = job?.projectType === 'On-site' && job?.location?.toLowerCase() !== 'remote';
+              const pType = (job?.projectType || job?.jobType || '').toLowerCase();
+              const isOnSite = pType === 'on-site' || (pType !== 'remote' && job?.location?.toLowerCase() !== 'remote');
               const canRequestCompletion = chatStatus === "IN_PROGRESS" && !job?.completedStatus && (!isOnSite || ['JOB_STARTED', 'WORK_COMPLETED', 'PAYMENT_RELEASED'].includes(job?.jobStatus));
 
               // Add Write Review option if job is completed

@@ -351,7 +351,8 @@ const FreelancerChat = ({ route, navigation }) => {
   };
 
   const handleRequestCompletion = () => {
-    const isOnSite = job?.projectType === 'On-site' && job?.location?.toLowerCase() !== 'remote';
+    const pType = (job?.projectType || job?.jobType || '').toLowerCase();
+    const isOnSite = pType === 'on-site' || (pType !== 'remote' && job?.location?.toLowerCase() !== 'remote');
     if (isOnSite && !job?.otpVerifiedAt) {
       Alert.alert(
         'OTP Not Verified',
@@ -614,7 +615,8 @@ const FreelancerChat = ({ route, navigation }) => {
             (() => {
               const isMyJob = job?.assignedFreelancer?.user?.id === userData?.id || job?.assignedFreelancerId === userData?.id || job?.assignedFreelancerId === userData?.freelancer?.id;
               const isCompleted = job?.jobStatus === 'COMPLETED';
-              const isOnSite = job?.projectType === 'On-site' && job?.location?.toLowerCase() !== 'remote';
+              const pType = (job?.projectType || job?.jobType || '').toLowerCase();
+              const isOnSite = pType === 'on-site' || (pType !== 'remote' && job?.location?.toLowerCase() !== 'remote');
               const canRequestCompletion = isMyJob && !isCompleted && (chatStatus === 'IN_PROGRESS' || chatStatus === 'ACCEPTED') && (!isOnSite || ['JOB_STARTED', 'WORK_COMPLETED', 'PAYMENT_RELEASED'].includes(job?.jobStatus));
               if (isCompleted) return ["View Profile", "Block", "Report", "Write Review"];
               if (canRequestCompletion) return ["View Profile", "Block", "Report", "Request Project Completion", "Cancel Job"];

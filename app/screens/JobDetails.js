@@ -175,9 +175,9 @@ const JobDetailsScreen = ({ route, navigation }) => {
   const companyName = userData?.client?.address || "Your Company";
 
   const isPlatformPayment = formData.paymentMethod === "PLATFORM";
-  const isRemote =
-    formData.jobLocation?.toLowerCase() === "remote" ||
-    !formData.jobLocation;
+  const pType = (formData.jobType || formData.projectType || "").toLowerCase();
+  const loc = (formData.jobLocation || "").toLowerCase();
+  const isRemote = pType.includes("remote") || (loc.includes("remote") && !pType.includes("on-site"));
 
   const attachedFiles = formData.portfolioImages || [];
   const filesCount = attachedFiles.length;
