@@ -33,6 +33,18 @@ const JobDetailsChatScreen = ({ route, navigation }) => {
   const [images, setImages] = useState([]);
   const [otpInput, setOtpInput] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
+  const [disputeModalVisible, setDisputeModalVisible] = useState(false);
+  const [disputeReasonText, setDisputeReasonText] = useState("");
+  const [selectedDisputeChip, setSelectedDisputeChip] = useState("Work not completed as agreed");
+
+  const disputeReasonChips = [
+    "Work not completed as agreed",
+    "Client refusing cash payment",
+    "Freelancer asked for extra money",
+    "Work quality or scope mismatch",
+    "Freelancer failed to show up / delayed",
+    "Other issue",
+  ];
 
   const { userData } = useAuth();
   const isClient = userData?.userType === "CLIENT" || userData?.client?.id === job?.client?.id;
@@ -64,15 +76,35 @@ const JobDetailsChatScreen = ({ route, navigation }) => {
     }
   };
 
-  const handlePhysicalProgress = async (action, otpCode = "") => {
+  const handlePhysicalProgress = async (action, extraPayload = {}) => {
     try {
       setActionLoading(true);
-      const res = await apiService.updatePhysicalJobProgress(job.id, action, { otpCode });
+      const payload = typeof extraPayload === 'string' ? { otpCode: extraPayload } : extraPayload;
+      const res = await apiService.updatePhysicalJobProgress(job.id, action, payload);
       Alert.alert("Success", `Status updated: ${action}`);
       if (res) setJob({ ...job, ...res });
       setOtpInput("");
     } catch (err) {
       Alert.alert("Error", err.message || "Failed to update progress");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleConfirmRaiseDispute = async () => {
+    const finalReason = disputeReasonText.trim() || selectedDisputeChip;
+    if (!finalReason) {
+      Alert.alert("Reason Required", "Please select or type a reason for raising the dispute.");
+      return;
+    }
+    try {
+      setActionLoading(true);
+      setDisputeModalVisible(false);
+      const res = await apiService.updatePhysicalJobProgress(job.id, "RAISE_DISPUTE", { reason: finalReason });
+      Alert.alert("Dispute Raised", "Your dispute has been submitted to support for review.");
+      if (res) setJob({ ...job, ...res });
+    } catch (err) {
+      Alert.alert("Error", err.message || "Failed to raise dispute");
     } finally {
       setActionLoading(false);
     }
@@ -128,10 +160,12 @@ const JobDetailsChatScreen = ({ route, navigation }) => {
       case "COMPLETED": return "#22C55E";
       case "WORK_SUBMITTED": return "#3B82F6";
       case "AUTO_ACCEPTED": return "#22C55E";
+      case "DISPUTE_RESOLVED": return "#22C55E";
       case "CANCELLED_BY_CLIENT":
       case "CANCELLED_BY_FREELANCER":
       case "CANCELLED":
-      case "CANCELLED_SCOPE_MISMATCH": return "#EF4444";
+      case "CANCELLED_SCOPE_MISMATCH":
+      case "REFUNDED": return "#EF4444";
       case "EXPIRED":
       case "DEADLINE_EXPIRED": return "#EF4444";
       case "DISPUTE_OPEN": return "#EF4444";
@@ -151,10 +185,12 @@ const JobDetailsChatScreen = ({ route, navigation }) => {
       case "COMPLETED": return "#DCFCE7";
       case "WORK_SUBMITTED": return "#EFF6FF";
       case "AUTO_ACCEPTED": return "#DCFCE7";
+      case "DISPUTE_RESOLVED": return "#DCFCE7";
       case "CANCELLED_BY_CLIENT":
       case "CANCELLED_BY_FREELANCER":
       case "CANCELLED":
-      case "CANCELLED_SCOPE_MISMATCH": return "#FDECEC";
+      case "CANCELLED_SCOPE_MISMATCH":
+      case "REFUNDED": return "#FDECEC";
       case "EXPIRED":
       case "DEADLINE_EXPIRED": return "#FDECEC";
       case "DISPUTE_OPEN": return "#FDECEC";
@@ -227,7 +263,13 @@ const JobDetailsChatScreen = ({ route, navigation }) => {
   const attachedFilesList = job.attachedFiles || job.attached_files || [];
   const filesCount = attachedFilesList.length;
   const skillsList = job.skillsRequired || job.skills || [];
-  const statusText = (job.jobStatus || job.status || "OPEN").toUpperCase();
+  const rawStatus = (job.jobStatus || job.status || "OPEN").toUpperCase();
+  const isCash = job.paymentMethod === "CASH" || !job.paymentMethod;
+  const statusText = (rawStatus === "REFUNDED" && isCash)
+    ? "CANCELLED (NO PAYMENT REQUIRED)"
+    : (rawStatus === "DISPUTE_RESOLVED" && isCash)
+    ? "DISPUTE RESOLVED (PAY FREELANCER IN CASH)"
+    : rawStatus;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -531,10 +573,9 @@ const JobDetailsChatScreen = ({ route, navigation }) => {
             <TouchableOpacity
               style={[styles.secondaryActionBtn, { borderColor: "#EF4444", marginBottom: 10 }]}
               onPress={() => {
-                Alert.alert("Raise Dispute", "This will initiate a dispute resolution process. A team member will review the case.", [
-                  { text: "Cancel", style: "cancel" },
-                  { text: "Raise Dispute", onPress: () => handlePhysicalProgress("RAISE_DISPUTE") },
-                ]);
+                setSelectedDisputeChip("Work not completed as agreed");
+                setDisputeReasonText("Work not completed as agreed");
+                setDisputeModalVisible(true);
               }}
               activeOpacity={0.8}
             >
@@ -555,6 +596,88 @@ const JobDetailsChatScreen = ({ route, navigation }) => {
             <Text style={styles.secondaryBackButtonText}>Back to Jobs</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Modal for Raise Dispute */}
+        <Modal visible={disputeModalVisible} transparent animationType="slide">
+          <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", padding: 20 }}>
+            <View style={{ backgroundColor: "#FFF", borderRadius: 16, padding: 20 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                <Ionicons name="alert-circle" size={24} color="#EF4444" />
+                <Text style={{ fontSize: 18, fontWeight: "700", color: "#1F192F" }}>
+                  Raise Dispute
+                </Text>
+              </View>
+              <Text style={{ fontSize: 12, color: "#6B7280", marginBottom: 14 }}>
+                Please select or explain why you are raising a dispute. Support will review your reason.
+              </Text>
+
+              <Text style={{ fontSize: 11, fontWeight: "700", color: "#4C1D95", marginBottom: 8, textTransform: "uppercase" }}>
+                Select Reason:
+              </Text>
+
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
+                <View style={{ flexDirection: "row", gap: 8 }}>
+                  {disputeReasonChips.map((chip, idx) => {
+                    const isSelected = selectedDisputeChip === chip;
+                    return (
+                      <TouchableOpacity
+                        key={idx}
+                        onPress={() => {
+                          setSelectedDisputeChip(chip);
+                          if (chip !== "Other issue") {
+                            setDisputeReasonText(chip);
+                          } else {
+                            setDisputeReasonText("");
+                          }
+                        }}
+                        style={{
+                          paddingHorizontal: 12,
+                          paddingVertical: 8,
+                          borderRadius: 20,
+                          backgroundColor: isSelected ? "#FEE2E2" : "#F3F4F6",
+                          borderWidth: 1,
+                          borderColor: isSelected ? "#EF4444" : "#E5E7EB",
+                        }}
+                      >
+                        <Text style={{ fontSize: 12, fontWeight: isSelected ? "700" : "500", color: isSelected ? "#991B1B" : "#374151" }}>
+                          {chip}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </ScrollView>
+
+              <Text style={{ fontSize: 11, fontWeight: "700", color: "#4C1D95", marginBottom: 6, textTransform: "uppercase" }}>
+                Additional Details / Explanation:
+              </Text>
+              <TextInput
+                style={{ borderWidth: 1, borderColor: "#DDD", borderRadius: 10, padding: 12, fontSize: 14, minHeight: 80, textAlignVertical: "top", marginBottom: 16, color: "#1F192F" }}
+                placeholder="Provide specific details about what happened..."
+                placeholderTextColor="#9CA3AF"
+                multiline
+                numberOfLines={3}
+                value={disputeReasonText}
+                onChangeText={setDisputeReasonText}
+              />
+
+              <View style={{ flexDirection: "row", gap: 10 }}>
+                <TouchableOpacity
+                  style={{ flex: 1, paddingVertical: 12, borderWidth: 1, borderColor: "#DDD", borderRadius: 10, alignItems: "center" }}
+                  onPress={() => setDisputeModalVisible(false)}
+                >
+                  <Text style={{ color: "#666", fontWeight: "700" }}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={{ flex: 1, paddingVertical: 12, backgroundColor: "#EF4444", borderRadius: 10, alignItems: "center" }}
+                  onPress={handleConfirmRaiseDispute}
+                >
+                  <Text style={{ color: "#FFF", fontWeight: "700" }}>Submit Dispute</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </ScrollView>
     </SafeAreaView>
   );

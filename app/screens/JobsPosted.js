@@ -39,7 +39,7 @@ const getStatusMeta = (status, isDark = false) => {
       bg: isDark ? "rgba(37,99,235,0.22)" : "#EAF1FF",
     };
   }
-  if (value === "CANCELLED" || value === "REJECTED") {
+  if (value === "CANCELLED" || value === "REJECTED" || value === "REFUNDED") {
     return {
       label: "Cancelled",
       color: isDark ? "#F87171" : "#EF4444",
