@@ -17,6 +17,8 @@ import { useChatData } from "../hooks/useChatSWR";
 import { useAuth } from "../context/NewAuthContext";
 import ApiService from "../lib/apiService";
 import ReviewFormModal from "../components/chat/ReviewFormModal";
+import OnSiteOtpModal from "../components/chat/OnSiteOtpModal";
+import SafeSpinner from "../components/SafeSpinner";
 import { Ionicons } from "@expo/vector-icons";
 
 const getStyles = (currentTheme, isKeyboardVisible) =>
@@ -297,9 +299,6 @@ const FreelancerChat = ({ route, navigation }) => {
   const { isKeyboardVisible } = useKeyboard();
   const currentTheme = themeStyles[theme];
 
-  // Safety guard for when user logs out but screen is still in transition/stack
-  if (!userData) return null;
-
   const styles = getStyles(currentTheme, isKeyboardVisible);
 
   // Local state for UI interactions
@@ -316,6 +315,7 @@ const FreelancerChat = ({ route, navigation }) => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [sending, setSending] = useState(false);
   const [currentInputLength, setCurrentInputLength] = useState(0);
+  const [showOtpModal, setShowOtpModal] = useState(false);
 
   // SWR data hooks
   const {
@@ -345,6 +345,15 @@ const FreelancerChat = ({ route, navigation }) => {
     mutateJob,
     mutateThread,
   } = useChatData("freelancer", route.params);
+
+  // Safety guard for when user logs out but screen is still in transition/stack
+  if (!userData) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: currentTheme?.background || "#FFFFFF", justifyContent: "center", alignItems: "center" }}>
+        <SafeSpinner size={36} color="#6B21A8" />
+      </SafeAreaView>
+    );
+  }
 
   const handleViewProfile = () => {
     navigation.navigate("ProfileScreen", { userId: route.params.client.user.id });
@@ -667,7 +676,14 @@ const FreelancerChat = ({ route, navigation }) => {
           />
 
           <View style={{ flex: 2 }}>
-            {((chatStatus === "ACCEPTED" || chatStatus === "IN_PROGRESS") || ["CANCELLED", "CANCELLED_BY_CLIENT", "CANCELLED_BY_FREELANCER", "CANCELLED_SCOPE_MISMATCH"].includes(job?.jobStatus)) && (
+            {(() => {
+              const pType = (job?.projectType || job?.jobType || '').toLowerCase();
+              const isOnSite = pType.includes('on-site') || (!pType.includes('remote') && job?.location?.toLowerCase() !== 'remote');
+              const activeStatuses = ["ACCEPTED", "IN_PROGRESS", "CONFIRMED", "FREELANCER_TRAVELLING", "ARRIVED", "JOB_STARTED", "WORK_SUBMITTED"];
+              const isCancelled = ["CANCELLED", "CANCELLED_BY_CLIENT", "CANCELLED_BY_FREELANCER", "CANCELLED_SCOPE_MISMATCH"].includes(job?.jobStatus);
+              const isActive = activeStatuses.includes(chatStatus) || activeStatuses.includes(job?.jobStatus?.toUpperCase());
+              return isActive || isCancelled || isOnSite;
+            })() && (
               <View style={styles.deadlineContainer}>
                 <View style={styles.deadlineTimerContainer}>
                   {["CANCELLED", "CANCELLED_BY_CLIENT", "CANCELLED_BY_FREELANCER", "CANCELLED_SCOPE_MISMATCH"].includes(job?.jobStatus) ? (
@@ -700,6 +716,37 @@ const FreelancerChat = ({ route, navigation }) => {
                     />
                   )}
                 </View>
+
+                {/* On-Site Job: Show Status Button for Freelancer below deadline timer */}
+                {(() => {
+                  const pType = (job?.projectType || job?.jobType || '').toLowerCase();
+                  const isOnSite = pType.includes('on-site') || (!pType.includes('remote') && job?.location?.toLowerCase() !== 'remote');
+                  const isCancelled = ["CANCELLED", "CANCELLED_BY_CLIENT", "CANCELLED_BY_FREELANCER", "CANCELLED_SCOPE_MISMATCH"].includes(job?.jobStatus);
+                  if (isOnSite && !isCancelled) {
+                    return (
+                      <TouchableOpacity
+                        style={{
+                          backgroundColor: "#111827",
+                          paddingVertical: 12,
+                          paddingHorizontal: 16,
+                          borderRadius: 12,
+                          flexDirection: "row",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          marginTop: 8,
+                          borderWidth: 1,
+                          borderColor: "#374151",
+                        }}
+                        onPress={() => setShowOtpModal(true)}
+                        activeOpacity={0.8}
+                      >
+                        <Ionicons name="location-outline" size={18} color="#3B82F6" style={{ marginRight: 8 }} />
+                        <Text style={{ color: "#FFFFFF", fontWeight: "700", fontSize: 14 }}>Show Status</Text>
+                      </TouchableOpacity>
+                    );
+                  }
+                  return null;
+                })()}
               </View>
             )}
 
@@ -816,6 +863,19 @@ const FreelancerChat = ({ route, navigation }) => {
             </View>
           </View>
         </Modal>
+
+        <OnSiteOtpModal
+          visible={showOtpModal}
+          onClose={() => setShowOtpModal(false)}
+          jobId={job?.id || route.params.jobId}
+          job={job}
+          userRole="freelancer"
+          onJobUpdated={() => {
+            mutateJob?.();
+            mutateThread?.();
+            mutateMessages?.();
+          }}
+        />
 
         <Toast />
       </View>

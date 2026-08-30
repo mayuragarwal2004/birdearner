@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { View, StyleSheet, FlatList, Text, TouchableOpacity, Modal, Alert, Platform, Keyboard } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
 import * as DocumentPicker from 'expo-document-picker';
 import { useTheme } from "../context/ThemeContext";
@@ -15,6 +16,8 @@ import CancelJobModal from "../components/chat/client/CancelJobModal";
 import ReportModal from "../components/chat/ReportModal";
 import ReviewFormModal from "../components/chat/ReviewFormModal";
 import NegotiationPanel from "../components/chat/NegotiationPanel";
+import OnSiteOtpModal from "../components/chat/OnSiteOtpModal";
+import SafeSpinner from "../components/SafeSpinner";
 import { useChatData } from "../hooks/useChatSWR";
 import { useAuth } from "../context/NewAuthContext";
 import ApiService from "../lib/apiService";
@@ -363,9 +366,6 @@ const ClientChat = ({ route, navigation }) => {
   const { isKeyboardVisible } = useKeyboard();
   const currentTheme = themeStyles[theme];
 
-  // Safety guard for when user logs out but screen is still in transition/stack
-  if (!userData) return null;
-
   const styles = getStyles(currentTheme, isKeyboardVisible);
 
   // Local state for UI interactions
@@ -386,6 +386,7 @@ const ClientChat = ({ route, navigation }) => {
   const [reviewModalVisible, setReviewModalVisible] = useState(false);
   const [reviewMessageId, setReviewMessageId] = useState(null);
   const [submittingReview, setSubmittingReview] = useState(false);
+  const [showOtpModal, setShowOtpModal] = useState(false);
 
   const api = ApiService;
 
@@ -417,6 +418,15 @@ const ClientChat = ({ route, navigation }) => {
     mutateJob,
     mutateThread,
   } = useChatData("client", route.params);
+
+  // Safety guard for when user logs out but screen is still in transition/stack
+  if (!userData) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: currentTheme?.background || "#FFFFFF", justifyContent: "center", alignItems: "center" }}>
+        <SafeSpinner size={36} color="#6B21A8" />
+      </SafeAreaView>
+    );
+  }
 
   console.log({ messages });
 
@@ -877,8 +887,12 @@ const ClientChat = ({ route, navigation }) => {
 
   const renderDeadlineSection = () => {
     const isCancelled = ["CANCELLED", "CANCELLED_BY_CLIENT", "CANCELLED_BY_FREELANCER", "CANCELLED_SCOPE_MISMATCH"].includes(job?.jobStatus);
+    const pType = (job?.projectType || job?.jobType || '').toLowerCase();
+    const isOnSite = pType.includes('on-site') || (!pType.includes('remote') && job?.location?.toLowerCase() !== 'remote');
+    const activeStatuses = ["ACCEPTED", "IN_PROGRESS", "CONFIRMED", "FREELANCER_TRAVELLING", "ARRIVED", "JOB_STARTED", "WORK_SUBMITTED"];
+    const isActive = activeStatuses.includes(chatStatus) || activeStatuses.includes(job?.jobStatus?.toUpperCase());
 
-    if (!isCancelled && chatStatus !== "ACCEPTED" && chatStatus !== "IN_PROGRESS") return null;
+    if (!isCancelled && !isActive && !isOnSite) return null;
 
     const isDeadlineOver = job?.deadlineDate && new Date(job.deadlineDate) < new Date();
     const isCompleted = job?.jobStatus === "COMPLETED";
@@ -929,6 +943,29 @@ const ClientChat = ({ route, navigation }) => {
               }}
             />
           </View>
+        )}
+
+        {/* On-Site Job: Show OTP Button for Client below deadline timer */}
+        {isOnSite && !isCancelled && (
+          <TouchableOpacity
+            style={{
+              backgroundColor: "#111827",
+              paddingVertical: 12,
+              paddingHorizontal: 16,
+              borderRadius: 12,
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "center",
+              marginTop: 8,
+              borderWidth: 1,
+              borderColor: "#374151",
+            }}
+            onPress={() => setShowOtpModal(true)}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="key-outline" size={18} color="#F59E0B" style={{ marginRight: 8 }} />
+            <Text style={{ color: "#FFFFFF", fontWeight: "700", fontSize: 14 }}>Show OTP</Text>
+          </TouchableOpacity>
         )}
       </View>
     );
@@ -1232,6 +1269,19 @@ const ClientChat = ({ route, navigation }) => {
             </View>
           </View>
         </Modal>
+
+        <OnSiteOtpModal
+          visible={showOtpModal}
+          onClose={() => setShowOtpModal(false)}
+          jobId={route.params.jobId || route.params.projectId}
+          job={job}
+          userRole="client"
+          onJobUpdated={() => {
+            mutateJob?.();
+            mutateThread?.();
+            mutateMessages?.();
+          }}
+        />
 
         <Toast />
       </View>

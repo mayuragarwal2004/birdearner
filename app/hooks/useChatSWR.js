@@ -174,7 +174,7 @@ export const useChatData = (role, params) => {
     if (job?.jobStatus?.toUpperCase() === 'OPEN') {
       const totalLimit = thread?.characterLimit || job?.characterLimit || 200;
       const currentUsage = messages
-        .filter(msg => msg.senderId === userData.id)
+        .filter(msg => msg.senderId === userData?.id)
         .reduce((total, msg) => total + (msg.messageContent?.length || 0), 0);
 
       if (currentUsage + messageContent.length > totalLimit) {
@@ -278,7 +278,7 @@ export const useChatData = (role, params) => {
         text2: error.message,
       });
     }
-  }, [thread?.id, userData.id, role, params, addOptimisticMessage, mutateMessages]);
+  }, [thread?.id, userData?.id, role, params, addOptimisticMessage, mutateMessages]);
 
   // Action handlers with SWR mutations
   const handleRequestCompletion = useCallback(async () => {
@@ -412,7 +412,7 @@ export const useChatData = (role, params) => {
 
   const charactersUsed = totalCharacterLimit
     ? messages
-      .filter(msg => msg.senderId === userData.id)
+      .filter(msg => msg.senderId === userData?.id)
       .reduce((total, msg) => total + (msg.messageContent?.length || 0), 0)
     : 0;
 
@@ -423,7 +423,7 @@ export const useChatData = (role, params) => {
   // Calculate character usage for the other user in the thread (the other party)
   const otherCharactersUsed = totalCharacterLimit
     ? messages
-      .filter(msg => msg.senderId && msg.senderId !== userData.id)
+      .filter(msg => msg.senderId && msg.senderId !== userData?.id)
       .reduce((total, msg) => total + (msg.messageContent?.length || 0), 0)
     : 0;
 
@@ -484,26 +484,26 @@ export const useChatData = (role, params) => {
       : null,
     charactersUsed: (job?.jobStatus?.toUpperCase() === 'OPEN')
       ? messages
-        .filter(msg => msg.senderId === userData.id)
+        .filter(msg => msg.senderId === userData?.id)
         .reduce((total, msg) => total + (msg.messageContent?.length || 0), 0)
       : 0,
     charactersRemaining: (job?.jobStatus?.toUpperCase() === 'OPEN')
       ? Math.max(0, (thread?.characterLimit || job?.characterLimit || 200) -
         messages
-          .filter(msg => msg.senderId === userData.id)
+          .filter(msg => msg.senderId === userData?.id)
           .reduce((total, msg) => total + (msg.messageContent?.length || 0), 0)
       )
       : null,
     // Other user's cumulative usage (useful to show notices to each party)
     otherCharactersUsed: (job?.jobStatus?.toUpperCase() === 'OPEN')
       ? messages
-        .filter(msg => msg.senderId && msg.senderId !== userData.id)
+        .filter(msg => msg.senderId && msg.senderId !== userData?.id)
         .reduce((total, msg) => total + (msg.messageContent?.length || 0), 0)
       : 0,
     otherCharactersRemaining: (job?.jobStatus?.toUpperCase() === 'OPEN')
       ? Math.max(0, (thread?.characterLimit || job?.characterLimit || 200) -
         messages
-          .filter(msg => msg.senderId && msg.senderId !== userData.id)
+          .filter(msg => msg.senderId && msg.senderId !== userData?.id)
           .reduce((total, msg) => total + (msg.messageContent?.length || 0), 0)
       )
       : null,
