@@ -2,7 +2,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 
-const DEV_API_BASE_URL = "https://longer-friendly-postal-hold.trycloudflare.com/api";
+const DEV_API_BASE_URL = "https://wonder-psychological-beds-authorized.trycloudflare.com/api";
 // const DEV_API_BASE_URL = "https://api.birdearner.com/api";
 
 const PROD_API_BASE_URL = "https://api.birdearner.com/api";
@@ -159,7 +159,7 @@ class ApiService {
       try {
         response = await fetch(url, config);
         responseText = await response.text();
-        isHtmlOrBadGateway = !response.ok || responseText.trim().startsWith("<") || responseText.includes("502 Bad Gateway");
+        isHtmlOrBadGateway = responseText.trim().startsWith("<") || responseText.includes("502 Bad Gateway") || response.status === 502 || response.status === 503;
       } catch (netErr) {
         isHtmlOrBadGateway = true;
       }
@@ -692,7 +692,7 @@ class ApiService {
       });
       return response.data;
     } catch (error) {
-      throw new Error(`Failed to create job: ${error.message}`);
+      throw error;
     }
   }
 

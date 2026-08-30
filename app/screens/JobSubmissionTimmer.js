@@ -103,7 +103,7 @@ const JobSubmissionTimmerScreen = ({ route, navigation }) => {
       setSubmitted(true);
     } catch (error) {
       console.error("Error creating job:", error);
-      Alert.alert("Error", `Failed to create job: ${error.message}`);
+      Alert.alert("Error", error.message || "Failed to create job");
     } finally {
       setIsSubmitting(false); // Reset loading state
     }
