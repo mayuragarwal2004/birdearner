@@ -94,6 +94,7 @@ export const AuthProvider = ({ children }) => {
 
   // Fetch user profile data (freelancer/client) from our backend
   const fetchUserProfile = useCallback(async (userId = user?.id, userRole) => {
+    if (!userId) return null;
     try {
       // First, verify that the user exists in the database
       try {
@@ -296,22 +297,32 @@ export const AuthProvider = ({ children }) => {
           setAuthToken(loginResponse.token);
         }
 
-        // Check for both freelancer and client profiles
-        let freelancerProfile = null;
-        let clientProfile = null;
+        // Check for both freelancer and client profiles (using embedded profiles first)
+        let freelancerProfile = (loginResponse.freelancer && loginResponse.freelancer.id) ? loginResponse.freelancer : null;
+        let clientProfile = (loginResponse.client && loginResponse.client.id) ? loginResponse.client : null;
 
-        try {
-          freelancerProfile = await apiService.getFreelancerProfile(
-            loginResponse.id
-          );
-        } catch (error) {
-          console.log("No freelancer profile found");
+        if (!freelancerProfile) {
+          try {
+            const fetchedFreelancer = await apiService.getFreelancerProfile(
+              loginResponse.id
+            );
+            if (fetchedFreelancer && fetchedFreelancer.id) {
+              freelancerProfile = fetchedFreelancer;
+            }
+          } catch (error) {
+            console.log("No freelancer profile found");
+          }
         }
 
-        try {
-          clientProfile = await apiService.getClientProfile(loginResponse.id);
-        } catch (error) {
-          console.log("No client profile found");
+        if (!clientProfile) {
+          try {
+            const fetchedClient = await apiService.getClientProfile(loginResponse.id);
+            if (fetchedClient && fetchedClient.id) {
+              clientProfile = fetchedClient;
+            }
+          } catch (error) {
+            console.log("No client profile found");
+          }
         }
 
         // Create a complete user data object with profiles

@@ -3,7 +3,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 
-const DEV_API_BASE_URL = "https://nobody-openings-manufactured-packs.trycloudflare.com/api";
+const DEV_API_BASE_URL = "https://floating-walnut-biographies-centres.trycloudflare.com/api";
 // const DEV_API_BASE_URL = "https://api.birdearner.com/api";
 
 const PROD_API_BASE_URL = "https://api.birdearner.com/api";
@@ -514,8 +514,14 @@ class ApiService {
   }
 
   async getFreelancerProfile(userId) {
-    const response = await this.makeRequest(`/freelancers/user/${userId}`);
-    return { ...response.data, role: "FREELANCER" };
+    try {
+      if (!userId) return null;
+      const response = await this.makeRequest(`/freelancers/user/${userId}`);
+      if (!response || !response.data) return null;
+      return { ...response.data, role: "FREELANCER" };
+    } catch (error) {
+      return null;
+    }
   }
 
   async updateFreelancerProfile(freelancerId, updateData) {
@@ -604,8 +610,14 @@ class ApiService {
   }
 
   async getClientProfile(userId) {
-    const response = await this.makeRequest(`/clients/user/${userId}`);
-    return { ...response.data, role: "CLIENT" };
+    try {
+      if (!userId) return null;
+      const response = await this.makeRequest(`/clients/user/${userId}`);
+      if (!response || !response.data) return null;
+      return { ...response.data, role: "CLIENT" };
+    } catch (error) {
+      return null;
+    }
   }
 
   async updateClientProfile(clientId, updateData) {
