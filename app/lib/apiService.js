@@ -3,7 +3,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 
-const DEV_API_BASE_URL = "https://floating-walnut-biographies-centres.trycloudflare.com/api";
+const DEV_API_BASE_URL = "https://variables-courts-bearing-ventures.trycloudflare.com/api";
 // const DEV_API_BASE_URL = "https://api.birdearner.com/api";
 
 const PROD_API_BASE_URL = "https://api.birdearner.com/api";
@@ -13,6 +13,7 @@ const API_BASE_URL = __DEV__ ? DEV_API_BASE_URL : PROD_API_BASE_URL;
 // Endpoints where 401 means bad credentials / public auth flow — not an expired session
 const PUBLIC_AUTH_ENDPOINTS = [
   "/auth/login",
+  "/auth/google",
   "/auth/send-verification-otp",
   "/auth/verify-email",
   "/auth/forgot-password",
@@ -422,6 +423,26 @@ class ApiService {
     }
 
     throw new Error("Login failed");
+  }
+
+  async googleLogin(idToken) {
+    const response = await this.makeRequest("/auth/google", {
+      method: "POST",
+      body: JSON.stringify({ idToken }),
+    });
+
+    if (response.success && response.data) {
+      console.log("Google login successful, storing user data and token");
+
+      await this.setAuthToken(response.data.token);
+
+      const { token, ...userData } = response.data;
+      await AsyncStorage.setItem("userData", JSON.stringify(userData));
+
+      return response.data;
+    }
+
+    throw new Error("Google login failed");
   }
 
   async register(userData) {

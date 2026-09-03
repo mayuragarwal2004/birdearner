@@ -29,7 +29,21 @@ const JobDescriptionScreen = ({ route, navigation }) => {
     navigation.goBack();
   };
 
+  const isOwnJob =
+    (job?.clientUserId && job?.clientUserId === userData?.id) ||
+    (job?.client?.userId && job?.client?.userId === userData?.id) ||
+    (job?.clientId && userData?.client?.id && job?.clientId === userData?.client?.id);
+
   const handleApply = async () => {
+    if (isOwnJob) {
+      Alert.alert(
+        "Own Job",
+        "This job was created by your Client profile. You cannot apply to or message on your own job post.",
+        [{ text: "OK" }]
+      );
+      return;
+    }
+
     try {
       setIsCheckingBalance(true);
 
@@ -514,14 +528,32 @@ const JobDescriptionScreen = ({ route, navigation }) => {
 
         {/* Action Buttons */}
         <View style={styles.actionsContainer}>
+          {isOwnJob && (
+            <View style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              backgroundColor: '#F3E8FF',
+              paddingHorizontal: 16,
+              paddingVertical: 12,
+              borderRadius: 12,
+              marginBottom: 12,
+            }}>
+              <Ionicons name="information-circle" size={20} color="#7E22CE" style={{ marginRight: 8 }} />
+              <Text style={{ flex: 1, fontSize: 13, color: "#6B21A8", fontWeight: "500", lineHeight: 18 }}>
+                This job was posted by your Client profile. You cannot apply to or message on your own job.
+              </Text>
+            </View>
+          )}
+
           <TouchableOpacity
             style={[
               styles.primaryApplyButton,
-              { opacity: canApply && !isCheckingBalance ? 1 : 0.6 },
+              { opacity: canApply && !isCheckingBalance && !isOwnJob ? 1 : 0.5 },
               job.hasApplied && { backgroundColor: '#10B981' },
+              isOwnJob && { backgroundColor: '#6B7280' },
             ]}
             onPress={handleApply}
-            disabled={!canApply || isCheckingBalance}
+            disabled={!canApply || isCheckingBalance || isOwnJob}
             activeOpacity={0.8}
           >
             {isCheckingBalance ? (
@@ -529,13 +561,13 @@ const JobDescriptionScreen = ({ route, navigation }) => {
             ) : (
               <>
                 <Ionicons
-                  name={job.hasApplied ? "checkmark-circle" : "paper-plane"}
+                  name={isOwnJob ? "lock-closed" : (job.hasApplied ? "checkmark-circle" : "paper-plane")}
                   size={18}
                   color="#FFFFFF"
                   style={{ marginRight: 8 }}
                 />
                 <Text style={styles.primaryApplyButtonText}>
-                  {job.hasApplied ? "Already Applied" : "Apply for Job"}
+                  {isOwnJob ? "Created by Your Client Profile" : (job.hasApplied ? "Already Applied" : "Apply for Job")}
                 </Text>
               </>
             )}

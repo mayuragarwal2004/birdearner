@@ -34,8 +34,9 @@ const Login = ({ navigation }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   
-  const { login } = useAuth();
+  const { login, googleLogin } = useAuth();
 
   const handleInputChange = (field, value) => {
     setCredentials({ ...credentials, [field]: value });
@@ -114,6 +115,21 @@ const Login = ({ navigation }) => {
       showToast("error", "Login Failed", errorMessage);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setIsGoogleLoading(true);
+    try {
+      const result = await googleLogin();
+      if (result) {
+        showToast("success", "Login Successful!", "Welcome back!");
+      }
+    } catch (error) {
+      console.log("Google Login Error:", error.message);
+      showToast("error", "Google Login Failed", error.message || "Something went wrong. Please try again.");
+    } finally {
+      setIsGoogleLoading(false);
     }
   };
 
@@ -237,6 +253,28 @@ const Login = ({ navigation }) => {
               <Text style={styles.dividerText}>Or</Text>
               <View style={styles.dividerLine} />
             </View>
+
+            {/* Google Login Button */}
+            <TouchableOpacity
+              style={styles.googleButton}
+              onPress={handleGoogleLogin}
+              disabled={isGoogleLoading}
+              activeOpacity={0.8}
+            >
+              <View style={styles.googleButtonContent}>
+                {isGoogleLoading ? (
+                  <SafeSpinner color="#4B0082" size={18} />
+                ) : (
+                  <>
+                    <Image
+                      source={{ uri: "https://developers.google.com/identity/images/glogo.png" }}
+                      style={styles.googleIcon}
+                    />
+                    <Text style={styles.googleButtonText}>Continue with Google</Text>
+                  </>
+                )}
+              </View>
+            </TouchableOpacity>
 
             {/* Sign Up Link */}
             <View style={styles.signupContainer}>
@@ -411,6 +449,32 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "transparent",
+  },
+  googleButton: {
+    width: "100%",
+    height: 54,
+    backgroundColor: "#ffffff",
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+  },
+  googleButtonContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  googleIcon: {
+    width: 22,
+    height: 22,
+    marginRight: 10,
+  },
+  googleButtonText: {
+    color: "#374151",
+    fontSize: 15,
+    fontWeight: "600",
   },
 });
 

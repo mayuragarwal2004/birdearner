@@ -384,6 +384,112 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Google Login function
+  const googleLogin = async () => {
+    try {
+      let AuthSession;
+      try {
+        AuthSession = require("expo-auth-session");
+      } catch (err) {
+        Alert.alert("Google Login", "Google login is not available on this device build.");
+        return;
+      }
+
+      const redirectUri = AuthSession.makeRedirectUri({
+        scheme: "birdearner",
+        path: "google-auth",
+      });
+
+      const result = await AuthSession.startAsync({
+        authUrl:
+          "https://accounts.google.com/o/oauth2/v2/auth?" +
+          new URLSearchParams({
+            client_id: "750433749399-234m1mdhkdl4d7vclejuqsmaberb36ro.apps.googleusercontent.com",
+            redirect_uri: redirectUri,
+            response_type: "id_token",
+            scope: "openid email profile",
+            nonce: crypto.randomUUID(),
+          }).toString(),
+      });
+
+      if (result.type === "success" && result.params.id_token) {
+        const response = await apiService.googleLogin(result.params.id_token);
+
+        if (response) {
+          setUser(response);
+          if (response.token) {
+            setAuthToken(response.token);
+          }
+
+          let freelancerProfile = (response.freelancer && response.freelancer.id) ? response.freelancer : null;
+          let clientProfile = (response.client && response.client.id) ? response.client : null;
+
+          if (!freelancerProfile) {
+            try {
+              const fetchedFreelancer = await apiService.getFreelancerProfile(response.id);
+              if (fetchedFreelancer && fetchedFreelancer.id) {
+                freelancerProfile = fetchedFreelancer;
+              }
+            } catch (error) {
+              console.log("No freelancer profile found");
+            }
+          }
+
+          if (!clientProfile) {
+            try {
+              const fetchedClient = await apiService.getClientProfile(response.id);
+              if (fetchedClient && fetchedClient.id) {
+                clientProfile = fetchedClient;
+              }
+            } catch (error) {
+              console.log("No client profile found");
+            }
+          }
+
+          const completeUserData = {
+            ...response,
+            freelancer: freelancerProfile,
+            client: clientProfile,
+          };
+
+          if (freelancerProfile && clientProfile) {
+            updateRoleOptions(completeUserData);
+            setRoleSelectionVisible(true);
+            await AsyncStorage.setItem("userData", JSON.stringify(completeUserData));
+            return response;
+          } else if (freelancerProfile) {
+            const role = determineUserRole(completeUserData, "FREELANCER");
+            const userData = { ...completeUserData, role };
+            setUserData(userData);
+            setUserProfile(freelancerProfile);
+            await AsyncStorage.setItem("userData", JSON.stringify(userData));
+            await AsyncStorage.setItem("userProfile", JSON.stringify(freelancerProfile));
+          } else if (clientProfile) {
+            const role = determineUserRole(completeUserData, "CLIENT");
+            const userData = { ...completeUserData, role };
+            setUserData(userData);
+            setUserProfile(clientProfile);
+            await AsyncStorage.setItem("userData", JSON.stringify(userData));
+            await AsyncStorage.setItem("userProfile", JSON.stringify(clientProfile));
+          } else {
+            setUserData(completeUserData);
+            setUserProfile(null);
+            await AsyncStorage.setItem("userData", JSON.stringify(completeUserData));
+          }
+
+          return response;
+        }
+      } else if (result.type === "cancel") {
+        throw new Error("Google sign-in was cancelled.");
+      } else {
+        throw new Error("Google sign-in failed. Please try again.");
+      }
+    } catch (error) {
+      console.error("Google login error:", error);
+      throw new Error(error.message || "Google login failed. Please try again.");
+    }
+  };
+
   // Register function
   const register = async (userData) => {
     try {
@@ -875,6 +981,7 @@ export const AuthProvider = ({ children }) => {
     authToken,
     loading,
     login,
+    googleLogin,
     register,
     logout,
     createFreelancerProfile,
@@ -897,6 +1004,7 @@ export const AuthProvider = ({ children }) => {
     authToken,
     loading,
     login,
+    googleLogin,
     register,
     logout,
     createFreelancerProfile,
