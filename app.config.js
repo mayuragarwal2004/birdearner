@@ -59,6 +59,7 @@ export default {
       "expo-router",
       "expo-font",
       "expo-location",
+      "expo-web-browser",
       "react-native-video",
       [
         "expo-splash-screen",

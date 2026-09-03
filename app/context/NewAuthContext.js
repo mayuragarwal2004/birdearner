@@ -12,11 +12,30 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
+  Linking,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import apiService from "../lib/apiService";
 import Toast from "react-native-toast-message";
 import { resetToLogin } from "../lib/navigationRef";
+
+const parseIdTokenFromUrl = (urlStr) => {
+  if (!urlStr) return null;
+  try {
+    const hashIdx = urlStr.indexOf("#");
+    const queryIdx = urlStr.indexOf("?");
+    let paramsStr = "";
+    if (hashIdx !== -1) {
+      paramsStr = urlStr.substring(hashIdx + 1);
+    } else if (queryIdx !== -1) {
+      paramsStr = urlStr.substring(queryIdx + 1);
+    }
+    const parsed = new URLSearchParams(paramsStr);
+    return parsed.get("id_token");
+  } catch (e) {
+    return null;
+  }
+};
 
 const AuthContext = createContext();
 
@@ -387,102 +406,168 @@ export const AuthProvider = ({ children }) => {
   // Google Login function
   const googleLogin = async () => {
     try {
-      let AuthSession;
-      try {
-        AuthSession = require("expo-auth-session");
-      } catch (err) {
-        Alert.alert("Google Login", "Google login is not available on this device build.");
-        return;
+      const clientId =
+        process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID ||
+        "750433749399-vuco9j5gh6t7rii1cmpt1avbsjgq2fi3.apps.googleusercontent.com";
+
+      const appRedirectScheme = "birdearner://google-auth";
+      const apiBaseUrl = apiService.getBaseUrl();
+      const backendCallbackUrl = apiBaseUrl.replace(/\/api$/, "") + "/api/auth/google/callback";
+
+      const authUrl =
+        "https://accounts.google.com/o/oauth2/v2/auth?" +
+        new URLSearchParams({
+          client_id: clientId,
+          redirect_uri: backendCallbackUrl,
+          response_type: "code",
+          scope: "openid email profile",
+          access_type: "offline",
+          prompt: "consent",
+          state: backendCallbackUrl,
+        }).toString();
+
+      console.log("[Google OAuth] clientId:", clientId);
+      console.log("[Google OAuth] callbackUrl:", backendCallbackUrl);
+      console.log("[Google OAuth] authUrl:", authUrl);
+
+      const userData = await new Promise(async (resolve, reject) => {
+        let subscription = null;
+        const timeout = setTimeout(() => {
+          if (subscription) subscription.remove();
+          reject(new Error("Google sign-in timed out. Please try again."));
+        }, 120000);
+
+        const handleUrl = ({ url }) => {
+          if (url && url.startsWith("birdearner://google-auth")) {
+            clearTimeout(timeout);
+            if (subscription) subscription.remove();
+            try {
+              const parsedUrl = new URL(url);
+              const dataParam = parsedUrl.searchParams.get("data");
+              const errorParam = parsedUrl.searchParams.get("error");
+
+              if (errorParam) {
+                reject(new Error("Google sign-in failed: " + decodeURIComponent(errorParam)));
+                return;
+              }
+
+              if (dataParam) {
+                resolve(JSON.parse(decodeURIComponent(dataParam)));
+              } else {
+                reject(new Error("No user data received from Google sign-in"));
+              }
+            } catch (e) {
+              reject(new Error("Failed to parse Google sign-in response"));
+            }
+          }
+        };
+
+        try {
+          subscription = Linking.addEventListener("url", handleUrl);
+
+          const initialUrl = await Linking.getInitialURL().catch(() => null);
+          if (initialUrl && initialUrl.startsWith("birdearner://google-auth")) {
+            try {
+              const parsedUrl = new URL(initialUrl);
+              const dataParam = parsedUrl.searchParams.get("data");
+              const errorParam = parsedUrl.searchParams.get("error");
+
+              if (errorParam) {
+                clearTimeout(timeout);
+                if (subscription) subscription.remove();
+                reject(new Error("Google sign-in failed: " + decodeURIComponent(errorParam)));
+                return;
+              }
+
+              if (dataParam) {
+                clearTimeout(timeout);
+                if (subscription) subscription.remove();
+                resolve(JSON.parse(decodeURIComponent(dataParam)));
+                return;
+              }
+            } catch (e) {}
+          }
+
+          await Linking.openURL(authUrl);
+        } catch (err) {
+          clearTimeout(timeout);
+          if (subscription) subscription.remove();
+          reject(err);
+        }
+      });
+
+      if (!userData || !userData.token) {
+        throw new Error("Google sign-in completed but no user data was returned.");
       }
 
-      const redirectUri = AuthSession.makeRedirectUri({
-        scheme: "birdearner",
-        path: "google-auth",
-      });
+      await apiService.setAuthToken(userData.token);
+      await AsyncStorage.setItem("authToken", userData.token);
 
-      const result = await AuthSession.startAsync({
-        authUrl:
-          "https://accounts.google.com/o/oauth2/v2/auth?" +
-          new URLSearchParams({
-            client_id: "750433749399-234m1mdhkdl4d7vclejuqsmaberb36ro.apps.googleusercontent.com",
-            redirect_uri: redirectUri,
-            response_type: "id_token",
-            scope: "openid email profile",
-            nonce: crypto.randomUUID(),
-          }).toString(),
-      });
+      const response = userData;
 
-      if (result.type === "success" && result.params.id_token) {
-        const response = await apiService.googleLogin(result.params.id_token);
-
-        if (response) {
-          setUser(response);
-          if (response.token) {
-            setAuthToken(response.token);
-          }
-
-          let freelancerProfile = (response.freelancer && response.freelancer.id) ? response.freelancer : null;
-          let clientProfile = (response.client && response.client.id) ? response.client : null;
-
-          if (!freelancerProfile) {
-            try {
-              const fetchedFreelancer = await apiService.getFreelancerProfile(response.id);
-              if (fetchedFreelancer && fetchedFreelancer.id) {
-                freelancerProfile = fetchedFreelancer;
-              }
-            } catch (error) {
-              console.log("No freelancer profile found");
-            }
-          }
-
-          if (!clientProfile) {
-            try {
-              const fetchedClient = await apiService.getClientProfile(response.id);
-              if (fetchedClient && fetchedClient.id) {
-                clientProfile = fetchedClient;
-              }
-            } catch (error) {
-              console.log("No client profile found");
-            }
-          }
-
-          const completeUserData = {
-            ...response,
-            freelancer: freelancerProfile,
-            client: clientProfile,
-          };
-
-          if (freelancerProfile && clientProfile) {
-            updateRoleOptions(completeUserData);
-            setRoleSelectionVisible(true);
-            await AsyncStorage.setItem("userData", JSON.stringify(completeUserData));
-            return response;
-          } else if (freelancerProfile) {
-            const role = determineUserRole(completeUserData, "FREELANCER");
-            const userData = { ...completeUserData, role };
-            setUserData(userData);
-            setUserProfile(freelancerProfile);
-            await AsyncStorage.setItem("userData", JSON.stringify(userData));
-            await AsyncStorage.setItem("userProfile", JSON.stringify(freelancerProfile));
-          } else if (clientProfile) {
-            const role = determineUserRole(completeUserData, "CLIENT");
-            const userData = { ...completeUserData, role };
-            setUserData(userData);
-            setUserProfile(clientProfile);
-            await AsyncStorage.setItem("userData", JSON.stringify(userData));
-            await AsyncStorage.setItem("userProfile", JSON.stringify(clientProfile));
-          } else {
-            setUserData(completeUserData);
-            setUserProfile(null);
-            await AsyncStorage.setItem("userData", JSON.stringify(completeUserData));
-          }
-
-          return response;
+      if (response) {
+        setUser(response);
+        if (response.token) {
+          setAuthToken(response.token);
         }
-      } else if (result.type === "cancel") {
-        throw new Error("Google sign-in was cancelled.");
-      } else {
-        throw new Error("Google sign-in failed. Please try again.");
+
+        let freelancerProfile = (response.freelancer && response.freelancer.id) ? response.freelancer : null;
+        let clientProfile = (response.client && response.client.id) ? response.client : null;
+
+        if (!freelancerProfile) {
+          try {
+            const fetchedFreelancer = await apiService.getFreelancerProfile(response.id);
+            if (fetchedFreelancer && fetchedFreelancer.id) {
+              freelancerProfile = fetchedFreelancer;
+            }
+          } catch (error) {
+            console.log("No freelancer profile found");
+          }
+        }
+
+        if (!clientProfile) {
+          try {
+            const fetchedClient = await apiService.getClientProfile(response.id);
+            if (fetchedClient && fetchedClient.id) {
+              clientProfile = fetchedClient;
+            }
+          } catch (error) {
+            console.log("No client profile found");
+          }
+        }
+
+        const completeUserData = {
+          ...response,
+          freelancer: freelancerProfile,
+          client: clientProfile,
+        };
+
+        if (freelancerProfile && clientProfile) {
+          updateRoleOptions(completeUserData);
+          setRoleSelectionVisible(true);
+          await AsyncStorage.setItem("userData", JSON.stringify(completeUserData));
+          return response;
+        } else if (freelancerProfile) {
+          const role = determineUserRole(completeUserData, "FREELANCER");
+          const userDataStored = { ...completeUserData, role };
+          setUserData(userDataStored);
+          setUserProfile(freelancerProfile);
+          await AsyncStorage.setItem("userData", JSON.stringify(userDataStored));
+          await AsyncStorage.setItem("userProfile", JSON.stringify(freelancerProfile));
+        } else if (clientProfile) {
+          const role = determineUserRole(completeUserData, "CLIENT");
+          const userDataStored = { ...completeUserData, role };
+          setUserData(userDataStored);
+          setUserProfile(clientProfile);
+          await AsyncStorage.setItem("userData", JSON.stringify(userDataStored));
+          await AsyncStorage.setItem("userProfile", JSON.stringify(clientProfile));
+        } else {
+          setUserData(completeUserData);
+          setUserProfile(null);
+          await AsyncStorage.setItem("userData", JSON.stringify(completeUserData));
+        }
+
+        return response;
       }
     } catch (error) {
       console.error("Google login error:", error);

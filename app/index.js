@@ -116,31 +116,7 @@ const linking = {
   ],
   config: {
     screens: {
-      MainTabs: {
-        screens: {
-          Profile: {
-            screens: {
-              ProfileScreen: {
-                path: "/profile/:userId",
-                parse: {
-                  userId: (userId) => userId,
-                },
-              },
-            },
-          },
-          Settings: {
-            screens: {
-              ProfileScreen: {
-                path: "/profile/:userId",
-                parse: {
-                  userId: (userId) => userId,
-                },
-              },
-            },
-          },
-        },
-      },
-      // Direct access to ProfileScreen when not in tabs
+      // Direct access to ProfileScreen (view another user's profile)
       ProfileScreen: {
         path: "/profile/:userId",
         parse: {

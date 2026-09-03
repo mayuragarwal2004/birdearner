@@ -3,7 +3,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 
-const DEV_API_BASE_URL = "https://variables-courts-bearing-ventures.trycloudflare.com/api";
+const DEV_API_BASE_URL = "https://cheese-commented-photograph-harvard.trycloudflare.com/api";
 // const DEV_API_BASE_URL = "https://api.birdearner.com/api";
 
 const PROD_API_BASE_URL = "https://api.birdearner.com/api";
@@ -49,6 +49,10 @@ class ApiService {
     this.token = null;
     this.onUnauthorized = null;
     this._handlingUnauthorized = false;
+  }
+
+  getBaseUrl() {
+    return API_BASE_URL;
   }
 
   // Register a handler (from AuthProvider) for expired/invalid sessions
