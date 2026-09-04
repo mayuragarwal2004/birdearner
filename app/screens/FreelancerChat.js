@@ -142,6 +142,25 @@ const getStyles = (currentTheme, isKeyboardVisible) =>
       padding: 16,
       paddingBottom: 20,
     },
+    chatWarning: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: "#FEF3C7",
+      marginHorizontal: 16,
+      marginTop: 4,
+      marginBottom: 4,
+      borderRadius: 8,
+      paddingVertical: 8,
+      paddingHorizontal: 12,
+      borderWidth: 1,
+      borderColor: "#FCD34D",
+    },
+    chatWarningText: {
+      fontSize: 11,
+      color: "#92400E",
+      flex: 1,
+      lineHeight: 15,
+    },
     limit: {
       backgroundColor: currentTheme.surface || "#FFFFFF",
       marginHorizontal: 16,
@@ -770,6 +789,13 @@ const FreelancerChat = ({ route, navigation }) => {
               style={styles.chatList}
               contentContainerStyle={styles.chatListContainer}
             />
+
+            <View style={styles.chatWarning}>
+              <Ionicons name="information-circle-outline" size={14} color="#D97706" style={{ marginRight: 6 }} />
+              <Text style={styles.chatWarningText}>
+                This chat is recorded. If any issues arise, the conversation will be reviewed.
+              </Text>
+            </View>
 
             {jobStatus === "OPEN" && characterLimit && (
               <View style={styles.limit}>
