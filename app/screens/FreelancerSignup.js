@@ -1237,7 +1237,8 @@ const FreelancerSignup = ({ navigation, route }) => {
                     placeholderTextColor="#A098AE"
                     placeholder="Enter your mobile number"
                     value={form.mobile}
-                    editable={false}
+                    onChangeText={(v) => setForm({ ...form, mobile: v })}
+                    keyboardType="phone-pad"
                   />
                 </View>
 
