@@ -47,8 +47,10 @@ const getEmail = (userData, userProfile) =>
   userData?.email || userProfile?.email || userProfile?.user?.email || "Email not added";
 
 const getPhone = (userData, userProfile) =>
+  userProfile?.mobileNumber ||
   userProfile?.phone ||
   userProfile?.phoneNumber ||
+  userData?.mobile ||
   userData?.phone ||
   userData?.phoneNumber ||
   "Phone not added";
