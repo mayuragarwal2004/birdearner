@@ -97,6 +97,7 @@ const SettingsScreen = ({ navigation }) => {
   }, [role, userProfile]);
 
   const walletRoute = role === "CLIENT" ? "WalletClient" : "WalletFreelancer";
+  const transactionHistoryRoute = role === "CLIENT" ? "TransactionHistoryClient" : "TransactionHistoryFreelancer";
 
   const navigateTo = (routeName, params) => {
     if (!routeName) return;
@@ -213,7 +214,7 @@ const SettingsScreen = ({ navigation }) => {
         {
           label: "Transaction History",
           icon: "receipt-outline",
-          route: walletRoute,
+          route: transactionHistoryRoute,
         },
       ],
     },

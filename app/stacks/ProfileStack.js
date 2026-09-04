@@ -66,6 +66,16 @@ const ProfileStack = ({ initialRouteName = "MyProfile" }) => (
       options={{ headerShown: false }}
     />
     <Stack.Screen
+      name="TransactionHistoryClient"
+      getComponent={() => require("../screens/TransactionHistoryClient").default}
+      options={{ headerShown: false }}
+    />
+    <Stack.Screen
+      name="TransactionHistoryFreelancer"
+      getComponent={() => require("../screens/TransactionHistoryFreelancer").default}
+      options={{ headerShown: false }}
+    />
+    <Stack.Screen
       name="Payment"
       getComponent={() => require("../screens/PaymentScreen").default}
       options={{ headerShown: false }}

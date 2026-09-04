@@ -61,6 +61,7 @@ export default {
       "expo-location",
       "expo-web-browser",
       "react-native-video",
+      "expo-speech-recognition",
       [
         "expo-splash-screen",
         {

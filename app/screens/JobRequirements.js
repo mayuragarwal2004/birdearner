@@ -12,6 +12,13 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+
+let ExpoSpeechRecognitionModule = null;
+try {
+  ExpoSpeechRecognitionModule = require("expo-speech-recognition").ExpoSpeechRecognitionModule;
+} catch (e) {
+  // Native module not available until rebuild
+}
 import SafeSpinner from "../components/SafeSpinner";
 import CustomPicker from "../components/CustomPicker";
 import * as ImagePicker from "expo-image-picker";
@@ -61,6 +68,7 @@ const JobRequirementsScreen = ({ navigation }) => {
   const [selectedCoupon, setSelectedCoupon] = useState(null);
   const [skills, setSkills] = useState([""]);
   const [jobDes, setJobDes] = useState("");
+  const [isRecording, setIsRecording] = useState(false);
   const [calculatedBirdFee, setCalculatedBirdFee] = useState(null);
   const [portfolioImages, setPortfolioImages] = useState([]);
   const [jobTitle, setJobTitle] = useState("");
@@ -894,6 +902,61 @@ const JobRequirementsScreen = ({ navigation }) => {
     }
   }, [latitude, longitude, hasCoordinates]);
 
+  useEffect(() => {
+    if (!ExpoSpeechRecognitionModule) return;
+
+    const listeners = [
+      ExpoSpeechRecognitionModule.addListener("result", (event) => {
+        if (event.results && event.results[0]) {
+          const transcript = event.results[0].transcript;
+          if (event.isFinal) {
+            setJobDes((prev) => (prev ? prev + " " + transcript : transcript));
+          }
+        }
+      }),
+      ExpoSpeechRecognitionModule.addListener("error", (event) => {
+        console.warn("Speech recognition error:", event.error);
+        setIsRecording(false);
+      }),
+      ExpoSpeechRecognitionModule.addListener("end", () => {
+        setIsRecording(false);
+      }),
+    ];
+
+    return () => {
+      listeners.forEach((l) => l.remove());
+    };
+  }, []);
+
+  const toggleVoiceInput = useCallback(async () => {
+    if (!ExpoSpeechRecognitionModule) {
+      Alert.alert("Unavailable", "Voice input will be available after the next app build.");
+      return;
+    }
+    try {
+      if (isRecording) {
+        ExpoSpeechRecognitionModule.stop();
+        setIsRecording(false);
+      } else {
+        const result = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+        if (!result.granted) {
+          Alert.alert("Permission Required", "Microphone permission is needed for voice input.");
+          return;
+        }
+        ExpoSpeechRecognitionModule.start({
+          lang: "en-US",
+          interimResults: true,
+          continuous: false,
+        });
+        setIsRecording(true);
+      }
+    } catch (error) {
+      console.warn("Voice input error:", error);
+      setIsRecording(false);
+      Alert.alert("Voice Input", "Could not start speech recognition. Please check microphone permissions.");
+    }
+  }, [isRecording]);
+
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
       <View style={styles.header}>
@@ -1413,8 +1476,8 @@ const JobRequirementsScreen = ({ navigation }) => {
               multiline
               onChangeText={setJobDes}
             />
-            <TouchableOpacity style={styles.micBtn}>
-              <Ionicons name="mic-outline" size={20} color={PURPLE} />
+            <TouchableOpacity style={[styles.micBtn, isRecording && styles.micBtnActive]} onPress={toggleVoiceInput}>
+              <Ionicons name={isRecording ? "mic" : "mic-outline"} size={20} color={isRecording ? "#FF3B30" : PURPLE} />
             </TouchableOpacity>
           </View>
         </View>
@@ -2087,6 +2150,10 @@ const getStyles = (currentTheme, isDark) => {
       backgroundColor: soft,
       alignItems: "center",
       justifyContent: "center",
+    },
+    micBtnActive: {
+      borderColor: "#FF3B30",
+      backgroundColor: isDark ? "#3A1515" : "#FFE5E5",
     },
     uploadCard: {
       borderRadius: 12,
