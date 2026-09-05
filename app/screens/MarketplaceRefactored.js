@@ -182,20 +182,20 @@ const MarketplaceScreen = ({ navigation }) => {
           distance={distance}
           jobs={jobs}
         />
-      </View>
 
-      {/* View Jobs Button */}
-      <View style={styles.viewJobsContainer}>
-        <TouchableOpacity
-          style={styles.viewJobsButton}
-          onPress={handleViewJobs}
-          activeOpacity={0.8}
-        >
-          <SlidersHorizontal size={20} color="#FFF" />
-          <Text style={styles.viewJobsButtonText}>
-            View Jobs ({allJobs.length})
-          </Text>
-        </TouchableOpacity>
+        {/* View Jobs Button */}
+        <View style={styles.viewJobsContainer}>
+          <TouchableOpacity
+            style={styles.viewJobsButton}
+            onPress={handleViewJobs}
+            activeOpacity={0.8}
+          >
+            <SlidersHorizontal size={20} color="#FFF" />
+            <Text style={styles.viewJobsButtonText}>
+              View Jobs ({allJobs.length})
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <Toast />
@@ -235,9 +235,7 @@ const getStyles = (currentTheme) =>
       paddingHorizontal: 20,
     },
     viewJobsContainer: {
-      flex: 1,
-      justifyContent: "center",
-      alignItems: "center",
+      marginTop: 16,
       paddingHorizontal: 20,
     },
     viewJobsButton: {
