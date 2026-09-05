@@ -27,7 +27,8 @@ const TEXT = "#101114";
 const MUTED = "#656B7A";
 const BORDER = "#E7E1EF";
 const SOFT_PURPLE = "#F3EAFF";
-const TABS = ["About", "Services", "Reviews", "Portfolio"];
+const FREELANCER_TABS = ["About", "Services", "Reviews", "Portfolio"];
+const CLIENT_TABS = ["About", "Reviews"];
 
 const showToast = (type, title, message = "") => {
   Toast.show({
@@ -138,12 +139,14 @@ export default function ProfileScreen({ route, navigation }) {
   );
 
   const isFreelancerProfile = profileData?.role === "FREELANCER";
+  const isClientProfile = profileData?.role === "CLIENT";
   const displayName = getDisplayName(profileData);
   const profileTitle = getProfileTitle(profileData, services);
   const averageRating =
     reviewStats?.averageRating || profileData?.rating || 0;
   const totalReviews =
     reviewStats?.totalReviews ?? reviews.length ?? 0;
+  const profileTabs = isClientProfile ? CLIENT_TABS : FREELANCER_TABS;
 
   const fetchRelatedData = useCallback(async (profile) => {
     try {
@@ -161,19 +164,24 @@ export default function ProfileScreen({ route, navigation }) {
       return;
     }
 
+    const isClient = profile?.role === "CLIENT";
+
     try {
-      const [reviewsResponse, statsResponse] = await Promise.all([
-        apiService.getReviewsByUserId(reviewUserId),
-        apiService.getReviewStats(reviewUserId),
-      ]);
-
-      const reviewList = Array.isArray(reviewsResponse)
-        ? reviewsResponse
-        : reviewsResponse?.data || reviewsResponse?.reviews || [];
-      const statsObj = statsResponse?.data || (statsResponse?.totalReviews !== undefined ? statsResponse : null);
-
-      setReviews(reviewList);
-      setReviewStats(statsObj);
+      if (isClient) {
+        const [reviewList, statsObj] = await Promise.all([
+          apiService.getReviewsGivenByUserId(reviewUserId),
+          apiService.getReviewStatsGiven(reviewUserId),
+        ]);
+        setReviews(Array.isArray(reviewList) ? reviewList : []);
+        setReviewStats(statsObj);
+      } else {
+        const [reviewList, statsObj] = await Promise.all([
+          apiService.getReviewsByUserId(reviewUserId),
+          apiService.getReviewStats(reviewUserId),
+        ]);
+        setReviews(Array.isArray(reviewList) ? reviewList : []);
+        setReviewStats(statsObj);
+      }
     } catch (error) {
       console.warn("Failed to load reviews:", error.message);
       setReviews([]);
@@ -244,6 +252,13 @@ export default function ProfileScreen({ route, navigation }) {
   useEffect(() => {
     fetchProfile();
   }, [fetchProfile]);
+
+  // Reset active tab when profile data changes
+  useEffect(() => {
+    if (profileData) {
+      setActiveTab("About");
+    }
+  }, [profileData?.role]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -365,28 +380,35 @@ export default function ProfileScreen({ route, navigation }) {
           onPhotoPress={() => openImageModal(profileData?.profilePhoto, [profileData?.profilePhoto])}
         />
 
-        <ProfileTabs uiStyles={uiStyles} activeTab={activeTab} onTabPress={setActiveTab} />
+        <ProfileTabs uiStyles={uiStyles} activeTab={activeTab} onTabPress={setActiveTab} tabs={profileTabs} />
 
         <View style={styles.contentPanel}>
           {activeTab === "About" && (
-            <AboutTab
-              uiStyles={uiStyles}
-              profileData={profileData}
-              services={services}
-              certifications={certifications}
-              selectedServices={selectedServices}
-            />
+            isClientProfile ? (
+              <ClientAboutTab
+                uiStyles={uiStyles}
+                profileData={profileData}
+              />
+            ) : (
+              <AboutTab
+                uiStyles={uiStyles}
+                profileData={profileData}
+                services={services}
+                certifications={certifications}
+                selectedServices={selectedServices}
+              />
+            )
           )}
 
-          {activeTab === "Services" && (
+          {activeTab === "Services" && !isClientProfile && (
             <ServicesTab uiStyles={uiStyles} services={services} onServicePress={handleServicePress} />
           )}
 
           {activeTab === "Reviews" && (
-            <ReviewsTab uiStyles={uiStyles} reviews={reviews} stats={reviewStats} />
+            <ReviewsTab uiStyles={uiStyles} reviews={reviews} stats={reviewStats} profileData={profileData} isClientProfile={isClientProfile} />
           )}
 
-          {activeTab === "Portfolio" && (
+          {activeTab === "Portfolio" && !isClientProfile && (
             <PortfolioTab
               uiStyles={uiStyles}
               images={portfolioImages}
@@ -456,10 +478,10 @@ function ProfileHero({
   );
 }
 
-function ProfileTabs({ uiStyles, activeTab, onTabPress }) {
+function ProfileTabs({ uiStyles, activeTab, onTabPress, tabs }) {
   return (
     <View style={uiStyles.tabShell}>
-      {TABS.map((tab) => {
+      {tabs.map((tab) => {
         const active = activeTab === tab;
         return (
           <TouchableOpacity
@@ -475,6 +497,59 @@ function ProfileTabs({ uiStyles, activeTab, onTabPress }) {
           </TouchableOpacity>
         );
       })}
+    </View>
+  );
+}
+
+function ClientAboutTab({ uiStyles, profileData }) {
+  const languages = parseArray(profileData?.languages);
+
+  return (
+    <View style={uiStyles.section}>
+      <Text style={uiStyles.sectionTitle}>About me</Text>
+      <Text style={uiStyles.description}>
+        {profileData?.profileDescription || "No description available"}
+      </Text>
+
+      <View style={uiStyles.infoList}>
+        <InfoRow
+          uiStyles={uiStyles}
+          icon="person"
+          label="Role"
+          value="Client"
+        />
+        <InfoRow
+          uiStyles={uiStyles}
+          icon="place"
+          label="From"
+          value={formatLocation(profileData)}
+        />
+        <InfoRow
+          uiStyles={uiStyles}
+          icon="calendar-today"
+          label="Member Since"
+          value={formatMemberSince(profileData?.createdAt)}
+        />
+      </View>
+
+      {languages.length > 0 && (
+        <>
+          <Text style={uiStyles.sectionTitle}>Languages</Text>
+          <View style={uiStyles.languageList}>
+            {languages.map((lang, idx) => (
+              <View key={idx} style={uiStyles.infoRow}>
+                <MaterialIcons name="g-translate" size={22} color={PURPLE} />
+                <Text style={uiStyles.infoLabel}>
+                  {typeof lang === 'string' ? lang : lang.name || lang.language || 'English'}
+                </Text>
+                <Text style={uiStyles.infoValue}>
+                  {typeof lang === 'object' && lang.proficiency ? lang.proficiency : 'Fluent'}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </>
+      )}
     </View>
   );
 }
@@ -644,7 +719,7 @@ function ServicesTab({ uiStyles, services, onServicePress }) {
   );
 }
 
-function ReviewsTab({ uiStyles, reviews = [], stats, profileData }) {
+function ReviewsTab({ uiStyles, reviews = [], stats, profileData, isClientProfile }) {
   const average = Number(stats?.averageRating || profileData?.rating || 0);
   const total = stats?.totalReviews || profileData?.totalReviews || reviews.length || 0;
   const distribution = stats?.ratingDistribution || {};
@@ -656,36 +731,37 @@ function ReviewsTab({ uiStyles, reviews = [], stats, profileData }) {
 
   return (
     <View style={uiStyles.section}>
-      {/* 1. Summary Card */}
-      <View style={uiStyles.summaryCard}>
-        <View style={uiStyles.summaryTop}>
-          <View>
-            <Text style={uiStyles.summaryRating}>{formatRating(average)}</Text>
-            <View style={uiStyles.summaryStars}>
-              {[1, 2, 3, 4, 5].map((item) => (
-                <FontAwesome
-                  key={item}
-                  name={item <= Math.round(average) ? "star" : "star-o"}
-                  size={18}
-                  color="#A855F7"
-                />
-              ))}
+      {/* Summary Card - only for freelancer profiles */}
+      {!isClientProfile && (
+        <View style={uiStyles.summaryCard}>
+          <View style={uiStyles.summaryTop}>
+            <View>
+              <Text style={uiStyles.summaryRating}>{formatRating(average)}</Text>
+              <View style={uiStyles.summaryStars}>
+                {[1, 2, 3, 4, 5].map((item) => (
+                  <FontAwesome
+                    key={item}
+                    name={item <= Math.round(average) ? "star" : "star-o"}
+                    size={18}
+                    color="#A855F7"
+                  />
+                ))}
+              </View>
+            </View>
+
+            <View style={uiStyles.summaryCountBox}>
+              <Text style={uiStyles.summaryCount}>{total}</Text>
+              <Text style={uiStyles.summaryLabel}>Total Reviews</Text>
             </View>
           </View>
 
-          <View style={uiStyles.summaryCountBox}>
-            <Text style={uiStyles.summaryCount}>{total}</Text>
-            <Text style={uiStyles.summaryLabel}>Total Reviews</Text>
-          </View>
-        </View>
-
-        {/* Rating Breakdown Bars */}
-        <View style={uiStyles.ratingBars}>
-          {[5, 4, 3, 2, 1].map((star) => {
-            const count = getCountForRating(star);
-            const percentage = total ? `${(count / total) * 100}%` : "0%";
-            return (
-              <View key={star} style={uiStyles.ratingBarRow}>
+          {/* Rating Breakdown Bars */}
+          <View style={uiStyles.ratingBars}>
+            {[5, 4, 3, 2, 1].map((star) => {
+              const count = getCountForRating(star);
+              const percentage = total ? `${(count / total) * 100}%` : "0%";
+              return (
+                <View key={star} style={uiStyles.ratingBarRow}>
                 <Text style={uiStyles.ratingBarLabel}>{star}</Text>
                 <View style={uiStyles.ratingBarTrack}>
                   <View style={[uiStyles.ratingBarFill, { width: percentage }]} />
@@ -696,50 +772,65 @@ function ReviewsTab({ uiStyles, reviews = [], stats, profileData }) {
           })}
         </View>
       </View>
+      )}
 
-      {/* 2. Section Header */}
+      {/* Section Header */}
       <View style={uiStyles.recentReviewsHeader}>
-        <Text style={uiStyles.recentReviewsTitle}>Recent Reviews</Text>
+        <Text style={uiStyles.recentReviewsTitle}>
+          {isClientProfile ? "Reviews Given" : "Recent Reviews"}
+        </Text>
         <Text style={uiStyles.recentReviewsMeta}>{total} total</Text>
       </View>
 
       {/* 3. Review items or Empty Card */}
       {reviews.length > 0 ? (
-        reviews.map((review) => (
-          <View key={review.id} style={uiStyles.reviewCard}>
-            <View style={uiStyles.reviewHeader}>
-              <Image
-                source={
-                  review.reviewer?.profilePhoto
-                    ? { uri: getImageUri(review.reviewer.profilePhoto) }
-                    : require("../assets/profile.png")
-                }
-                style={uiStyles.reviewAvatar}
-              />
-              <View style={uiStyles.reviewMeta}>
-                <Text style={uiStyles.reviewerName}>
-                  {review.reviewer?.user?.fullName || "Bird Earner user"}
-                </Text>
-                <View style={uiStyles.reviewStars}>
-                  {[1, 2, 3, 4, 5].map((item) => (
-                    <FontAwesome
-                      key={item}
-                      name={item <= Number(review.rating || 0) ? "star" : "star-o"}
-                      size={15}
-                      color="#A855F7"
-                    />
-                  ))}
+        reviews.map((review) => {
+          const displayProfile = isClientProfile
+            ? (review.reviewee || review.freelancer || review.user)
+            : review.reviewer;
+          const displayNameReview = isClientProfile
+            ? (displayProfile?.user?.fullName || displayProfile?.fullName || "Bird Earner user")
+            : (review.reviewer?.user?.fullName || "Bird Earner user");
+          const displayPhoto = isClientProfile
+            ? (displayProfile?.profilePhoto || displayProfile?.user?.profilePhoto)
+            : review.reviewer?.profilePhoto;
+
+          return (
+            <View key={review.id} style={uiStyles.reviewCard}>
+              <View style={uiStyles.reviewHeader}>
+                <Image
+                  source={
+                    displayPhoto
+                      ? { uri: getImageUri(displayPhoto) }
+                      : require("../assets/profile.png")
+                  }
+                  style={uiStyles.reviewAvatar}
+                />
+                <View style={uiStyles.reviewMeta}>
+                  <Text style={uiStyles.reviewerName}>
+                    {displayNameReview}
+                  </Text>
+                  <View style={uiStyles.reviewStars}>
+                    {[1, 2, 3, 4, 5].map((item) => (
+                      <FontAwesome
+                        key={item}
+                        name={item <= Number(review.rating || 0) ? "star" : "star-o"}
+                        size={15}
+                        color="#A855F7"
+                      />
+                    ))}
+                  </View>
                 </View>
+                <Text style={uiStyles.reviewDate}>
+                  {formatMemberSince(review.createdAt)}
+                </Text>
               </View>
-              <Text style={uiStyles.reviewDate}>
-                {formatMemberSince(review.createdAt)}
+              <Text style={uiStyles.reviewText}>
+                {review.reviewText || "No review text provided"}
               </Text>
             </View>
-            <Text style={uiStyles.reviewText}>
-              {review.reviewText || "No review text provided"}
-            </Text>
-          </View>
-        ))
+          );
+        })
       ) : (
         <View style={uiStyles.reviewEmptyCard}>
           <View style={uiStyles.purpleIconBox}>
@@ -747,7 +838,9 @@ function ReviewsTab({ uiStyles, reviews = [], stats, profileData }) {
           </View>
           <Text style={uiStyles.reviewEmptyTitle}>No reviews yet</Text>
           <Text style={uiStyles.reviewEmptySubtitle}>
-            Reviews from completed work will appear here.
+            {isClientProfile
+              ? "Reviews you've written for freelancers will appear here."
+              : "Reviews from completed work will appear here."}
           </Text>
         </View>
       )}

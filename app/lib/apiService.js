@@ -3,7 +3,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 
-const DEV_API_BASE_URL = "https://newbie-authorized-income-deborah.trycloudflare.com/api";
+const DEV_API_BASE_URL = "https://exercise-copying-dad-volumes.trycloudflare.com/api";
 // const DEV_API_BASE_URL = "https://api.birdearner.com/api";
 
 const PROD_API_BASE_URL = "https://api.birdearner.com/api";
@@ -1033,6 +1033,28 @@ class ApiService {
       return response;
     } catch (error) {
       throw new Error(`Failed to fetch review statistics: ${error.message}`);
+    }
+  }
+
+  // Get reviews given by a user (where user is the reviewer)
+  async getReviewsGivenByUserId(userId) {
+    try {
+      const response = await this.makeRequest(`/reviews/given/${userId}`);
+      return response.data || response || [];
+    } catch (error) {
+      console.warn("Failed to fetch reviews given:", error.message);
+      return [];
+    }
+  }
+
+  // Get review statistics for reviews given by a user
+  async getReviewStatsGiven(userId) {
+    try {
+      const response = await this.makeRequest(`/reviews/given-stats/${userId}`);
+      return response.data || response || null;
+    } catch (error) {
+      console.warn("Failed to fetch review stats given:", error.message);
+      return null;
     }
   }
 

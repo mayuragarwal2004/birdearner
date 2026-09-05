@@ -1,6 +1,6 @@
 import { useAuth } from "../context/NewAuthContext";
 import { useTheme } from "../context/ThemeContext";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -12,18 +12,14 @@ import {
   Modal,
   RefreshControl,
   Alert,
-  Animated,
-  Easing,
 } from "react-native";
 import SafeSpinner from "../components/SafeSpinner";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { FontAwesome, MaterialIcons } from "@expo/vector-icons";
 import ImageViewer from "react-native-image-zoom-viewer";
 import Toast from "react-native-toast-message";
-import LottieView from "lottie-react-native";
 import apiService from "../lib/apiService";
 
-const AnimatedLottieView = Animated.createAnimatedComponent(LottieView);
 const PURPLE = "#7B2CFF";
 const DEEP_PURPLE = "#1B1028";
 const TEXT = "#101114";
@@ -113,10 +109,6 @@ export default function ProfileScreen({ navigation }) {
     user,
     loading,
     userData,
-    logout,
-    roleOptions,
-    handleRoleSelection,
-    switchUserRole,
     refreshUserData,
     userProfile,
     setUserProfile,
@@ -126,10 +118,7 @@ export default function ProfileScreen({ navigation }) {
   const [modalVisible, setModalVisible] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [images, setImages] = useState([]);
-  const [modalVisiblet, setModalVisiblet] = useState(false);
-  const [switchingRole, setSwitchingRole] = useState(false);
   const [activeTab, setActiveTab] = useState("About");
-  const animationProgress = useRef(new Animated.Value(0));
   const [userServices, setUserServices] = useState([]);
   const [reviews, setReviews] = useState([]);
   const [reviewStats, setReviewStats] = useState(null);
@@ -161,18 +150,23 @@ export default function ProfileScreen({ navigation }) {
       const targetUserId = userProfile?.userId || userData?.id;
       if (!targetUserId) return;
       try {
-        const [reviewsResponse, statsResponse] = await Promise.all([
-          apiService.getReviewsByUserId(targetUserId),
-          apiService.getReviewStats(targetUserId),
-        ]);
+        const isClient = role === "CLIENT";
 
-        const reviewList = Array.isArray(reviewsResponse)
-          ? reviewsResponse
-          : reviewsResponse?.data || reviewsResponse?.reviews || [];
-        const statsObj = statsResponse?.data || (statsResponse?.totalReviews !== undefined ? statsResponse : null);
-
-        setReviews(reviewList);
-        setReviewStats(statsObj);
+        if (isClient) {
+          const [reviewList, statsObj] = await Promise.all([
+            apiService.getReviewsGivenByUserId(targetUserId),
+            apiService.getReviewStatsGiven(targetUserId),
+          ]);
+          setReviews(Array.isArray(reviewList) ? reviewList : []);
+          setReviewStats(statsObj);
+        } else {
+          const [reviewList, statsObj] = await Promise.all([
+            apiService.getReviewsByUserId(targetUserId),
+            apiService.getReviewStats(targetUserId),
+          ]);
+          setReviews(Array.isArray(reviewList) ? reviewList : []);
+          setReviewStats(statsObj);
+        }
       } catch (err) {
         console.warn("Failed to load user reviews:", err.message);
         setReviews([]);
@@ -180,7 +174,7 @@ export default function ProfileScreen({ navigation }) {
       }
     };
     loadReviews();
-  }, [userProfile?.userId, userData?.id]);
+  }, [userProfile?.userId, userData?.id, role]);
 
   useEffect(() => {
     const loadServices = async () => {
@@ -201,67 +195,6 @@ export default function ProfileScreen({ navigation }) {
   const styles = getStyles(currentTheme);
 
   const formattedDate = formatMemberSince(data?.createdAt || userData?.createdAt);
-  // ... (other hooks and functions)
-
-  const transitionText =
-    userData?.role === "FREELANCER"
-      ? "Switching to Client"
-      : "Switching to Freelancer";
-
-  const runRoleSwitchAnimation = () =>
-    new Promise((resolve) => {
-      animationProgress.current.setValue(0);
-      Animated.timing(animationProgress.current, {
-        toValue: 1,
-        duration: 2500,
-        easing: Easing.linear,
-        useNativeDriver: false,
-      }).start(resolve);
-    });
-
-  const handleRoleSwitch = async (newRoleData) => {
-    if (switchingRole) return;
-
-    const newRole = newRoleData?.role;
-    if (!newRole || newRole === userData?.role) return;
-
-    try {
-      setSwitchingRole(true);
-      setModalVisiblet(true);
-
-      await Promise.all([
-        runRoleSwitchAnimation(),
-        switchUserRole(newRole),
-      ]);
-    } catch (error) {
-      console.error("Error switching role:", error);
-      Alert.alert("Error", "Failed to switch role. Please try again.");
-    } finally {
-      setModalVisiblet(false);
-      setSwitchingRole(false);
-      animationProgress.current.setValue(0);
-    }
-  };
-
-  const handleSetupRole = async (roleType) => {
-    try {
-      if (roleType === "client") {
-        // Navigate to ClientSignup in create mode for existing users
-        navigation.navigate("ClientSignup", {
-          mode: "create",
-          title: "Create Client Profile",
-        });
-      } else if (roleType === "freelancer") {
-        // Navigate to FreelancerSignup in create mode for existing users
-        navigation.navigate("FreelancerSignup", {
-          mode: "create",
-          title: "Create Freelancer Profile",
-        });
-      }
-    } catch (error) {
-      Alert.alert("Error setting up role:", error.message);
-    }
-  };
 
   const onRefresh = async () => {
     console.log("Refreshing...");
@@ -463,19 +396,26 @@ export default function ProfileScreen({ navigation }) {
             })}
           </View>
         ) : (
-          <View style={styles.tabShell}>
-            <TouchableOpacity style={styles.profileTabButton} activeOpacity={0.85}>
-              <Text style={styles.profileTabTextActive}>My Profile</Text>
-              <View style={styles.profileTabIndicatorActive} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.profileTabButton}
-              activeOpacity={0.85}
-              onPress={() => navigation.navigate("MyReview", { profileData: data })}
-            >
-              <Text style={styles.profileTabText}>My Reviews</Text>
-              <View style={styles.profileTabIndicator} />
-            </TouchableOpacity>
+          <View style={styles.freelancerTabShell}>
+            {[
+              { key: "About", label: "About Me" },
+              { key: "Reviews", label: "Reviews" },
+            ].map(({ key, label }) => {
+              const active = activeTab === key;
+              return (
+                <TouchableOpacity
+                  key={key}
+                  style={styles.freelancerTabButton}
+                  onPress={() => setActiveTab(key)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.freelancerTabText, active && styles.freelancerTabTextActive]}>
+                    {label}
+                  </Text>
+                  {active && <View style={styles.freelancerTabIndicatorActive} />}
+                </TouchableOpacity>
+              );
+            })}
           </View>
         )}
 
@@ -822,115 +762,119 @@ export default function ProfileScreen({ navigation }) {
             </>
           ) : (
             <>
-              <Text style={styles.sectionTitleLeft}>About me</Text>
-              <Text style={styles.aboutDescription}>
-                {data?.profileDescription || "No description available"}
-              </Text>
+              {activeTab === "About" && (
+                <View>
+                  <Text style={styles.sectionTitleLeft}>About me</Text>
+                  <Text style={styles.aboutDescription}>
+                    {data?.profileDescription || "No description available"}
+                  </Text>
 
-              <View style={styles.infoList}>
-                <InfoRow
-                  styles={styles}
-                  icon="business"
-                  label="Company"
-                  value={data?.companyName || data?.company_name || "Not added"}
-                />
-                <InfoRow
-                  styles={styles}
-                  icon="place"
-                  label="From"
-                  value={formatLocation(data, userData)}
-                />
-                <InfoRow
-                  styles={styles}
-                  icon="calendar-today"
-                  label="Member Since"
-                  value={formattedDate}
-                />
-              </View>
+                  <View style={styles.infoList}>
+                    <InfoRow
+                      styles={styles}
+                      icon="person"
+                      label="Role"
+                      value="Client"
+                    />
+                    <InfoRow
+                      styles={styles}
+                      icon="calendar-today"
+                      label="Member Since"
+                      value={formattedDate}
+                    />
+                  </View>
+
+                  {parseArray(data?.languages).length > 0 && (
+                    <>
+                      <Text style={styles.sectionTitleLeft}>Languages</Text>
+                      <View style={styles.languageList}>
+                        {parseArray(data?.languages).map((lang, idx) => (
+                          <View key={idx} style={styles.infoRow}>
+                            <MaterialIcons name="g-translate" size={22} color={PURPLE} />
+                            <Text style={styles.infoLabel}>
+                              {typeof lang === 'string' ? lang : lang.name || lang.language || 'English'}
+                            </Text>
+                            <Text style={styles.infoValue}>
+                              {typeof lang === 'object' && lang.proficiency ? lang.proficiency : 'Fluent'}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                    </>
+                  )}
+                </View>
+              )}
+
+              {activeTab === "Reviews" && (
+                <View>
+                  {/* Section Header */}
+                  <View style={styles.recentReviewsHeader}>
+                    <Text style={styles.recentReviewsTitle}>Reviews Given</Text>
+                    <Text style={styles.recentReviewsMeta}>
+                      {reviews.length || 0} total
+                    </Text>
+                  </View>
+
+                  {/* Review items or Empty Card */}
+                  {reviews.length > 0 ? (
+                    reviews.map((review) => {
+                      const displayProfile = review.reviewee || review.freelancer || review.user;
+                      const displayNameReview = displayProfile?.user?.fullName || displayProfile?.fullName || "Bird Earner user";
+                      const displayPhoto = displayProfile?.profilePhoto || displayProfile?.user?.profilePhoto;
+
+                      return (
+                        <View key={review.id} style={styles.reviewCard}>
+                          <View style={styles.reviewHeader}>
+                            <Image
+                              source={
+                                displayPhoto
+                                  ? { uri: getImageUri(displayPhoto) }
+                                  : require("../assets/profile.png")
+                              }
+                              style={styles.reviewerAvatar}
+                            />
+                            <View style={styles.reviewMeta}>
+                              <Text style={styles.reviewerName}>
+                                {displayNameReview}
+                              </Text>
+                              <View style={styles.reviewStars}>
+                                {[1, 2, 3, 4, 5].map((item) => (
+                                  <FontAwesome
+                                    key={item}
+                                    name={item <= Number(review.rating || 0) ? "star" : "star-o"}
+                                    size={15}
+                                    color="#A855F7"
+                                  />
+                                ))}
+                              </View>
+                            </View>
+                            <Text style={styles.reviewDate}>
+                              {formatMemberSince(review.createdAt)}
+                            </Text>
+                          </View>
+                          <Text style={styles.reviewText}>
+                            {review.reviewText || "No review text provided"}
+                          </Text>
+                        </View>
+                      );
+                    })
+                  ) : (
+                    <View style={styles.reviewEmptyCard}>
+                      <View style={styles.purpleIconBox}>
+                        <MaterialIcons name="rate-review" size={26} color="#FFFFFF" />
+                      </View>
+                      <Text style={styles.reviewEmptyTitle}>No reviews yet</Text>
+                      <Text style={styles.reviewEmptySubtitle}>
+                        Reviews you've written for freelancers will appear here.
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              )}
             </>
           )}
         </View>
 
-        {/* Role switch button (Only for non-freelancer profile view) */}
-        {role !== "FREELANCER" && userData && (
-          <>
-            {userData.freelancer && userData.client ? (
-              <TouchableOpacity
-                style={[
-                  styles.editProfileButton,
-                  switchingRole && styles.buttonDisabled,
-                ]}
-                disabled={switchingRole}
-                onPress={() =>
-                  handleRoleSwitch(
-                    userData.role === "FREELANCER"
-                      ? { role: "CLIENT" }
-                      : { role: "FREELANCER" }
-                  )
-                }
-              >
-                <Text style={styles.buttonText}>
-                  Switch to{" "}
-                  {userData.role === "FREELANCER" ? "Client" : "Freelancer"}
-                </Text>
-              </TouchableOpacity>
-            ) : (
-              <>
-                {!userData.client && userData.role === "FREELANCER" ? (
-                  <TouchableOpacity
-                    style={styles.editProfileButton}
-                    onPress={() => handleSetupRole("client")}
-                  >
-                    <Text style={styles.buttonText}>Setup Client Profile</Text>
-                  </TouchableOpacity>
-                ) : !userData.freelancer && userData.role === "CLIENT" ? (
-                  <TouchableOpacity
-                    style={styles.editProfileButton}
-                    onPress={() => handleSetupRole("freelancer")}
-                  >
-                    <Text style={styles.buttonText}>
-                      Setup Freelancer Profile
-                    </Text>
-                  </TouchableOpacity>
-                ) : null}
-              </>
-            )}
-          </>
-        )}
-
-        {/* Modal for Transition Animation */}
-        <Modal
-          animationType="fade"
-          transparent={true}
-          visible={modalVisiblet}
-          onRequestClose={() => {
-            if (!switchingRole) setModalVisiblet(false);
-          }}
-        >
-          <View style={[styles.modalContainer, {}]}>
-            <AnimatedLottieView
-              source={require("../../assets/loader-bird.json")}
-              progress={animationProgress.current}
-              style={[styles.modalContent]}
-            />
-          </View>
-        </Modal>
-
-        {/* Log out button (Only for non-freelancer profile view) */}
-        {role !== "FREELANCER" && (
-          <TouchableOpacity
-            onPress={async () => {
-              try {
-                await logout();
-                showToast("success", "Logged out successfully!");
-              } catch (error) {
-                showToast("error", "Logout Failed", error.message);
-              }
-            }}
-          >
-            <Text style={styles.deactivateLink}>Log out</Text>
-          </TouchableOpacity>
-        )}
         <Toast />
       </ScrollView>
     </SafeAreaView>

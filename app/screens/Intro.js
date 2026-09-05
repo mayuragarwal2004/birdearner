@@ -99,9 +99,6 @@ const Intro = ({ navigation }) => {
 
         {/* App Name */}
         <Text style={[styles.title, { color: "white" }]}>BirdEARNER</Text>
-        <Text style={[styles.subtitle, { color: "white" }]}>
-          Be BirdEARNER, Become Bread Earner!
-        </Text>
 
         {/* Loading Indicator */}
         {loading && (
@@ -111,24 +108,6 @@ const Intro = ({ navigation }) => {
             style={styles.loadingIndicator}
           />
         )}
-
-        {/* Social Icons */}
-        <View style={styles.socialContainer}>
-          <TouchableOpacity 
-            style={styles.socialIcon}
-            onPress={() => handleSocialMediaPress("instagram")}
-            activeOpacity={0.7}
-          >
-            <InstagramLogoIcon size={24} color="white" />
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.socialIcon}
-            onPress={() => handleSocialMediaPress("x")}
-            activeOpacity={0.7}
-          >
-            <XLogoIcon size={24} color="white" />
-          </TouchableOpacity>
-        </View>
       </View>
     </SafeAreaView>
   );

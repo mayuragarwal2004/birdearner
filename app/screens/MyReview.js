@@ -132,20 +132,30 @@ export default function MyReview({ navigation, route }) {
 
     setLoadingProfile(true);
     try {
-      const [reviewsResponse, statsResponse] = await Promise.all([
-        apiService.getReviewsByUserId(profileUserId),
-        apiService.getReviewStats(profileUserId),
-      ]);
+      const isClient = role === "CLIENT";
 
-      setReviews(reviewsResponse?.success ? reviewsResponse.data || [] : []);
-      setReviewStats(statsResponse?.success ? statsResponse.data : null);
+      if (isClient) {
+        const [reviewList, statsObj] = await Promise.all([
+          apiService.getReviewsGivenByUserId(profileUserId),
+          apiService.getReviewStatsGiven(profileUserId),
+        ]);
+        setReviews(Array.isArray(reviewList) ? reviewList : []);
+        setReviewStats(statsObj);
+      } else {
+        const [reviewList, statsObj] = await Promise.all([
+          apiService.getReviewsByUserId(profileUserId),
+          apiService.getReviewStats(profileUserId),
+        ]);
+        setReviews(Array.isArray(reviewList) ? reviewList : []);
+        setReviewStats(statsObj);
+      }
     } catch (error) {
       console.error("Failed to fetch reviews:", error);
       showToast("error", "Error", "Failed to fetch reviews");
     } finally {
       setLoadingProfile(false);
     }
-  }, [profileUserId]);
+  }, [profileUserId, role]);
 
   const loadUserServices = useCallback(async () => {
     if (role !== "FREELANCER") {
