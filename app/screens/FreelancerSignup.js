@@ -1870,71 +1870,75 @@ const FreelancerSignup = ({ navigation, route }) => {
                 {/* 11. Certifications */}
                 <Text style={styles.sectionNumberTitle}>11. Certifications</Text>
                 {form.certifications.map((cert, i) => (
-                  <View key={i} style={styles.certRow}>
-                    <View style={[styles.gridCol, { flex: 1 }]}>
-                      <View style={styles.inputContainer}>
-                        <View style={styles.iconBox}>
-                          <Award size={20} color="#7C3AED" />
+                  <View key={i} style={styles.certBlock}>
+                    <View style={styles.certTopRow}>
+                      <View style={[styles.gridCol, { flex: 1 }]}>
+                        <View style={styles.inputContainer}>
+                          <View style={styles.iconBox}>
+                            <Award size={20} color="#7C3AED" />
+                          </View>
+                          <TextInput
+                            placeholderTextColor="#A098AE"
+                            style={styles.textInput}
+                            placeholder="Certificate name"
+                            value={cert}
+                            onChangeText={(v) =>
+                              setForm({
+                                ...form,
+                                certifications: form.certifications.map((c, idx) =>
+                                  idx === i ? v : c
+                                ),
+                              })
+                            }
+                          />
                         </View>
-                        <TextInput
-                          placeholderTextColor="#A098AE"
-                          style={styles.textInput}
-                          placeholder="Certificate name"
-                          value={cert}
-                          onChangeText={(v) =>
+                      </View>
+
+                      {form.certifications.length > 1 && (
+                        <TouchableOpacity
+                          style={styles.trashIconButton}
+                          onPress={() => {
                             setForm({
                               ...form,
-                              certifications: form.certifications.map((c, idx) =>
-                                idx === i ? v : c
+                              certifications: form.certifications.filter(
+                                (_, idx) => idx !== i
                               ),
-                            })
-                          }
-                        />
-                      </View>
+                            });
+                          }}
+                        >
+                          <Trash2 size={18} color="#EF4444" />
+                        </TouchableOpacity>
+                      )}
                     </View>
 
-                    <View style={[styles.gridCol, { flex: 1 }]}>
-                      <View style={styles.inputContainer}>
-                        <View style={styles.iconBox}>
-                          <Building size={20} color="#7C3AED" />
+                    <View style={styles.certBottomRow}>
+                      <View style={[styles.gridCol, { flex: 1 }]}>
+                        <View style={styles.inputContainer}>
+                          <View style={styles.iconBox}>
+                            <Building size={20} color="#7C3AED" />
+                          </View>
+                          <TextInput
+                            placeholderTextColor="#A098AE"
+                            style={styles.textInput}
+                            placeholder="University / Institute"
+                          />
                         </View>
-                        <TextInput
-                          placeholderTextColor="#A098AE"
-                          style={styles.textInput}
-                          placeholder="University / Institute"
-                        />
                       </View>
-                    </View>
 
-                    <View style={[styles.gridCol, { flex: 0.8 }]}>
-                      <View style={styles.inputContainer}>
-                        <View style={styles.iconBox}>
-                          <Calendar size={20} color="#7C3AED" />
+                      <View style={[styles.gridCol, { flex: 0.5 }]}>
+                        <View style={styles.inputContainer}>
+                          <View style={styles.iconBox}>
+                            <Calendar size={20} color="#7C3AED" />
+                          </View>
+                          <TextInput
+                            placeholderTextColor="#A098AE"
+                            style={styles.textInput}
+                            placeholder="Year"
+                            keyboardType="numeric"
+                          />
                         </View>
-                        <TextInput
-                          placeholderTextColor="#A098AE"
-                          style={styles.textInput}
-                          placeholder="Year"
-                          keyboardType="numeric"
-                        />
                       </View>
                     </View>
-
-                    {form.certifications.length > 1 && (
-                      <TouchableOpacity
-                        style={styles.trashIconButton}
-                        onPress={() => {
-                          setForm({
-                            ...form,
-                            certifications: form.certifications.filter(
-                              (_, idx) => idx !== i
-                            ),
-                          });
-                        }}
-                      >
-                        <Trash2 size={18} color="#EF4444" />
-                      </TouchableOpacity>
-                    )}
                   </View>
                 ))}
 
@@ -2741,6 +2745,20 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+  },
+  certBlock: {
+    marginBottom: 8,
+  },
+  certTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  certBottomRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 8,
   },
   trashIconButton: {
     width: 44,
