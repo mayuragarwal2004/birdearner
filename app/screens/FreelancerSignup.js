@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  SafeAreaView,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -14,6 +13,7 @@ import {
   Alert,
   Modal,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import Checkbox from "expo-checkbox";
 import Toast from "react-native-toast-message";
@@ -131,6 +131,33 @@ const indianStates = [
   { label: "West Bengal", value: "West Bengal" },
 ];
 
+const parseJsonField = (value, fallback) => {
+  if (value === null || value === undefined) return fallback;
+  if (Array.isArray(value)) return value;
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : fallback;
+    } catch {
+      return fallback;
+    }
+  }
+  return fallback;
+};
+
+const normalizeFreelancerData = (data) => {
+  if (!data) return data;
+  return {
+    ...data,
+    selectedServices: parseJsonField(data.selectedServices, []),
+    certifications: parseJsonField(data.certifications, []),
+    socialMediaLinks: parseJsonField(data.socialMediaLinks, []),
+    portfolioImages: parseJsonField(data.portfolioImages, []),
+    skills: parseJsonField(data.skills, []),
+    languages: parseJsonField(data.languages, []),
+  };
+};
+
 const assetSchema = z.any();
 
 // Create conditional schema based on mode
@@ -192,7 +219,7 @@ const createSchema = (mode) => {
 };
 
 const FreelancerSignup = ({ navigation, route }) => {
-  const { register, user, refreshUserData } = useAuth();
+  const { register, user, userData, userProfile, refreshUserData } = useAuth();
 
   // Extract route params
   const {
@@ -211,9 +238,11 @@ const FreelancerSignup = ({ navigation, route }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  const initialFreelancer = normalizeFreelancerData(profileData || userProfile || userData?.freelancer);
+
   const [availableServices, setAvailableServices] = useState([]);
   const [selectedServices, setSelectedServices] = useState(
-    user?.freelancer?.selectedServices || []
+    initialFreelancer?.selectedServices || []
   );
   const [servicesLoading, setServicesLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -230,52 +259,61 @@ const FreelancerSignup = ({ navigation, route }) => {
 
   // Languages & Freelancer mode state extensions
   const [workType, setWorkType] = useState("remote"); // 'remote' or 'onsite'
-  const [freelancerCategory, setFreelancerCategory] = useState("");
+  const [freelancerCategory, setFreelancerCategory] = useState(initialFreelancer?.freelancerCategory || "");
   const [languageInput, setLanguageInput] = useState("");
   const [selectedProficiency, setSelectedProficiency] = useState("");
-  const [languageList, setLanguageList] = useState([
-    { name: "English", level: "Fluent" },
-    { name: "Hindi", level: "Native" },
-  ]);
+  const [languageList, setLanguageList] = useState(
+    (initialFreelancer?.languages?.length ? initialFreelancer.languages : null) || [
+      { name: "English", level: "Fluent" },
+      { name: "Hindi", level: "Native" },
+    ]
+  );
   const [skillInput, setSkillInput] = useState("");
-  const [skillsList, setSkillsList] = useState([]);
+  const [skillsList, setSkillsList] = useState(initialFreelancer?.skills || []);
 
   const [form, setForm] = useState({
-    full_name: user?.fullName || "",
+    full_name: userData?.fullName || user?.fullName || "",
     mobile: initialMobile || "",
-    email: initialEmail || user?.email || "",
+    email: initialEmail || userData?.email || user?.email || "",
     password: "",
     confirmPassword: "",
     termsAccepted: false,
-    qualification: user?.freelancer?.highestQualification || "",
-    experience: user?.freelancer?.experience
-      ? user.freelancer.experience.toString()
+    qualification: initialFreelancer?.highestQualification || "",
+    experience: initialFreelancer?.experience
+      ? initialFreelancer.experience.toString()
       : "",
-    heading: user?.freelancer?.profileHeading || "",
-    zipCode: user?.freelancer?.zipcode
-      ? user.freelancer.zipcode.toString()
+    heading: initialFreelancer?.profileHeading || "",
+    zipCode: initialFreelancer?.zipcode
+      ? initialFreelancer.zipcode.toString()
       : "",
-    city: user?.freelancer?.city || "",
-    state: user?.freelancer?.state || "",
-    country: user?.freelancer?.country || "India",
-    bio: user?.freelancer?.profileDescription || "",
+    city: initialFreelancer?.city || "",
+    state: initialFreelancer?.state || "",
+    country: initialFreelancer?.country || "India",
+    bio: initialFreelancer?.profileDescription || "",
     autoFilledLocation: false,
-    gender: user?.freelancer?.gender || "",
-    dob: user?.freelancer?.dob ? new Date(user.freelancer.dob) : null,
-    certifications: user?.freelancer?.certifications?.length
-      ? user.freelancer.certifications
+    gender: initialFreelancer?.gender || "",
+    dob: initialFreelancer?.dob ? new Date(initialFreelancer.dob) : null,
+    certifications: (() => {
+      const raw = initialFreelancer?.certifications;
+      if (!raw || (Array.isArray(raw) && raw.length === 0)) return [{ name: "", university: "", year: "" }];
+      const parsed = Array.isArray(raw) ? raw : [];
+      return parsed.map((c) => {
+        if (typeof c === "string") return { name: c, university: "", year: "" };
+        if (typeof c === "object" && c !== null) return { name: c.name || c.certification || "", university: c.university || "", year: c.year || "" };
+        return { name: "", university: "", year: "" };
+      });
+    })(),
+    socialLinks: initialFreelancer?.socialMediaLinks?.length
+      ? initialFreelancer.socialMediaLinks
       : [""],
-    socialLinks: user?.freelancer?.socialMediaLinks?.length
-      ? user.freelancer.socialMediaLinks
-      : [""],
-    profileImage: user?.freelancer?.profilePhoto
-      ? { uri: user.freelancer.profilePhoto, isExisting: true }
+    profileImage: initialFreelancer?.profilePhoto
+      ? { uri: initialFreelancer.profilePhoto, isExisting: true }
       : null,
-    coverImage: user?.freelancer?.coverPhoto
-      ? { uri: user.freelancer.coverPhoto, isExisting: true }
+    coverImage: initialFreelancer?.coverPhoto
+      ? { uri: initialFreelancer.coverPhoto, isExisting: true }
       : null,
-    portfolioImages: user?.freelancer?.portfolioImages?.length
-      ? user.freelancer.portfolioImages.map((item) => {
+    portfolioImages: initialFreelancer?.portfolioImages?.length
+      ? initialFreelancer.portfolioImages.map((item) => {
           const uri = typeof item === "string" ? item : item?.uri || item?.url || "";
           const isPdf = uri.toLowerCase().endsWith(".pdf") ||
             (typeof item === "object" && item?.mimeType === "application/pdf");
@@ -288,12 +326,12 @@ const FreelancerSignup = ({ navigation, route }) => {
           };
         })
       : [],
-    agreePortfolioTerms: user?.freelancer?.termsAccepted || false,
-    termsAndConditions: false,
-    selectedServices: user?.freelancer?.selectedServices || [],
+    agreePortfolioTerms: initialFreelancer?.termsAccepted || false,
+    termsAndConditions: mode === "update" ? (initialFreelancer?.termsAccepted || false) : false,
+    selectedServices: initialFreelancer?.selectedServices || [],
     suggestedService: null,
-    freelancerCategory: user?.freelancer?.freelancerCategory || "",
-    skills: user?.freelancer?.skills || [],
+    freelancerCategory: initialFreelancer?.freelancerCategory || "",
+    skills: initialFreelancer?.skills || [],
   });
 
   const [deletedImages, setDeletedImages] = useState([]);
@@ -309,11 +347,11 @@ const FreelancerSignup = ({ navigation, route }) => {
   }, [initialMobile, initialEmail]);
 
   useEffect(() => {
-    const dataSource = profileData || user?.freelancer;
+    const dataSource = normalizeFreelancerData(profileData || userProfile || userData?.freelancer);
     if (mode === "update" && dataSource) {
       setForm((prevForm) => ({
         ...prevForm,
-        full_name: user?.fullName || prevForm.full_name,
+        full_name: userData?.fullName || user?.fullName || prevForm.full_name,
         qualification: dataSource.highestQualification || prevForm.qualification,
         experience: dataSource.experience
           ? dataSource.experience.toString()
@@ -329,7 +367,11 @@ const FreelancerSignup = ({ navigation, route }) => {
         gender: dataSource.gender || prevForm.gender,
         dob: dataSource.dob ? new Date(dataSource.dob) : prevForm.dob,
         certifications: dataSource.certifications?.length
-          ? dataSource.certifications
+          ? dataSource.certifications.map((c) => {
+              if (typeof c === "string") return { name: c, university: "", year: "" };
+              if (typeof c === "object" && c !== null) return { name: c.name || c.certification || "", university: c.university || "", year: c.year || "" };
+              return { name: "", university: "", year: "" };
+            })
           : prevForm.certifications,
         socialLinks: dataSource.socialMediaLinks?.length
           ? dataSource.socialMediaLinks
@@ -356,6 +398,8 @@ const FreelancerSignup = ({ navigation, route }) => {
           : prevForm.portfolioImages,
         agreePortfolioTerms:
           dataSource.termsAccepted || prevForm.agreePortfolioTerms,
+        termsAndConditions:
+          dataSource.termsAccepted !== undefined ? dataSource.termsAccepted : prevForm.termsAndConditions,
       }));
 
       if (dataSource.selectedServices) {
@@ -382,8 +426,12 @@ const FreelancerSignup = ({ navigation, route }) => {
         setSkillsList(dataSource.skills);
         setForm((prevForm) => ({ ...prevForm, skills: dataSource.skills }));
       }
+
+      if (dataSource.languages && Array.isArray(dataSource.languages) && dataSource.languages.length > 0) {
+        setLanguageList(dataSource.languages);
+      }
     }
-  }, [mode, user?.id, profileData]);
+  }, [mode, user?.id, userProfile, userData, profileData]);
 
   const isValidIndianPincode = (pincode) => {
     const indianPincodeRegex = /^[1-9][0-9]{5}$/;
@@ -599,7 +647,7 @@ const FreelancerSignup = ({ navigation, route }) => {
   const addSocialLink = () =>
     setForm({ ...form, socialLinks: [...form.socialLinks, ""] });
   const addCertification = () =>
-    setForm({ ...form, certifications: [...form.certifications, ""] });
+    setForm({ ...form, certifications: [...form.certifications, { name: "", university: "", year: "" }] });
 
   const addLanguage = () => {
     if (!languageInput.trim()) {
@@ -722,10 +770,11 @@ const FreelancerSignup = ({ navigation, route }) => {
   }, []);
 
   useEffect(() => {
-    if (mode === "update" && user?.freelancer?.selectedServices) {
-      setSelectedServices(user.freelancer.selectedServices);
+    const dataSource = normalizeFreelancerData(profileData || userProfile || userData?.freelancer);
+    if (mode === "update" && dataSource?.selectedServices) {
+      setSelectedServices(dataSource.selectedServices);
     }
-  }, [mode, user?.freelancer?.selectedServices]);
+  }, [mode, profileData, userProfile, userData]);
 
   useEffect(() => {
     if (searchQuery.trim() === "") {
@@ -880,23 +929,26 @@ const FreelancerSignup = ({ navigation, route }) => {
   const handleSubmit = async () => {
     setIsLoading(true);
 
-    const formToValidate = {
-      ...form,
-      freelancerCategory,
-      skills: skillsList,
-    };
-    const result = schema.safeParse(formToValidate);
-    if (!result.success) {
-      setIsLoading(false);
-      showToast("error", "Validation Error", result.error.errors[0].message);
-      return;
+    if (mode !== "update") {
+      const formToValidate = {
+        ...form,
+        freelancerCategory,
+        skills: skillsList,
+      };
+      const result = schema.safeParse(formToValidate);
+      if (!result.success) {
+        setIsLoading(false);
+        showToast("error", "Validation Error", result.error.errors[0].message);
+        return;
+      }
     }
 
     const cleanedForm = {
       ...form,
       freelancerCategory,
       skills: skillsList,
-      certifications: form.certifications.filter((cert) => cert.trim() !== ""),
+      languages: languageList,
+      certifications: form.certifications.filter((cert) => cert.name?.trim() !== "" || cert.university?.trim() !== ""),
       socialLinks: form.socialLinks.filter((link) => link.trim() !== ""),
     };
 
@@ -1061,6 +1113,7 @@ const FreelancerSignup = ({ navigation, route }) => {
           fullName: cleanedForm.full_name,
           freelancerCategory: cleanedForm.freelancerCategory,
           skills: cleanedForm.skills,
+          languages: cleanedForm.languages,
         };
 
         Object.keys(freelancerCreateData).forEach((key) => {
@@ -1107,6 +1160,7 @@ const FreelancerSignup = ({ navigation, route }) => {
           deletedImages: deletedImages,
           freelancerCategory: cleanedForm.freelancerCategory,
           skills: cleanedForm.skills,
+          languages: cleanedForm.languages,
         };
 
         Object.keys(freelancerUpdateData).forEach((key) => {
@@ -1119,7 +1173,7 @@ const FreelancerSignup = ({ navigation, route }) => {
           }
         });
 
-        const freelancerIdToUpdate = profileData?.id || userProfile?.id || user?.freelancer?.id;
+        const freelancerIdToUpdate = profileData?.id || userProfile?.id || userData?.freelancer?.id;
         result = await apiService.updateFreelancerProfile(
           freelancerIdToUpdate,
           freelancerUpdateData
@@ -1881,12 +1935,12 @@ const FreelancerSignup = ({ navigation, route }) => {
                             placeholderTextColor="#A098AE"
                             style={styles.textInput}
                             placeholder="Certificate name"
-                            value={cert}
+                            value={cert.name || ""}
                             onChangeText={(v) =>
                               setForm({
                                 ...form,
                                 certifications: form.certifications.map((c, idx) =>
-                                  idx === i ? v : c
+                                  idx === i ? { ...c, name: v } : c
                                 ),
                               })
                             }
@@ -1921,6 +1975,15 @@ const FreelancerSignup = ({ navigation, route }) => {
                             placeholderTextColor="#A098AE"
                             style={styles.textInput}
                             placeholder="University / Institute"
+                            value={cert.university || ""}
+                            onChangeText={(v) =>
+                              setForm({
+                                ...form,
+                                certifications: form.certifications.map((c, idx) =>
+                                  idx === i ? { ...c, university: v } : c
+                                ),
+                              })
+                            }
                           />
                         </View>
                       </View>
@@ -1935,6 +1998,15 @@ const FreelancerSignup = ({ navigation, route }) => {
                             style={styles.textInput}
                             placeholder="Year"
                             keyboardType="numeric"
+                            value={cert.year || ""}
+                            onChangeText={(v) =>
+                              setForm({
+                                ...form,
+                                certifications: form.certifications.map((c, idx) =>
+                                  idx === i ? { ...c, year: v } : c
+                                ),
+                              })
+                            }
                           />
                         </View>
                       </View>
@@ -1985,136 +2057,111 @@ const FreelancerSignup = ({ navigation, route }) => {
               </View>
             )}
 
-            {/* Step 5: Add Your Portfolio (Exact Match to Image 5 Reference) */}
+            {/* Step 5: Add Your Portfolio */}
             {step === 5 && (
               <View style={styles.card}>
                 <View style={styles.portfolioGridContainer}>
-                  {/* Top Row: Left big upload box + Right 2 stacked small upload boxes */}
-                  <View style={styles.portfolioGridWrapper}>
-                    <TouchableOpacity
-                      style={styles.portfolioBigUploadBox}
-                      onPress={uploadPortfolioImages}
-                      activeOpacity={0.8}
-                    >
-                      <Plus size={26} color="#7C3AED" />
-                      <Text style={styles.portfolioUploadBoxTitle}>
-                        Upload File
-                      </Text>
-                      <Text style={styles.portfolioUploadBoxSubtext}>
-                        Image or PDF (Optional)
-                      </Text>
-                    </TouchableOpacity>
-
-                    <View style={styles.portfolioRightCol}>
-                      <TouchableOpacity
-                        style={styles.portfolioSmallUploadBox}
-                        onPress={uploadPortfolioImages}
-                        activeOpacity={0.8}
-                      >
-                        <Plus size={18} color="#7C3AED" />
-                        <Text style={styles.portfolioSmallBoxTitle}>
-                          Upload File
-                        </Text>
-                        <Text style={styles.portfolioUploadBoxSubtext}>
-                          Image or PDF
-                        </Text>
-                      </TouchableOpacity>
-
-                      <TouchableOpacity
-                        style={styles.portfolioSmallUploadBox}
-                        onPress={uploadPortfolioImages}
-                        activeOpacity={0.8}
-                      >
-                        <Plus size={18} color="#7C3AED" />
-                        <Text style={styles.portfolioSmallBoxTitle}>
-                          Upload File
-                        </Text>
-                        <Text style={styles.portfolioUploadBoxSubtext}>
-                          Image or PDF
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-
-                  {/* Row 2: 3 Equal Boxes */}
-                  <View style={styles.portfolioRowThree}>
-                    {[1, 2, 3].map((idx) => (
-                      <TouchableOpacity
-                        key={idx}
-                        style={styles.portfolioRowBox}
-                        onPress={uploadPortfolioImages}
-                        activeOpacity={0.8}
-                      >
-                        <Plus size={18} color="#7C3AED" />
-                        <Text style={styles.portfolioSmallBoxTitle}>Upload File</Text>
-                        <Text style={styles.portfolioUploadBoxSubtext}>Image or PDF</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-
-                  {/* Row 3: 3 Equal Boxes */}
-                  <View style={styles.portfolioRowThree}>
-                    {[4, 5, 6].map((idx) => (
-                      <TouchableOpacity
-                        key={idx}
-                        style={styles.portfolioRowBox}
-                        onPress={uploadPortfolioImages}
-                        activeOpacity={0.8}
-                      >
-                        <Plus size={18} color="#7C3AED" />
-                        <Text style={styles.portfolioSmallBoxTitle}>Upload File</Text>
-                        <Text style={styles.portfolioUploadBoxSubtext}>Image or PDF</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-
-                  {/* Row 4: 1 Full Width Box */}
-                  <TouchableOpacity
-                    style={styles.portfolioFullWidthBox}
-                    onPress={uploadPortfolioImages}
-                    activeOpacity={0.8}
-                  >
-                    <Plus size={20} color="#7C3AED" />
-                    <Text style={styles.portfolioUploadBoxTitle}>Upload File</Text>
-                    <Text style={styles.portfolioUploadBoxSubtext}>Image or PDF (Optional)</Text>
-                  </TouchableOpacity>
-                </View>
-
-                {/* Uploaded Portfolio Previews */}
-                {form.portfolioImages.length > 0 && (
-                  <View style={styles.uploadedImagesGrid}>
-                    {form.portfolioImages.map((file, i) => (
-                      <View key={i} style={styles.portfolioPreviewBox}>
-                        {file.fileType === "pdf" ? (
-                          <View style={styles.pdfPreviewContainer}>
-                            <MaterialIcons name="picture-as-pdf" size={32} color="#EF4444" />
-                            <Text style={styles.pdfPreviewName} numberOfLines={2}>
-                              {file.fileName || "document.pdf"}
-                            </Text>
+                  {/* Helper: render a box that shows preview or empty state */}
+                  {(() => {
+                    const files = form.portfolioImages || [];
+                    const renderBox = (file, style, titleStyle) => {
+                      if (file) {
+                        const isPdf = file.fileType === "pdf";
+                        return (
+                          <View style={[style, { borderWidth: 0, backgroundColor: "#F5F0FF", overflow: "hidden" }]}>
+                            {isPdf ? (
+                              <View style={{ alignItems: "center", justifyContent: "center", flex: 1, width: "100%", paddingHorizontal: 4 }}>
+                                <MaterialIcons name="picture-as-pdf" size={28} color="#EF4444" />
+                                <Text style={[styles.portfolioSmallBoxTitle, { marginTop: 4, textAlign: "center" }]} numberOfLines={2}>
+                                  {file.fileName || "PDF"}
+                                </Text>
+                              </View>
+                            ) : (
+                              <Image
+                                source={{ uri: apiService.loadImageURI(file.uri) }}
+                                style={{ width: "100%", height: "100%", borderRadius: 14 }}
+                                resizeMode="cover"
+                              />
+                            )}
+                            {file.isExisting && mode === "update" && (
+                              <View style={styles.existingImageTag}>
+                                <Text style={styles.existingImageTagText}>Existing</Text>
+                              </View>
+                            )}
+                            <TouchableOpacity
+                              style={styles.removeImageBadge}
+                              onPress={() => {
+                                const idx = files.indexOf(file);
+                                if (idx !== -1) removePortfolioImage(idx);
+                              }}
+                            >
+                              <Trash2 size={14} color="#FFFFFF" />
+                            </TouchableOpacity>
                           </View>
-                        ) : (
-                          <Image
-                            source={{ uri: apiService.loadImageURI(file.uri) }}
-                            style={styles.portfolioPreviewImg}
-                          />
-                        )}
-                        {file.isExisting && mode === "update" && (
-                          <View style={styles.existingImageTag}>
-                            <Text style={styles.existingImageTagText}>
-                              Existing
-                            </Text>
-                          </View>
-                        )}
-                        <TouchableOpacity
-                          style={styles.removeImageBadge}
-                          onPress={() => removePortfolioImage(i)}
-                        >
-                          <Trash2 size={14} color="#FFFFFF" />
+                        );
+                      }
+                      return (
+                        <TouchableOpacity style={style} onPress={uploadPortfolioImages} activeOpacity={0.8}>
+                          <Plus size={titleStyle === styles.portfolioUploadBoxTitle ? 26 : 18} color="#7C3AED" />
+                          <Text style={titleStyle}>Upload File</Text>
+                          <Text style={styles.portfolioUploadBoxSubtext}>Image or PDF</Text>
                         </TouchableOpacity>
-                      </View>
-                    ))}
-                  </View>
-                )}
+                      );
+                    };
+
+                    const bigBoxFile = files[0] || null;
+                    const smallBox1File = files[1] || null;
+                    const smallBox2File = files[2] || null;
+                    const row2Files = [files[3] || null, files[4] || null, files[5] || null];
+                    const row3Files = [files[6] || null, files[7] || null, files[8] || null];
+                    const fullWidthFile = files[9] || null;
+
+                    return (
+                      <>
+                        {/* Top Row: Left big box + Right 2 stacked small boxes */}
+                        <View style={styles.portfolioGridWrapper}>
+                          {renderBox(bigBoxFile, styles.portfolioBigUploadBox, styles.portfolioUploadBoxTitle)}
+                          <View style={styles.portfolioRightCol}>
+                            {renderBox(smallBox1File, styles.portfolioSmallUploadBox, styles.portfolioSmallBoxTitle)}
+                            {renderBox(smallBox2File, styles.portfolioSmallUploadBox, styles.portfolioSmallBoxTitle)}
+                          </View>
+                        </View>
+
+                        {/* Row 2: 3 Equal Boxes */}
+                        <View style={styles.portfolioRowThree}>
+                          {row2Files.map((f, i) => (
+                            <React.Fragment key={`row2-${i}`}>
+                              {renderBox(f, styles.portfolioRowBox, styles.portfolioSmallBoxTitle)}
+                            </React.Fragment>
+                          ))}
+                        </View>
+
+                        {/* Row 3: 3 Equal Boxes */}
+                        <View style={styles.portfolioRowThree}>
+                          {row3Files.map((f, i) => (
+                            <React.Fragment key={`row3-${i}`}>
+                              {renderBox(f, styles.portfolioRowBox, styles.portfolioSmallBoxTitle)}
+                            </React.Fragment>
+                          ))}
+                        </View>
+
+                        {/* Row 4: 1 Full Width Box */}
+                        {renderBox(fullWidthFile, styles.portfolioFullWidthBox, styles.portfolioUploadBoxTitle)}
+
+                        {/* Additional upload buttons if more than 10 files */}
+                        {files.length > 10 && (
+                          <View style={styles.portfolioRowThree}>
+                            {files.slice(10).map((f, i) => (
+                              <React.Fragment key={`extra-${i}`}>
+                                {renderBox(f, styles.portfolioRowBox, styles.portfolioSmallBoxTitle)}
+                              </React.Fragment>
+                            ))}
+                          </View>
+                        )}
+                      </>
+                    );
+                  })()}
+                </View>
 
                 {/* Info Banner */}
                 <View style={styles.infoBannerBox}>
@@ -2816,6 +2863,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     justifyContent: "center",
     alignItems: "center",
+    overflow: "hidden",
   },
   portfolioUploadBoxTitle: {
     fontSize: 13,
@@ -2840,6 +2888,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     justifyContent: "center",
     alignItems: "center",
+    overflow: "hidden",
   },
   portfolioSmallBoxTitle: {
     fontSize: 11,
@@ -2861,6 +2910,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     justifyContent: "center",
     alignItems: "center",
+    overflow: "hidden",
   },
   portfolioFullWidthBox: {
     height: 70,
@@ -2871,6 +2921,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     justifyContent: "center",
     alignItems: "center",
+    overflow: "hidden",
   },
   uploadedImagesGrid: {
     flexDirection: "row",

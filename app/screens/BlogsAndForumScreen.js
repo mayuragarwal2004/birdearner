@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet, SafeAreaView } from 'react-native';
+import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet } from 'react-native';
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from '../context/ThemeContext';
 
 const BlogsAndForumScreen = ({ navigation }) => {

@@ -564,64 +564,11 @@ export default function ProfileScreen({ navigation }) {
 
               {activeTab === "Reviews" && (
                 <View>
-                  {/* Summary Card */}
-                  <View style={styles.summaryCard}>
-                    <View style={styles.summaryTop}>
-                      <View>
-                        <Text style={styles.summaryRating}>
-                          {formatRating(reviewStats?.averageRating || data?.rating || 0)}
-                        </Text>
-                        <View style={styles.summaryStars}>
-                          {[1, 2, 3, 4, 5].map((item) => (
-                            <FontAwesome
-                              key={item}
-                              name={
-                                item <= Math.round(Number(reviewStats?.averageRating || data?.rating || 0))
-                                  ? "star"
-                                  : "star-o"
-                              }
-                              size={18}
-                              color="#A855F7"
-                            />
-                          ))}
-                        </View>
-                      </View>
-
-                      <View style={styles.summaryCountBox}>
-                        <Text style={styles.summaryCount}>
-                          {reviewStats?.totalReviews || data?.totalReviews || reviews.length || 0}
-                        </Text>
-                        <Text style={styles.summaryLabel}>Total Reviews</Text>
-                      </View>
-                    </View>
-
-                    {/* Rating Breakdown Bars */}
-                    <View style={styles.ratingBars}>
-                      {[5, 4, 3, 2, 1].map((star) => {
-                        const count =
-                          reviewStats?.ratingDistribution?.[star] !== undefined
-                            ? Number(reviewStats.ratingDistribution[star])
-                            : reviews.filter((r) => Math.round(Number(r.rating || 0)) === star).length;
-                        const total = reviewStats?.totalReviews || data?.totalReviews || reviews.length || 0;
-                        const percentage = total ? `${(count / total) * 100}%` : "0%";
-                        return (
-                          <View key={star} style={styles.ratingBarRow}>
-                            <Text style={styles.ratingBarLabel}>{star}</Text>
-                            <View style={styles.ratingBarTrack}>
-                              <View style={[styles.ratingBarFill, { width: percentage }]} />
-                            </View>
-                            <Text style={styles.ratingBarCount}>{count}</Text>
-                          </View>
-                        );
-                      })}
-                    </View>
-                  </View>
-
                   {/* Section Header */}
                   <View style={styles.recentReviewsHeader}>
                     <Text style={styles.recentReviewsTitle}>Recent Reviews</Text>
                     <Text style={styles.recentReviewsMeta}>
-                      {reviewStats?.totalReviews || data?.totalReviews || reviews.length || 0} total
+                      {reviews.length || 0} total
                     </Text>
                   </View>
 

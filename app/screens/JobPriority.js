@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import {
-  SafeAreaView,
   View,
   Text,
   StyleSheet,
@@ -9,6 +8,7 @@ import {
   FlatList,
   Alert,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { PanResponder, Animated } from "react-native";
 import { Audio } from 'expo-av';
@@ -344,12 +344,10 @@ const getStyles = (currentTheme) =>
     container: {
       flex: 1,
       backgroundColor: currentTheme.background || "#fff",
-      paddingTop: 45,
       paddingBottom: 70,
     },
     scrollContent: {
       padding: 20,
-      height: 743,
     },
     title: {
       fontSize: 22,
@@ -363,7 +361,8 @@ const getStyles = (currentTheme) =>
       // marginBottom: 20,
     },
     priorityButton: {
-      width: 355,
+      width: "100%",
+      maxWidth: 355,
       padding: 8,
       alignItems: "center",
       display: "flex",

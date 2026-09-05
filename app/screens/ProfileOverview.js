@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Platform, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Modal } from 'react-native';
+import { SafeAreaView } from "react-native-safe-area-context";
 import { ArrowLeft, Question, Star, TrendUp, Target, Flag, ChatCircleText, Trophy, ChartBar, Sparkle, Clock } from 'phosphor-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../context/ThemeContext';
@@ -262,7 +263,6 @@ const InsightItem = ({ icon, iconBg, value, label, subLabel, progressColor, prog
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    paddingTop: Platform.OS === 'android' ? 30 : 0,
   },
   headerContainer: {
     flexDirection: 'row',

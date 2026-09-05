@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from "react";
 import {
   View,
-  SafeAreaView,
   TouchableOpacity,
   Text,
   StyleSheet,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import SafeSpinner from "../components/SafeSpinner";
 import { WebView } from "react-native-webview";
 import { Ionicons } from "@expo/vector-icons";
@@ -94,7 +94,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingTop: 45,
     paddingBottom: 16,
     paddingHorizontal: 16,
     flexDirection: "row",

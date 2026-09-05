@@ -9,6 +9,7 @@ import {
   Alert,
   RefreshControl,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import SafeSpinner from "../components/SafeSpinner";
 import { useAuth } from "../context/NewAuthContext";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
@@ -122,6 +123,7 @@ const ChatList = () => {
   }
 
   return (
+    <SafeAreaView style={{flex: 1}}>
     <View style={styles.container}>
       <View style={styles.main}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
@@ -191,6 +193,7 @@ const ChatList = () => {
         }
       />
     </View>
+    </SafeAreaView>
   );
 };
 
@@ -199,7 +202,6 @@ const getStyles = (currentTheme) =>
     container: {
       flex: 1, backgroundColor: currentTheme.background || "#fff",
       paddingHorizontal: 20,
-      paddingTop: 40
     },
     main: {
       marginTop: 25,

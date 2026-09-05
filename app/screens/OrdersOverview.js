@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Platform, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Modal } from 'react-native';
+import { SafeAreaView } from "react-native-safe-area-context";
 import { ArrowLeft, Question, ClipboardText, ListDashes, XCircle, ChartLine, CheckCircle, Clock } from 'phosphor-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../context/ThemeContext';
@@ -190,7 +191,6 @@ const AnalyticsItem = ({ icon, iconBg, title, subtitle, value, isDark, hideBorde
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    paddingTop: Platform.OS === 'android' ? 30 : 0,
   },
   headerContainer: {
     flexDirection: 'row',

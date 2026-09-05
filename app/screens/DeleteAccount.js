@@ -11,6 +11,7 @@ import {
   Platform,
   Linking
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import SafeSpinner from "../components/SafeSpinner";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../context/NewAuthContext";
@@ -206,6 +207,7 @@ const DeleteAccountScreen = ({ navigation }) => {
   }
 
   return (
+    <SafeAreaView style={{flex: 1}}>
     <KeyboardAvoidingView 
       style={styles.container} 
       behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -513,6 +515,7 @@ const DeleteAccountScreen = ({ navigation }) => {
       </ScrollView>
       <Toast />
     </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 

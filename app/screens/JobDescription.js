@@ -598,7 +598,6 @@ const getStyles = (currentTheme) =>
     safeArea: {
       flex: 1,
       backgroundColor: "#FFFFFF",
-      paddingTop: Platform.OS === "android" ? StatusBar.currentHeight || 10 : 0,
     },
     scrollView: {
       flex: 1,

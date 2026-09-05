@@ -8,6 +8,7 @@ import {
   StyleSheet,
   ScrollView,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import Checkbox from "expo-checkbox";
 import Toast from "react-native-toast-message";
@@ -158,6 +159,7 @@ const PortfolioScreen = ({ navigation, route }) => {
   };
 
   return (
+    <SafeAreaView style={{flex: 1}}>
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>
         {role === "client" ? "Read it loud" : "Portfolio"}
@@ -284,6 +286,7 @@ const PortfolioScreen = ({ navigation, route }) => {
 
       <Toast />
     </ScrollView>
+    </SafeAreaView>
   );
 };
 

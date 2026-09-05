@@ -7,6 +7,7 @@ import {
     TextInput,
     Animated,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import SafeSpinner from "../components/SafeSpinner";
 import LottieView from "lottie-react-native";
 import RazorpayCheckout from "react-native-razorpay";
@@ -143,7 +144,7 @@ const SettleBalanceScreen = ({ navigation }) => {
     };
 
     return (
-        <View style={styles.container}>
+        <SafeAreaView style={styles.container}>
             <View style={styles.content}>
                 {!paymentSuccess && (
                     <View style={styles.main}>
@@ -212,7 +213,7 @@ const SettleBalanceScreen = ({ navigation }) => {
                     </View>
                 )}
             </View>
-        </View>
+        </SafeAreaView>
     );
 };
 
@@ -229,7 +230,7 @@ const getStyles = (currentTheme) =>
         main: {
             flexDirection: "row",
             alignItems: "center",
-            marginTop: 40,
+            marginTop: 16,
             marginBottom: 30,
         },
         backButton: {

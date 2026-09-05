@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Svg, Circle } from "react-native-svg";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../context/NewAuthContext";
@@ -138,7 +139,7 @@ const JobSubmissionTimmerScreen = ({ route, navigation }) => {
   const strokeDashoffset = 251.2 * (1 - progress);
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <TouchableOpacity onPress={navigation.goBack} style={styles.backButton}>
         <Ionicons name="arrow-back" size={24} color="black" />
       </TouchableOpacity>
@@ -186,7 +187,7 @@ const JobSubmissionTimmerScreen = ({ route, navigation }) => {
       <TouchableOpacity onPress={handleCancel}>
         <Text style={styles.cancelText}>Cancel</Text>
       </TouchableOpacity>
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -201,7 +202,7 @@ const getStyles = (currentTheme) =>
     },
     backButton: {
       position: "absolute",
-      top: 40,
+      top: 16,
       left: 20,
     },
     header: {

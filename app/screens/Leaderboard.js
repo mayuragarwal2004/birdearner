@@ -5,13 +5,13 @@ import {
     ScrollView,
     StyleSheet,
     TouchableOpacity,
-    SafeAreaView,
     Platform,
     Image,
     Dimensions,
     StatusBar,
     RefreshControl
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { useAuth } from "../context/NewAuthContext";
 import { useTheme } from "../context/ThemeContext";
@@ -264,7 +264,7 @@ const getStyles = (currentTheme) =>
             height: 480, // Fixed height to ensure it covers header + podium area
         },
         header: {
-            paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 24) + 20 : 10,
+            paddingTop: 20,
             paddingHorizontal: 20,
             alignItems: 'center',
             zIndex: 10,

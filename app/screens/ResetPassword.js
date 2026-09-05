@@ -5,7 +5,10 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import SafeSpinner from "../components/SafeSpinner";
 import Toast from "react-native-toast-message";
 import apiService from "../lib/apiService";
@@ -88,7 +91,7 @@ const ResetPasswordScreen = ({ route, navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <Text style={styles.title}>Reset Password</Text>
       <Text style={styles.subtitle}>Enter your new password below</Text>
       
@@ -130,7 +133,7 @@ const ResetPasswordScreen = ({ route, navigation }) => {
       </TouchableOpacity>
       
       <Toast />
-    </View>
+    </SafeAreaView>
   );
 };
 

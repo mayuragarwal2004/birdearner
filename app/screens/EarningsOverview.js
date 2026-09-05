@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Platform, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Modal } from 'react-native';
+import { SafeAreaView } from "react-native-safe-area-context";
 import { ArrowLeft, Question, Wallet, ChartBar, Tag, ShoppingBag, ClipboardText, TrendUp, Download, Clock, Sparkle } from 'phosphor-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../context/ThemeContext';
@@ -189,7 +190,6 @@ const SummaryColumn = ({ icon, title, amount, isDark, iconBg }) => (
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    paddingTop: Platform.OS === 'android' ? 30 : 0,
   },
   headerContainer: {
     flexDirection: 'row',

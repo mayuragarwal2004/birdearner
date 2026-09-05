@@ -1,7 +1,6 @@
 import {
   ImageBackground,
   StyleSheet,
-  SafeAreaView,
   Image,
   View,
   TouchableOpacity,
@@ -10,6 +9,7 @@ import {
   Animated,
   Dimensions,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import React, { useState, useEffect, useRef } from "react";
 import offerBackground from "../assets/offerBackground.png";
 import egg from "../assets/egg.png";

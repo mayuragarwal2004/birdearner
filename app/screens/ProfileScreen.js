@@ -405,7 +405,7 @@ export default function ProfileScreen({ route, navigation }) {
           )}
 
           {activeTab === "Reviews" && (
-            <ReviewsTab uiStyles={uiStyles} reviews={reviews} stats={reviewStats} profileData={profileData} isClientProfile={isClientProfile} />
+            <ReviewsTab uiStyles={uiStyles} reviews={reviews} isClientProfile={isClientProfile} />
           )}
 
           {activeTab === "Portfolio" && !isClientProfile && (
@@ -719,67 +719,16 @@ function ServicesTab({ uiStyles, services, onServicePress }) {
   );
 }
 
-function ReviewsTab({ uiStyles, reviews = [], stats, profileData, isClientProfile }) {
-  const average = Number(stats?.averageRating || profileData?.rating || 0);
-  const total = stats?.totalReviews || profileData?.totalReviews || reviews.length || 0;
-  const distribution = stats?.ratingDistribution || {};
-
-  const getCountForRating = (star) => {
-    if (distribution[star] !== undefined) return Number(distribution[star]);
-    return reviews.filter((r) => Math.round(Number(r.rating || 0)) === star).length;
-  };
+function ReviewsTab({ uiStyles, reviews = [], isClientProfile }) {
 
   return (
     <View style={uiStyles.section}>
-      {/* Summary Card - only for freelancer profiles */}
-      {!isClientProfile && (
-        <View style={uiStyles.summaryCard}>
-          <View style={uiStyles.summaryTop}>
-            <View>
-              <Text style={uiStyles.summaryRating}>{formatRating(average)}</Text>
-              <View style={uiStyles.summaryStars}>
-                {[1, 2, 3, 4, 5].map((item) => (
-                  <FontAwesome
-                    key={item}
-                    name={item <= Math.round(average) ? "star" : "star-o"}
-                    size={18}
-                    color="#A855F7"
-                  />
-                ))}
-              </View>
-            </View>
-
-            <View style={uiStyles.summaryCountBox}>
-              <Text style={uiStyles.summaryCount}>{total}</Text>
-              <Text style={uiStyles.summaryLabel}>Total Reviews</Text>
-            </View>
-          </View>
-
-          {/* Rating Breakdown Bars */}
-          <View style={uiStyles.ratingBars}>
-            {[5, 4, 3, 2, 1].map((star) => {
-              const count = getCountForRating(star);
-              const percentage = total ? `${(count / total) * 100}%` : "0%";
-              return (
-                <View key={star} style={uiStyles.ratingBarRow}>
-                <Text style={uiStyles.ratingBarLabel}>{star}</Text>
-                <View style={uiStyles.ratingBarTrack}>
-                  <View style={[uiStyles.ratingBarFill, { width: percentage }]} />
-                </View>
-                <Text style={uiStyles.ratingBarCount}>{count}</Text>
-              </View>
-            );
-          })}
-        </View>
-      </View>
-      )}
-
       {/* Section Header */}
       <View style={uiStyles.recentReviewsHeader}>
         <Text style={uiStyles.recentReviewsTitle}>
           {isClientProfile ? "Reviews Given" : "Recent Reviews"}
         </Text>
-        <Text style={uiStyles.recentReviewsMeta}>{total} total</Text>
+        <Text style={uiStyles.recentReviewsMeta}>{reviews.length} total</Text>
       </View>
 
       {/* 3. Review items or Empty Card */}

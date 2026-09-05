@@ -7,12 +7,12 @@ import {
   TouchableOpacity,
   Modal,
   Alert,
-  SafeAreaView,
   StatusBar,
   Platform,
   TextInput,
   ActivityIndicator,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import ImageViewer from "react-native-image-zoom-viewer";
 import { useTheme } from "../context/ThemeContext";
@@ -892,7 +892,6 @@ const getStyles = (currentTheme) =>
     safeArea: {
       flex: 1,
       backgroundColor: "#FFFFFF",
-      paddingTop: Platform.OS === "android" ? StatusBar.currentHeight || 10 : 0,
     },
     scrollView: {
       flex: 1,

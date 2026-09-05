@@ -7,12 +7,12 @@ import {
   TouchableOpacity,
   Alert,
   Modal,
-  SafeAreaView,
   StatusBar,
   Platform,
   TextInput,
   ActivityIndicator,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import SafeSpinner from "../components/SafeSpinner";
 import { Ionicons } from "@expo/vector-icons";
 import ImageViewer from "react-native-image-zoom-viewer";
@@ -555,7 +555,7 @@ const JobDetailsChatScreen = ({ route, navigation }) => {
 
 const getStyles = (currentTheme = {}) =>
   StyleSheet.create({
-    safeArea: { flex: 1, backgroundColor: "#FFFFFF", paddingTop: Platform.OS === "android" ? StatusBar.currentHeight || 10 : 0 },
+    safeArea: { flex: 1, backgroundColor: "#FFFFFF" },
     scrollView: { flex: 1, backgroundColor: "#FFFFFF" },
     scrollContent: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 80 },
     loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#FFFFFF" },

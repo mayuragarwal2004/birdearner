@@ -10,6 +10,7 @@ import {
   Alert,
   TextInput,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import SafeSpinner from "../components/SafeSpinner";
 import { FontAwesome, Ionicons } from "@expo/vector-icons";
 import ImageViewer from "react-native-image-zoom-viewer";
@@ -548,6 +549,7 @@ const UpdateJobDetailsScreen = ({ route, navigation }) => {
   );
 
   return (
+    <SafeAreaView style={{flex: 1}}>
     <View style={styles.container1}>
       {isEditing ? (
         renderEditForm()
@@ -639,6 +641,7 @@ const UpdateJobDetailsScreen = ({ route, navigation }) => {
         </ScrollView>
       )}
     </View>
+    </SafeAreaView>
   );
 };
 
