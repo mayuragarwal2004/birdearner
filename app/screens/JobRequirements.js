@@ -34,8 +34,10 @@ import {
   PaperPlaneTilt,
   ShieldCheck,
   Tag,
+  Trash,
   User,
   Wallet,
+  X,
 } from "phosphor-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Location from "expo-location";
@@ -761,6 +763,12 @@ const JobRequirementsScreen = ({ navigation }) => {
 
   const addSkills = () => setSkills([...skills, ""]);
 
+  const removeSkill = (index) => {
+    if (skills.length > 1) {
+      setSkills(skills.filter((_, i) => i !== index));
+    }
+  };
+
   const pickAttachments = async () => {
     Alert.alert("Add Attachment", "Choose a file type", [
       {
@@ -1447,6 +1455,11 @@ const JobRequirementsScreen = ({ navigation }) => {
                   setSkills(updated);
                 }}
               />
+              {skills.length > 1 && (
+                <TouchableOpacity onPress={() => removeSkill(index)} style={styles.removeSkillBtn}>
+                  <Trash size={18} color="#EF4444" />
+                </TouchableOpacity>
+              )}
               {index === skills.length - 1 && (
                 <TouchableOpacity onPress={addSkills}>
                   <Text style={styles.addSkillsLink}>+ Add more skills</Text>
@@ -2108,6 +2121,9 @@ const getStyles = (currentTheme, isDark) => {
       color: PURPLE,
       fontSize: 13,
       fontWeight: "700",
+    },
+    removeSkillBtn: {
+      padding: 4,
     },
     textAreaWrap: {
       borderRadius: 12,
