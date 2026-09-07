@@ -422,8 +422,7 @@ const getStyles = (currentTheme) =>
       alignItems: "center",
       justifyContent: "space-between",
       paddingHorizontal: 20,
-      paddingVertical: 15,
-      marginTop: Platform.OS === "android" ? 20 : 0,
+      paddingVertical: 10,
     },
     headerButton: {
       width: 44,
