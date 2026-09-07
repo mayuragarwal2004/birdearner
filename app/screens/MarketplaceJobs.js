@@ -8,6 +8,8 @@ import {
   TouchableOpacity,
   FlatList,
   Image,
+  Modal,
+  Pressable,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import SafeSpinner from "../components/SafeSpinner";
@@ -16,6 +18,9 @@ import {
   ArrowLeft,
   SlidersHorizontal,
   X,
+  Check,
+  ArrowsDownUp,
+  ListChecks,
 } from "phosphor-react-native";
 
 import { useTheme } from "../context/ThemeContext";
@@ -50,6 +55,10 @@ const MarketplaceJobs = ({ navigation, route }) => {
 
   const [selectedServices, setSelectedServices] = useState([]);
   const [sortBy, setSortBy] = useState("none");
+  const [showFilterPanel, setShowFilterPanel] = useState(false);
+  const [tempSelectedServices, setTempSelectedServices] = useState([]);
+  const [tempSortBy, setTempSortBy] = useState("none");
+  const [activeCategory, setActiveCategory] = useState("sort");
 
   // Capture freelancer services into module-level cache (once, permanently)
   if (_cachedFreelancerServices === null) {
@@ -156,12 +165,37 @@ const MarketplaceJobs = ({ navigation, route }) => {
   }, [route.params?.filterResult]);
 
   const openFilterPanel = () => {
-    navigation.navigate("JobFilterScreen", {
-      availableServices,
-      serviceJobCounts,
-      currentSelectedServices: selectedServices,
-      currentSortBy: sortBy,
-    });
+    setTempSelectedServices([...selectedServices]);
+    setTempSortBy(sortBy);
+    setActiveCategory("sort");
+    setShowFilterPanel(true);
+  };
+
+  const handleApplyFilter = () => {
+    setSelectedServices(tempSelectedServices);
+    setSortBy(tempSortBy);
+    setShowFilterPanel(false);
+  };
+
+  const handleResetFilter = () => {
+    setTempSortBy("none");
+    setTempSelectedServices([]);
+  };
+
+  const handleToggleTempService = (serviceId) => {
+    setTempSelectedServices((prev) =>
+      prev.includes(serviceId)
+        ? prev.filter((id) => id !== serviceId)
+        : [...prev, serviceId]
+    );
+  };
+
+  const handleTempSelectAll = () => {
+    setTempSelectedServices(availableServices.map((s) => s.id));
+  };
+
+  const handleTempClearAll = () => {
+    setTempSelectedServices([]);
   };
 
   const handleRefresh = () => {
@@ -406,6 +440,188 @@ const MarketplaceJobs = ({ navigation, route }) => {
         )}
       />
 
+      {/* Filter Bottom Sheet Modal */}
+      <Modal
+        visible={showFilterPanel}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowFilterPanel(false)}
+      >
+        <Pressable
+          style={styles.filterOverlay}
+          onPress={() => setShowFilterPanel(false)}
+        >
+          <View
+            style={styles.filterSheet}
+          >
+            {/* Filter Header */}
+            <View style={styles.filterHeader}>
+              <TouchableOpacity
+                onPress={() => setShowFilterPanel(false)}
+                style={styles.filterHeaderBtn}
+                activeOpacity={0.7}
+              >
+                <X size={22} color={currentTheme.text || "#000"} />
+              </TouchableOpacity>
+              <Text style={styles.filterHeaderTitle}>Filters</Text>
+              <TouchableOpacity onPress={handleResetFilter} style={styles.filterResetBtn}>
+                <Text style={styles.filterResetText}>Reset</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Two Panel Layout */}
+            <View style={styles.filterTwoPanel}>
+              {/* Left Panel - Categories */}
+              <View style={styles.filterLeftPanel}>
+                {[
+                  { key: "sort", label: "Sort by", Icon: ArrowsDownUp },
+                  { key: "services", label: "Services", Icon: ListChecks },
+                ].map((cat) => {
+                  const isActive = activeCategory === cat.key;
+                  return (
+                    <TouchableOpacity
+                      key={cat.key}
+                      style={[
+                        styles.filterCategoryItem,
+                        isActive && styles.filterCategoryItemActive,
+                      ]}
+                      onPress={() => setActiveCategory(cat.key)}
+                      activeOpacity={0.7}
+                    >
+                      {isActive && <View style={styles.filterActiveIndicator} />}
+                      <cat.Icon
+                        size={16}
+                        color={isActive ? "#762BAD" : currentTheme.subText || "#666"}
+                      />
+                      <Text
+                        style={[
+                          styles.filterCategoryText,
+                          isActive && styles.filterCategoryTextActive,
+                        ]}
+                      >
+                        {cat.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {/* Right Panel - Options */}
+              <View style={styles.filterRightPanel}>
+                {activeCategory === "sort" && (
+                  <FlatList
+                    data={[
+                      { key: "none", label: "Default" },
+                      { key: "lowToHigh", label: "Price: Low to High" },
+                      { key: "highToLow", label: "Price: High to Low" },
+                    ]}
+                    keyExtractor={(item) => item.key}
+                    renderItem={({ item }) => (
+                      <TouchableOpacity
+                        style={[
+                          styles.filterOptionRow,
+                          tempSortBy === item.key && styles.filterOptionRowActive,
+                        ]}
+                        onPress={() => setTempSortBy(item.key)}
+                        activeOpacity={0.7}
+                      >
+                        <Text
+                          style={[
+                            styles.filterOptionText,
+                            tempSortBy === item.key && styles.filterOptionTextActive,
+                          ]}
+                        >
+                          {item.label}
+                        </Text>
+                        {tempSortBy === item.key && (
+                          <Check size={18} color="#762BAD" weight="bold" />
+                        )}
+                      </TouchableOpacity>
+                    )}
+                    contentContainerStyle={styles.filterOptionContent}
+                  />
+                )}
+                {activeCategory === "services" && (
+                  <FlatList
+                    data={availableServices}
+                    keyExtractor={(item) => item.id}
+                    ListHeaderComponent={() => (
+                      <View style={styles.filterServiceActions}>
+                        <TouchableOpacity onPress={handleTempSelectAll} style={styles.filterServiceActionBtn}>
+                          <Text style={styles.filterServiceActionText}>Select All</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={handleTempClearAll} style={styles.filterServiceActionBtn}>
+                          <Text style={[styles.filterServiceActionText, { color: "#EF4444" }]}>Clear</Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                    renderItem={({ item: service }) => {
+                      const isSelected = tempSelectedServices.includes(service.id);
+                      const jobCount = serviceJobCounts[service.id] || 0;
+                      return (
+                        <TouchableOpacity
+                          style={[
+                            styles.filterOptionRow,
+                            isSelected && styles.filterOptionRowActive,
+                          ]}
+                          onPress={() => handleToggleTempService(service.id)}
+                          activeOpacity={0.7}
+                        >
+                          <View style={styles.filterOptionLeft}>
+                            <Text
+                              style={[
+                                styles.filterOptionText,
+                                isSelected && styles.filterOptionTextActive,
+                              ]}
+                            >
+                              {service.name}
+                            </Text>
+                            {jobCount > 0 && (
+                              <View style={styles.filterCountBadge}>
+                                <Text style={styles.filterCountBadgeText}>{jobCount}</Text>
+                              </View>
+                            )}
+                          </View>
+                          {isSelected && (
+                            <Check size={18} color="#762BAD" weight="bold" />
+                          )}
+                        </TouchableOpacity>
+                      );
+                    }}
+                    contentContainerStyle={styles.filterOptionContent}
+                  />
+                )}
+              </View>
+            </View>
+
+            {/* Bottom Apply Bar */}
+            <View style={styles.filterBottomBar}>
+              <View style={styles.filterBottomInfo}>
+                {(tempSelectedServices.length + (tempSortBy !== "none" ? 1 : 0)) > 0 && (
+                  <View style={styles.filterActiveCountBadge}>
+                    <Text style={styles.filterActiveCountText}>
+                      {tempSelectedServices.length + (tempSortBy !== "none" ? 1 : 0)}
+                    </Text>
+                  </View>
+                )}
+                <Text style={styles.filterBottomInfoText}>
+                  {(tempSelectedServices.length + (tempSortBy !== "none" ? 1 : 0)) > 0
+                    ? `${tempSelectedServices.length + (tempSortBy !== "none" ? 1 : 0)} filter${(tempSelectedServices.length + (tempSortBy !== "none" ? 1 : 0)) > 1 ? "s" : ""} selected`
+                    : "No filters selected"}
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={styles.filterApplyButton}
+                onPress={handleApplyFilter}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.filterApplyButtonText}>Apply Filters</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Pressable>
+      </Modal>
+
       <Toast />
     </SafeAreaView>
   );
@@ -575,6 +791,203 @@ const getStyles = (currentTheme) =>
       color: currentTheme.subText || "#666",
       textAlign: "center",
       fontStyle: "italic",
+    },
+    filterOverlay: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.4)",
+      justifyContent: "flex-end",
+    },
+    filterSheet: {
+      height: "50%",
+      backgroundColor: currentTheme.background || "#fff",
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      overflow: "hidden",
+    },
+    filterHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      borderBottomWidth: 1,
+      borderBottomColor: currentTheme.border || "#F3E8FF",
+    },
+    filterHeaderBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor:
+        currentTheme.theme === "dark" ? "#1f2937" : "#F3E8FF",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    filterHeaderTitle: {
+      fontSize: 17,
+      fontWeight: "bold",
+      color: currentTheme.text,
+    },
+    filterResetBtn: {
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+    },
+    filterResetText: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: "#762BAD",
+    },
+    filterTwoPanel: {
+      flex: 1,
+      flexDirection: "row",
+    },
+    filterLeftPanel: {
+      width: "30%",
+      backgroundColor:
+        currentTheme.theme === "dark" ? "#1a1a2e" : "#F8F4FF",
+      borderRightWidth: 1,
+      borderRightColor: currentTheme.border || "#F3E8FF",
+    },
+    filterCategoryItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: 16,
+      paddingHorizontal: 12,
+      gap: 8,
+      position: "relative",
+    },
+    filterCategoryItemActive: {
+      backgroundColor:
+        currentTheme.theme === "dark" ? "#2a1a3e" : "#FFFFFF",
+    },
+    filterActiveIndicator: {
+      position: "absolute",
+      left: 0,
+      top: 0,
+      bottom: 0,
+      width: 3,
+      backgroundColor: "#762BAD",
+      borderTopRightRadius: 3,
+      borderBottomRightRadius: 3,
+    },
+    filterCategoryText: {
+      fontSize: 13,
+      fontWeight: "500",
+      color: currentTheme.subText || "#666",
+    },
+    filterCategoryTextActive: {
+      fontWeight: "700",
+      color: "#762BAD",
+    },
+    filterRightPanel: {
+      flex: 1,
+      backgroundColor: currentTheme.background || "#fff",
+    },
+    filterOptionContent: {
+      padding: 16,
+    },
+    filterServiceActions: {
+      flexDirection: "row",
+      justifyContent: "flex-end",
+      marginBottom: 12,
+      gap: 16,
+    },
+    filterServiceActionBtn: {
+      paddingVertical: 4,
+    },
+    filterServiceActionText: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: "#762BAD",
+    },
+    filterOptionRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingVertical: 14,
+      paddingHorizontal: 14,
+      borderRadius: 12,
+      marginBottom: 8,
+      backgroundColor:
+        currentTheme.theme === "dark" ? "#374151" : "#F8F4FF",
+    },
+    filterOptionRowActive: {
+      backgroundColor:
+        currentTheme.theme === "dark" ? "#4B0082" : "#F3E8FF",
+      borderWidth: 1,
+      borderColor: "#762BAD",
+    },
+    filterOptionLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    filterOptionText: {
+      fontSize: 14,
+      color: currentTheme.text || "#333",
+    },
+    filterOptionTextActive: {
+      fontWeight: "600",
+      color: "#762BAD",
+    },
+    filterCountBadge: {
+      backgroundColor:
+        currentTheme.theme === "dark" ? "#4B0082" : "#EDE4FB",
+      borderRadius: 10,
+      minWidth: 22,
+      height: 22,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 6,
+    },
+    filterCountBadgeText: {
+      fontSize: 11,
+      fontWeight: "600",
+      color: "#762BAD",
+    },
+    filterBottomBar: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 16,
+      paddingTop: 14,
+      paddingBottom: 20,
+      borderTopWidth: 1,
+      borderTopColor: currentTheme.border || "#F3E8FF",
+      backgroundColor: currentTheme.background || "#fff",
+    },
+    filterBottomInfo: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    filterActiveCountBadge: {
+      backgroundColor: "#762BAD",
+      borderRadius: 12,
+      minWidth: 24,
+      height: 24,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 7,
+    },
+    filterActiveCountText: {
+      fontSize: 12,
+      fontWeight: "bold",
+      color: "#FFF",
+    },
+    filterBottomInfoText: {
+      fontSize: 13,
+      color: currentTheme.subText || "#666",
+    },
+    filterApplyButton: {
+      backgroundColor: "#762BAD",
+      paddingVertical: 12,
+      paddingHorizontal: 28,
+      borderRadius: 12,
+    },
+    filterApplyButtonText: {
+      color: "#FFF",
+      fontSize: 15,
+      fontWeight: "bold",
     },
   });
 
