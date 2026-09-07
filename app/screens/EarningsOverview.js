@@ -66,7 +66,7 @@ const EarningsOverview = ({ navigation }) => {
               <View style={styles.withdrawIcon}>
                 <Wallet size={20} color="#FFF" weight="fill" />
               </View>
-              <View>
+              <View style={styles.withdrawTextCol}>
                 <Text style={styles.withdrawTitle}>Withdraw your earnings</Text>
                 <Text style={styles.withdrawSubtitle}>Secure withdrawals, anytime</Text>
               </View>
@@ -245,11 +245,17 @@ const styles = StyleSheet.create({
     width: '100%',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.2)',
+    gap: 12,
   },
   withdrawLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
+    minWidth: 0,
+  },
+  withdrawTextCol: {
+    flex: 1,
+    minWidth: 0,
   },
   withdrawIcon: {
     width: 40,
@@ -262,19 +268,20 @@ const styles = StyleSheet.create({
   },
   withdrawTitle: {
     color: '#FFF',
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: 'bold',
     marginBottom: 2,
   },
   withdrawSubtitle: {
     color: 'rgba(255,255,255,0.6)',
-    fontSize: 11,
+    fontSize: 10,
   },
   withdrawButton: {
     backgroundColor: '#FFF',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
+    flexShrink: 0,
   },
   withdrawButtonText: {
     color: '#000',
