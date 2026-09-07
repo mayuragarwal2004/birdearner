@@ -238,7 +238,13 @@ const FreelancerSignup = ({ navigation, route }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const initialFreelancer = normalizeFreelancerData(profileData || userProfile || userData?.freelancer);
+  const rawFreelancer = profileData || userProfile || userData?.freelancer;
+  const initialFreelancer = normalizeFreelancerData({
+    ...rawFreelancer,
+    profilePhoto: userData?.profilePhoto || rawFreelancer?.profilePhoto,
+    dob: userData?.dob || rawFreelancer?.dob,
+    gender: userData?.gender || rawFreelancer?.gender,
+  });
 
   const [availableServices, setAvailableServices] = useState([]);
   const [selectedServices, setSelectedServices] = useState(

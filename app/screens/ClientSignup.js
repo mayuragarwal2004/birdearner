@@ -147,7 +147,7 @@ const createSchema = (mode) => {
 };
 
 const ClientSignup = ({ navigation, route }) => {
-  const { register, user, refreshUserData } = useAuth();
+  const { register, user, userData, userProfile, refreshUserData } = useAuth();
 
   // Extract route params to determine mode and data
   const {
@@ -158,6 +158,14 @@ const ClientSignup = ({ navigation, route }) => {
     title,
   } = route.params || {};
 
+  const rawClient = profileData || userProfile || userData?.client;
+  const initialClient = {
+    ...rawClient,
+    profilePhoto: userData?.profilePhoto || rawClient?.profilePhoto,
+    dob: userData?.dob || rawClient?.dob,
+    gender: userData?.gender || rawClient?.gender,
+  };
+
   const schema = createSchema(mode);
   const [step, setStep] = useState(mode === "signup" ? 1 : 2);
   const [isLoading, setIsLoading] = useState(false);
@@ -167,30 +175,33 @@ const ClientSignup = ({ navigation, route }) => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [form, setForm] = useState({
-    full_name: user?.fullName || "",
+    full_name: userData?.fullName || user?.fullName || "",
     mobile: initialMobile || "",
-    email: initialEmail || user?.email || "",
+    email: initialEmail || userData?.email || user?.email || "",
     password: "",
     confirmPassword: "",
-    termsAccepted: false,
-    designation: user?.client?.organizationType || "",
-    heading: user?.client?.companyName || "",
-    zipCode: user?.client?.zipcode ? user.client.zipcode.toString() : "",
-    city: user?.client?.city || "",
-    state: user?.client?.state || "",
-    country: user?.client?.country || "India",
-    bio: user?.client?.profileDescription || "",
+    termsAccepted: initialClient?.termsAccepted || false,
+    designation: initialClient?.organizationType || "",
+    heading: initialClient?.companyName || "",
+    zipCode: initialClient?.zipcode ? initialClient.zipcode.toString() : "",
+    city: initialClient?.city || "",
+    state: initialClient?.state || "",
+    country: initialClient?.country || "India",
+    bio: initialClient?.profileDescription || "",
     autoFilledLocation: false,
-    gender: "",
-    dob: null,
-    socialLinks: user?.client?.socialMediaLinks?.length
-      ? user.client.socialMediaLinks
-      : [""],
-    profileImage: user?.client?.profilePhoto
-      ? { uri: user.client.profilePhoto, isExisting: true }
+    gender: initialClient?.gender || "",
+    dob: initialClient?.dob ? new Date(initialClient.dob) : null,
+    socialLinks: (() => {
+      const raw = initialClient?.socialMediaLinks;
+      if (!raw) return [""];
+      const parsed = Array.isArray(raw) ? raw : (typeof raw === "string" ? (() => { try { return JSON.parse(raw); } catch { return [""]; } })() : [""]);
+      return parsed.length > 0 ? parsed : [""];
+    })(),
+    profileImage: initialClient?.profilePhoto
+      ? { uri: initialClient.profilePhoto, isExisting: true }
       : null,
-    coverImage: user?.client?.coverPhoto
-      ? { uri: user.client.coverPhoto, isExisting: true }
+    coverImage: initialClient?.coverPhoto
+      ? { uri: initialClient.coverPhoto, isExisting: true }
       : null,
   });
 
@@ -207,11 +218,11 @@ const ClientSignup = ({ navigation, route }) => {
   }, [initialMobile, initialEmail]);
 
   useEffect(() => {
-    const dataSource = profileData || user?.client;
+    const dataSource = profileData || userProfile || userData?.client;
     if (mode === "update" && dataSource) {
       setForm((prevForm) => ({
         ...prevForm,
-        full_name: user?.fullName || prevForm.full_name,
+        full_name: userData?.fullName || user?.fullName || prevForm.full_name,
         designation: dataSource.organizationType || prevForm.designation,
         heading: dataSource.companyName || prevForm.heading,
         city: dataSource.city || prevForm.city,
@@ -221,9 +232,14 @@ const ClientSignup = ({ navigation, route }) => {
           : prevForm.zipCode,
         country: dataSource.country || prevForm.country,
         bio: dataSource.profileDescription || prevForm.bio,
-        socialLinks: dataSource.socialMediaLinks?.length
-          ? dataSource.socialMediaLinks
-          : prevForm.socialLinks,
+        gender: dataSource.gender || prevForm.gender,
+        dob: dataSource.dob ? new Date(dataSource.dob) : prevForm.dob,
+        socialLinks: (() => {
+          const raw = dataSource.socialMediaLinks;
+          if (!raw) return prevForm.socialLinks;
+          const parsed = Array.isArray(raw) ? raw : (typeof raw === "string" ? (() => { try { return JSON.parse(raw); } catch { return prevForm.socialLinks; } })() : prevForm.socialLinks);
+          return parsed.length > 0 ? parsed : prevForm.socialLinks;
+        })(),
         profileImage: dataSource.profilePhoto
           ? { uri: dataSource.profilePhoto, isExisting: true }
           : prevForm.profileImage,
@@ -232,7 +248,7 @@ const ClientSignup = ({ navigation, route }) => {
           : prevForm.coverImage,
       }));
     }
-  }, [mode, user?.id, profileData]);
+  }, [mode, user?.id, profileData, userProfile, userData]);
 
   const formatDateOfBirth = (dob) => {
     if (!dob) return "DD / MM / YYYY";
@@ -522,6 +538,8 @@ const ClientSignup = ({ navigation, route }) => {
           profilePhoto: cleanedForm.profileImage,
           coverPhoto: cleanedForm.coverImage,
           fullName: cleanedForm.full_name,
+          gender: cleanedForm.gender || null,
+          dob: cleanedForm.dob,
         };
 
         Object.keys(clientCreateData).forEach((key) => {
@@ -558,6 +576,8 @@ const ClientSignup = ({ navigation, route }) => {
           profilePhoto: cleanedForm.profileImage,
           coverPhoto: cleanedForm.coverImage,
           fullName: cleanedForm.full_name,
+          gender: cleanedForm.gender || null,
+          dob: cleanedForm.dob,
           deletedImages: deletedImages,
         };
 
