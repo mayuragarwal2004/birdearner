@@ -268,13 +268,13 @@ const getStyles = (currentTheme) =>
             paddingHorizontal: 20,
             alignItems: 'center',
             zIndex: 10,
-            marginBottom: 10,
+            marginBottom: 0,
         },
         headerTitle: {
             fontSize: 24,
             fontWeight: 'bold',
             color: '#fff',
-            marginBottom: 20,
+            marginBottom: 12,
         },
         loadingContainer: {
             padding: 40,
@@ -311,14 +311,13 @@ const getStyles = (currentTheme) =>
         },
         scrollContent: {
             paddingBottom: 20,
-            flexGrow: 1,
         },
         podiumContainer: {
             flexDirection: 'row',
             justifyContent: 'center',
             alignItems: 'flex-end',
-            height: 220,
-            marginTop: 10,
+            height: 180,
+            marginTop: 0,
             marginBottom: 20,
         },
         sidePodium: {

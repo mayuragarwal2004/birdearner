@@ -798,7 +798,7 @@ const getStyles = (currentTheme) =>
       justifyContent: "flex-end",
     },
     filterSheet: {
-      height: "50%",
+      height: "55%",
       backgroundColor: currentTheme.background || "#fff",
       borderTopLeftRadius: 20,
       borderTopRightRadius: 20,
@@ -903,7 +903,7 @@ const getStyles = (currentTheme) =>
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
-      paddingVertical: 14,
+      paddingVertical: 11,
       paddingHorizontal: 14,
       borderRadius: 12,
       marginBottom: 8,
