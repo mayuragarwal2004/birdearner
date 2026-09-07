@@ -54,7 +54,7 @@ const ProfileHeader = ({
 
       const deepLink = `birdearner://profile/${userIdToShare}`;
       const webLink = `https://birdearner.com/profile/${userIdToShare}`;
-      const shareMessage = `Check out ${isOwnProfile ? 'my' : 'this'} profile on Bird Earner!\n\n👤 ${displayName}\n\n🌐 Click here: ${webLink}\n\nDownload Bird Earner to connect with amazing freelancers and clients!`;
+      const shareMessage = `Check out ${isOwnProfile ? 'my' : 'this'} profile on Bird Earner:\n\n${webLink}`;
 
       const result = await Share.share({
         message: shareMessage,

@@ -212,7 +212,7 @@ export default function MyReview({ navigation, route }) {
       const webLink = `https://birdearner.com/profile/${profileUserId}`;
       await Share.share({
         title: `${displayName}'s Bird Earner Profile`,
-        message: `Check out my ${role === "CLIENT" ? "client" : "freelancer"} profile on Bird Earner:\n\n${displayName}\n${profileTitle}\n\n${webLink}`,
+        message: `Check out my ${role === "CLIENT" ? "client" : "freelancer"} profile on Bird Earner:\n\n${webLink}`,
       });
     } catch (error) {
       console.error("Share error:", error);

@@ -292,7 +292,7 @@ export default function ProfileScreen({ route, navigation }) {
       const webLink = `https://birdearner.com/profile/${idToShare}`;
       await Share.share({
         title: `${displayName}'s Bird Earner Profile`,
-        message: `Check out this Bird Earner profile:\n\n${displayName}\n${profileTitle}\n\n${webLink}`,
+        message: `Check out this Bird Earner profile:\n\n${webLink}`,
       });
     } catch (error) {
       console.error("Share error:", error);
