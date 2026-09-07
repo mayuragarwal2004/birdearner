@@ -75,7 +75,19 @@ const MarketplaceJobs = ({ navigation, route }) => {
     );
   }, []);
 
-  const allJobs = useMemo(() => getAllJobs(), [getAllJobs]);
+  // Freelancer service IDs for pre-filtering
+  const freelancerServiceIds = useMemo(() => {
+    return (_cachedFreelancerServices || []).map((s) => s.id);
+  }, []);
+
+  // Pre-filter: only show jobs matching the freelancer's own services
+  const allJobs = useMemo(() => {
+    const rawJobs = getAllJobs();
+    if (freelancerServiceIds.length === 0) return rawJobs;
+    return rawJobs.filter(
+      (job) => job.serviceId && freelancerServiceIds.includes(job.serviceId)
+    );
+  }, [getAllJobs, freelancerServiceIds]);
 
   // Use only freelancer's own services for filtering
   const availableServices = useMemo(() => {
