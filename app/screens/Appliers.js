@@ -136,7 +136,7 @@ const AppliersScreen = ({ navigation, route }) => {
               )}
             </View>
             <Text style={styles.heading} numberOfLines={2}>
-              {item.profileHeading || "Freelancer"}
+              {item.freelancerCategory || item.profileHeading || "Freelancer"}
             </Text>
           </View>
 
@@ -162,6 +162,29 @@ const AppliersScreen = ({ navigation, route }) => {
             label={`Level ${item.level || 1}`}
           />
         </View>
+
+        {(item.freelancerOffer || item.freelancerDays) && (
+          <View style={styles.negotiationRow}>
+            {item.freelancerOffer && (
+              <View style={styles.negotiationChip}>
+                <Text style={styles.negotiationLabel}>Offer</Text>
+                <Text style={styles.negotiationValue}>₹{Number(item.freelancerOffer).toLocaleString()}</Text>
+              </View>
+            )}
+            {item.freelancerDays && (
+              <View style={styles.negotiationChip}>
+                <Text style={styles.negotiationLabel}>Days</Text>
+                <Text style={styles.negotiationValue}>{item.freelancerDays}d</Text>
+              </View>
+            )}
+            {item.agreedAmount && (
+              <View style={[styles.negotiationChip, styles.negotiationAgreed]}>
+                <Text style={styles.negotiationLabel}>Agreed</Text>
+                <Text style={[styles.negotiationValue, styles.negotiationAgreedText]}>₹{Number(item.agreedAmount).toLocaleString()}</Text>
+              </View>
+            )}
+          </View>
+        )}
 
         <View style={styles.cardFooter}>
           <Text style={styles.chatHint}>Tap to open chat</Text>
@@ -475,6 +498,37 @@ const getStyles = (currentTheme, isDark) => {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
+    },
+    negotiationRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 8,
+      marginTop: 12,
+    },
+    negotiationChip: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 8,
+      backgroundColor: isDark ? "#2A2034" : "#F3EAFF",
+    },
+    negotiationLabel: {
+      color: muted,
+      fontSize: 11,
+      fontWeight: "600",
+    },
+    negotiationValue: {
+      color: PURPLE,
+      fontSize: 13,
+      fontWeight: "800",
+    },
+    negotiationAgreed: {
+      backgroundColor: isDark ? "rgba(34,197,94,0.18)" : "#EAF8EF",
+    },
+    negotiationAgreedText: {
+      color: isDark ? "#4ADE80" : "#22C55E",
     },
     chatHint: {
       color: accentLink,
