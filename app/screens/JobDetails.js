@@ -73,10 +73,12 @@ const JobDetailsScreen = ({ route, navigation }) => {
   );
 
   const budgetNum = parseFloat(currentJob?.budget || currentJob?.budgetAmount || 0);
-  const availableBalance = walletData?.availableBalance || 0;
-  const remainingAmount = Math.max(0, budgetNum - availableBalance);
   const isPlatformPayment = (currentJob?.paymentMethod || formData?.paymentMethod) === "PLATFORM";
-  const isInsufficient = isPlatformPayment && availableBalance < budgetNum;
+  const pendingPenalty = parseFloat(walletData?.pendingPenaltyAmount?.toString() || "0");
+  const totalRequired = isPlatformPayment ? (budgetNum + pendingPenalty) : budgetNum;
+  const availableBalance = walletData?.availableBalance || 0;
+  const remainingAmount = Math.max(0, totalRequired - availableBalance);
+  const isInsufficient = isPlatformPayment && availableBalance < totalRequired;
 
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme] || themeStyles.light;
@@ -92,7 +94,7 @@ const JobDetailsScreen = ({ route, navigation }) => {
       if (isPlatformPayment && isInsufficient) {
         Alert.alert(
           "Insufficient Wallet Balance",
-          `Your wallet balance is ${formatCurrency(availableBalance)}. You must add at least ${formatCurrency(remainingAmount)} to your wallet before confirming this job.`,
+          `Your wallet balance is ${formatCurrency(availableBalance)}. You must add at least ${formatCurrency(remainingAmount)} to your wallet before confirming this job${pendingPenalty > 0 ? ` (Job: ${formatCurrency(budgetNum)} + Penalty: ${formatCurrency(pendingPenalty)})` : ""}.`,
           [
             { text: "Cancel", style: "cancel" },
             { text: "Add to Wallet", onPress: () => navigation.navigate("WalletClient") },
@@ -592,23 +594,41 @@ const JobDetailsScreen = ({ route, navigation }) => {
                 <Text style={{ fontSize: 13, color: "#6B7280" }}>Job Budget:</Text>
                 <Text style={{ fontSize: 14, fontWeight: "700", color: "#1F192F" }}>{formatCurrency(budgetNum)}</Text>
               </View>
+
+              {pendingPenalty > 0 && (
+                <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
+                  <Text style={{ fontSize: 13, color: "#EF4444" }}>Outstanding Penalty:</Text>
+                  <Text style={{ fontSize: 14, fontWeight: "700", color: "#EF4444" }}>{formatCurrency(pendingPenalty)}</Text>
+                </View>
+              )}
+
+              {pendingPenalty > 0 && isPlatformPayment && (
+                <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6, borderTopWidth: 1, borderTopColor: "#E5E7EB", paddingTop: 6 }}>
+                  <Text style={{ fontSize: 13, fontWeight: "600", color: "#1F192F" }}>Total Required Amount:</Text>
+                  <Text style={{ fontSize: 14, fontWeight: "700", color: "#1F192F" }}>{formatCurrency(totalRequired)}</Text>
+                </View>
+              )}
+
               <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
                 <Text style={{ fontSize: 13, color: "#6B7280" }}>Amount in Wallet:</Text>
                 <Text style={{ fontSize: 14, fontWeight: "700", color: "#6B21A8" }}>
                   {walletLoading ? "Loading..." : formatCurrency(availableBalance)}
                 </Text>
               </View>
+
               <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 12 }}>
-                <Text style={{ fontSize: 13, color: "#6B7280" }}>Remaining Amount to Pay:</Text>
+                <Text style={{ fontSize: 13, color: "#6B7280" }}>
+                  {isPlatformPayment ? "Remaining Amount to Add:" : "Remaining Penalty to Pay:"}
+                </Text>
                 <Text style={{ fontSize: 14, fontWeight: "700", color: isPlatformPayment && isInsufficient ? "#EF4444" : "#22C55E" }}>
-                  {isPlatformPayment ? formatCurrency(remainingAmount) : "₹0 (Cash Payment)"}
+                  {isPlatformPayment ? formatCurrency(remainingAmount) : (pendingPenalty > 0 && availableBalance < pendingPenalty ? formatCurrency(pendingPenalty) : "₹0 (Cash Payment)")}
                 </Text>
               </View>
 
               {isPlatformPayment && isInsufficient && (
                 <View style={{ backgroundColor: "#FEF2F2", padding: 12, borderRadius: 12, borderWidth: 1, borderColor: "#FCA5A5", marginBottom: 6 }}>
                   <Text style={{ fontSize: 12, color: "#991B1B", fontWeight: "600", marginBottom: 10 }}>
-                    ⚠️ Insufficient wallet balance. You need at least {formatCurrency(remainingAmount)} more in your wallet to post this job.
+                    ⚠️ Insufficient wallet balance. You need at least {formatCurrency(remainingAmount)} more in your wallet to post this job{pendingPenalty > 0 ? ` (Job: ${formatCurrency(budgetNum)} + Penalty: ${formatCurrency(pendingPenalty)})` : ''}.
                   </Text>
                   <TouchableOpacity
                     style={{
@@ -633,7 +653,7 @@ const JobDetailsScreen = ({ route, navigation }) => {
               {isPlatformPayment && !isInsufficient && (
                 <View style={{ backgroundColor: "#F0FDF4", padding: 10, borderRadius: 10, borderWidth: 1, borderColor: "#86EFAC" }}>
                   <Text style={{ fontSize: 12, color: "#166534", fontWeight: "600", textAlign: "center" }}>
-                    ✓ Sufficient wallet balance available to fund this job.
+                    ✓ Sufficient wallet balance available to fund this job{pendingPenalty > 0 ? ` (includes ${formatCurrency(pendingPenalty)} cancellation penalty)` : ''}.
                   </Text>
                 </View>
               )}
@@ -641,7 +661,11 @@ const JobDetailsScreen = ({ route, navigation }) => {
               {!isPlatformPayment && (
                 <View style={{ backgroundColor: "#F3F4F6", padding: 10, borderRadius: 10 }}>
                   <Text style={{ fontSize: 12, color: "#4B5563", fontWeight: "600", textAlign: "center" }}>
-                    ℹ Cash Payment selected. Wallet lock not required.
+                    {pendingPenalty > 0 && availableBalance >= pendingPenalty
+                      ? `ℹ Outstanding penalty of ${formatCurrency(pendingPenalty)} will be auto-deducted from your wallet upon posting.`
+                      : pendingPenalty > 0
+                      ? `ℹ Outstanding penalty of ${formatCurrency(pendingPenalty)} will be added to your cash payment to the freelancer.`
+                      : "ℹ Cash Payment selected. Wallet lock not required."}
                   </Text>
                 </View>
               )}

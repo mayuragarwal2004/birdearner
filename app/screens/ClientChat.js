@@ -721,7 +721,22 @@ const ClientChat = ({ route, navigation }) => {
         }),
       });
 
-      if (res.success) {
+      if (res && res.requiresPayment) {
+        Alert.alert(
+          "Additional Payment Required",
+          res.message || `Additional ₹${res.additionalAmount} required for the negotiated amount. Please add funds to your wallet before assigning the freelancer.`,
+          [
+            { text: "Cancel", style: "cancel" },
+            {
+              text: "Pay Birdearner",
+              onPress: () => navigation.navigate("WalletClient"),
+            },
+          ]
+        );
+        return;
+      }
+
+      if (res && res.success) {
         Toast.show({
           type: "success",
           text1: "Success",
