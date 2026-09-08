@@ -200,10 +200,6 @@ const JobRequirementsScreen = ({ navigation }) => {
             if (prefill.jobType === "Remote" || prefill.jobType === "On-site") {
               setJobType(prefill.jobType);
               setIsOnSite(prefill.jobType === "On-site");
-              // Remote jobs only support platform payment
-              if (prefill.jobType === "Remote" && prefill.paymentMethod === "CASH") {
-                setPaymentMethod("PLATFORM");
-              }
             }
             if (prefill.serviceId) setServiceId(prefill.serviceId);
             if (prefill.freelancerType) setFrelancerType(prefill.freelancerType);
@@ -356,7 +352,6 @@ const JobRequirementsScreen = ({ navigation }) => {
       setLatitude(0);
       setLongitude(0);
       setSelectedSavedAddressId(null);
-      // Remote jobs only support platform payment
       setPaymentMethod("PLATFORM");
     }
   };
@@ -1201,7 +1196,7 @@ const JobRequirementsScreen = ({ navigation }) => {
               style={[
                 styles.paymentCard,
                 paymentMethod === "PLATFORM" && styles.paymentCardActive,
-                !isOnSite && styles.paymentCardFull,
+                !isOnSite && styles.paymentCardHalf,
               ]}
               onPress={() => setPaymentMethod("PLATFORM")}
               activeOpacity={0.88}
@@ -1964,9 +1959,9 @@ const getStyles = (currentTheme, isDark) => {
       borderColor: PURPLE,
       backgroundColor: soft,
     },
-    paymentCardFull: {
+    paymentCardHalf: {
       flex: 0,
-      width: "100%",
+      width: "50%",
     },
     paymentCardTop: {
       flexDirection: "row",
