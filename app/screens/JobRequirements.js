@@ -23,7 +23,7 @@ import SafeSpinner from "../components/SafeSpinner";
 import CustomPicker from "../components/CustomPicker";
 import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, FontAwesome } from "@expo/vector-icons";
 import {
   Briefcase,
   CalendarBlank,
@@ -1440,13 +1440,15 @@ const JobRequirementsScreen = ({ navigation }) => {
 
         {/* Skills */}
         <View style={styles.section}>
-          <Text style={styles.label}>Skills Required</Text>
+          <View style={styles.labelRow}>
+            <Tag size={18} color={accent} />
+            <Text style={[styles.label, styles.labelInline]}>Skills Required</Text>
+          </View>
           {skills.map((skill, index) => (
-            <View key={`skill-${index}`} style={styles.inputRow}>
-              <Tag size={20} color={accent} />
+            <View key={`skill-${index}`} style={styles.skillInputContainer}>
               <TextInput
-                style={styles.inputFlex}
-                placeholder="Add the required skills"
+                style={[styles.input, styles.skillInput]}
+                placeholder={`Skill ${index + 1}`}
                 placeholderTextColor={styles.placeholder.color}
                 value={skill}
                 onChangeText={(text) => {
@@ -1456,17 +1458,15 @@ const JobRequirementsScreen = ({ navigation }) => {
                 }}
               />
               {skills.length > 1 && (
-                <TouchableOpacity onPress={() => removeSkill(index)} style={styles.removeSkillBtn}>
-                  <Trash size={18} color="#EF4444" />
-                </TouchableOpacity>
-              )}
-              {index === skills.length - 1 && (
-                <TouchableOpacity onPress={addSkills}>
-                  <Text style={styles.addSkillsLink}>+ Add more skills</Text>
+                <TouchableOpacity onPress={() => removeSkill(index)} style={styles.removeSkillButton}>
+                  <FontAwesome name="minus-circle" size={20} color="#B64928" />
                 </TouchableOpacity>
               )}
             </View>
           ))}
+          <TouchableOpacity onPress={addSkills} style={styles.addSkillButton}>
+            <Text style={styles.addSkillText}>+ Add more skills</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Description */}
@@ -2124,6 +2124,31 @@ const getStyles = (currentTheme, isDark) => {
     },
     removeSkillBtn: {
       padding: 4,
+    },
+    skillInputContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: 10,
+    },
+    skillInput: {
+      flex: 1,
+      marginBottom: 0,
+    },
+    removeSkillButton: {
+      marginLeft: 10,
+      padding: 5,
+    },
+    addSkillButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: 8,
+      paddingHorizontal: 12,
+      gap: 8,
+    },
+    addSkillText: {
+      fontSize: 14,
+      color: PURPLE,
+      fontWeight: "600",
     },
     textAreaWrap: {
       borderRadius: 12,

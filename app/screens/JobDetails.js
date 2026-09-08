@@ -455,11 +455,6 @@ const JobDetailsScreen = ({ route, navigation }) => {
                   </Text>
                 </View>
               </View>
-              {currentJob.jobStatus === "OPEN" && (
-                <Text style={styles.statusNoticeText}>
-                  Application Deadline: 24 Hours from posting.
-                </Text>
-              )}
               {currentJob.workDeadline && (
                 <Text style={styles.statusNoticeText}>
                   Work Deadline: {formatDate(currentJob.workDeadline)} ({currentJob.workDurationDays || 1} Day{currentJob.workDurationDays > 1 ? "s" : ""})
@@ -472,18 +467,6 @@ const JobDetailsScreen = ({ route, navigation }) => {
         {/* Dynamic Action Controls for Complete Booking Flow */}
         <View style={styles.actionsContainer}>
           {loading && <ActivityIndicator size="large" color="#6B21A8" style={{ marginBottom: 12 }} />}
-
-          {/* OPEN Job: Client option to Extend Application Deadline (+24h) */}
-          {currentJob.jobStatus === "OPEN" && isClient && !currentJob.applicationExtended && (
-            <TouchableOpacity
-              style={styles.primaryConfirmButton}
-              onPress={handleExtendDeadline}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="time-outline" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
-              <Text style={styles.primaryConfirmButtonText}>Extend Application Deadline (+24h)</Text>
-            </TouchableOpacity>
-          )}
 
           {/* Physical Service Flow Buttons */}
           {!isRemote && (currentJob.jobStatus === "CONFIRMED" || currentJob.jobStatus === "IN_PROGRESS") && !isClient && (

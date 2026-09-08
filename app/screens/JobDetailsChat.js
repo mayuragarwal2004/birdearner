@@ -431,27 +431,12 @@ const JobDetailsChatScreen = ({ route, navigation }) => {
           {actionLoading && <ActivityIndicator size="large" color="#6B21A8" style={{ marginBottom: 12 }} />}
 
           {/* Timeline info */}
-          {job.applicationDeadline && statusText === "OPEN" && (
-            <View style={{ backgroundColor: "#EFF6FF", padding: 12, borderRadius: 12, marginBottom: 14 }}>
-              <Text style={{ fontSize: 12, color: "#1D4ED8", fontWeight: "600" }}>
-                Application Deadline: {formatDate(job.applicationDeadline)}
-              </Text>
-            </View>
-          )}
           {job.workDeadline && (
             <View style={{ backgroundColor: "#F0FDF4", padding: 12, borderRadius: 12, marginBottom: 14 }}>
               <Text style={{ fontSize: 12, color: "#166534", fontWeight: "600" }}>
                 Work Deadline: {formatDate(job.workDeadline)} ({job.workDurationDays || 1} Day{job.workDurationDays > 1 ? "s" : ""})
               </Text>
             </View>
-          )}
-
-          {/* OPEN Job: Client option to Extend Application Deadline (+24h) */}
-          {statusText === "OPEN" && isClient && !job.applicationExtended && (
-            <TouchableOpacity style={styles.primaryActionBtn} onPress={handleExtendDeadline} activeOpacity={0.8}>
-              <Ionicons name="time-outline" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
-              <Text style={styles.primaryActionBtnText}>Extend Application Deadline (+24h)</Text>
-            </TouchableOpacity>
           )}
 
           {/* Existing buttons */}

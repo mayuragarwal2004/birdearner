@@ -376,11 +376,15 @@ function JobOptionsModal({ visible, job, styles, onClose, onSelect }) {
           </Text>
 
           <ActionRow styles={styles} icon="document-text-outline" label="View Job Details" onPress={() => onSelect("View Details")} />
-          <ActionRow styles={styles} icon="create-outline" label="Update Job Details" onPress={() => onSelect("Update")} />
+          {!job?.assignedFreelancer && (
+            <ActionRow styles={styles} icon="create-outline" label="Update Job Details" onPress={() => onSelect("Update")} />
+          )}
           {!!job?.assignedFreelancer && (
             <ActionRow styles={styles} icon={<ChatCircleText size={23} color={PURPLE} />} label="Chat with Freelancer" onPress={() => onSelect("Chat")} />
           )}
-          <ActionRow styles={styles} icon="trash-outline" label="Delete This Job" danger onPress={() => onSelect("Delete")} />
+          {!job?.assignedFreelancer && (
+            <ActionRow styles={styles} icon="trash-outline" label="Delete This Job" danger onPress={() => onSelect("Delete")} />
+          )}
 
           <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
             <Text style={styles.cancelText}>Cancel</Text>

@@ -14,14 +14,12 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import SafeSpinner from "../components/SafeSpinner";
 import { FontAwesome, Ionicons } from "@expo/vector-icons";
 import ImageViewer from "react-native-image-zoom-viewer";
-import DateTimePicker from "@react-native-community/datetimepicker";
 import { useTheme } from "../context/ThemeContext";
 import * as ImagePicker from "expo-image-picker";
 import apiService from "../lib/apiService";
 
 const UpdateJobDetailsScreen = ({ route, navigation }) => {
-  const [deadline, setDeadline] = useState(new Date());
-  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [workDurationDays, setWorkDurationDays] = useState(1);
 
   const { jobId } = route.params;
   const [modalVisible, setModalVisible] = useState(false);
@@ -29,7 +27,6 @@ const UpdateJobDetailsScreen = ({ route, navigation }) => {
   const [job, setJob] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [updatedJob, setUpdatedJob] = useState({});
-  const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
   const [portfolioImages, setPortfolioImages] = useState([]);
   
   // Budget and wallet management
@@ -41,12 +38,6 @@ const UpdateJobDetailsScreen = ({ route, navigation }) => {
   
   // Skills management
   const [skillsArray, setSkillsArray] = useState([""]);
-
-  const onChangeDeadline = (event, selectedDate) => {
-    const currentDate = selectedDate || deadline;
-    setShowDatePicker(false);
-    setDeadline(currentDate);
-  };
 
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
@@ -72,7 +63,7 @@ const UpdateJobDetailsScreen = ({ route, navigation }) => {
       
       setJob(mappedJob);
       setUpdatedJob({ ...mappedJob }); // Clone the job details for editing
-      setDeadline(new Date(jobDoc.deadlineDate || new Date()));
+      setWorkDurationDays(jobDoc.workDurationDays || 1);
       
       // Set skills array for proper editing
       if (mappedJob.skills && Array.isArray(mappedJob.skills)) {
@@ -174,11 +165,6 @@ const UpdateJobDetailsScreen = ({ route, navigation }) => {
     }
   }, [isEditing]);
 
-  const handleDateConfirm = (date) => {
-    setUpdatedJob((prev) => ({ ...prev, deadline: date.toISOString() }));
-    setIsDatePickerVisible(false);
-  };
-
   const handleDeleteFile = (index) => {
     const updatedFiles = updatedJob.attached_files.filter(
       (_, i) => i !== index
@@ -198,9 +184,24 @@ const UpdateJobDetailsScreen = ({ route, navigation }) => {
       return;
     }
 
-    // Validate budget
-    if (!validateBudget(updatedJob.budget)) {
+    // Validate budget is a valid positive number
+    const budgetNum = parseFloat(updatedJob.budget);
+    if (isNaN(budgetNum) || budgetNum <= 0) {
+      Alert.alert("Error", "Please enter a valid budget amount.");
       return;
+    }
+
+    // Validate wallet balance if wallet data is available
+    if (walletData && job) {
+      const currentJobBudget = parseFloat(job.budget) || 0;
+      const maxAllowedBudget = walletData.availableBalance + currentJobBudget;
+      if (budgetNum > maxAllowedBudget) {
+        Alert.alert(
+          "Insufficient Balance",
+          `Maximum budget allowed: ₹${maxAllowedBudget.toFixed(2)}\nAvailable: ₹${walletData.availableBalance?.toFixed(2)}\nCurrent: ₹${currentJobBudget.toFixed(2)}`
+        );
+        return;
+      }
     }
 
     try {
@@ -231,7 +232,7 @@ const UpdateJobDetailsScreen = ({ route, navigation }) => {
         jobDescription: updatedJob.description,
         budgetAmount: parseFloat(updatedJob.budget),
         skillsRequired: skillsArray.filter(skill => skill.trim() !== ""),
-        deadlineDate: deadline.toISOString(),
+        workDurationDays: workDurationDays,
         attachedFiles: allImageUrls,
       };
 
@@ -468,30 +469,33 @@ const UpdateJobDetailsScreen = ({ route, navigation }) => {
         </TouchableOpacity>
       </View>
 
-      {/* Deadline */}
+      {/* Work Duration */}
       <View style={styles.deadlineSection}>
-        <Text style={styles.label1}>Deadline</Text>
-        <TouchableOpacity
-          style={styles.datePickerButton}
-          onPress={() => setShowDatePicker(true)}
-        >
-          <View style={styles.datePickerContent}>
-            <FontAwesome name="calendar" size={20} color="#6A0DAD" />
-            <Text style={styles.datePickerText}>
-              {deadline ? deadline.toDateString() : "Select Deadline"}
-            </Text>
-            <FontAwesome name="chevron-down" size={16} color="#999" />
-          </View>
-        </TouchableOpacity>
-        {showDatePicker && (
-          <DateTimePicker
-            value={deadline}
-            mode="date"
-            display="default"
-            minimumDate={new Date()}
-            onChange={onChangeDeadline}
-          />
-        )}
+        <Text style={styles.label1}>Work Duration</Text>
+        <Text style={styles.helperText1}>
+          Application deadline: 24 hours. Work deadline starts after freelancer booking is confirmed.
+        </Text>
+        <View style={styles.durationRow}>
+          {[1, 2, 3].map((days) => (
+            <TouchableOpacity
+              key={days}
+              style={[
+                styles.durationOption,
+                workDurationDays === days && styles.durationOptionActive,
+              ]}
+              onPress={() => setWorkDurationDays(days)}
+            >
+              <Text
+                style={[
+                  styles.durationOptionText,
+                  workDurationDays === days && styles.durationOptionTextActive,
+                ]}
+              >
+                {days} {days === 1 ? "Day" : "Days"}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
 
       {/* Attached Files */}
@@ -535,14 +539,14 @@ const UpdateJobDetailsScreen = ({ route, navigation }) => {
 
       {/* Buttons */}
       <View style={styles.buttonContainer1}>
-        <TouchableOpacity onPress={handleUpdateJob} style={styles.buttonSave}>
-          <Text style={{ color: "#fff", fontSize: 16 }}>Save Changes</Text>
-        </TouchableOpacity>
         <TouchableOpacity
           onPress={() => setIsEditing(false)}
           style={styles.buttoncancel}
         >
           <Text style={{ color: "#fff", fontSize: 16 }}>Cancel</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={handleUpdateJob} style={styles.buttonSave}>
+          <Text style={{ color: "#fff", fontSize: 16 }}>Save Changes</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -600,9 +604,11 @@ const UpdateJobDetailsScreen = ({ route, navigation }) => {
                     {job?.budget}/-
                   </Text>
                 </View>
-                <TouchableOpacity onPress={() => setIsEditing(true)}>
-                  <FontAwesome name="edit" size={24} color="#4e2587" />
-                </TouchableOpacity>
+                {!job?.assignedFreelancer && (
+                  <TouchableOpacity onPress={() => setIsEditing(true)}>
+                    <FontAwesome name="edit" size={24} color="#4e2587" />
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
 
@@ -1103,24 +1109,36 @@ const getStyles = (currentTheme) =>
     deadlineSection: {
       marginBottom: 20,
     },
-    datePickerButton: {
+    helperText1: {
+      fontSize: 12,
+      color: "#888",
+      marginBottom: 12,
+      lineHeight: 18,
+    },
+    durationRow: {
+      flexDirection: "row",
+      gap: 10,
+    },
+    durationOption: {
+      flex: 1,
+      paddingVertical: 12,
+      borderRadius: 10,
       borderWidth: 1,
       borderColor: "#ccc",
-      borderRadius: 8,
-      paddingHorizontal: 15,
-      paddingVertical: 12,
+      alignItems: "center",
       backgroundColor: "#fff",
     },
-    datePickerContent: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
+    durationOptionActive: {
+      borderColor: "#6A0DAD",
+      backgroundColor: "#6A0DAD",
     },
-    datePickerText: {
-      flex: 1,
-      marginLeft: 12,
-      fontSize: 16,
+    durationOptionText: {
+      fontSize: 14,
+      fontWeight: "600",
       color: "#333",
+    },
+    durationOptionTextActive: {
+      color: "#fff",
     },
   });
 
