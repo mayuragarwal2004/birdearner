@@ -96,37 +96,19 @@ const JobPriority = ({ navigation, route }) => {
     }
   }, [currentPriority, jobs]);
 
-  const formatDeadline = (deadline) => {
+  const formatDeadline = (deadline, workDays) => {
+    if (workDays) {
+      return `${workDays} ${workDays === 1 ? "Day" : "Days"}`;
+    }
+    if (!deadline) return "1 Day";
     try {
-      if (!deadline) return "No deadline";
-
       const currentDate = new Date();
-      let deadlineDate;
-
-      // Handle different date formats that might come from the backend
-      if (deadline instanceof Date) {
-        deadlineDate = deadline;
-      } else if (typeof deadline === "string") {
-        // Try parsing the date string
-        deadlineDate = new Date(deadline);
-
-        // Check if the date is valid
-        if (isNaN(deadlineDate.getTime())) {
-          console.log("Invalid date format:", deadline);
-          return "Invalid date";
-        }
-      } else {
-        console.log("Unknown deadline format:", deadline);
-        return "Unknown format";
-      }
-
-      const timeDiff = Math.ceil(
-        (deadlineDate - currentDate) / (1000 * 60 * 60 * 24)
-      );
-      return timeDiff > 0 ? `${timeDiff} days` : "Deadline passed";
-    } catch (error) {
-      console.error("Error formatting deadline:", error);
-      return "Date error";
+      let deadlineDate = deadline instanceof Date ? deadline : new Date(deadline);
+      if (isNaN(deadlineDate.getTime())) return "1 Day";
+      const timeDiff = Math.ceil((deadlineDate - currentDate) / (1000 * 60 * 60 * 24));
+      return timeDiff > 0 ? `${timeDiff} days` : "1 Day";
+    } catch {
+      return "1 Day";
     }
   };
 
@@ -211,7 +193,7 @@ const JobPriority = ({ navigation, route }) => {
           </Text>
           <Text style={styles.jobDetails}>
             Budget: ₹{formatBudget(jobBudget)} • Deadline:{" "}
-            {formatDeadline(jobDeadline)}
+            {formatDeadline(jobDeadline, job.workDurationDays)}
           </Text>
           <Text style={styles.jobDescription} numberOfLines={2}>
             {jobDescription}

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -13,6 +13,8 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useFocusEffect } from "@react-navigation/native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import ImageViewer from "react-native-image-zoom-viewer";
 import { useTheme } from "../context/ThemeContext";
@@ -25,6 +27,8 @@ const JobDetailsScreen = ({ route, navigation }) => {
   const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [currentJob, setCurrentJob] = useState(formData);
+  const [walletData, setWalletData] = useState(null);
+  const [walletLoading, setWalletLoading] = useState(false);
   const [otpInput, setOtpInput] = useState("");
   const [workFileUrl, setWorkFileUrl] = useState("");
   const [workNotes, setWorkNotes] = useState("");
@@ -48,6 +52,32 @@ const JobDetailsScreen = ({ route, navigation }) => {
   const { userData } = useAuth();
   const isClient = userData?.userType === "CLIENT" || userData?.client?.id === (currentJob.clientId || currentJob.client?.id);
 
+  const fetchWalletInfo = useCallback(async () => {
+    setWalletLoading(true);
+    try {
+      const res = await apiService.getClientWalletInfo();
+      if (res && res.success) {
+        setWalletData(res.data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch wallet info in JobDetails:", err);
+    } finally {
+      setWalletLoading(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchWalletInfo();
+    }, [fetchWalletInfo])
+  );
+
+  const budgetNum = parseFloat(currentJob?.budget || currentJob?.budgetAmount || 0);
+  const availableBalance = walletData?.availableBalance || 0;
+  const remainingAmount = Math.max(0, budgetNum - availableBalance);
+  const isPlatformPayment = (currentJob?.paymentMethod || formData?.paymentMethod) === "PLATFORM";
+  const isInsufficient = isPlatformPayment && availableBalance < budgetNum;
+
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme] || themeStyles.light;
   const styles = getStyles(currentTheme);
@@ -58,7 +88,92 @@ const JobDetailsScreen = ({ route, navigation }) => {
   };
 
   const handleSubmit = () => {
-    navigation.navigate("JobSubmissionTimmer", { formData: currentJob });
+    if (!currentJob.id) {
+      if (isPlatformPayment && isInsufficient) {
+        Alert.alert(
+          "Insufficient Wallet Balance",
+          `Your wallet balance is ${formatCurrency(availableBalance)}. You must add at least ${formatCurrency(remainingAmount)} to your wallet before confirming this job.`,
+          [
+            { text: "Cancel", style: "cancel" },
+            { text: "Add to Wallet", onPress: () => navigation.navigate("WalletClient") },
+          ]
+        );
+        return;
+      }
+
+      Alert.alert(
+        "Confirm Job Submission",
+        "Are you sure you want to confirm and post this job?",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Confirm & Post Job",
+            onPress: async () => {
+              try {
+                setLoading(true);
+
+                let finalImages = [];
+                if (Array.isArray(currentJob.portfolioImages)) {
+                  for (const img of currentJob.portfolioImages) {
+                    if (img && img.uri && (img.uri.startsWith("file:") || img.uri.startsWith("content:"))) {
+                      const uploadRes = await apiService.uploadImage(img, "job_portfolios");
+                      if (uploadRes.success && uploadRes.url) {
+                        finalImages.push(uploadRes.url);
+                      }
+                    } else if (typeof img === "string") {
+                      finalImages.push(img);
+                    } else if (img?.uri || img?.url) {
+                      finalImages.push(img.uri || img.url);
+                    }
+                  }
+                }
+
+                const jobDataToSubmit = {
+                  jobTitle: String(currentJob.jobTitle || "").trim(),
+                  jobDescription: String(currentJob.jobDes || currentJob.jobDescription || "").trim(),
+                  jobCategory: currentJob.freelancerType || currentJob.jobCategory || "General",
+                  jobSubCategory: currentJob.freelancerType || currentJob.jobSubCategory || "General",
+                  skillsRequired: (currentJob.skills || [])
+                    .map((s) => String(s || "").trim())
+                    .filter(Boolean),
+                  projectType: currentJob.jobType || "Remote",
+                  budgetType: "Fixed",
+                  budgetAmount: parseFloat(currentJob.budget),
+                  workDurationDays: Number(currentJob.workDurationDays || 1),
+                  attachedFiles: finalImages,
+                  location: currentJob.jobLocation,
+                  latitude: currentJob.latitude,
+                  longitude: currentJob.longitude,
+                  serviceId: currentJob.serviceId,
+                  paymentMethod: currentJob.paymentMethod || "PLATFORM",
+                  birdFeeAmount: currentJob.birdFeeAmount != null ? parseFloat(currentJob.birdFeeAmount) : undefined,
+                  birdFeePaid: (currentJob.paymentMethod || "PLATFORM") === "PLATFORM",
+                  selectedCouponId: currentJob.selectedCoupon?.id || null,
+                };
+
+                const res = await apiService.createJob(jobDataToSubmit);
+                if (res) {
+                  const createdJob = res.data || res;
+                  await AsyncStorage.removeItem("jobRequirementsDraft");
+                  navigation.navigate("JobPostedSuccess", {
+                    jobData: jobDataToSubmit,
+                    createdJob,
+                  });
+                } else {
+                  Alert.alert("Error", "Failed to create job.");
+                }
+              } catch (err) {
+                Alert.alert("Error", err.message || "Failed to submit job");
+              } finally {
+                setLoading(false);
+              }
+            },
+          },
+        ]
+      );
+    } else {
+      navigation.navigate("JobSubmissionTimmer", { formData: currentJob });
+    }
   };
 
   const handleExtendDeadline = async () => {
@@ -206,7 +321,6 @@ const JobDetailsScreen = ({ route, navigation }) => {
   const clientType = `Client \u2022 ${userData?.client?.organizationType || "Individual"}`;
   const companyName = userData?.client?.address || "Your Company";
 
-  const isPlatformPayment = formData.paymentMethod === "PLATFORM";
   const pType = (formData.jobType || formData.projectType || "").toLowerCase();
   const loc = (formData.jobLocation || "").toLowerCase();
   const isRemote = pType.includes("remote") || (loc.includes("remote") && !pType.includes("on-site"));
@@ -464,6 +578,77 @@ const JobDetailsScreen = ({ route, navigation }) => {
           </View>
         </View>
 
+        {/* Section for Wallet Balance & Payment Setup (when client is reviewing job before creation) */}
+        {!currentJob.id && (
+          <View style={styles.card}>
+            <View style={styles.cardHeaderRow}>
+              <View style={styles.iconCircle}>
+                <Ionicons name="wallet-outline" size={18} color="#6B21A8" />
+              </View>
+              <Text style={styles.cardHeaderTitle}>Wallet Balance & Payment Setup</Text>
+            </View>
+            <View style={styles.cardContentPadding}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
+                <Text style={{ fontSize: 13, color: "#6B7280" }}>Job Budget:</Text>
+                <Text style={{ fontSize: 14, fontWeight: "700", color: "#1F192F" }}>{formatCurrency(budgetNum)}</Text>
+              </View>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
+                <Text style={{ fontSize: 13, color: "#6B7280" }}>Amount in Wallet:</Text>
+                <Text style={{ fontSize: 14, fontWeight: "700", color: "#6B21A8" }}>
+                  {walletLoading ? "Loading..." : formatCurrency(availableBalance)}
+                </Text>
+              </View>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 12 }}>
+                <Text style={{ fontSize: 13, color: "#6B7280" }}>Remaining Amount to Pay:</Text>
+                <Text style={{ fontSize: 14, fontWeight: "700", color: isPlatformPayment && isInsufficient ? "#EF4444" : "#22C55E" }}>
+                  {isPlatformPayment ? formatCurrency(remainingAmount) : "₹0 (Cash Payment)"}
+                </Text>
+              </View>
+
+              {isPlatformPayment && isInsufficient && (
+                <View style={{ backgroundColor: "#FEF2F2", padding: 12, borderRadius: 12, borderWidth: 1, borderColor: "#FCA5A5", marginBottom: 6 }}>
+                  <Text style={{ fontSize: 12, color: "#991B1B", fontWeight: "600", marginBottom: 10 }}>
+                    ⚠️ Insufficient wallet balance. You need at least {formatCurrency(remainingAmount)} more in your wallet to post this job.
+                  </Text>
+                  <TouchableOpacity
+                    style={{
+                      backgroundColor: "#6B21A8",
+                      borderRadius: 10,
+                      paddingVertical: 10,
+                      alignItems: "center",
+                      flexDirection: "row",
+                      justifyContent: "center",
+                    }}
+                    onPress={() => navigation.navigate("WalletClient")}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons name="add-circle-outline" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
+                    <Text style={{ color: "#FFFFFF", fontWeight: "700", fontSize: 14 }}>
+                      Add {formatCurrency(remainingAmount)} to Wallet
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {isPlatformPayment && !isInsufficient && (
+                <View style={{ backgroundColor: "#F0FDF4", padding: 10, borderRadius: 10, borderWidth: 1, borderColor: "#86EFAC" }}>
+                  <Text style={{ fontSize: 12, color: "#166534", fontWeight: "600", textAlign: "center" }}>
+                    ✓ Sufficient wallet balance available to fund this job.
+                  </Text>
+                </View>
+              )}
+
+              {!isPlatformPayment && (
+                <View style={{ backgroundColor: "#F3F4F6", padding: 10, borderRadius: 10 }}>
+                  <Text style={{ fontSize: 12, color: "#4B5563", fontWeight: "600", textAlign: "center" }}>
+                    ℹ Cash Payment selected. Wallet lock not required.
+                  </Text>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
+
         {/* Dynamic Action Controls for Complete Booking Flow */}
         <View style={styles.actionsContainer}>
           {loading && <ActivityIndicator size="large" color="#6B21A8" style={{ marginBottom: 12 }} />}
@@ -505,7 +690,7 @@ const JobDetailsScreen = ({ route, navigation }) => {
           {!isRemote && currentJob.jobStatus === "ARRIVED" && isClient && (
             <View style={{ marginBottom: 14, backgroundColor: "#FFF8E7", padding: 12, borderRadius: 12, borderWidth: 1, borderColor: "#FCD34D" }}>
               <Text style={{ fontSize: 12, color: "#92400E", fontWeight: "600", marginBottom: 6 }}>
-                The freelancer has requested the OTP. Share it verbally only after verifying their physical presence.
+                ⚠️ Important: Only share the OTP after the Freelancer has physically arrived at your location. Never share this OTP before the Freelancer arrives.
               </Text>
               {currentJob.otpCode ? (
                 <View style={{ backgroundColor: "#FFFFFF", borderRadius: 10, padding: 12, alignItems: "center", marginTop: 6, borderWidth: 1, borderColor: "#E5E7EB" }}>
@@ -683,12 +868,15 @@ const JobDetailsScreen = ({ route, navigation }) => {
 
           {!currentJob.id && (
             <TouchableOpacity
-              style={styles.primaryConfirmButton}
+              style={[
+                styles.primaryConfirmButton,
+                isPlatformPayment && isInsufficient && { backgroundColor: "#9CA3AF" },
+              ]}
               onPress={handleSubmit}
               activeOpacity={0.8}
             >
               <Ionicons name="checkmark-circle" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
-              <Text style={styles.primaryConfirmButtonText}>Confirm Job</Text>
+              <Text style={styles.primaryConfirmButtonText}>Confirm & Post Job</Text>
             </TouchableOpacity>
           )}
 

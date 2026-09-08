@@ -435,7 +435,7 @@ const JobDescriptionScreen = ({ route, navigation }) => {
               <Text style={styles.gridCardLabel}>Deadline</Text>
             </View>
             <Text style={styles.gridCardValue}>
-              {formatDate(job.deadlineDate || job.deadline)}
+              {`${job.workDurationDays || 1} ${job.workDurationDays === 1 ? "Day" : "Days"}`}
             </Text>
           </View>
         </View>

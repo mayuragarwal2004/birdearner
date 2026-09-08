@@ -30,6 +30,11 @@ const JobRequirementStack = () => (
       getComponent={() => require('../screens/PaymentScreen').default}
       options={{ headerShown: false }}
     />
+    <Stack.Screen
+      name="JobPostedSuccess"
+      getComponent={() => require('../screens/JobPostedSuccess').default}
+      options={{ headerShown: false }}
+    />
   </Stack.Navigator>
 );
 

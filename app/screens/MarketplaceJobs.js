@@ -217,19 +217,22 @@ const MarketplaceJobs = ({ navigation, route }) => {
       : `${budget}`;
   };
 
-  const formatDeadline = (deadline) => {
-    if (!deadline) return "No deadline";
+  const formatDeadline = (deadline, workDays) => {
+    if (workDays) {
+      return `${workDays} ${workDays === 1 ? "Day" : "Days"}`;
+    }
+    if (!deadline) return "1 Day";
     try {
       const currentDate = new Date();
       let deadlineDate =
         deadline instanceof Date ? deadline : new Date(deadline);
-      if (isNaN(deadlineDate.getTime())) return "Invalid date";
+      if (isNaN(deadlineDate.getTime())) return "1 Day";
       const timeDiff = Math.ceil(
         (deadlineDate - currentDate) / (1000 * 60 * 60 * 24)
       );
-      return timeDiff > 0 ? `${timeDiff} days` : "Deadline passed";
+      return timeDiff > 0 ? `${timeDiff} days` : "1 Day";
     } catch {
-      return "Date error";
+      return "1 Day";
     }
   };
 
@@ -304,7 +307,7 @@ const MarketplaceJobs = ({ navigation, route }) => {
           </Text>
           <Text style={styles.jobDetails}>
             Budget: ₹{formatBudget(jobBudget)} | Deadline:{" "}
-            {formatDeadline(jobDeadline)}
+            {formatDeadline(jobDeadline, job.workDurationDays)}
           </Text>
           <Text style={styles.jobDescription} numberOfLines={2}>
             {jobDescription}

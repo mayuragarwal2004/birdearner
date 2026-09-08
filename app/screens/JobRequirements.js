@@ -317,19 +317,6 @@ const JobRequirementsScreen = ({ navigation }) => {
       return true;
     }
 
-    if (paymentMethod === "PLATFORM") {
-      if (!walletData) {
-        setBudgetError("Unable to verify wallet balance. Please try again.");
-        return false;
-      }
-      if (budgetNum > walletData.availableBalance) {
-        setBudgetError(
-          `Insufficient balance. \nRequired: ₹${budgetNum.toFixed(2)}. \nAvailable: ₹${walletData.availableBalance?.toFixed(2)}`
-        );
-        return false;
-      }
-    }
-
     return true;
   };
 
