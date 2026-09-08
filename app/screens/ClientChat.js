@@ -451,7 +451,11 @@ const ClientChat = ({ route, navigation }) => {
 
 
   const handleViewProfile = () => {
-    navigation.navigate("ProfileScreen", { userId: route.params.freelancer.user.id });
+    const f = route.params.freelancer;
+    const userId = f?.user?.id || f?.userId || f?.id;
+    if (userId) {
+      navigation.navigate("ProfileScreen", { userId });
+    }
   };
 
   const handleMenuAction = (action) => {

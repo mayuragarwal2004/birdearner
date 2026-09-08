@@ -375,7 +375,11 @@ const FreelancerChat = ({ route, navigation }) => {
   }
 
   const handleViewProfile = () => {
-    navigation.navigate("ProfileScreen", { userId: route.params.client.user.id });
+    const c = route.params.client;
+    const userId = c?.user?.id || c?.userId || c?.id;
+    if (userId) {
+      navigation.navigate("ProfileScreen", { userId });
+    }
   };
 
   const handleRequestCompletion = () => {

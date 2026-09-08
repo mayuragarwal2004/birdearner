@@ -32,7 +32,7 @@ const ChatHeader = ({
       </TouchableOpacity>
       <View style={styles.headerData}>
         <TouchableOpacity onPress={onViewProfile}>
-          <Text style={styles.username}>{user.user.fullName}</Text>
+          <Text style={styles.username}>{user?.user?.fullName || user?.fullName || 'User'}</Text>
         </TouchableOpacity>
 
         <StatusBadge status={chatStatus} />

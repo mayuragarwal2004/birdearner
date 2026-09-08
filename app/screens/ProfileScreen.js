@@ -39,6 +39,10 @@ const showToast = (type, title, message = "") => {
   });
 };
 
+const isUUIDString = (str) =>
+  typeof str === "string" &&
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+
 const parseArray = (value) => {
   if (!value) return [];
   if (Array.isArray(value)) return value.filter(Boolean);

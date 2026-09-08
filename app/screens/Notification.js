@@ -107,7 +107,7 @@ const NotificationScreen = () => {
           threadId: data.threadId,
           projectId: data.projectId,
           freelancer: {
-            user: { fullName: data.senderName || 'Freelancer' },
+            user: { id: data.senderId, fullName: data.senderName || 'Freelancer' },
             profilePhoto: data.senderImage,
             id: data.senderId
           }
@@ -117,7 +117,7 @@ const NotificationScreen = () => {
           threadId: data.threadId,
           projectId: data.projectId,
           client: {
-            user: { fullName: data.senderName || 'Client' },
+            user: { id: data.senderId, fullName: data.senderName || 'Client' },
             profilePhoto: data.senderImage,
             id: data.senderId
           }
