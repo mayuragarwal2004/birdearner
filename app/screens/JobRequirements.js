@@ -200,6 +200,10 @@ const JobRequirementsScreen = ({ navigation }) => {
             if (prefill.jobType === "Remote" || prefill.jobType === "On-site") {
               setJobType(prefill.jobType);
               setIsOnSite(prefill.jobType === "On-site");
+              // Remote jobs only support platform payment
+              if (prefill.jobType === "Remote" && prefill.paymentMethod === "CASH") {
+                setPaymentMethod("PLATFORM");
+              }
             }
             if (prefill.serviceId) setServiceId(prefill.serviceId);
             if (prefill.freelancerType) setFrelancerType(prefill.freelancerType);
@@ -352,6 +356,8 @@ const JobRequirementsScreen = ({ navigation }) => {
       setLatitude(0);
       setLongitude(0);
       setSelectedSavedAddressId(null);
+      // Remote jobs only support platform payment
+      setPaymentMethod("PLATFORM");
     }
   };
 
@@ -1195,6 +1201,7 @@ const JobRequirementsScreen = ({ navigation }) => {
               style={[
                 styles.paymentCard,
                 paymentMethod === "PLATFORM" && styles.paymentCardActive,
+                !isOnSite && styles.paymentCardFull,
               ]}
               onPress={() => setPaymentMethod("PLATFORM")}
               activeOpacity={0.88}
@@ -1218,29 +1225,31 @@ const JobRequirementsScreen = ({ navigation }) => {
               <Text style={styles.paymentSub}>Pay through BirdEarner</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[
-                styles.paymentCard,
-                paymentMethod === "CASH" && styles.paymentCardActive,
-              ]}
-              onPress={() => setPaymentMethod("CASH")}
-              activeOpacity={0.88}
-            >
-              <View style={styles.paymentCardTop}>
-                <View
-                  style={[styles.radio, paymentMethod === "CASH" && styles.radioActive]}
-                >
-                  {paymentMethod === "CASH" && <View style={styles.radioDot} />}
+            {isOnSite && (
+              <TouchableOpacity
+                style={[
+                  styles.paymentCard,
+                  paymentMethod === "CASH" && styles.paymentCardActive,
+                ]}
+                onPress={() => setPaymentMethod("CASH")}
+                activeOpacity={0.88}
+              >
+                <View style={styles.paymentCardTop}>
+                  <View
+                    style={[styles.radio, paymentMethod === "CASH" && styles.radioActive]}
+                  >
+                    {paymentMethod === "CASH" && <View style={styles.radioDot} />}
+                  </View>
+                  <Wallet
+                    size={22}
+                    color={paymentMethod === "CASH" ? accent : currentTheme.subText}
+                    weight="fill"
+                  />
                 </View>
-                <Wallet
-                  size={22}
-                  color={paymentMethod === "CASH" ? accent : currentTheme.subText}
-                  weight="fill"
-                />
-              </View>
-              <Text style={styles.paymentTitle}>Cash Payment</Text>
-              <Text style={styles.paymentSub}>Pay directly in cash</Text>
-            </TouchableOpacity>
+                <Text style={styles.paymentTitle}>Cash Payment</Text>
+                <Text style={styles.paymentSub}>Pay directly in cash</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 
@@ -1954,6 +1963,10 @@ const getStyles = (currentTheme, isDark) => {
     paymentCardActive: {
       borderColor: PURPLE,
       backgroundColor: soft,
+    },
+    paymentCardFull: {
+      flex: 0,
+      width: "100%",
     },
     paymentCardTop: {
       flexDirection: "row",
