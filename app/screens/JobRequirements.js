@@ -1429,7 +1429,7 @@ const JobRequirementsScreen = ({ navigation }) => {
               style={[
                 styles.paymentCard,
                 paymentMethod === "PLATFORM" && styles.paymentCardActive,
-                !isOnSite && styles.paymentCardHalf,
+                styles.paymentCardHalf,
               ]}
               onPress={() => setPaymentMethod("PLATFORM")}
               activeOpacity={0.88}
@@ -1458,6 +1458,7 @@ const JobRequirementsScreen = ({ navigation }) => {
                 style={[
                   styles.paymentCard,
                   paymentMethod === "CASH" && styles.paymentCardActive,
+                  styles.paymentCardHalf,
                 ]}
                 onPress={() => setPaymentMethod("CASH")}
                 activeOpacity={0.88}
