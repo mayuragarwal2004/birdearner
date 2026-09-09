@@ -18,6 +18,7 @@ import BirdEarnerSvg from "./assets/BirdEarnerSvg";
 import MarketplaceSvg from "./assets/MarketplaceSvg";
 import UserSvg from "./assets/UserSvg";
 import { useAuth, AuthProvider } from "./context/NewAuthContext";
+import { useNavigation, useNavigationState } from "@react-navigation/native";
 
 // Only the first-paint screen is eager — everything else loads on demand
 import IntroScreen from "./screens/Intro";
@@ -182,6 +183,26 @@ function MainTabs() {
   const { userData } = useAuth();
   const { isKeyboardVisible } = useKeyboard();
   const isClient = userData?.role === "CLIENT";
+  const navigation = useNavigation();
+
+  // Get the current route to conditionally hide tab bar
+  const currentRoute = useNavigationState((state) => {
+    if (!state) return null;
+    // Get the focused route from the tab navigator
+    const tabState = state.routes[state.index];
+    if (!tabState) return null;
+    // For nested stacks, traverse to find the innermost route
+    let current = tabState;
+    while (current.state) {
+      const innerState = current.state;
+      current = innerState.routes[innerState.index];
+      if (!current) break;
+    }
+    return current?.name;
+  });
+
+  // Hide tab bar for JobDetails and JobPostedSuccess screens
+  const hideTabBar = currentRoute === "JobDetails" || currentRoute === "JobPostedSuccess";
 
   const tabScreens = isClient
     ? [
@@ -207,7 +228,8 @@ function MainTabs() {
         tabBarLabelStyle: styles.tabBarLabel,
         tabBarStyle: [
           styles.tabBarStyle,
-          isKeyboardVisible && { display: 'none' }
+          isKeyboardVisible && { display: 'none' },
+          hideTabBar && { display: 'none' }
         ],
         tabBarIcon: ({ focused }) => renderTabIcon(route, focused),
         tabBarActiveTintColor: "#FFFFFF",
