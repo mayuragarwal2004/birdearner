@@ -883,17 +883,6 @@ const FreelancerSignup = ({ navigation, route }) => {
         return;
       }
     } else if (step === 2) {
-      const totalCount = selectedServices.length + (suggestedService ? 1 : 0);
-      if (totalCount === 0) {
-        showToast(
-          "error",
-          "Services Required",
-          "Please select at least one service or suggest a service you want to offer"
-        );
-        return;
-      }
-      setStep(3);
-    } else if (step === 3) {
       if (!freelancerCategory) {
         showToast("error", "Freelancer Type Required", "Please select your freelancer type");
         return;
@@ -912,6 +901,17 @@ const FreelancerSignup = ({ navigation, route }) => {
       }
       if (skillsList.length === 0) {
         showToast("error", "Skills Required", "Please add at least one skill");
+        return;
+      }
+      setStep(3);
+    } else if (step === 3) {
+      const totalCount = selectedServices.length + (suggestedService ? 1 : 0);
+      if (totalCount === 0) {
+        showToast(
+          "error",
+          "Services Required",
+          "Please select at least one service or suggest a service you want to offer"
+        );
         return;
       }
       setStep(5);
@@ -1205,8 +1205,8 @@ const FreelancerSignup = ({ navigation, route }) => {
 
   const getHeading = () => {
     if (step === 1 && mode === "signup") return "Complete Your Profile";
-    if (step === 2) return "Add Your Services";
-    if (step === 3) return "Complete Your Freelancer Profile";
+    if (step === 2) return "Complete Your Freelancer Profile";
+    if (step === 3) return "Add Your Services";
     if (step === 4) return "Personal & Work Details";
     if (step === 5) return "Add Your Portfolio";
     if (step === 6) return "Review & Submit";
@@ -1215,8 +1215,8 @@ const FreelancerSignup = ({ navigation, route }) => {
 
   const getHeaderSubtitle = () => {
     if (step === 1) return "Please fill in the details below to get started";
-    if (step === 2) return "Add up to 20 services (minimum 1 required)";
-    if (step === 3) return "Tell us more about yourself and your work";
+    if (step === 2) return "Tell us more about yourself and your work";
+    if (step === 3) return "Add up to 20 services (minimum 1 required)";
     if (step === 4) return "Add your skills, languages, and qualifications";
     if (step === 5) return "Upload images of your work to showcase your skills and experience to clients";
     if (step === 6) return "Review your details before submitting";
@@ -1390,190 +1390,8 @@ const FreelancerSignup = ({ navigation, route }) => {
               </View>
             )}
 
-            {/* Step 2: Add Your Services */}
+            {/* Step 2: Complete Your Freelancer Profile */}
             {step === 2 && (
-              <View style={styles.card}>
-                <Text style={styles.subFieldLabel}>
-                  Choose up to 5 services you want to offer (minimum 1 required):
-                </Text>
-
-                <View style={styles.inputContainer}>
-                  <View style={styles.iconBox}>
-                    <Search size={20} color="#7C3AED" />
-                  </View>
-                  <TextInput
-                    placeholderTextColor="#A098AE"
-                    style={styles.textInput}
-                    placeholder="Search services (e.g. Graphic Design, Web Dev)..."
-                    value={searchQuery}
-                    onChangeText={setSearchQuery}
-                    autoCapitalize="none"
-                  />
-                </View>
-
-                {selectedServices.length > 0 && (
-                  <View style={styles.selectedServicesContainer}>
-                    <Text style={styles.selectedServicesTitle}>
-                      Selected Services ({selectedServices.length}/5)
-                    </Text>
-                    <View style={styles.tagsWrapper}>
-                      {selectedServices.map((serviceId) => (
-                        <View key={serviceId} style={styles.purpleTagBadge}>
-                          <Text style={styles.purpleTagText}>
-                            {getServiceNameById(serviceId)}
-                          </Text>
-                          <TouchableOpacity
-                            onPress={() => {
-                              const service = availableServices.find(
-                                (s) => s.id === serviceId
-                              );
-                              if (service) toggleServiceSelection(service);
-                            }}
-                            style={styles.tagRemoveBtn}
-                          >
-                            <X size={12} color="#FFFFFF" />
-                          </TouchableOpacity>
-                        </View>
-                      ))}
-                    </View>
-                  </View>
-                )}
-
-                {servicesLoading ? (
-                  <SafeSpinner
-                    size="large"
-                    color="#6D28D9"
-                    style={{ marginVertical: 20 }}
-                  />
-                ) : (
-                  <ScrollView
-                    style={{ maxHeight: 320, marginVertical: 10 }}
-                    nestedScrollEnabled={true}
-                    showsVerticalScrollIndicator={true}
-                  >
-                    {searchQuery.trim() === "" ? (
-                      <View style={styles.infoBannerBox}>
-                        <Info size={18} color="#7C3AED" style={{ marginRight: 8 }} />
-                        <Text style={styles.infoBannerText}>
-                          Type keywords to search and add services to your profile.
-                        </Text>
-                      </View>
-                    ) : (
-                      <>
-                        {filteredServices.length === 0 ? (
-                          <View style={styles.noResultsBox}>
-                            <Text style={styles.noResultsTitle}>
-                              No services found for "{searchQuery}"
-                            </Text>
-                          </View>
-                        ) : (
-                          filteredServices.map((service) => {
-                            const isSelected = selectedServices.includes(service.id);
-                            return (
-                              <TouchableOpacity
-                                key={service.id}
-                                style={[
-                                  styles.serviceCardItem,
-                                  isSelected && styles.serviceCardItemSelected,
-                                ]}
-                                onPress={() => toggleServiceSelection(service)}
-                                activeOpacity={0.7}
-                              >
-                                <View style={{ flex: 1, marginRight: 10 }}>
-                                  <Text
-                                    style={[
-                                      styles.serviceItemName,
-                                      isSelected && styles.purpleTextBold,
-                                    ]}
-                                  >
-                                    {service.name}
-                                  </Text>
-                                  {service.description && (
-                                    <Text
-                                      style={styles.serviceItemDesc}
-                                      numberOfLines={2}
-                                    >
-                                      {service.description}
-                                    </Text>
-                                  )}
-                                </View>
-                                <View
-                                  style={[
-                                    styles.checkboxCircle,
-                                    isSelected && styles.checkboxCircleSelected,
-                                  ]}
-                                >
-                                  {isSelected && <Check size={14} color="#FFFFFF" />}
-                                </View>
-                              </TouchableOpacity>
-                            );
-                          })
-                        )}
-                      </>
-                    )}
-                  </ScrollView>
-                )}
-
-                {suggestedService && (
-                  <View style={styles.suggestedBadgeCard}>
-                    <View style={{ flex: 1 }}>
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                        <Sparkles size={14} color="#6D28D9" />
-                        <Text style={styles.suggestedBadgeTitle}>
-                          Suggested: {suggestedService.serviceName}
-                        </Text>
-                      </View>
-                      <Text style={styles.suggestedBadgeSubtitle}>
-                        Pending Super Admin Approval
-                      </Text>
-                    </View>
-                    <TouchableOpacity
-                      onPress={handleRemoveSuggestedService}
-                      style={styles.tagRemoveBtn}
-                    >
-                      <X size={12} color="#FFFFFF" />
-                    </TouchableOpacity>
-                  </View>
-                )}
-
-                <TouchableOpacity
-                  style={styles.suggestServiceTriggerBtn}
-                  onPress={() => setShowSuggestModal(true)}
-                  activeOpacity={0.8}
-                >
-                  <Sparkles size={16} color="#6D28D9" style={{ marginRight: 6 }} />
-                  <Text style={styles.suggestServiceTriggerText}>
-                    Can't find your service? Suggest a Service
-                  </Text>
-                </TouchableOpacity>
-
-                <View style={styles.buttonRow}>
-                  <TouchableOpacity
-                    style={styles.secondaryHalfButton}
-                    onPress={prevStep}
-                    disabled={mode === "signup"}
-                  >
-                    <ArrowLeft size={18} color="#6D28D9" style={{ marginRight: 6 }} />
-                    <Text style={styles.secondaryHalfButtonText}>Back</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[
-                      styles.primaryHalfButton,
-                      (selectedServices.length === 0 && !suggestedService) && styles.disabledButton,
-                    ]}
-                    onPress={nextStep}
-                    disabled={selectedServices.length === 0 && !suggestedService}
-                  >
-                    <Text style={styles.primaryHalfButtonText}>Next</Text>
-                    <ArrowRight size={18} color="#FFFFFF" style={{ marginLeft: 6 }} />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
-
-            {/* Step 3: Complete Your Freelancer Profile (Exact Match to Image 2 Reference) */}
-            {step === 3 && (
               <View style={styles.card}>
                 {/* 1. Add Your Profile Picture */}
                 <Text style={styles.sectionNumberTitle}>1. Add Your Profile</Text>
@@ -2055,6 +1873,188 @@ const FreelancerSignup = ({ navigation, route }) => {
                   <TouchableOpacity
                     style={styles.primaryHalfButton}
                     onPress={nextStep}
+                  >
+                    <Text style={styles.primaryHalfButtonText}>Next</Text>
+                    <ArrowRight size={18} color="#FFFFFF" style={{ marginLeft: 6 }} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+
+            {/* Step 3: Add Your Services */}
+            {step === 3 && (
+              <View style={styles.card}>
+                <Text style={styles.subFieldLabel}>
+                  Choose up to 5 services you want to offer (minimum 1 required):
+                </Text>
+
+                <View style={styles.inputContainer}>
+                  <View style={styles.iconBox}>
+                    <Search size={20} color="#7C3AED" />
+                  </View>
+                  <TextInput
+                    placeholderTextColor="#A098AE"
+                    style={styles.textInput}
+                    placeholder="Search services (e.g. Graphic Design, Web Dev)..."
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    autoCapitalize="none"
+                  />
+                </View>
+
+                {selectedServices.length > 0 && (
+                  <View style={styles.selectedServicesContainer}>
+                    <Text style={styles.selectedServicesTitle}>
+                      Selected Services ({selectedServices.length}/5)
+                    </Text>
+                    <View style={styles.tagsWrapper}>
+                      {selectedServices.map((serviceId) => (
+                        <View key={serviceId} style={styles.purpleTagBadge}>
+                          <Text style={styles.purpleTagText}>
+                            {getServiceNameById(serviceId)}
+                          </Text>
+                          <TouchableOpacity
+                            onPress={() => {
+                              const service = availableServices.find(
+                                (s) => s.id === serviceId
+                              );
+                              if (service) toggleServiceSelection(service);
+                            }}
+                            style={styles.tagRemoveBtn}
+                          >
+                            <X size={12} color="#FFFFFF" />
+                          </TouchableOpacity>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                )}
+
+                {servicesLoading ? (
+                  <SafeSpinner
+                    size="large"
+                    color="#6D28D9"
+                    style={{ marginVertical: 20 }}
+                  />
+                ) : (
+                  <ScrollView
+                    style={{ maxHeight: 320, marginVertical: 10 }}
+                    nestedScrollEnabled={true}
+                    showsVerticalScrollIndicator={true}
+                  >
+                    {searchQuery.trim() === "" ? (
+                      <View style={styles.infoBannerBox}>
+                        <Info size={18} color="#7C3AED" style={{ marginRight: 8 }} />
+                        <Text style={styles.infoBannerText}>
+                          Type keywords to search and add services to your profile.
+                        </Text>
+                      </View>
+                    ) : (
+                      <>
+                        {filteredServices.length === 0 ? (
+                          <View style={styles.noResultsBox}>
+                            <Text style={styles.noResultsTitle}>
+                              No services found for "{searchQuery}"
+                            </Text>
+                          </View>
+                        ) : (
+                          filteredServices.map((service) => {
+                            const isSelected = selectedServices.includes(service.id);
+                            return (
+                              <TouchableOpacity
+                                key={service.id}
+                                style={[
+                                  styles.serviceCardItem,
+                                  isSelected && styles.serviceCardItemSelected,
+                                ]}
+                                onPress={() => toggleServiceSelection(service)}
+                                activeOpacity={0.7}
+                              >
+                                <View style={{ flex: 1, marginRight: 10 }}>
+                                  <Text
+                                    style={[
+                                      styles.serviceItemName,
+                                      isSelected && styles.purpleTextBold,
+                                    ]}
+                                  >
+                                    {service.name}
+                                  </Text>
+                                  {service.description && (
+                                    <Text
+                                      style={styles.serviceItemDesc}
+                                      numberOfLines={2}
+                                    >
+                                      {service.description}
+                                    </Text>
+                                  )}
+                                </View>
+                                <View
+                                  style={[
+                                    styles.checkboxCircle,
+                                    isSelected && styles.checkboxCircleSelected,
+                                  ]}
+                                >
+                                  {isSelected && <Check size={14} color="#FFFFFF" />}
+                                </View>
+                              </TouchableOpacity>
+                            );
+                          })
+                        )}
+                      </>
+                    )}
+                  </ScrollView>
+                )}
+
+                {suggestedService && (
+                  <View style={styles.suggestedBadgeCard}>
+                    <View style={{ flex: 1 }}>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                        <Sparkles size={14} color="#6D28D9" />
+                        <Text style={styles.suggestedBadgeTitle}>
+                          Suggested: {suggestedService.serviceName}
+                        </Text>
+                      </View>
+                      <Text style={styles.suggestedBadgeSubtitle}>
+                        Pending Super Admin Approval
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      onPress={handleRemoveSuggestedService}
+                      style={styles.tagRemoveBtn}
+                    >
+                      <X size={12} color="#FFFFFF" />
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                <TouchableOpacity
+                  style={styles.suggestServiceTriggerBtn}
+                  onPress={() => setShowSuggestModal(true)}
+                  activeOpacity={0.8}
+                >
+                  <Sparkles size={16} color="#6D28D9" style={{ marginRight: 6 }} />
+                  <Text style={styles.suggestServiceTriggerText}>
+                    Can't find your service? Suggest a Service
+                  </Text>
+                </TouchableOpacity>
+
+                <View style={styles.buttonRow}>
+                  <TouchableOpacity
+                    style={styles.secondaryHalfButton}
+                    onPress={prevStep}
+                    disabled={mode === "signup"}
+                  >
+                    <ArrowLeft size={18} color="#6D28D9" style={{ marginRight: 6 }} />
+                    <Text style={styles.secondaryHalfButtonText}>Back</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.primaryHalfButton,
+                      (selectedServices.length === 0 && !suggestedService) && styles.disabledButton,
+                    ]}
+                    onPress={nextStep}
+                    disabled={selectedServices.length === 0 && !suggestedService}
                   >
                     <Text style={styles.primaryHalfButtonText}>Next</Text>
                     <ArrowRight size={18} color="#FFFFFF" style={{ marginLeft: 6 }} />

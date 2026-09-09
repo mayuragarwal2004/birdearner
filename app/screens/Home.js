@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import {
-  SafeAreaView,
   View,
   Text,
   StyleSheet,
@@ -9,9 +8,26 @@ import {
   RefreshControl,
   Platform,
 } from "react-native";
-import SafeSpinner from "../components/SafeSpinner";
-import { FontAwesome, MaterialIcons, Ionicons } from "@expo/vector-icons";
-import { Bell, Crown, Clock, Flag, ChatCircleText, Wallet, CreditCard, ArrowCircleUp, ClipboardText, ListDashes, XCircle, Sparkle, ChatCircleDots, Star } from "phosphor-react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { FontAwesome, Ionicons } from "@expo/vector-icons";
+import {
+  Bell,
+  Crown,
+  Clock,
+  Flag,
+  ChatCircleText,
+  Wallet,
+  CreditCard,
+  ArrowCircleUp,
+  ClipboardText,
+  ListDashes,
+  XCircle,
+  Sparkle,
+  ChatCircleDots,
+  Star,
+  Megaphone,
+  ShoppingBag,
+} from "phosphor-react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useAuth } from "../context/NewAuthContext";
 import { useTheme } from "../context/ThemeContext";
@@ -66,7 +82,7 @@ const getFreelancerProfileCompletion = (userData, userProfile) => {
 };
 
 const HomeScreen = () => {
-  const { userData, userProfile, logout } = useAuth();
+  const { userData, userProfile } = useAuth();
   const [profilePercentage, setProfilePercentage] = useState(20);
   const [flagsCount, setFlagsCount] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
@@ -74,8 +90,6 @@ const HomeScreen = () => {
   const [activeOrders, setActiveOrders] = useState(0);
   const [cancelledOrders, setCancelledOrdersOrders] = useState(0);
   const [successScore, setSuccessScore] = useState(0);
-  const [showProfileSetup, setShowProfileSetup] = useState(false);
-  const [currentSetupStep, setCurrentSetupStep] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
   const navigation = useNavigation();
@@ -85,66 +99,12 @@ const HomeScreen = () => {
 
   const styles = getStyles(currentTheme);
 
-  // Handle profile setup navigation
-  const handleProfileSetupNavigation = () => {
-    if (currentSetupStep) {
-      navigation.navigate(currentSetupStep);
-    }
-  };
-
-  // Handle skip profile setup (go to main tabs)
-  const handleSkipProfileSetup = () => {
-    navigation.replace("MainTabs");
-  };
-
   const fetchOrderRecords = async () => {
     try {
-      // TODO: Implement with new backend
-      // For now, set some default values to prevent errors
       setCancelledOrdersOrders(0);
       setActiveOrders(0);
       setCompletedOrders(0);
       setSuccessScore(0);
-
-      /* Original Appwrite code - commented out for migration
-      const cancelledOrders = userData?.cancelled_jobs.length;
-      const assignedJobs = userData?.assigned_jobs;
-
-      setCancelledOrdersOrders(cancelledOrders);
-
-      if (userData?.assigned_jobs.length === 0) {
-        setActiveOrders(0);
-        setCompletedOrders(0);
-      } else {
-        const jobPromises = assignedJobs.map((jobId) =>
-          databases.getDocument(
-            appwriteConfig.databaseId,
-            appwriteConfig.jobCollectionID,
-            jobId
-          )
-        );
-
-        const jobs = await Promise.all(jobPromises);
-
-        const completedCount = jobs.filter(
-          (job) => job?.completed_status === true
-        ).length;
-        const activeCount = jobs.filter(
-          (job) =>
-            job?.completed_status === false || job?.completed_status === null
-        ).length;
-
-        setCompletedOrders(completedCount);
-        setActiveOrders(activeCount);
-
-        const totalOrders = completedCount + cancelledOrders;
-        const calSuccessScore = totalOrders
-          ? ((completedCount / totalOrders) * 100).toFixed(0)
-          : 0;
-
-        setSuccessScore(calSuccessScore);
-      }
-      */
     } catch (error) {
       throw error;
     }
@@ -156,7 +116,7 @@ const HomeScreen = () => {
         setLoadingNotifications(true);
         const response = await apiService.getNotifications(userData.id, 1);
         if (response && response.data) {
-          setNotifications(response.data.slice(0, 5)); // Show only latest 5
+          setNotifications(response.data.slice(0, 5));
         }
       }
     } catch (error) {
@@ -175,7 +135,7 @@ const HomeScreen = () => {
 
   useEffect(() => {
     setProfilePercentage(getFreelancerProfileCompletion(userData, userProfile));
-    setFlagsCount(0); // TODO: Implement flags in new backend
+    setFlagsCount(0);
   }, [userData, userProfile]);
 
   const handleCompleteProfile = () => {
@@ -195,48 +155,19 @@ const HomeScreen = () => {
     rootNavigation.navigate("FreelancerSignup", params);
   };
 
-  // TODO: Implement user data fetching with new backend
-  /* Original Appwrite code - commented out for migration
-  useEffect(() => {
-    const flagsData = async () => {
-      if (userData) {
-        try {
-          const freelancerId = userData?.$id;
-
-          const collectionId =
-            userData?.role === "client"
-              ? appwriteConfig.clientCollectionId
-              : appwriteConfig.freelancerCollectionId;
-
-          const freelancerDoc = await databases.getDocument(
-            appwriteConfig.databaseId,
-            collectionId,
-            freelancerId
-          );
-          setUserData(freelancerDoc);
-        } catch (error) {
-          Alert.alert("Error updating flags:", error);
-        }
-      }
-    };
-    flagsData();
-  }, [refreshing]);
-  */
-
   const formatAmount = (xp) => {
+    if (!xp || xp === 0) return "0";
     if (xp >= 1000000) {
-      return (xp / 1000000).toFixed(1) + "M"; // For millions
+      return (xp / 1000000).toFixed(1) + "M";
     } else if (xp >= 1000) {
-      return (xp / 1000).toFixed(1) + "K"; // For thousands
+      return (xp / 1000).toFixed(1) + "K";
     } else {
-      return xp; // For values less than 1000
+      return xp;
     }
   };
 
   const onRefresh = () => {
     setRefreshing(true);
-    // TODO: Implement refresh with new backend
-    // fetchUserData();
     fetchOrderRecords();
     fetchNotifications();
     setTimeout(() => {
@@ -245,7 +176,7 @@ const HomeScreen = () => {
   };
 
   return (
-    <SafeAreaView>
+    <SafeAreaView style={styles.safeArea}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         style={styles.safeContainer}
@@ -254,44 +185,52 @@ const HomeScreen = () => {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={["#3b006b"]}
+            colors={["#5B21B6"]}
             progressBackgroundColor={currentTheme.cardBackground || "#fff"}
           />
         }
       >
+        {/* Header */}
         <View style={styles.header}>
-          <View>
+          <View style={styles.headerSpacer} />
+          <View style={styles.headerTitleCol}>
             <Text style={styles.welcomeText}>Welcome Back,</Text>
-            <Text style={styles.usernameText}>{userData?.fullName}</Text>
+            <Text style={styles.usernameText}>
+              {userData?.fullName || "Irshad Khan"}
+            </Text>
           </View>
           <TouchableOpacity
             style={styles.notificationIcon}
             onPress={() => navigation.navigate("Notification")}
           >
-            <Bell size={24} color="#FFF" weight="fill" />
+            <Bell size={22} color="#FFF" weight="fill" />
             <View style={styles.notificationBadge} />
           </TouchableOpacity>
         </View>
 
         {/* Profile Overview Widget */}
         <LinearGradient
-          colors={['#762BAD', '#4A148C']}
+          colors={["#4C1D95", "#2E1065"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.widgetCardPurple}
         >
           <View style={styles.widgetHeader}>
             <View style={styles.widgetHeaderLeft}>
-              <Crown size={24} color="#FFF" weight="regular" />
+              <Crown size={22} color="#FFF" weight="regular" />
               <Text style={styles.widgetTitleWhite}>Profile Overview</Text>
             </View>
-            <TouchableOpacity style={styles.viewDetailsBtn} onPress={() => navigation.navigate('ProfileOverview')}>
-              <Text style={styles.viewDetailsTextWhite}>View Details {'>'}</Text>
+            <TouchableOpacity
+              style={styles.viewDetailsBtnWhite}
+              onPress={() => navigation.navigate("ProfileOverview")}
+            >
+              <Text style={styles.viewDetailsTextWhite}>View Details {">"}</Text>
             </TouchableOpacity>
           </View>
 
           <View style={styles.profileInnerCard}>
-            <View style={styles.levelCircleContainer}>
+            {/* Left Side: Level Circle */}
+            <View style={styles.levelSection}>
               <View style={styles.levelCircle}>
                 <Text style={styles.levelLabel}>Level</Text>
                 <Text style={styles.levelNumber}>1</Text>
@@ -302,40 +241,57 @@ const HomeScreen = () => {
               </View>
             </View>
 
-            <View style={styles.profileStatsGrid}>
-              <View style={styles.profileStatItem}>
-                <Clock size={20} color="#762BAD" />
-                <View style={styles.profileStatTextCol}>
-                  <Text style={styles.profileStatValue}>0%</Text>
-                  <Text style={styles.profileStatLabel}>Success Score</Text>
+            {/* Vertical Divider */}
+            <View style={styles.verticalDivider} />
+
+            {/* Right Side: Stats Grid */}
+            <View style={styles.profileStatsSection}>
+              {/* Top Row: Success Score & Rating */}
+              <View style={styles.profileStatsRowTop}>
+                <View style={styles.profileStatItemSmall}>
+                  <Clock size={18} color="#5B21B6" />
+                  <View style={styles.profileStatTextCol}>
+                    <Text style={styles.profileStatValue}>{successScore}%</Text>
+                    <Text style={styles.profileStatLabel}>Success Score</Text>
+                  </View>
+                </View>
+                <View style={styles.gridVerticalDivider} />
+                <View style={styles.profileStatItemSmall}>
+                  <Star size={18} color="#5B21B6" weight="regular" />
+                  <View style={styles.profileStatTextCol}>
+                    <Text style={styles.profileStatValue}>0</Text>
+                    <Text style={styles.profileStatLabel}>Rating</Text>
+                  </View>
                 </View>
               </View>
-              <View style={styles.profileStatItem}>
-                <Star size={20} color="#762BAD" weight="regular" />
-                <View style={styles.profileStatTextCol}>
-                  <Text style={styles.profileStatValue}>0</Text>
-                  <Text style={styles.profileStatLabel}>Rating</Text>
+
+              {/* Horizontal Line */}
+              <View style={styles.gridHorizontalDivider} />
+
+              {/* Bottom Row: Avg Response, Flags, Response Rate */}
+              <View style={styles.profileStatsRowBottom}>
+                <View style={styles.profileStatItemMicro}>
+                  <Clock size={16} color="#5B21B6" />
+                  <View style={styles.profileStatTextCol}>
+                    <Text style={styles.profileStatValue}>1 hr</Text>
+                    <Text style={styles.profileStatLabel}>Avg. Response Time</Text>
+                  </View>
                 </View>
-              </View>
-              <View style={styles.profileStatItem}>
-                <Clock size={20} color="#762BAD" />
-                <View style={styles.profileStatTextCol}>
-                  <Text style={styles.profileStatValue}>1 hr</Text>
-                  <Text style={styles.profileStatLabel}>Avg. Response Time</Text>
+                <View style={styles.gridVerticalDividerSmall} />
+                <View style={styles.profileStatItemMicro}>
+                  <Flag size={16} color="#5B21B6" />
+                  <View style={styles.profileStatTextCol}>
+                    <Text style={styles.profileStatValue}>NA</Text>
+                    <Text style={styles.profileStatLabel}>Flags</Text>
+                  </View>
                 </View>
-              </View>
-              <View style={styles.profileStatItem}>
-                <Flag size={20} color="#762BAD" />
-                <View style={styles.profileStatTextCol}>
-                  <Text style={styles.profileStatValue}>NA</Text>
-                  <Text style={styles.profileStatLabel}>Flags</Text>
-                </View>
-              </View>
-              <View style={styles.profileStatItem}>
-                <ChatCircleText size={20} color="#762BAD" />
-                <View style={styles.profileStatTextCol}>
-                  <Text style={styles.profileStatValue}>0%</Text>
-                  <Text style={styles.profileStatLabel}>Response Rate</Text>
+                <View style={styles.gridVerticalDividerSmall} />
+                <View style={styles.profileStatItemMicro}>
+                  <ChatCircleText size={16} color="#5B21B6" />
+                  <View style={styles.profileStatTextCol}>
+                    <Text style={styles.profileStatValue}>0%</Text>
+                    <Text style={styles.profileStatLabel}>Response Rate</Text>
+                  </View>
                 </View>
               </View>
             </View>
@@ -346,24 +302,48 @@ const HomeScreen = () => {
         <View style={styles.widgetCardWhite}>
           <View style={styles.widgetHeader}>
             <View style={styles.widgetHeaderLeft}>
-              <View style={styles.iconCirclePurple}>
-                <Wallet size={16} color="#762BAD" weight="fill" />
+              <View style={[styles.iconCircle, { backgroundColor: "#F3E8FF" }]}>
+                <Wallet size={16} color="#6B21A8" weight="fill" />
               </View>
               <Text style={styles.widgetTitleDark}>Earnings Overview</Text>
             </View>
-            <TouchableOpacity onPress={() => navigation.navigate('EarningsOverview')}>
-              <Text style={styles.viewDetailsTextPurple}>View Details {'>'}</Text>
+            <TouchableOpacity onPress={() => navigation.navigate("EarningsOverview")}>
+              <Text style={styles.viewDetailsTextPurple}>View Details {">"}</Text>
             </TouchableOpacity>
           </View>
-          
-          <View style={styles.statsRow}>
-            <StatItem icon={<Wallet size={20} color="#762BAD" weight="fill" />} iconBg="#F3E8FF" value={`Rs. ${formatAmount(0)}`} label="Total Earnings" />
-            <View style={styles.divider} />
-            <StatItem icon={<CreditCard size={20} color="#34C759" weight="fill" />} iconBg="#E8F5E9" value={`Rs. ${formatAmount(0)}`} label="Monthly Earnings" />
-            <View style={styles.divider} />
-            <StatItem icon={<Clock size={20} color="#FF9500" weight="fill" />} iconBg="#FFF9E6" value={formatAmount(0)} label="Outstanding" />
-            <View style={styles.divider} />
-            <StatItem icon={<ArrowCircleUp size={20} color="#FF3B30" weight="fill" />} iconBg="#FFF0F0" value={`Rs. ${formatAmount(0)}`} label="Withdrawal" />
+
+          <View style={styles.statsCardInnerContainer}>
+            <StatItem
+              icon={<Wallet size={18} color="#6B21A8" weight="fill" />}
+              iconBg="#F3E8FF"
+              value={`Rs. ${formatAmount(0)}`}
+              label="Total Earnings"
+              styles={styles}
+            />
+            <View style={styles.statsColumnDivider} />
+            <StatItem
+              icon={<CreditCard size={18} color="#16A34A" weight="fill" />}
+              iconBg="#DCFCE7"
+              value={`Rs. ${formatAmount(0)}`}
+              label="Monthly Earnings"
+              styles={styles}
+            />
+            <View style={styles.statsColumnDivider} />
+            <StatItem
+              icon={<Clock size={18} color="#EA580C" weight="fill" />}
+              iconBg="#FFEDD5"
+              value={`Rs. ${formatAmount(0)}`}
+              label="Outstanding"
+              styles={styles}
+            />
+            <View style={styles.statsColumnDivider} />
+            <StatItem
+              icon={<ArrowCircleUp size={18} color="#DC2626" weight="fill" />}
+              iconBg="#FEE2E2"
+              value={`Rs. ${formatAmount(0)}`}
+              label="Withdrawal"
+              styles={styles}
+            />
           </View>
         </View>
 
@@ -371,49 +351,85 @@ const HomeScreen = () => {
         <View style={styles.widgetCardWhite}>
           <View style={styles.widgetHeader}>
             <View style={styles.widgetHeaderLeft}>
-              <View style={styles.iconCirclePurple}>
-                <ClipboardText size={16} color="#762BAD" weight="fill" />
+              <View style={[styles.iconCircle, { backgroundColor: "#F3E8FF" }]}>
+                <ShoppingBag size={16} color="#6B21A8" weight="fill" />
               </View>
               <Text style={styles.widgetTitleDark}>Orders Overview</Text>
             </View>
-            <TouchableOpacity onPress={() => navigation.navigate('OrdersOverview')}>
-              <Text style={styles.viewDetailsTextPurple}>View Details {'>'}</Text>
+            <TouchableOpacity onPress={() => navigation.navigate("OrdersOverview")}>
+              <Text style={styles.viewDetailsTextPurple}>View Details {">"}</Text>
             </TouchableOpacity>
           </View>
 
-          <View style={styles.statsRow}>
-            <StatItem icon={<ClipboardText size={20} color="#762BAD" weight="fill" />} iconBg="#F3E8FF" value={String(CompletedOrders || 0)} label="Orders Completed" />
-            <View style={styles.divider} />
-            <StatItem icon={<ListDashes size={20} color="#38BDF8" weight="fill" />} iconBg="#E0F2FE" value={String(activeOrders || 0)} label="Active Orders" />
-            <View style={styles.divider} />
-            <StatItem icon={<XCircle size={20} color="#FF9500" weight="fill" />} iconBg="#FFF9E6" value={String(cancelledOrders || 0)} label="Cancelled Orders" />
+          <View style={styles.statsCardInnerContainer}>
+            <StatItem
+              icon={<ClipboardText size={18} color="#6B21A8" weight="fill" />}
+              iconBg="#F3E8FF"
+              value={String(CompletedOrders || 0)}
+              label="Orders Completed"
+              styles={styles}
+            />
+            <View style={styles.statsColumnDivider} />
+            <StatItem
+              icon={<ListDashes size={18} color="#0284C7" weight="fill" />}
+              iconBg="#E0F2FE"
+              value={String(activeOrders || 0)}
+              label="Active Orders"
+              styles={styles}
+            />
+            <View style={styles.statsColumnDivider} />
+            <StatItem
+              icon={<XCircle size={18} color="#D97706" weight="fill" />}
+              iconBg="#FEF3C7"
+              value={String(cancelledOrders || 0)}
+              label="Cancelled Orders"
+              styles={styles}
+            />
           </View>
         </View>
 
         {/* Complete Profile Widget */}
         {profilePercentage < 100 ? (
           <View style={styles.completeProfileWidget}>
-            <View style={styles.completeProfileLeft}>
-              <View style={styles.clipboardIllustration}>
-                <ClipboardText size={64} color="#E5D5FF" weight="fill" />
-                <Sparkle size={12} color="#762BAD" weight="fill" style={{position: 'absolute', top: -5, right: -5}} />
-                <Sparkle size={10} color="#762BAD" weight="fill" style={{position: 'absolute', bottom: -5, left: -5}} />
+            {/* Left Graphic Illustration */}
+            <View style={styles.clipboardGraphicContainer}>
+              <View style={styles.clipboardBoard}>
+                <View style={styles.clipboardHeaderBar} />
+                <View style={styles.clipboardBody}>
+                  <View style={styles.clipboardAvatarCircle}>
+                    <Ionicons name="person" size={20} color="#7C3AED" />
+                  </View>
+                  <View style={styles.clipboardTextLines}>
+                    <View style={styles.clipboardLineLong} />
+                    <View style={styles.clipboardLineShort} />
+                  </View>
+                </View>
+                {/* Pencil edit graphic */}
+                <View style={styles.pencilGraphic}>
+                  <Ionicons name="pencil" size={14} color="#FFF" />
+                </View>
               </View>
+              <Sparkle size={10} color="#A855F7" weight="fill" style={{ position: 'absolute', top: 4, left: 2 }} />
+              <Sparkle size={12} color="#A855F7" weight="fill" style={{ position: 'absolute', bottom: 8, right: 0 }} />
             </View>
+
+            {/* Right Text & Progress */}
             <View style={styles.completeProfileRight}>
               <Text style={styles.completeProfileTitle}>Complete Your Profile</Text>
-              <Text style={styles.completeProfileSubtitle}>Your profile is {String(profilePercentage || 0)}% complete</Text>
-              
+              <Text style={styles.completeProfileSubtitle}>
+                Your profile is {String(profilePercentage || 80)}% complete
+              </Text>
+
               <View style={styles.progressBlocks}>
                 <View style={[styles.progressBlock, profilePercentage >= 20 ? styles.bgRed : styles.bgGray]} />
                 <View style={[styles.progressBlock, profilePercentage >= 40 ? styles.bgOrange : styles.bgGray]} />
-                <View style={[styles.progressBlock, profilePercentage >= 70 ? styles.bgYellow : styles.bgGray]} />
-                <View style={[styles.progressBlock, profilePercentage >= 70 ? styles.bgPurple : styles.bgGray]} />
+                <View style={[styles.progressBlock, profilePercentage >= 60 ? styles.bgYellow : styles.bgGray]} />
+                <View style={[styles.progressBlock, profilePercentage >= 80 ? styles.bgPurple : styles.bgGray]} />
                 <View style={[styles.progressBlock, profilePercentage === 100 ? styles.bgGreen : styles.bgGray]} />
               </View>
 
               <TouchableOpacity style={styles.completeNowBtn} onPress={handleCompleteProfile}>
-                <Text style={styles.completeNowText}>Complete Now {'>'}</Text>
+                <Text style={styles.completeNowText}>Complete Now {">"}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -423,20 +439,53 @@ const HomeScreen = () => {
         <View style={styles.smartMessagesBox}>
           <View style={styles.smartMessagesLeft}>
             <View style={styles.smartMessagesIconBg}>
-              <ChatCircleDots size={24} color="#FFF" weight="fill" />
+              <ChatCircleDots size={22} color="#FFF" weight="fill" />
             </View>
-            <View>
+            <View style={styles.smartMessagesTextCol}>
               <Text style={styles.smartMessagesTitle}>Smart Messages</Text>
               <Text style={styles.smartMessagesSubtitle}>You have 0 unread messages</Text>
               <Text style={styles.smartMessagesDesc}>Stay connected and reply to clients.</Text>
             </View>
           </View>
-          <TouchableOpacity style={styles.viewMessagesBtn} onPress={() => navigation.navigate(userData?.role === "FREELANCER" ? "FreelancerChatList" : "ClientChatList")}>
-            <ChatCircleDots size={16} color="#762BAD" weight="regular" />
+          <TouchableOpacity
+            style={styles.viewMessagesBtn}
+            onPress={() =>
+              navigation.navigate(
+                userData?.role === "FREELANCER" ? "FreelancerChatList" : "ClientChatList"
+              )
+            }
+          >
+            <ChatCircleDots size={14} color="#6B21A8" weight="regular" />
             <Text style={styles.viewMessagesText}>View Messages</Text>
           </TouchableOpacity>
         </View>
 
+        {/* What's New Card */}
+        <TouchableOpacity
+          style={styles.whatsNewBox}
+          activeOpacity={0.8}
+          onPress={() => navigation.navigate("Notification")}
+        >
+          <View style={styles.whatsNewLeft}>
+            <View style={styles.whatsNewIconBg}>
+              <Megaphone size={20} color="#6B21A8" weight="fill" />
+            </View>
+            <View style={styles.whatsNewTextCol}>
+              <Text style={styles.whatsNewTitle}>What's New</Text>
+              <Text style={styles.whatsNewSubtitle}>
+                Stay updated with the latest notifications and updates.
+              </Text>
+            </View>
+          </View>
+          <View style={styles.whatsNewBellGraphic}>
+            <View style={styles.whatsNewBellCircle}>
+              <Bell size={20} color="#FFF" weight="fill" />
+              <View style={styles.whatsNewBellBadge} />
+            </View>
+          </View>
+        </TouchableOpacity>
+
+        {/* Outstanding balance prompt if any */}
         {userProfile?.withdrawableAmount < 0 && (
           <View style={styles.sectionContainer}>
             <View style={[styles.profileContainers, { backgroundColor: "#FFF5F5", borderColor: "#FFD2D2", borderWidth: 1 }]}>
@@ -448,7 +497,7 @@ const HomeScreen = () => {
                 You have an outstanding balance of ₹{Math.abs(userProfile.withdrawableAmount).toFixed(2)}.
                 Please settle it to continue applying for new jobs.
               </Text>
-                <TouchableOpacity
+              <TouchableOpacity
                 style={[styles.loginButton, { backgroundColor: "#FF3B30", marginTop: 15 }]}
                 onPress={() =>
                   (navigation.getParent?.()?.navigate
@@ -461,9 +510,9 @@ const HomeScreen = () => {
             </View>
           </View>
         )}
-
-
       </ScrollView>
+
+      {/* Floating Chat Icon */}
       <View style={styles.stickyButton}>
         <TouchableOpacity
           style={styles.chatIcon}
@@ -475,265 +524,405 @@ const HomeScreen = () => {
             )
           }
         >
-          <FontAwesome name="comments" size={28} color="#fff" />
+          <FontAwesome name="comments" size={26} color="#fff" />
         </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
 };
 
-const StatItem = ({ icon, iconBg, value, label }) => {
-  const { theme, themeStyles } = useTheme();
-  const currentTheme = themeStyles[theme];
-  const isDark = theme === 'dark';
+const StatItem = ({ icon, iconBg, value, label, styles }) => {
   return (
-    <View style={{ alignItems: 'center', flex: 1, paddingVertical: 10 }}>
-      <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: isDark ? '#374151' : iconBg, alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+    <View style={styles.statItemContainer}>
+      <View style={[styles.statIconCircle, { backgroundColor: iconBg }]}>
         {icon}
       </View>
-      <Text style={{ fontSize: 16, fontWeight: 'bold', color: isDark ? '#FFF' : '#000', marginBottom: 4 }}>{value}</Text>
-      <Text style={{ fontSize: 11, color: currentTheme.subText, textAlign: 'center' }}>{label}</Text>
+      <Text style={styles.statValueText}>{value}</Text>
+      <Text style={styles.statLabelText}>{label}</Text>
     </View>
   );
 };
 
 const getStyles = (currentTheme) =>
   StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: "#F8FAFC",
+    },
     safeContainer: {
-      // flex: 1,
-      backgroundColor: currentTheme.background || "#fff",
-      paddingHorizontal: 20,
-      paddingTop: 30,
+      flex: 1,
+      backgroundColor: "#F8FAFC",
+      paddingHorizontal: 16,
+      paddingTop: 10,
     },
     scrollContent: {
-      paddingBottom: Platform.OS === "ios" ? 150 : 130, // Increased bottom padding to prevent tab bar and sticky icon overlap
+      paddingBottom: Platform.OS === "ios" ? 140 : 120,
     },
     header: {
-      flexDirection: "column",
-      justifyContent: "space-between",
+      flexDirection: "row",
       alignItems: "center",
-      marginBottom: 20,
-      marginTop: 15,
+      marginBottom: 16,
+      marginTop: 10,
+    },
+    headerTitleCol: {
+      flex: 1,
+      alignItems: "center",
+    },
+    headerSpacer: {
+      width: 44,
     },
     welcomeText: {
-      fontSize: 24,
-      fontWeight: "bold",
-      color: currentTheme.primary || "#5A4CAE",
+      fontSize: 16,
+      fontWeight: "600",
+      color: "#5B21B6",
+      textAlign: "center",
     },
     usernameText: {
-      fontSize: 18,
-      color: currentTheme.primary || "#5A4CAE",
+      fontSize: 24,
+      fontWeight: "bold",
+      color: "#0F172A",
+      marginTop: 2,
+      textAlign: "center",
     },
     notificationIcon: {
-      backgroundColor: "#3b006b",
-      padding: 10,
-      borderRadius: 50,
-      position: "absolute",
-      right: 10,
-    },
-    logoutButton: {
-      backgroundColor: "#dc3545",
-      padding: 10,
-      borderRadius: 50,
-      position: "absolute",
-      right: 70, // Position it next to the notification icon
+      backgroundColor: "#3B0764",
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      alignItems: "center",
+      justifyContent: "center",
+      position: "relative",
     },
     notificationBadge: {
-      position: 'absolute',
+      position: "absolute",
       top: 10,
       right: 12,
       width: 8,
       height: 8,
       borderRadius: 4,
-      backgroundColor: '#FF3B30',
+      backgroundColor: "#EF4444",
       borderWidth: 1,
-      borderColor: '#3b006b'
+      borderColor: "#3B0764",
     },
     widgetCardPurple: {
       borderRadius: 20,
-      padding: 20,
-      marginBottom: 20,
+      padding: 16,
+      marginBottom: 16,
       elevation: 4,
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 8,
-    },
-    widgetCardWhite: {
-      backgroundColor: currentTheme.cardBackground || '#FFF',
-      borderRadius: 20,
-      padding: 20,
-      marginBottom: 20,
-      borderWidth: currentTheme.theme === 'dark' ? 1 : 0,
-      borderColor: '#374151',
-      elevation: 2,
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.05,
-      shadowRadius: 8,
+      shadowColor: "#4C1D95",
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.15,
+      shadowRadius: 10,
     },
     widgetHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: 20,
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 14,
     },
     widgetHeaderLeft: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
     },
     widgetTitleWhite: {
-      color: '#FFF',
+      color: "#FFF",
       fontSize: 16,
-      fontWeight: 'bold',
-      marginLeft: 10,
+      fontWeight: "bold",
+      marginLeft: 8,
     },
     widgetTitleDark: {
-      color: currentTheme.text,
+      color: "#0F172A",
       fontSize: 16,
-      fontWeight: 'bold',
-      marginLeft: 10,
+      fontWeight: "bold",
+      marginLeft: 8,
     },
-    viewDetailsBtn: {
+    viewDetailsBtnWhite: {
       borderWidth: 1,
-      borderColor: 'rgba(255,255,255,0.3)',
+      borderColor: "rgba(255, 255, 255, 0.4)",
       paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 20,
+      paddingVertical: 5,
+      borderRadius: 16,
     },
     viewDetailsTextWhite: {
-      color: '#FFF',
+      color: "#FFF",
       fontSize: 12,
-      fontWeight: '600',
+      fontWeight: "600",
     },
     viewDetailsTextPurple: {
-      color: '#762BAD',
+      color: "#6B21A8",
       fontSize: 12,
-      fontWeight: 'bold',
-    },
-    iconCirclePurple: {
-      width: 32,
-      height: 32,
-      borderRadius: 16,
-      backgroundColor: '#F3E8FF',
-      alignItems: 'center',
-      justifyContent: 'center',
+      fontWeight: "bold",
     },
     profileInnerCard: {
-      backgroundColor: currentTheme.theme === 'dark' ? '#1F2937' : '#FDF8FF',
+      backgroundColor: "#FFFFFF",
       borderRadius: 16,
-      padding: 20,
+      padding: 14,
+      flexDirection: "row",
+      alignItems: "center",
     },
-    levelCircleContainer: {
-      alignItems: 'center',
-      marginBottom: 20,
-      position: 'relative',
+    levelSection: {
+      alignItems: "center",
+      justifyContent: "center",
+      position: "relative",
+      paddingRight: 6,
     },
     levelCircle: {
-      width: 90,
-      height: 90,
-      borderRadius: 45,
+      width: 84,
+      height: 84,
+      borderRadius: 42,
       borderWidth: 4,
-      borderColor: '#762BAD',
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: currentTheme.cardBackground,
+      borderColor: "#4C1D95",
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: "#FFF",
     },
     levelLabel: {
       fontSize: 10,
-      color: currentTheme.subText,
+      color: "#64748B",
     },
     levelNumber: {
-      fontSize: 28,
-      fontWeight: 'bold',
-      color: currentTheme.text,
+      fontSize: 24,
+      fontWeight: "bold",
+      color: "#0F172A",
       marginVertical: -2,
     },
     levelStatus: {
       fontSize: 10,
-      color: '#762BAD',
-      fontWeight: 'bold',
+      color: "#4C1D95",
+      fontWeight: "bold",
     },
     levelStarBadge: {
-      position: 'absolute',
-      top: 0,
-      right: '35%',
-      backgroundColor: '#762BAD',
+      position: "absolute",
+      top: -2,
+      right: 4,
+      backgroundColor: "#4C1D95",
+      width: 22,
+      height: 22,
+      borderRadius: 11,
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 2,
+      borderColor: "#FFF",
+    },
+    verticalDivider: {
+      width: 1,
+      height: "85%",
+      backgroundColor: "#F1F5F9",
+      marginHorizontal: 10,
+    },
+    profileStatsSection: {
+      flex: 1,
+      flexDirection: "column",
+    },
+    profileStatsRowTop: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-around",
+    },
+    profileStatsRowBottom: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    profileStatItemSmall: {
+      flexDirection: "row",
+      alignItems: "center",
+      flex: 1,
+      justifyContent: "center",
+    },
+    profileStatItemMicro: {
+      flexDirection: "row",
+      alignItems: "center",
+      flex: 1,
+      justifyContent: "center",
+    },
+    profileStatTextCol: {
+      marginLeft: 6,
+    },
+    profileStatValue: {
+      fontSize: 14,
+      fontWeight: "bold",
+      color: "#0F172A",
+    },
+    profileStatLabel: {
+      fontSize: 9,
+      color: "#64748B",
+    },
+    gridVerticalDivider: {
+      width: 1,
+      height: 28,
+      backgroundColor: "#F1F5F9",
+      marginHorizontal: 4,
+    },
+    gridVerticalDividerSmall: {
+      width: 1,
+      height: 24,
+      backgroundColor: "#F1F5F9",
+      marginHorizontal: 2,
+    },
+    gridHorizontalDivider: {
+      height: 1,
+      backgroundColor: "#F1F5F9",
+      marginVertical: 8,
+    },
+    widgetCardWhite: {
+      backgroundColor: "#FFFFFF",
+      borderRadius: 20,
+      padding: 16,
+      marginBottom: 16,
+      borderWidth: 1,
+      borderColor: "#F1F5F9",
+      elevation: 2,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.04,
+      shadowRadius: 8,
+    },
+    iconCircle: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    statsCardInnerContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingVertical: 4,
+    },
+    statItemContainer: {
+      alignItems: "center",
+      flex: 1,
+    },
+    statIconCircle: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: 8,
+    },
+    statValueText: {
+      fontSize: 14,
+      fontWeight: "bold",
+      color: "#0F172A",
+      marginBottom: 2,
+    },
+    statLabelText: {
+      fontSize: 10,
+      color: "#64748B",
+      textAlign: "center",
+    },
+    statsColumnDivider: {
+      width: 1,
+      height: 40,
+      backgroundColor: "#F1F5F9",
+    },
+    completeProfileWidget: {
+      flexDirection: "row",
+      backgroundColor: "#FDF8FF",
+      borderRadius: 20,
+      padding: 16,
+      marginBottom: 16,
+      borderWidth: 1,
+      borderColor: "#F3E8FF",
+      alignItems: "center",
+    },
+    clipboardGraphicContainer: {
+      width: 90,
+      height: 90,
+      position: "relative",
+      alignItems: "center",
+      justifyContent: "center",
+      marginRight: 12,
+    },
+    clipboardBoard: {
+      width: 70,
+      height: 80,
+      backgroundColor: "#FFFFFF",
+      borderRadius: 10,
+      borderWidth: 1.5,
+      borderColor: "#DDD6FE",
+      position: "relative",
+      alignItems: "center",
+      paddingTop: 12,
+      elevation: 2,
+      shadowColor: "#6B21A8",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.08,
+      shadowRadius: 4,
+    },
+    clipboardHeaderBar: {
+      position: "absolute",
+      top: -8,
+      width: 32,
+      height: 12,
+      backgroundColor: "#7C3AED",
+      borderRadius: 4,
+    },
+    clipboardBody: {
+      alignItems: "center",
+      width: "100%",
+      paddingHorizontal: 8,
+    },
+    clipboardAvatarCircle: {
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      backgroundColor: "#F3E8FF",
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: 6,
+    },
+    clipboardTextLines: {
+      width: "100%",
+      alignItems: "center",
+    },
+    clipboardLineLong: {
+      width: "80%",
+      height: 3,
+      backgroundColor: "#DDD6FE",
+      borderRadius: 2,
+      marginBottom: 3,
+    },
+    clipboardLineShort: {
+      width: "50%",
+      height: 3,
+      backgroundColor: "#DDD6FE",
+      borderRadius: 2,
+    },
+    pencilGraphic: {
+      position: "absolute",
+      bottom: -6,
+      right: -6,
       width: 24,
       height: 24,
       borderRadius: 12,
-      alignItems: 'center',
-      justifyContent: 'center',
+      backgroundColor: "#7C3AED",
+      alignItems: "center",
+      justifyContent: "center",
       borderWidth: 2,
-      borderColor: currentTheme.cardBackground,
-    },
-    profileStatsGrid: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      justifyContent: 'space-between',
-    },
-    profileStatItem: {
-      width: '48%',
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginBottom: 16,
-    },
-    profileStatTextCol: {
-      marginLeft: 8,
-    },
-    profileStatValue: {
-      fontSize: 16,
-      fontWeight: 'bold',
-      color: currentTheme.text,
-    },
-    profileStatLabel: {
-      fontSize: 10,
-      color: currentTheme.subText,
-    },
-    statsRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-    },
-    divider: {
-      width: 1,
-      height: 40,
-      backgroundColor: currentTheme.theme === 'dark' ? '#374151' : '#F3F4F6',
-    },
-    completeProfileWidget: {
-      flexDirection: 'row',
-      backgroundColor: currentTheme.theme === 'dark' ? '#1f2937' : '#FDF8FF',
-      borderRadius: 20,
-      padding: 20,
-      marginBottom: 20,
-      borderWidth: 1,
-      borderColor: '#E5D5FF',
-    },
-    completeProfileLeft: {
-      marginRight: 16,
-      justifyContent: 'center',
-    },
-    clipboardIllustration: {
-      position: 'relative',
+      borderColor: "#FFF",
     },
     completeProfileRight: {
       flex: 1,
     },
     completeProfileTitle: {
       fontSize: 16,
-      fontWeight: 'bold',
-      color: '#762BAD',
-      marginBottom: 4,
+      fontWeight: "bold",
+      color: "#4C1D95",
+      marginBottom: 2,
     },
     completeProfileSubtitle: {
       fontSize: 12,
-      color: currentTheme.subText,
-      marginBottom: 12,
+      color: "#64748B",
+      marginBottom: 10,
     },
     progressBlocks: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      marginBottom: 16,
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginBottom: 12,
     },
     progressBlock: {
       height: 6,
@@ -741,173 +930,185 @@ const getStyles = (currentTheme) =>
       borderRadius: 3,
       marginHorizontal: 2,
     },
-    bgGray: { backgroundColor: currentTheme.theme === 'dark' ? '#374151' : '#E5E7EB' },
-    bgRed: { backgroundColor: '#FF3B30' },
-    bgOrange: { backgroundColor: '#FF9500' },
-    bgYellow: { backgroundColor: '#FBBF24' },
-    bgPurple: { backgroundColor: '#762BAD' },
-    bgGreen: { backgroundColor: '#34C759' },
+    bgGray: { backgroundColor: "#E2E8F0" },
+    bgRed: { backgroundColor: "#EF4444" },
+    bgOrange: { backgroundColor: "#F97316" },
+    bgYellow: { backgroundColor: "#EAB308" },
+    bgPurple: { backgroundColor: "#7C3AED" },
+    bgGreen: { backgroundColor: "#16A34A" },
     completeNowBtn: {
-      backgroundColor: '#762BAD',
+      backgroundColor: "#4C1D95",
       paddingVertical: 10,
-      borderRadius: 8,
-      alignItems: 'center',
+      borderRadius: 12,
+      alignItems: "center",
     },
     completeNowText: {
-      color: '#FFF',
+      color: "#FFF",
       fontSize: 14,
-      fontWeight: 'bold',
+      fontWeight: "bold",
     },
     smartMessagesBox: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      backgroundColor: currentTheme.theme === 'dark' ? '#1f2937' : '#FFF',
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      backgroundColor: "#FFFFFF",
       borderRadius: 16,
-      padding: 16,
-      marginBottom: 20,
+      padding: 14,
+      marginBottom: 16,
       borderWidth: 1,
-      borderColor: currentTheme.theme === 'dark' ? '#374151' : '#F3F4F6',
+      borderColor: "#F1F5F9",
     },
     smartMessagesLeft: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       flex: 1,
     },
     smartMessagesIconBg: {
       width: 40,
       height: 40,
       borderRadius: 20,
-      backgroundColor: '#762BAD',
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginRight: 12,
+      backgroundColor: "#6B21A8",
+      alignItems: "center",
+      justifyContent: "center",
+      marginRight: 10,
+    },
+    smartMessagesTextCol: {
+      flex: 1,
     },
     smartMessagesTitle: {
       fontSize: 14,
-      fontWeight: 'bold',
-      color: '#762BAD',
+      fontWeight: "bold",
+      color: "#4C1D95",
       marginBottom: 2,
     },
     smartMessagesSubtitle: {
       fontSize: 11,
-      color: currentTheme.text,
-      fontWeight: '600',
+      color: "#0F172A",
+      fontWeight: "600",
       marginBottom: 2,
     },
     smartMessagesDesc: {
       fontSize: 10,
-      color: currentTheme.subText,
+      color: "#64748B",
     },
     viewMessagesBtn: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       borderWidth: 1,
-      borderColor: '#E5D5FF',
+      borderColor: "#DDD6FE",
       borderRadius: 20,
       paddingHorizontal: 12,
       paddingVertical: 6,
     },
     viewMessagesText: {
-      color: '#762BAD',
+      color: "#6B21A8",
       fontSize: 11,
-      fontWeight: 'bold',
+      fontWeight: "bold",
       marginLeft: 4,
     },
-
-    stickyButton: {
-      width: 60,
-      height: 60,
-      borderRadius: 40,
-      backgroundColor: "#3b006b",
+    whatsNewBox: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      backgroundColor: "#FFFFFF",
+      borderRadius: 16,
+      padding: 14,
+      marginBottom: 16,
+      borderWidth: 1,
+      borderColor: "#F1F5F9",
+    },
+    whatsNewLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      flex: 1,
+    },
+    whatsNewIconBg: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: "#F3E8FF",
+      alignItems: "center",
+      justifyContent: "center",
+      marginRight: 10,
+    },
+    whatsNewTextCol: {
+      flex: 1,
+      paddingRight: 8,
+    },
+    whatsNewTitle: {
+      fontSize: 14,
+      fontWeight: "bold",
+      color: "#0F172A",
+      marginBottom: 2,
+    },
+    whatsNewSubtitle: {
+      fontSize: 11,
+      color: "#64748B",
+      lineHeight: 15,
+    },
+    whatsNewBellGraphic: {
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    whatsNewBellCircle: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: "#7C3AED",
+      alignItems: "center",
+      justifyContent: "center",
+      position: "relative",
+    },
+    whatsNewBellBadge: {
       position: "absolute",
-      bottom: Platform.OS === "ios" ? 105 : 90, // Position above tab bar (85px + 20px buffer for iOS, 70px + 20px for Android)
+      top: 9,
+      right: 9,
+      width: 7,
+      height: 7,
+      borderRadius: 3.5,
+      backgroundColor: "#EF4444",
+      borderWidth: 1,
+      borderColor: "#7C3AED",
+    },
+    stickyButton: {
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      backgroundColor: "#3B0764",
+      position: "absolute",
+      bottom: Platform.OS === "ios" ? 100 : 85,
       right: 20,
-      shadowColor: currentTheme.shadow || "#000000",
-      shadowOffset: {
-        width: 0,
-        height: 3,
-      },
-      shadowOpacity: 0.17,
-      shadowRadius: 3.05,
-      elevation: 4,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.2,
+      shadowRadius: 6,
+      elevation: 5,
     },
     chatIcon: {
       flex: 1,
       justifyContent: "center",
-      alignContent: "center",
       alignItems: "center",
     },
-    // Profile Setup Overlay Styles
-    profileSetupOverlay: {
-      position: "absolute",
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: "rgba(0, 0, 0, 0.8)",
-      zIndex: 1000,
-      justifyContent: "center",
-      alignItems: "center",
+    sectionContainer: {
+      marginVertical: 10,
     },
-    profileSetupContainer: {
-      backgroundColor: "white",
+    profileContainers: {
       borderRadius: 16,
-      padding: 24,
-      margin: 20,
+      padding: 16,
       alignItems: "center",
-      shadowColor: "#000",
-      shadowOffset: {
-        width: 0,
-        height: 2,
-      },
-      shadowOpacity: 0.25,
-      shadowRadius: 4,
-      elevation: 5,
     },
-    profileSetupTitle: {
-      fontSize: 24,
+    profileText: {
+      fontSize: 16,
       fontWeight: "bold",
-      marginBottom: 12,
-      color: "#333",
-      textAlign: "center",
     },
-    profileSetupMessage: {
-      fontSize: 16,
-      textAlign: "center",
-      marginBottom: 24,
-      color: "#666",
-      lineHeight: 22,
-    },
-    profileSetupButton: {
-      backgroundColor: currentTheme.primary || "#3b006b",
-      paddingVertical: 12,
-      paddingHorizontal: 24,
+    loginButton: {
+      paddingVertical: 10,
+      paddingHorizontal: 20,
       borderRadius: 8,
-      marginVertical: 8,
-      minWidth: 200,
     },
-    profileSetupButtonText: {
-      color: "white",
-      fontSize: 16,
-      fontWeight: "600",
-      textAlign: "center",
-    },
-    profileSetupSkipButton: {
-      backgroundColor: "transparent",
-      paddingVertical: 12,
-      paddingHorizontal: 24,
-      borderRadius: 8,
-      marginVertical: 8,
-      minWidth: 200,
-      borderWidth: 1,
-      borderColor: currentTheme.primary || "#3b006b",
-    },
-    profileSetupSkipButtonText: {
-      color: currentTheme.primary || "#3b006b",
-      fontSize: 16,
-      fontWeight: "600",
-      textAlign: "center",
+    loginButtonText: {
+      color: "#FFF",
+      fontWeight: "bold",
     },
   });
 

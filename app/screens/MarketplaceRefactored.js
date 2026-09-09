@@ -192,7 +192,7 @@ const MarketplaceScreen = ({ navigation }) => {
           >
             <SlidersHorizontal size={20} color="#FFF" />
             <Text style={styles.viewJobsButtonText}>
-              View Jobs ({allJobs.length})
+              View Jobs
             </Text>
           </TouchableOpacity>
         </View>

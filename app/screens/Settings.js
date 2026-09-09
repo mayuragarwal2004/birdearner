@@ -4,7 +4,6 @@ import {
   Image,
   ImageBackground,
   Platform,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Switch,
@@ -12,6 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
 import { useAuth } from "../context/NewAuthContext";
@@ -417,7 +417,7 @@ const getStyles = (currentTheme) => {
     header: {
       minHeight: 52,
       paddingHorizontal: 16,
-      paddingTop: Platform.OS === "android" ? 12 : 4,
+      paddingTop: 12,
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
