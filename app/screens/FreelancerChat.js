@@ -329,6 +329,7 @@ const FreelancerChat = ({ route, navigation }) => {
   const [reportModalVisible, setReportModalVisible] = useState(false);
   const [cancelModalVisible, setCancelModalVisible] = useState(false);
   const [selectedReportReason, setSelectedReportReason] = useState(null);
+  const [submittingReport, setSubmittingReport] = useState(false);
   const [fileInfo, setFileInfo] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -513,19 +514,27 @@ const FreelancerChat = ({ route, navigation }) => {
   };
 
   // Report functionality
-  const handleReport = async () => {
+  const handleReport = async (reportDetails = '') => {
     if (!selectedReportReason) return;
 
+    setSubmittingReport(true);
     try {
       const api = ApiService;
       await api.init();
+
+      const reportedUserId =
+        route.params?.client?.user?.id ||
+        route.params?.client?.userId ||
+        route.params?.client?.id ||
+        thread?.client?.userId;
 
       const res = await api.makeRequest('/chats/report', {
         method: 'POST',
         body: JSON.stringify({
           threadId: thread?.id,
           reason: selectedReportReason,
-          reportedUserId: route.params.client.userId,
+          reportedUserId: reportedUserId,
+          details: reportDetails,
         }),
       });
 
@@ -537,14 +546,18 @@ const FreelancerChat = ({ route, navigation }) => {
         });
         setReportModalVisible(false);
         setSelectedReportReason(null);
+      } else {
+        throw new Error(res.error || res.message || 'Failed to submit report');
       }
     } catch (error) {
       console.error('Error submitting report:', error);
       Toast.show({
         type: 'error',
         text1: 'Error',
-        text2: 'Failed to submit report',
+        text2: error.message || 'Failed to submit report',
       });
+    } finally {
+      setSubmittingReport(false);
     }
   };
 
@@ -842,6 +855,7 @@ const FreelancerChat = ({ route, navigation }) => {
           onSubmit={handleReport}
           selectedReason={selectedReportReason}
           onSelectReason={setSelectedReportReason}
+          isSubmitting={submittingReport}
         />
 
         <FreelancerCancelJobModal
