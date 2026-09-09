@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Image,
   Modal,
@@ -12,6 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { Audio } from "expo-av";
 
 let ExpoSpeechRecognitionModule = null;
 try {
@@ -19,6 +21,7 @@ try {
 } catch (e) {
   // Native module not available until rebuild
 }
+import Constants from "expo-constants";
 import SafeSpinner from "../components/SafeSpinner";
 import CustomPicker from "../components/CustomPicker";
 import * as ImagePicker from "expo-image-picker";
@@ -71,6 +74,7 @@ const JobRequirementsScreen = ({ navigation }) => {
   const [skills, setSkills] = useState([""]);
   const [jobDes, setJobDes] = useState("");
   const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
   const [calculatedBirdFee, setCalculatedBirdFee] = useState(null);
   const [portfolioImages, setPortfolioImages] = useState([]);
   const [jobTitle, setJobTitle] = useState("");
@@ -888,6 +892,10 @@ const JobRequirementsScreen = ({ navigation }) => {
   const hasCoordinates = !!(latitude && longitude && latitude !== 0 && longitude !== 0);
 
   const mapPreviewRef = useRef(null);
+  const webRecognitionRef = useRef(null);
+  const webMediaRecorderRef = useRef(null);
+  const audioRecordingRef = useRef(null);
+  const initialTextRef = useRef("");
 
   useEffect(() => {
     if (hasCoordinates && mapPreviewRef.current) {
@@ -901,57 +909,282 @@ const JobRequirementsScreen = ({ navigation }) => {
   useEffect(() => {
     if (!ExpoSpeechRecognitionModule) return;
 
-    const listeners = [
-      ExpoSpeechRecognitionModule.addListener("result", (event) => {
-        if (event.results && event.results[0]) {
-          const transcript = event.results[0].transcript;
-          if (event.isFinal) {
-            setJobDes((prev) => (prev ? prev + " " + transcript : transcript));
-          }
+    let subResult, subError, subEnd;
+
+    try {
+      subResult = ExpoSpeechRecognitionModule.addListener("result", (event) => {
+        if (event.results && event.results.length > 0) {
+          const transcript = event.results.map((r) => r.transcript).join(" ");
+          const prefix = initialTextRef.current ? initialTextRef.current.trim() + " " : "";
+          setJobDes(prefix + transcript);
         }
-      }),
-      ExpoSpeechRecognitionModule.addListener("error", (event) => {
+      });
+      subError = ExpoSpeechRecognitionModule.addListener("error", (event) => {
         console.warn("Speech recognition error:", event.error);
         setIsRecording(false);
-      }),
-      ExpoSpeechRecognitionModule.addListener("end", () => {
+      });
+      subEnd = ExpoSpeechRecognitionModule.addListener("end", () => {
         setIsRecording(false);
-      }),
-    ];
+      });
+    } catch (err) {
+      console.warn("Error attaching native speech recognition listeners:", err);
+    }
 
     return () => {
-      listeners.forEach((l) => l.remove());
+      subResult?.remove?.();
+      subError?.remove?.();
+      subEnd?.remove?.();
+      if (webRecognitionRef.current) {
+        try {
+          webRecognitionRef.current.stop();
+        } catch (e) {}
+      }
+      if (webMediaRecorderRef.current) {
+        try {
+          webMediaRecorderRef.current.stop();
+        } catch (e) {}
+      }
+      if (audioRecordingRef.current) {
+        try {
+          audioRecordingRef.current.stopAndUnloadAsync();
+        } catch (e) {}
+      }
     };
   }, []);
 
   const toggleVoiceInput = useCallback(async () => {
-    if (!ExpoSpeechRecognitionModule) {
-      Alert.alert("Unavailable", "Voice input will be available after the next app build.");
+    // -------------------------------------------------------------
+    // STEP 1: STOP RECORDING IF ALREADY ACTIVE
+    // -------------------------------------------------------------
+    if (isRecording) {
+      if (webRecognitionRef.current) {
+        try {
+          webRecognitionRef.current.stop();
+        } catch (e) {}
+        webRecognitionRef.current = null;
+        setIsRecording(false);
+        return;
+      }
+      if (webMediaRecorderRef.current) {
+        const recorder = webMediaRecorderRef.current;
+        webMediaRecorderRef.current = null;
+        setIsRecording(false);
+        setIsTranscribing(true);
+        try {
+          recorder.stop();
+        } catch (e) {
+          setIsTranscribing(false);
+        }
+        return;
+      }
+      if (ExpoSpeechRecognitionModule) {
+        try {
+          ExpoSpeechRecognitionModule.stop();
+        } catch (e) {}
+        setIsRecording(false);
+        return;
+      }
+      if (audioRecordingRef.current) {
+        const recording = audioRecordingRef.current;
+        audioRecordingRef.current = null;
+        setIsRecording(false);
+        setIsTranscribing(true);
+        try {
+          await recording.stopAndUnloadAsync();
+          const uri = recording.getURI();
+          if (uri) {
+            const response = await apiService.transcribeAudio(uri);
+            if (response && response.success && response.text) {
+              const prefix = initialTextRef.current ? initialTextRef.current.trim() + " " : "";
+              setJobDes(prefix + response.text.trim());
+            } else {
+              Alert.alert(
+                "Voice Input",
+                response?.error || "Could not transcribe audio. Please speak clearly and try again."
+              );
+            }
+          }
+        } catch (recordingErr) {
+          console.warn("Failed to transcribe audio recording:", recordingErr);
+          Alert.alert("Voice Input", "Failed to process audio recording. Please try again.");
+        } finally {
+          setIsTranscribing(false);
+        }
+        return;
+      }
+      setIsRecording(false);
       return;
     }
-    try {
-      if (isRecording) {
-        ExpoSpeechRecognitionModule.stop();
-        setIsRecording(false);
-      } else {
+
+    // -------------------------------------------------------------
+    // STEP 2: START RECORDING
+    // -------------------------------------------------------------
+    initialTextRef.current = jobDes || "";
+
+    // OPTION A: Web Speech API (Chrome / Edge / Safari / Opera)
+    const SpeechRecognition =
+      typeof window !== "undefined" &&
+      (window.SpeechRecognition || window.webkitSpeechRecognition);
+
+    if (SpeechRecognition) {
+      try {
+        const recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = "en-US";
+
+        recognition.onresult = (event) => {
+          let transcript = "";
+          for (let i = 0; i < event.results.length; i++) {
+            transcript += event.results[i][0].transcript;
+          }
+          const prefix = initialTextRef.current
+            ? initialTextRef.current.trim() + " "
+            : "";
+          setJobDes(prefix + transcript.trim());
+        };
+
+        recognition.onerror = (event) => {
+          console.warn("Web Speech recognition error:", event.error);
+          setIsRecording(false);
+          webRecognitionRef.current = null;
+          if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+            Alert.alert(
+              "Permission Denied",
+              "Microphone access was denied. Please allow microphone permissions in browser settings."
+            );
+          }
+        };
+
+        recognition.onend = () => {
+          setIsRecording(false);
+          webRecognitionRef.current = null;
+        };
+
+        recognition.start();
+        webRecognitionRef.current = recognition;
+        setIsRecording(true);
+        return;
+      } catch (webErr) {
+        console.warn("Web Speech Recognition initialization error:", webErr);
+      }
+    }
+
+    // OPTION B: Web MediaRecorder (Browsers without SpeechRecognition like Firefox/WebViews)
+    if (
+      Platform.OS === "web" &&
+      typeof navigator !== "undefined" &&
+      navigator.mediaDevices &&
+      navigator.mediaDevices.getUserMedia
+    ) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const mediaRecorder = new MediaRecorder(stream);
+        const audioChunks = [];
+
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data && event.data.size > 0) audioChunks.push(event.data);
+        };
+
+        mediaRecorder.onstop = async () => {
+          stream.getTracks().forEach((track) => track.stop());
+          if (audioChunks.length === 0) {
+            setIsTranscribing(false);
+            return;
+          }
+          const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
+          try {
+            const formData = new FormData();
+            formData.append("audio", audioBlob, "web_audio.webm");
+
+            const response = await apiService.makeRequest("/transcribe", {
+              method: "POST",
+              body: formData,
+              skipAuth: true,
+            });
+
+            if (response && response.success && response.text) {
+              const prefix = initialTextRef.current ? initialTextRef.current.trim() + " " : "";
+              setJobDes(prefix + response.text.trim());
+            } else {
+              Alert.alert("Voice Input", response?.error || "Could not transcribe audio. Please try again.");
+            }
+          } catch (err) {
+            console.warn("Web audio transcription error:", err);
+            Alert.alert("Voice Input", "Failed to process voice recording.");
+          } finally {
+            setIsTranscribing(false);
+          }
+        };
+
+        mediaRecorder.start();
+        webMediaRecorderRef.current = mediaRecorder;
+        setIsRecording(true);
+        return;
+      } catch (mediaErr) {
+        console.warn("Web MediaRecorder error:", mediaErr);
+        Alert.alert(
+          "Permission Denied",
+          "Microphone access is required for voice input. Please allow microphone access."
+        );
+        return;
+      }
+    }
+
+    // OPTION C: Native Standalone Build / Dev Client (when NOT in Expo Go)
+    const isExpoGo = Constants.appOwnership === "expo" || Constants.executionEnvironment === "storeClient";
+    if (ExpoSpeechRecognitionModule && !isExpoGo) {
+      try {
         const result = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
-        if (!result.granted) {
-          Alert.alert("Permission Required", "Microphone permission is needed for voice input.");
+        if (result.granted) {
+          ExpoSpeechRecognitionModule.start({
+            lang: "en-US",
+            interimResults: true,
+            continuous: true,
+          });
+          setIsRecording(true);
           return;
         }
-        ExpoSpeechRecognitionModule.start({
-          lang: "en-US",
-          interimResults: true,
-          continuous: false,
-        });
-        setIsRecording(true);
+      } catch (error) {
+        console.warn("Native voice input error:", error);
       }
-    } catch (error) {
-      console.warn("Voice input error:", error);
-      setIsRecording(false);
-      Alert.alert("Voice Input", "Could not start speech recognition. Please check microphone permissions.");
     }
-  }, [isRecording]);
+
+    // OPTION D: Universal Mobile Engine for Expo Go & Android Apps (expo-av)
+    try {
+      const permission = await Audio.requestPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert(
+          "Microphone Permission Required",
+          "Microphone access is currently disabled for this app. Please open Android Settings -> Apps -> Expo Go (or BirdEarner) -> Permissions -> Microphone and select 'Allow'."
+        );
+        setIsRecording(false);
+        return;
+      }
+
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+        shouldDuckAndroid: true,
+        playThroughEarpieceAndroid: false,
+        staysActiveInBackground: false,
+      });
+
+      const { recording } = await Audio.Recording.createAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY
+      );
+      audioRecordingRef.current = recording;
+      setIsRecording(true);
+      return;
+    } catch (audioErr) {
+      console.warn("Audio recording initialization error:", audioErr);
+      setIsRecording(false);
+      Alert.alert(
+        "Voice Input Error",
+        "Could not start microphone recording. Please check microphone permissions in your Android app settings."
+      );
+    }
+  }, [isRecording, jobDes]);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
@@ -1469,20 +1702,38 @@ const JobRequirementsScreen = ({ navigation }) => {
             </Text>
           </Text>
           <View style={styles.textAreaWrap}>
-            <View style={styles.textAreaIcon}>
-              <Ionicons name="document-text-outline" size={20} color={accent} />
+            <View style={styles.textAreaRow}>
+              <Ionicons name="document-text-outline" size={20} color={accent} style={styles.textAreaIconStyle} />
+              <TextInput
+                style={styles.textArea}
+                placeholder="Describe your job in detail..."
+                placeholderTextColor={styles.placeholder.color}
+                value={jobDes}
+                multiline
+                onChangeText={setJobDes}
+              />
             </View>
-            <TextInput
-              style={styles.textArea}
-              placeholder="Describe your job in detail..."
-              placeholderTextColor={styles.placeholder.color}
-              value={jobDes}
-              multiline
-              onChangeText={setJobDes}
-            />
-            <TouchableOpacity style={[styles.micBtn, isRecording && styles.micBtnActive]} onPress={toggleVoiceInput}>
-              <Ionicons name={isRecording ? "mic" : "mic-outline"} size={20} color={isRecording ? "#FF3B30" : PURPLE} />
-            </TouchableOpacity>
+            <View style={styles.textAreaFooter}>
+              <Text style={styles.charCountText}>
+                {jobDes.length} / {JOB_VALIDATION.jobDescriptionMin} min chars
+              </Text>
+              <TouchableOpacity
+                style={[styles.micBtn, isRecording && styles.micBtnActive]}
+                onPress={toggleVoiceInput}
+                disabled={isTranscribing}
+                activeOpacity={0.7}
+              >
+                {isTranscribing ? (
+                  <ActivityIndicator size="small" color={isRecording ? "#FF3B30" : PURPLE} />
+                ) : (
+                  <Ionicons
+                    name={isRecording ? "mic" : "mic-outline"}
+                    size={20}
+                    color={isRecording ? "#FF3B30" : PURPLE}
+                  />
+                )}
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
 
@@ -1693,6 +1944,33 @@ const getStyles = (currentTheme, isDark) => {
     headerCenter: {
       flex: 1,
       alignItems: "center",
+    },
+    textArea: {
+      flex: 1,
+      minHeight: 92,
+      color: text,
+      fontSize: 14,
+      fontWeight: "500",
+      lineHeight: 20,
+      paddingTop: 0,
+      paddingBottom: 0,
+      paddingRight: 40,
+      textAlignVertical: "top",
+    },
+    micBtn: {
+      position: "absolute",
+      bottom: 10,
+      right: 10,
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: isDark ? "#3A2A55" : "#E8D9FF",
+      backgroundColor: soft,
+      alignItems: "center",
+      justifyContent: "center",
+      zIndex: 999,
+      elevation: 10,
     },
     headerTitle: {
       color: text,
@@ -2153,19 +2431,18 @@ const getStyles = (currentTheme, isDark) => {
       minHeight: 120,
       paddingHorizontal: 16,
       paddingVertical: 14,
+    },
+    textAreaRow: {
       flexDirection: "row",
       alignItems: "flex-start",
-      gap: 12,
-      position: "relative",
+      gap: 10,
     },
-    textAreaIcon: {
-      height: 22,
-      justifyContent: "center",
-      marginTop: Platform.OS === "ios" ? 1 : 3,
+    textAreaIconStyle: {
+      marginTop: 2,
     },
     textArea: {
       flex: 1,
-      minHeight: 92,
+      minHeight: 80,
       color: text,
       fontSize: 14,
       fontWeight: "500",
@@ -2174,10 +2451,21 @@ const getStyles = (currentTheme, isDark) => {
       paddingBottom: 0,
       textAlignVertical: "top",
     },
+    textAreaFooter: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginTop: 10,
+      paddingTop: 8,
+      borderTopWidth: 1,
+      borderTopColor: isDark ? "#2A1B3D" : "#F3E8FF",
+    },
+    charCountText: {
+      fontSize: 12,
+      color: muted,
+      fontWeight: "500",
+    },
     micBtn: {
-      position: "absolute",
-      bottom: 10,
-      right: 10,
       width: 36,
       height: 36,
       borderRadius: 18,

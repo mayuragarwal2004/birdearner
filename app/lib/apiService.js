@@ -3,7 +3,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 
-const DEV_API_BASE_URL = "https://cornwall-roy-funeral-lifestyle.trycloudflare.com/api";
+const DEV_API_BASE_URL = "https://wanted-import-phrases-spelling.trycloudflare.com/api";
 // const DEV_API_BASE_URL = "https://api.birdearner.com/api";
 
 const PROD_API_BASE_URL = "https://api.birdearner.com/api";
@@ -23,6 +23,7 @@ const PUBLIC_AUTH_ENDPOINTS = [
   "/signup/client",
   "/signup/freelancer",
   "/services",
+  "/transcribe",
 ];
 
 const isPublicAuthEndpoint = (endpoint = "") => {
@@ -2201,7 +2202,27 @@ class ApiService {
       return response?.data || { banners: [], offers: [], all: [] };
     } catch (error) {
       console.warn("Failed to fetch home promos:", error?.message);
-      return { banners: [], offers: [], all: [] };
+    }
+  }
+
+  async transcribeAudio(audioUri) {
+    try {
+      const formData = new FormData();
+      formData.append("audio", {
+        uri: Platform.OS === "android" ? audioUri : audioUri.replace("file://", ""),
+        type: "audio/m4a",
+        name: `audio_${Date.now()}.m4a`,
+      });
+
+      const response = await this.makeRequest("/transcribe", {
+        method: "POST",
+        body: formData,
+        skipAuth: true,
+      });
+      return response;
+    } catch (error) {
+      console.warn("transcribeAudio error:", error);
+      throw error;
     }
   }
 }
