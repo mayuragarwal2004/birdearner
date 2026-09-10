@@ -5,7 +5,7 @@ export default {
     owner: "birdearner",
     name: "BirdEarner",
     slug: "birdearner",
-    newArchEnabled: true,
+    newArchEnabled: false,
     scheme: "birdearner",
     version: "1.0.0",
     orientation: "portrait",

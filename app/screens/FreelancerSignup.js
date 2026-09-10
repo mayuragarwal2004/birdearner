@@ -77,7 +77,7 @@ const COUNTRY_OPTIONS = [
 ];
 
 const FREELANCER_TYPE_OPTIONS = [
-  { label: "Select your freelancer type", value: "" },
+  { label: "Select your organization type", value: "" },
   { label: "Individual Freelancer", value: "Individual" },
   { label: "Agency / Team", value: "Agency" },
   { label: "Consultant / Advisor", value: "Consultant" },
@@ -783,10 +783,15 @@ const FreelancerSignup = ({ navigation, route }) => {
   }, [mode, profileData, userProfile, userData]);
 
   useEffect(() => {
+    const targetCategory = workType === "remote" ? "FREELANCE" : "HOUSEHOLD";
+    const categoryServices = availableServices.filter(
+      (service) => service.category === targetCategory
+    );
+
     if (searchQuery.trim() === "") {
-      setFilteredServices([]);
+      setFilteredServices(categoryServices);
     } else {
-      const filtered = availableServices.filter(
+      const filtered = categoryServices.filter(
         (service) =>
           service.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
           (service.description &&
@@ -796,7 +801,7 @@ const FreelancerSignup = ({ navigation, route }) => {
       );
       setFilteredServices(filtered);
     }
-  }, [searchQuery, availableServices]);
+  }, [searchQuery, availableServices, workType]);
 
   const toggleServiceSelection = (service) => {
     const serviceId = service.id;
@@ -884,7 +889,7 @@ const FreelancerSignup = ({ navigation, route }) => {
       }
     } else if (step === 2) {
       if (!freelancerCategory) {
-        showToast("error", "Freelancer Type Required", "Please select your freelancer type");
+        showToast("error", "Organization Type Required", "Please select your organization type");
         return;
       }
       if (!form.experience || form.experience.trim() === "") {
@@ -1216,7 +1221,7 @@ const FreelancerSignup = ({ navigation, route }) => {
   const getHeaderSubtitle = () => {
     if (step === 1) return "Please fill in the details below to get started";
     if (step === 2) return "Tell us more about yourself and your work";
-    if (step === 3) return "Add up to 20 services (minimum 1 required)";
+    if (step === 3) return "Add up to 5 services (minimum 1 required)";
     if (step === 4) return "Add your skills, languages, and qualifications";
     if (step === 5) return "Upload images of your work to showcase your skills and experience to clients";
     if (step === 6) return "Review your details before submitting";
@@ -1485,9 +1490,9 @@ const FreelancerSignup = ({ navigation, route }) => {
                   </TouchableOpacity>
                 </View>
 
-                {/* 3. Select Your Freelancer Type */}
+                {/* 3. Select Your Organization Type */}
                 <Text style={styles.sectionNumberTitle}>
-                  3. Select Your Freelancer Type <Text style={styles.requiredText}>*</Text>
+                  3. Select Your Organization Type <Text style={styles.requiredText}>*</Text>
                 </Text>
                 <PickerModal
                   items={FREELANCER_TYPE_OPTIONS}
@@ -1496,12 +1501,12 @@ const FreelancerSignup = ({ navigation, route }) => {
                     setFreelancerCategory(v);
                     setForm({ ...form, freelancerCategory: v });
                   }}
-                  placeholder="Select your freelancer type"
+                  placeholder="Select your organization type"
                   leftIcon={<Briefcase size={20} color="#7C3AED" />}
                   style={{ marginVertical: 4, marginBottom: 4 }}
                 />
                 <Text style={styles.fieldHelperText}>
-                  Options will change based on your freelancer type selection.
+                  Options will change based on your organization type selection.
                 </Text>
 
                 {/* 4. Write About Yourself */}
@@ -1946,7 +1951,9 @@ const FreelancerSignup = ({ navigation, route }) => {
                       <View style={styles.infoBannerBox}>
                         <Info size={18} color="#7C3AED" style={{ marginRight: 8 }} />
                         <Text style={styles.infoBannerText}>
-                          Type keywords to search and add services to your profile.
+                          {workType === "remote" 
+                            ? "Showing remote (Freelance) services. Type keywords to search and add services to your profile."
+                            : "Showing on-site (Household) services. Type keywords to search and add services to your profile."}
                         </Text>
                       </View>
                     ) : (
@@ -1954,7 +1961,7 @@ const FreelancerSignup = ({ navigation, route }) => {
                         {filteredServices.length === 0 ? (
                           <View style={styles.noResultsBox}>
                             <Text style={styles.noResultsTitle}>
-                              No services found for "{searchQuery}"
+                              No {workType === "remote" ? "remote" : "on-site"} services found for "{searchQuery}"
                             </Text>
                           </View>
                         ) : (
