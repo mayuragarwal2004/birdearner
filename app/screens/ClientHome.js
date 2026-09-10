@@ -119,6 +119,19 @@ const ClientHomeScreen = () => {
     [notifications]
   );
 
+  const displayBanners = useMemo(() => {
+    if (banners && banners.length > 0) return banners;
+    return [
+      {
+        id: "banner_ac_summer",
+        title: "Get your AC ready for summer",
+        subtitle: "Up to 25% off on AC servicing",
+        ctaLabel: "Book now",
+        backgroundColor: isDark ? "#2A2034" : "#F3EAFF",
+      },
+    ];
+  }, [banners, isDark]);
+
   useEffect(() => {
     let percentage = 20;
     if (client?.fullName || userData?.fullName) percentage = 20;
@@ -409,87 +422,83 @@ const ClientHomeScreen = () => {
           />
         }
       >
-        {/* Promo carousel — admin-configured banners */}
-        {loadingPromos && banners.length === 0 ? (
-          <SafeSpinner color={PURPLE} size={24} style={{ marginVertical: 24 }} />
-        ) : banners.length > 0 ? (
-          <>
-            <ScrollView
-              horizontal
-              pagingEnabled
-              showsHorizontalScrollIndicator={false}
-              onScroll={onPromoScroll}
-              scrollEventThrottle={16}
-              contentContainerStyle={styles.promoPager}
-              decelerationRate="fast"
-              snapToInterval={PROMO_WIDTH + 12}
-              snapToAlignment="start"
-            >
-              {banners.map((promo) => (
-                <TouchableOpacity
-                  key={promo.id}
-                  activeOpacity={0.92}
-                  onPress={() => openJobRequirementsFromPromo(promo)}
-                  style={[
-                    styles.promoCard,
-                    {
-                      width: PROMO_WIDTH,
-                      backgroundColor: promo.backgroundColor || (isDark ? "#2A2034" : "#F3EAFF"),
-                    },
-                  ]}
-                >
-                  {promo.imageUrl ? (
-                    <Image
-                      source={{ uri: apiService.loadImageURI(promo.imageUrl) }}
-                      style={styles.promoImage}
-                      resizeMode="cover"
-                    />
-                  ) : null}
-                  <View style={styles.promoCopy}>
+        {/* Promo banner carousel above Freelance Services */}
+        <View style={{ marginBottom: 16 }}>
+          <ScrollView
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onScroll={onPromoScroll}
+            scrollEventThrottle={16}
+            contentContainerStyle={styles.promoPager}
+            decelerationRate="fast"
+            snapToInterval={PROMO_WIDTH + 12}
+            snapToAlignment="start"
+          >
+            {displayBanners.map((promo) => (
+              <TouchableOpacity
+                key={promo.id}
+                activeOpacity={0.92}
+                onPress={() => openJobRequirementsFromPromo(promo)}
+                style={[
+                  styles.promoCard,
+                  {
+                    width: PROMO_WIDTH,
+                    backgroundColor: promo.backgroundColor || (isDark ? "#2A2034" : "#F3EAFF"),
+                  },
+                ]}
+              >
+                {promo.imageUrl ? (
+                  <Image
+                    source={{ uri: apiService.loadImageURI(promo.imageUrl) }}
+                    style={styles.promoImage}
+                    resizeMode="cover"
+                  />
+                ) : null}
+                <View style={styles.promoCopy}>
+                  <Text
+                    style={[
+                      styles.promoTitle,
+                      promo.textColor ? { color: promo.textColor } : null,
+                    ]}
+                  >
+                    {promo.title}
+                  </Text>
+                  {!!promo.subtitle && (
                     <Text
                       style={[
-                        styles.promoTitle,
-                        promo.textColor ? { color: promo.textColor } : null,
+                        styles.promoSubtitle,
+                        promo.textColor ? { color: promo.textColor, opacity: 0.85 } : null,
                       ]}
                     >
-                      {promo.title}
+                      {promo.subtitle}
                     </Text>
-                    {!!promo.subtitle && (
-                      <Text
-                        style={[
-                          styles.promoSubtitle,
-                          promo.textColor ? { color: promo.textColor, opacity: 0.85 } : null,
-                        ]}
-                      >
-                        {promo.subtitle}
-                      </Text>
-                    )}
-                    <View
-                      style={[
-                        styles.promoCta,
-                        promo.accentColor
-                          ? { backgroundColor: promo.accentColor }
-                          : null,
-                      ]}
-                    >
-                      <Text style={styles.promoCtaText}>
-                        {promo.ctaLabel || "Book now"}
-                      </Text>
-                    </View>
+                  )}
+                  <View
+                    style={[
+                      styles.promoCta,
+                      promo.accentColor
+                        ? { backgroundColor: promo.accentColor }
+                        : null,
+                    ]}
+                  >
+                    <Text style={styles.promoCtaText}>
+                      {promo.ctaLabel || "Book now"}
+                    </Text>
                   </View>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-            <View style={styles.dotsRow}>
-              {banners.map((promo, index) => (
-                <View
-                  key={promo.id}
-                  style={[styles.dot, index === promoIndex && styles.dotActive]}
-                />
-              ))}
-            </View>
-          </>
-        ) : null}
+                </View>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+          <View style={styles.dotsRow}>
+            {displayBanners.map((promo, index) => (
+              <View
+                key={promo.id || index}
+                style={[styles.dot, index === promoIndex && styles.dotActive]}
+              />
+            ))}
+          </View>
+        </View>
 
         {/* Service lists */}
         <ClientHomeServiceFinder ref={servicesRef} search={search} />
@@ -653,64 +662,61 @@ const getStyles = (currentTheme, isDark) => {
   const muted = currentTheme.subText || "#656B7A";
   const border = currentTheme.border || "#E7E1EF";
   const soft = isDark ? "#2A2034" : "#F3EAFF";
-  const softMint = isDark ? "#1F2A24" : "#EAF7F0";
-  const softPeach = isDark ? "#2A221C" : "#FFF1E8";
 
   return StyleSheet.create({
     safeArea: {
       flex: 1,
-      // Match header so the status-bar / notch inset is purple, not white
       backgroundColor: isDark ? "#1B1028" : DEEP_PURPLE,
     },
     headerBand: {
       backgroundColor: isDark ? "#1B1028" : DEEP_PURPLE,
-      paddingHorizontal: 20,
-      paddingBottom: 18,
-      borderBottomLeftRadius: 24,
-      borderBottomRightRadius: 24,
+      paddingHorizontal: 16,
+      paddingBottom: 14,
+      borderBottomLeftRadius: 20,
+      borderBottomRightRadius: 20,
     },
     headerTop: {
       flexDirection: "row",
       alignItems: "flex-start",
       justifyContent: "space-between",
-      paddingTop: 6,
-      marginBottom: 14,
+      paddingTop: 4,
+      marginBottom: 10,
     },
     locationBlock: {
       flex: 1,
-      paddingRight: 12,
+      paddingRight: 10,
     },
     locationLabelRow: {
       flexDirection: "row",
       alignItems: "center",
-      gap: 6,
+      gap: 4,
     },
     locationEyebrow: {
       color: "rgba(255,255,255,0.85)",
-      fontSize: 12,
-      fontWeight: "700",
+      fontSize: 11,
+      fontWeight: "600",
     },
     locationText: {
       color: "#FFFFFF",
-      fontSize: 15,
-      fontWeight: "900",
-      marginTop: 4,
+      fontSize: 13,
+      fontWeight: "700",
+      marginTop: 2,
     },
     bellButton: {
-      width: 42,
-      height: 42,
-      borderRadius: 14,
+      width: 38,
+      height: 38,
+      borderRadius: 12,
       alignItems: "center",
       justifyContent: "center",
       backgroundColor: "rgba(255,255,255,0.16)",
     },
     bellDot: {
       position: "absolute",
-      top: 10,
-      right: 11,
-      width: 8,
-      height: 8,
-      borderRadius: 4,
+      top: 8,
+      right: 9,
+      width: 7,
+      height: 7,
+      borderRadius: 3.5,
       backgroundColor: "#EF4444",
       borderWidth: 1.5,
       borderColor: DEEP_PURPLE,
@@ -718,58 +724,58 @@ const getStyles = (currentTheme, isDark) => {
     searchRow: {
       flexDirection: "row",
       alignItems: "center",
-      gap: 10,
+      gap: 8,
     },
     searchBox: {
       flex: 1,
-      minHeight: 48,
-      borderRadius: 14,
+      minHeight: 42,
+      borderRadius: 12,
       backgroundColor: "#FFFFFF",
       flexDirection: "row",
       alignItems: "center",
-      paddingHorizontal: 14,
-      gap: 10,
+      paddingHorizontal: 12,
+      gap: 8,
     },
     searchInput: {
       flex: 1,
       color: "#0F172A",
-      fontSize: 15,
+      fontSize: 13,
       fontWeight: "600",
-      paddingVertical: Platform.OS === "ios" ? 12 : 8,
+      paddingVertical: Platform.OS === "ios" ? 10 : 6,
     },
     eggButton: {
-      width: 48,
-      height: 48,
-      borderRadius: 14,
+      width: 42,
+      height: 42,
+      borderRadius: 12,
       overflow: "hidden",
       backgroundColor: "rgba(255,255,255,0.18)",
-      borderWidth: 2,
+      borderWidth: 1.5,
       borderColor: "rgba(255,255,255,0.45)",
       alignItems: "center",
       justifyContent: "center",
     },
     eggImage: {
-      width: 30,
-      height: 30,
+      width: 26,
+      height: 26,
       transform: [{ rotate: "90deg" }],
     },
     scrollContent: {
-      paddingBottom: Platform.OS === "ios" ? 140 : 120,
-      paddingTop: 18,
+      paddingBottom: Platform.OS === "ios" ? 110 : 90,
+      paddingTop: 12,
     },
     mainScroll: {
       flex: 1,
       backgroundColor: surface,
     },
     promoPager: {
-      paddingHorizontal: 20,
-      gap: 12,
+      paddingHorizontal: 16,
+      gap: 10,
     },
     promoCard: {
-      borderRadius: 20,
+      borderRadius: 16,
       overflow: "hidden",
       backgroundColor: soft,
-      minHeight: 168,
+      minHeight: 130,
     },
     promoImage: {
       ...StyleSheet.absoluteFillObject,
@@ -777,93 +783,93 @@ const getStyles = (currentTheme, isDark) => {
       height: "100%",
     },
     promoCopy: {
-      padding: 20,
-      minHeight: 168,
+      padding: 14,
+      minHeight: 130,
       justifyContent: "center",
     },
     promoTitle: {
       color: text,
-      fontSize: 22,
-      fontWeight: "900",
-      lineHeight: 28,
-      maxWidth: "90%",
+      fontSize: 16,
+      fontWeight: "700",
+      lineHeight: 21,
+      maxWidth: "88%",
     },
     promoSubtitle: {
       color: muted,
-      fontSize: 14,
+      fontSize: 12,
       fontWeight: "600",
-      marginTop: 8,
-      marginBottom: 16,
+      marginTop: 4,
+      marginBottom: 10,
     },
     promoCta: {
       alignSelf: "flex-start",
       backgroundColor: PURPLE,
-      borderRadius: 12,
-      paddingHorizontal: 16,
-      paddingVertical: 10,
+      borderRadius: 8,
+      paddingHorizontal: 14,
+      paddingVertical: 6,
     },
     promoCtaText: {
       color: "#FFFFFF",
-      fontSize: 13,
-      fontWeight: "900",
+      fontSize: 12,
+      fontWeight: "700",
     },
     dotsRow: {
       flexDirection: "row",
       justifyContent: "center",
       gap: 6,
-      marginTop: 12,
-      marginBottom: 10,
+      marginTop: 8,
+      marginBottom: 4,
     },
     dot: {
-      width: 7,
-      height: 7,
-      borderRadius: 4,
+      width: 6,
+      height: 6,
+      borderRadius: 3,
       backgroundColor: isDark ? "#3F3F46" : "#D6D3DE",
     },
     dotActive: {
-      width: 18,
+      width: 16,
       backgroundColor: PURPLE,
     },
     section: {
-      marginTop: 22,
-      paddingHorizontal: 20,
+      marginTop: 16,
+      paddingHorizontal: 16,
     },
     sectionHeader: {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
-      marginBottom: 12,
+      marginBottom: 8,
     },
     sectionTitle: {
       color: text,
-      fontSize: 18,
-      fontWeight: "900",
+      fontSize: 16,
+      fontWeight: "700",
     },
     viewAll: {
       color: PURPLE,
-      fontSize: 13,
-      fontWeight: "800",
+      fontSize: 12,
+      fontWeight: "700",
     },
     loadingBox: {
-      minHeight: 90,
+      minHeight: 70,
       alignItems: "center",
       justifyContent: "center",
     },
     jobCard: {
-      borderRadius: 16,
+      borderRadius: 14,
       borderWidth: 1,
       borderColor: border,
       backgroundColor: card,
-      padding: 12,
+      padding: 10,
       flexDirection: "row",
       alignItems: "center",
-      gap: 12,
-      marginBottom: 12,
+      gap: 10,
+      marginBottom: 10,
     },
     jobImage: {
-      width: 64,
-      height: 64,
-      borderRadius: 14,
+      width: 48,
+      height: 48,
+      borderRadius: 10,
       backgroundColor: soft,
     },
     jobContent: {
@@ -873,111 +879,111 @@ const getStyles = (currentTheme, isDark) => {
     jobTitleRow: {
       flexDirection: "row",
       alignItems: "center",
-      gap: 8,
+      gap: 6,
     },
     jobTitle: {
       flexShrink: 1,
       color: text,
-      fontSize: 15,
-      fontWeight: "900",
+      fontSize: 14,
+      fontWeight: "700",
     },
     statusPill: {
       borderRadius: 999,
-      paddingHorizontal: 8,
-      paddingVertical: 3,
+      paddingHorizontal: 7,
+      paddingVertical: 2,
     },
     statusText: {
       fontSize: 10,
-      fontWeight: "900",
+      fontWeight: "700",
     },
     jobSchedule: {
       color: muted,
-      fontSize: 12,
+      fontSize: 11,
       fontWeight: "600",
-      marginTop: 4,
+      marginTop: 2,
     },
     freelancerRow: {
       flexDirection: "row",
       alignItems: "center",
-      gap: 8,
-      marginTop: 8,
+      gap: 6,
+      marginTop: 6,
     },
     freelancerAvatar: {
-      width: 22,
-      height: 22,
-      borderRadius: 11,
+      width: 18,
+      height: 18,
+      borderRadius: 9,
       backgroundColor: soft,
     },
     freelancerName: {
       flex: 1,
       color: text,
-      fontSize: 12,
-      fontWeight: "700",
+      fontSize: 11,
+      fontWeight: "600",
     },
     viewDetailsBtn: {
       borderWidth: 1.5,
       borderColor: PURPLE,
-      borderRadius: 12,
+      borderRadius: 8,
       paddingHorizontal: 10,
-      paddingVertical: 10,
+      paddingVertical: 6,
       backgroundColor: isDark ? "transparent" : "#FFFFFF",
     },
     viewDetailsText: {
       color: PURPLE,
       fontSize: 11,
-      fontWeight: "900",
+      fontWeight: "700",
     },
     emptyJobCard: {
-      borderRadius: 16,
+      borderRadius: 14,
       borderWidth: 1,
       borderColor: border,
       backgroundColor: card,
-      padding: 20,
+      padding: 16,
       alignItems: "center",
     },
     emptyJobTitle: {
       color: text,
-      fontSize: 16,
-      fontWeight: "900",
-      marginTop: 10,
+      fontSize: 14,
+      fontWeight: "700",
+      marginTop: 8,
     },
     emptyJobText: {
       color: muted,
-      fontSize: 13,
+      fontSize: 12,
       textAlign: "center",
-      marginTop: 6,
-      lineHeight: 18,
+      marginTop: 4,
+      lineHeight: 16,
     },
     emptyJobBtn: {
-      marginTop: 14,
+      marginTop: 10,
       backgroundColor: PURPLE,
-      borderRadius: 12,
-      paddingHorizontal: 16,
-      paddingVertical: 10,
+      borderRadius: 8,
+      paddingHorizontal: 14,
+      paddingVertical: 7,
     },
     emptyJobBtnText: {
       color: "#FFFFFF",
-      fontSize: 13,
-      fontWeight: "900",
+      fontSize: 12,
+      fontWeight: "700",
     },
     offersRow: {
       flexDirection: "row",
-      gap: 12,
+      gap: 10,
     },
     offerCard: {
-      borderRadius: 18,
-      padding: 16,
-      minHeight: 150,
+      borderRadius: 14,
+      padding: 12,
+      minHeight: 115,
       overflow: "hidden",
     },
     offerImage: {
       position: "absolute",
       top: 0,
       right: 0,
-      width: 72,
-      height: 72,
+      width: 60,
+      height: 60,
       opacity: 0.35,
-      borderBottomLeftRadius: 18,
+      borderBottomLeftRadius: 14,
     },
     offerWide: {
       flex: 1.25,
@@ -988,65 +994,65 @@ const getStyles = (currentTheme, isDark) => {
     },
     offerTitle: {
       color: text,
-      fontSize: 18,
-      fontWeight: "900",
+      fontSize: 15,
+      fontWeight: "700",
     },
     offerBadge: {
       alignSelf: "flex-start",
-      marginTop: 8,
+      marginTop: 6,
       backgroundColor: PURPLE,
       borderRadius: 999,
-      paddingHorizontal: 10,
-      paddingVertical: 4,
+      paddingHorizontal: 8,
+      paddingVertical: 2,
     },
     offerBadgeText: {
       color: "#FFFFFF",
-      fontSize: 11,
-      fontWeight: "900",
+      fontSize: 10,
+      fontWeight: "700",
     },
     offerDesc: {
       color: muted,
-      fontSize: 13,
+      fontSize: 11,
       fontWeight: "600",
-      marginTop: 10,
-      lineHeight: 18,
+      marginTop: 6,
+      lineHeight: 15,
     },
     offerCta: {
-      marginTop: 14,
+      marginTop: 8,
       alignSelf: "flex-start",
       backgroundColor: PURPLE,
-      borderRadius: 10,
-      paddingHorizontal: 12,
-      paddingVertical: 8,
+      borderRadius: 6,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
     },
     offerCtaText: {
       color: "#FFFFFF",
-      fontSize: 12,
-      fontWeight: "900",
+      fontSize: 11,
+      fontWeight: "700",
     },
     profileCard: {
-      marginTop: 22,
-      marginHorizontal: 20,
-      borderRadius: 18,
+      marginTop: 16,
+      marginHorizontal: 16,
+      borderRadius: 14,
       borderWidth: 1,
       borderColor: border,
       backgroundColor: card,
-      padding: 18,
+      padding: 14,
     },
     profileTitle: {
       color: text,
-      fontSize: 17,
-      fontWeight: "900",
+      fontSize: 15,
+      fontWeight: "700",
     },
     profileSubtitle: {
       color: muted,
-      fontSize: 13,
+      fontSize: 12,
       fontWeight: "600",
-      marginTop: 6,
-      marginBottom: 12,
+      marginTop: 4,
+      marginBottom: 10,
     },
     progressTrack: {
-      height: 8,
+      height: 6,
       borderRadius: 999,
       backgroundColor: isDark ? "#2A2A2A" : "#EDE7F6",
       overflow: "hidden",
@@ -1057,33 +1063,33 @@ const getStyles = (currentTheme, isDark) => {
       borderRadius: 999,
     },
     profileCta: {
-      marginTop: 14,
+      marginTop: 10,
       alignSelf: "flex-start",
       backgroundColor: PURPLE,
-      borderRadius: 12,
-      paddingHorizontal: 16,
-      paddingVertical: 10,
+      borderRadius: 8,
+      paddingHorizontal: 14,
+      paddingVertical: 7,
     },
     profileCtaText: {
       color: "#FFFFFF",
-      fontSize: 13,
-      fontWeight: "900",
+      fontSize: 12,
+      fontWeight: "700",
     },
     fab: {
       position: "absolute",
-      right: 20,
-      bottom: Platform.OS === "ios" ? 100 : 86,
-      width: 58,
-      height: 58,
-      borderRadius: 29,
+      right: 16,
+      bottom: Platform.OS === "ios" ? 90 : 70,
+      width: 48,
+      height: 48,
+      borderRadius: 24,
       backgroundColor: DEEP_PURPLE,
       alignItems: "center",
       justifyContent: "center",
       shadowColor: "#2C1B3F",
       shadowOpacity: 0.25,
-      shadowRadius: 10,
-      shadowOffset: { width: 0, height: 6 },
-      elevation: 6,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 4 },
+      elevation: 5,
       zIndex: 20,
     },
   });

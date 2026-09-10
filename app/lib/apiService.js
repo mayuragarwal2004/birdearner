@@ -3,7 +3,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 
-const DEV_API_BASE_URL = "https://treating-knowledgestorm-doing-neutral.trycloudflare.com/api";
+const DEV_API_BASE_URL = "https://generators-lamb-sequences-suitable.trycloudflare.com/api";
 // const DEV_API_BASE_URL = "https://api.birdearner.com/api";
 
 const PROD_API_BASE_URL = "https://api.birdearner.com/api";
@@ -1820,6 +1820,8 @@ class ApiService {
   loadImageURI = (uri) => {
     if (!Boolean(uri)) {
       return null;
+    } else if (typeof uri !== "string") {
+      return null;
     } else if (uri.startsWith("http://") || uri.startsWith("https://")) {
       return uri; // Return remote URL as is
     } else if (uri.startsWith("/")) {
@@ -1831,6 +1833,8 @@ class ApiService {
       uri.startsWith("assets-library://")
     ) {
       return uri; // Local / device media URIs
+    } else if (uri.trim().length > 0) {
+      return `${this.baseURL}/${uri.trim()}`;
     } else {
       console.error("Invalid URI format:", uri);
       return null; // Return null for invalid URIs

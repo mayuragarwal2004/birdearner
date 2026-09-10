@@ -271,7 +271,13 @@ export default function ProfileScreen({ navigation }) {
 
   const displayName = getDisplayName(data, userData);
   const profileTitle = getProfileTitle(role, data, userServices);
-  const profilePhotoUri = getImageUri(data?.profilePhoto);
+  const rawProfilePhoto =
+    data?.profilePhoto ||
+    data?.user?.profilePhoto ||
+    data?.userProfile?.profilePhoto ||
+    userData?.profilePhoto ||
+    userData?.user?.profilePhoto;
+  const profilePhotoUri = getImageUri(rawProfilePhoto);
   const portfolioImages = parseArray(data?.portfolioImages);
   const certifications = parseArray(data?.certifications);
   const isAvailable = data?.currentlyAvailable !== false;
@@ -332,7 +338,7 @@ export default function ProfileScreen({ navigation }) {
 
           <TouchableOpacity
             style={styles.avatarButton}
-            onPress={() => openImageModal(data?.profilePhoto)}
+            onPress={() => openImageModal(rawProfilePhoto)}
             disabled={!profilePhotoUri}
             activeOpacity={0.85}
           >
@@ -355,18 +361,13 @@ export default function ProfileScreen({ navigation }) {
           </TouchableOpacity>
 
           <Text style={styles.nameText}>{displayName}</Text>
-          <Text style={styles.roleText}>{profileTitle}</Text>
 
           <View style={styles.ratingRow}>
             {role === "FREELANCER" ? (
-              <>
-                <Text style={styles.ratingText}>{formatRating(data?.rating || 0)}</Text>
-                <Text style={styles.reviewCount}>({data?.totalReviews || 0})</Text>
-                <View style={styles.badge}>
-                  <MaterialIcons name="workspace-premium" size={20} color={PURPLE} />
-                  <Text style={styles.badgeText}>{getBadgeLabel(data?.level)}</Text>
-                </View>
-              </>
+              <View style={styles.badge}>
+                <MaterialIcons name="badge" size={20} color={PURPLE} />
+                <Text style={styles.badgeText}>Freelancer Profile</Text>
+              </View>
             ) : (
               <View style={styles.badge}>
                 <MaterialIcons name="business-center" size={20} color={PURPLE} />

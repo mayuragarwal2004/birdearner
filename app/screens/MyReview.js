@@ -123,8 +123,14 @@ export default function MyReview({ navigation, route }) {
   const [userServices, setUserServices] = useState([]);
 
   const displayName = getDisplayName(profileData, userData);
-  const profileTitle = getProfileTitle(role, profileData, userServices);
-  const profilePhotoUri = getImageUri(profileData?.profilePhoto);
+  const profileTitle = getProfileTitle(role, profileData);
+  const rawProfilePhoto =
+    profileData?.profilePhoto ||
+    profileData?.user?.profilePhoto ||
+    profileData?.userProfile?.profilePhoto ||
+    userData?.profilePhoto ||
+    userData?.user?.profilePhoto;
+  const profilePhotoUri = getImageUri(rawProfilePhoto);
   const isAvailable = profileData?.currentlyAvailable !== false;
 
   const fetchReviews = useCallback(async () => {
@@ -280,21 +286,16 @@ export default function MyReview({ navigation, route }) {
           </View>
 
           <Text style={styles.nameText}>{displayName}</Text>
-          <Text style={styles.roleText}>{profileTitle}</Text>
 
           <View style={styles.ratingRow}>
-            <Text style={styles.ratingText}>{formatRating(reviewStats?.averageRating)}</Text>
-            <Text style={styles.reviewCount}>
-              ({reviewStats?.totalReviews || reviews.length || 0})
-            </Text>
             <View style={styles.badge}>
               <MaterialIcons
-                name={role === "CLIENT" ? "business-center" : "workspace-premium"}
+                name={role === "CLIENT" ? "business-center" : "badge"}
                 size={20}
                 color={PURPLE}
               />
               <Text style={styles.badgeText}>
-                {role === "CLIENT" ? "Client Profile" : getBadgeLabel(profileData?.level)}
+                {role === "CLIENT" ? "Client Profile" : "Freelancer Profile"}
               </Text>
             </View>
           </View>

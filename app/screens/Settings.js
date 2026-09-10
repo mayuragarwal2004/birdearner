@@ -72,7 +72,13 @@ const SettingsScreen = ({ navigation }) => {
   const role = userData?.role;
   const hasBothProfiles = !!userData?.freelancer && !!userData?.client;
   const nextRole = role === "FREELANCER" ? "CLIENT" : "FREELANCER";
-  const profilePhotoUri = getImageUri(userProfile?.profilePhoto);
+  const rawProfilePhoto =
+    userProfile?.profilePhoto ||
+    userProfile?.user?.profilePhoto ||
+    userProfile?.userProfile?.profilePhoto ||
+    userData?.profilePhoto ||
+    userData?.user?.profilePhoto;
+  const profilePhotoUri = getImageUri(rawProfilePhoto);
 
   const editProfileOption = useMemo(() => {
     if (role === "CLIENT") {

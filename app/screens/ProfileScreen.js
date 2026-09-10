@@ -381,7 +381,13 @@ export default function ProfileScreen({ route, navigation }) {
           totalReviews={totalReviews}
           onBack={() => navigation.goBack()}
           onShare={handleShare}
-          onPhotoPress={() => openImageModal(profileData?.profilePhoto, [profileData?.profilePhoto])}
+          onPhotoPress={() => {
+            const rawPhoto =
+              profileData?.profilePhoto ||
+              profileData?.user?.profilePhoto ||
+              profileData?.userProfile?.profilePhoto;
+            openImageModal(rawPhoto, [rawPhoto]);
+          }}
         />
 
         <ProfileTabs uiStyles={uiStyles} activeTab={activeTab} onTabPress={setActiveTab} tabs={profileTabs} />
@@ -437,8 +443,13 @@ function ProfileHero({
   onShare,
   onPhotoPress,
 }) {
-  const photoUri = getImageUri(profileData?.profilePhoto);
+  const rawPhoto =
+    profileData?.profilePhoto ||
+    profileData?.user?.profilePhoto ||
+    profileData?.userProfile?.profilePhoto;
+  const photoUri = getImageUri(rawPhoto);
   const available = profileData?.currentlyAvailable !== false;
+  const isClientProfile = profileData?.role === "CLIENT";
 
   return (
     <View style={uiStyles.hero}>
@@ -468,15 +479,19 @@ function ProfileHero({
       </TouchableOpacity>
 
       <Text style={uiStyles.name}>{displayName}</Text>
-      <Text style={uiStyles.title}>{profileTitle}</Text>
 
       <View style={uiStyles.ratingRow}>
-        <Text style={uiStyles.ratingText}>{formatRating(rating)}</Text>
-        <Text style={uiStyles.reviewCount}>({totalReviews})</Text>
-        <View style={uiStyles.badge}>
-          <MaterialIcons name="workspace-premium" size={16} color={PURPLE} />
-          <Text style={uiStyles.badgeText}>{getBadgeLabel(profileData?.level)}</Text>
-        </View>
+        {isClientProfile ? (
+          <View style={uiStyles.badge}>
+            <MaterialIcons name="business-center" size={16} color={PURPLE} />
+            <Text style={uiStyles.badgeText}>Client Profile</Text>
+          </View>
+        ) : (
+          <View style={uiStyles.badge}>
+            <MaterialIcons name="badge" size={16} color={PURPLE} />
+            <Text style={uiStyles.badgeText}>Freelancer Profile</Text>
+          </View>
+        )}
       </View>
     </View>
   );
