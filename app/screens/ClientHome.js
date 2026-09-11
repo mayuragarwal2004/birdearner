@@ -132,6 +132,31 @@ const ClientHomeScreen = () => {
     ];
   }, [banners, isDark]);
 
+  const displayOfferCards = useMemo(() => {
+    if (offerCards && offerCards.length > 0) return offerCards;
+    return [
+      {
+        id: "offer_insta_help",
+        title: "Insta Help",
+        badge: "Flat ₹50 OFF",
+        subtitle: "Instant assistance for quick tasks",
+        ctaLabel: "Book now",
+        backgroundColor: isDark ? "#2A2034" : "#F3EAFF",
+        serviceCategory: "HOUSEHOLD",
+        prefillJobTitle: "Insta Help Task",
+      },
+      {
+        id: "offer_cleaning_40",
+        title: "Up to 40% off on Cleaning",
+        subtitle: "Deep cleaning services for home & office",
+        ctaLabel: "Claim Now",
+        backgroundColor: isDark ? "#1F2A24" : "#EAF7F0",
+        serviceCategory: "HOUSEHOLD",
+        prefillJobTitle: "Deep Cleaning Service",
+      },
+    ];
+  }, [offerCards, isDark]);
+
   useEffect(() => {
     let percentage = 20;
     if (client?.fullName || userData?.fullName) percentage = 20;
@@ -535,83 +560,81 @@ const ClientHomeScreen = () => {
           )}
         </View>
 
-        {/* Offers & Discounts — admin-configured; tap opens Job Requirements */}
-        {offerCards.length > 0 && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Offers & Discounts</Text>
-            </View>
-            <View style={styles.offersRow}>
-              {offerCards.map((offer, index) => (
-                <TouchableOpacity
-                  key={offer.id}
+        {/* Offers & Discounts — admin-configured or default fallback */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Offers & Discounts</Text>
+          </View>
+          <View style={styles.offersRow}>
+            {displayOfferCards.map((offer, index) => (
+              <TouchableOpacity
+                key={offer.id || index}
+                style={[
+                  styles.offerCard,
+                  index === 0 ? styles.offerWide : styles.offerNarrow,
+                  {
+                    backgroundColor:
+                      offer.backgroundColor ||
+                      (index === 0
+                        ? isDark
+                          ? "#2A2034"
+                          : "#F3EAFF"
+                        : isDark
+                          ? "#1F2A24"
+                          : "#EAF7F0"),
+                  },
+                ]}
+                onPress={() => openJobRequirementsFromPromo(offer)}
+                activeOpacity={0.88}
+              >
+                {offer.imageUrl ? (
+                  <Image
+                    source={{ uri: apiService.loadImageURI(offer.imageUrl) }}
+                    style={styles.offerImage}
+                    resizeMode="cover"
+                  />
+                ) : null}
+                <Text
                   style={[
-                    styles.offerCard,
-                    index === 0 ? styles.offerWide : styles.offerNarrow,
-                    {
-                      backgroundColor:
-                        offer.backgroundColor ||
-                        (index === 0
-                          ? isDark
-                            ? "#2A2034"
-                            : "#F3EAFF"
-                          : isDark
-                            ? "#1F2A24"
-                            : "#EAF7F0"),
-                    },
+                    styles.offerTitle,
+                    offer.textColor ? { color: offer.textColor } : null,
                   ]}
-                  onPress={() => openJobRequirementsFromPromo(offer)}
-                  activeOpacity={0.88}
                 >
-                  {offer.imageUrl ? (
-                    <Image
-                      source={{ uri: apiService.loadImageURI(offer.imageUrl) }}
-                      style={styles.offerImage}
-                      resizeMode="cover"
-                    />
-                  ) : null}
-                  <Text
+                  {offer.title}
+                </Text>
+                {!!offer.badge && (
+                  <View
                     style={[
-                      styles.offerTitle,
-                      offer.textColor ? { color: offer.textColor } : null,
+                      styles.offerBadge,
+                      offer.accentColor
+                        ? { backgroundColor: offer.accentColor }
+                        : null,
                     ]}
                   >
-                    {offer.title}
+                    <Text style={styles.offerBadgeText}>{offer.badge}</Text>
+                  </View>
+                )}
+                {!!offer.subtitle && (
+                  <Text
+                    style={[
+                      styles.offerDesc,
+                      offer.textColor
+                        ? { color: offer.textColor, opacity: 0.85 }
+                        : null,
+                    ]}
+                  >
+                    {offer.subtitle}
                   </Text>
-                  {!!offer.badge && (
-                    <View
-                      style={[
-                        styles.offerBadge,
-                        offer.accentColor
-                          ? { backgroundColor: offer.accentColor }
-                          : null,
-                      ]}
-                    >
-                      <Text style={styles.offerBadgeText}>{offer.badge}</Text>
-                    </View>
-                  )}
-                  {!!offer.subtitle && (
-                    <Text
-                      style={[
-                        styles.offerDesc,
-                        offer.textColor
-                          ? { color: offer.textColor, opacity: 0.85 }
-                          : null,
-                      ]}
-                    >
-                      {offer.subtitle}
-                    </Text>
-                  )}
-                  {!!offer.ctaLabel && (
-                    <View style={styles.offerCta}>
-                      <Text style={styles.offerCtaText}>{offer.ctaLabel}</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              ))}
-            </View>
+                )}
+                {!!offer.ctaLabel && (
+                  <View style={styles.offerCta}>
+                    <Text style={styles.offerCtaText}>{offer.ctaLabel}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            ))}
           </View>
-        )}
+        </View>
 
         {/* Profile completion */}
         {!client?.termsAccepted && profilePercentage !== 100 && (
