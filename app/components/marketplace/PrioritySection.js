@@ -37,7 +37,7 @@ const PrioritySection = ({
   onPriorityPress,
   theme 
 }) => {
-  const isDark = theme.theme === 'dark';
+  const isDark = Boolean(theme?.isDark || theme?.theme === 'dark');
 
   const renderPriorityCard = (priority) => {
     const jobCount = jobs[priority]?.length || 0;
@@ -48,12 +48,15 @@ const PrioritySection = ({
         key={priority}
         style={[
           styles.priorityCard,
-          { backgroundColor: isDark ? '#1f2937' : config.bg } // Adjust bg for dark mode
+          { 
+            backgroundColor: isDark ? '#1E1E1E' : config.bg,
+            borderColor: isDark ? '#2A2A2A' : 'rgba(0,0,0,0.03)' 
+          }
         ]}
         onPress={() => onPriorityPress(priority)}
         activeOpacity={0.8}
       >
-        <View style={[styles.iconBox, { backgroundColor: isDark ? '#374151' : config.iconBg }]}>
+        <View style={[styles.iconBox, { backgroundColor: isDark ? '#2A2A2A' : config.iconBg }]}>
           {config.icon}
         </View>
 
@@ -61,7 +64,7 @@ const PrioritySection = ({
           <Text style={[styles.priorityTitle, { color: isDark ? '#FFF' : '#000' }]}>
             {config.title}
           </Text>
-          <Text style={[styles.jobCount, { color: isDark ? '#9CA3AF' : '#666' }]}>
+          <Text style={[styles.jobCount, { color: isDark ? '#AAA' : '#666' }]}>
             {jobCount}+ Jobs
           </Text>
         </View>

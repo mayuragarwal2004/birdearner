@@ -10,11 +10,15 @@ import {
 import { MaterialIcons } from "@expo/vector-icons";
 import apiService from "../lib/apiService";
 import { Modal } from "react-native";
+import { useTheme } from "../context/ThemeContext";
 import CashPaymentMessage from "./chat/CashPaymentMessage";
 import CompletionRequestMessage from "./chat/CompletionRequestMessage";
 import ReviewRequestMessage from "./chat/ReviewRequestMessage";
 
 const MessageItem = ({ messageItem, message, isCurrentUser, media = [], onMessageUpdate, currentUserId, userRole }) => {
+  const { theme, themeStyles } = useTheme();
+  const currentTheme = themeStyles[theme] || themeStyles.light;
+  const isDark = theme === "dark";
   const [downloadingIndex, setDownloadingIndex] = useState(null);
   const [loadingImages, setLoadingImages] = useState({});
   const [fullImage, setFullImage] = useState(null); // { uri: string, name: string, index: number }
@@ -128,7 +132,9 @@ const MessageItem = ({ messageItem, message, isCurrentUser, media = [], onMessag
     <View
       style={[
         styles.messageContainer,
-        isCurrentUser ? styles.currentUserMessage : styles.otherUserMessage,
+        isCurrentUser
+          ? [styles.currentUserMessage, isDark && { backgroundColor: "#3A2A55" }]
+          : [styles.otherUserMessage, isDark && { backgroundColor: "#1E1E2E", borderWidth: 1, borderColor: "#2D2D3F" }],
       ]}
     >
       <Modal
@@ -166,7 +172,9 @@ const MessageItem = ({ messageItem, message, isCurrentUser, media = [], onMessag
             <Text
               style={[
                 styles.messageText,
-                isCurrentUser ? styles.currentUserText : styles.otherUserText,
+                isCurrentUser
+                  ? [styles.currentUserText, isDark && { color: "#FFFFFF" }]
+                  : [styles.otherUserText, isDark && { color: "#E2E8F0" }],
               ]}
             >
               {message}
@@ -226,7 +234,9 @@ const MessageItem = ({ messageItem, message, isCurrentUser, media = [], onMessag
         <Text
           style={[
             styles.messageText,
-            isCurrentUser ? styles.currentUserText : styles.otherUserText,
+            isCurrentUser
+              ? [styles.currentUserText, isDark && { color: "#FFFFFF" }]
+              : [styles.otherUserText, isDark && { color: "#E2E8F0" }],
           ]}
         >
           {message}
@@ -351,7 +361,9 @@ const MessageItem = ({ messageItem, message, isCurrentUser, media = [], onMessag
       {/* Message timestamp */}
       <Text style={[
         styles.timestamp,
-        isCurrentUser ? styles.currentUserTimestamp : styles.otherUserTimestamp
+        isCurrentUser 
+          ? [styles.currentUserTimestamp, isDark && { color: "#C4B5FD" }]
+          : [styles.otherUserTimestamp, isDark && { color: "#94A3B8" }],
       ]}>
         {formatTimestamp(messageItem?.createdAt)}
       </Text>

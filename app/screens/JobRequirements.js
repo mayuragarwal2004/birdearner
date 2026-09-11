@@ -1671,17 +1671,20 @@ const JobRequirementsScreen = ({ navigation }) => {
           </View>
           {skills.map((skill, index) => (
             <View key={`skill-${index}`} style={styles.skillInputContainer}>
-              <TextInput
-                style={[styles.input, styles.skillInput]}
-                placeholder={`Skill ${index + 1}`}
-                placeholderTextColor={styles.placeholder.color}
-                value={skill}
-                onChangeText={(text) => {
-                  const updated = [...skills];
-                  updated[index] = text;
-                  setSkills(updated);
-                }}
-              />
+              <View style={[styles.inputRow, { flex: 1, marginBottom: 0 }]}>
+                <Tag size={18} color={accent} />
+                <TextInput
+                  style={styles.inputFlex}
+                  placeholder={`e.g., Skill ${index + 1}`}
+                  placeholderTextColor={styles.placeholder.color}
+                  value={skill}
+                  onChangeText={(text) => {
+                    const updated = [...skills];
+                    updated[index] = text;
+                    setSkills(updated);
+                  }}
+                />
+              </View>
               {skills.length > 1 && (
                 <TouchableOpacity onPress={() => removeSkill(index)} style={styles.removeSkillButton}>
                   <FontAwesome name="minus-circle" size={20} color="#B64928" />

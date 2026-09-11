@@ -27,7 +27,7 @@ const AdvancedFilter = ({
   onSortChange,
   theme,
 }) => {
-  const isDark = theme?.theme === 'dark';
+  const isDark = Boolean(theme?.isDark || theme?.theme === 'dark');
   const styles = getStyles(isDark);
 
   return (
@@ -140,11 +140,11 @@ const getStyles = (isDark) =>
   StyleSheet.create({
     overlay: {
       flex: 1,
-      backgroundColor: 'rgba(0,0,0,0.5)',
-      justifyContent: 'flex-end',
+      backgroundColor: 'rgba(0,0,0,0.6)',
+      justify: 'flex-end',
     },
     container: {
-      backgroundColor: isDark ? '#1f2937' : '#FFF',
+      backgroundColor: isDark ? '#1E1E1E' : '#FFF',
       borderTopLeftRadius: 24,
       borderTopRightRadius: 24,
       maxHeight: '75%',
@@ -156,7 +156,7 @@ const getStyles = (isDark) =>
       justifyContent: 'space-between',
       padding: 20,
       borderBottomWidth: 1,
-      borderBottomColor: isDark ? '#374151' : '#F3E8FF',
+      borderBottomColor: isDark ? '#2A2A2A' : '#F3E8FF',
     },
     headerLeft: {
       flexDirection: 'row',
@@ -172,14 +172,14 @@ const getStyles = (isDark) =>
       width: 36,
       height: 36,
       borderRadius: 18,
-      backgroundColor: isDark ? '#374151' : '#F3E8FF',
+      backgroundColor: isDark ? '#2A2A2A' : '#F3E8FF',
       alignItems: 'center',
       justifyContent: 'center',
     },
     section: {
       padding: 20,
       borderBottomWidth: 1,
-      borderBottomColor: isDark ? '#374151' : '#F3E8FF',
+      borderBottomColor: isDark ? '#2A2A2A' : '#F3E8FF',
     },
     sectionHeader: {
       flexDirection: 'row',
@@ -209,10 +209,10 @@ const getStyles = (isDark) =>
       paddingHorizontal: 14,
       borderRadius: 12,
       marginBottom: 8,
-      backgroundColor: isDark ? '#374151' : '#F8F4FF',
+      backgroundColor: isDark ? '#2A2A2A' : '#F8F4FF',
     },
     optionRowActive: {
-      backgroundColor: isDark ? '#4B0082' : '#F3E8FF',
+      backgroundColor: isDark ? '#3A1F5C' : '#F3E8FF',
       borderWidth: 1,
       borderColor: '#762BAD',
     },
@@ -222,7 +222,7 @@ const getStyles = (isDark) =>
     },
     optionTextActive: {
       fontWeight: '600',
-      color: '#762BAD',
+      color: isDark ? '#C4B5FD' : '#762BAD',
     },
     applyButton: {
       marginHorizontal: 20,

@@ -62,6 +62,7 @@ const Clock = getIcon("Clock");
 const ChevronDown = getIcon("ChevronDown");
 import apiService from "../lib/apiService";
 import { useAuth } from "../context/NewAuthContext";
+import { useTheme } from "../context/ThemeContext";
 import PickerModal from "../components/CustomPicker";
 
 const GENDER_OPTIONS = [
@@ -220,6 +221,10 @@ const createSchema = (mode) => {
 
 const FreelancerSignup = ({ navigation, route }) => {
   const { register, user, userData, userProfile, refreshUserData } = useAuth();
+  const { theme, themeStyles } = useTheme();
+  const currentTheme = themeStyles[theme] || themeStyles.light;
+  const isDark = theme === "dark";
+  const styles = getStyles(currentTheme, isDark);
 
   // Extract route params
   const {
@@ -1229,9 +1234,9 @@ const FreelancerSignup = ({ navigation, route }) => {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#2E0854" }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: isDark ? "#121212" : "#2E0854" }}>
       <LinearGradient
-        colors={["#2B0855", "#3B0A75", "#160233"]}
+        colors={isDark ? ["#121212", "#1E1E1E", "#121212"] : ["#2B0855", "#3B0A75", "#160233"]}
         style={{ flex: 1 }}
       >
         <KeyboardAvoidingView
@@ -1279,7 +1284,7 @@ const FreelancerSignup = ({ navigation, route }) => {
                   </View>
                   <TextInput
                     style={styles.textInput}
-                    placeholderTextColor="#A098AE"
+                    placeholderTextColor={isDark ? "#888888" : "#A098AE"}
                     placeholder="Enter your full name"
                     value={form.full_name}
                     onChangeText={(v) => setForm({ ...form, full_name: v })}
@@ -1299,7 +1304,7 @@ const FreelancerSignup = ({ navigation, route }) => {
                   </View>
                   <TextInput
                     style={styles.textInput}
-                    placeholderTextColor="#A098AE"
+                    placeholderTextColor={isDark ? "#888888" : "#A098AE"}
                     placeholder="Enter your mobile number"
                     value={form.mobile}
                     onChangeText={(v) => setForm({ ...form, mobile: v })}
@@ -1314,7 +1319,7 @@ const FreelancerSignup = ({ navigation, route }) => {
                   </View>
                   <TextInput
                     style={styles.textInput}
-                    placeholderTextColor="#A098AE"
+                    placeholderTextColor={isDark ? "#888888" : "#A098AE"}
                     placeholder="Enter your email address"
                     value={form.email}
                     onChangeText={(v) => setForm({ ...form, email: v })}
@@ -1330,7 +1335,7 @@ const FreelancerSignup = ({ navigation, route }) => {
                   </View>
                   <TextInput
                     style={styles.textInput}
-                    placeholderTextColor="#A098AE"
+                    placeholderTextColor={isDark ? "#888888" : "#A098AE"}
                     placeholder="Enter your password"
                     value={form.password}
                     onChangeText={(v) => setForm({ ...form, password: v })}
@@ -1355,7 +1360,7 @@ const FreelancerSignup = ({ navigation, route }) => {
                   </View>
                   <TextInput
                     style={styles.textInput}
-                    placeholderTextColor="#A098AE"
+                    placeholderTextColor={isDark ? "#888888" : "#A098AE"}
                     placeholder="Confirm your password"
                     value={form.confirmPassword}
                     onChangeText={(v) => setForm({ ...form, confirmPassword: v })}
@@ -1514,7 +1519,7 @@ const FreelancerSignup = ({ navigation, route }) => {
                 <View style={styles.textareaContainer}>
                   <TextInput
                     style={styles.textareaInput}
-                    placeholderTextColor="#A098AE"
+                    placeholderTextColor={isDark ? "#888888" : "#A098AE"}
                     placeholder="Write a short bio about yourself, your background and what you do..."
                     value={form.bio}
                     multiline
@@ -1605,7 +1610,7 @@ const FreelancerSignup = ({ navigation, route }) => {
                   </View>
                   <TextInput
                     style={styles.textInput}
-                    placeholderTextColor="#A098AE"
+                    placeholderTextColor={isDark ? "#888888" : "#A098AE"}
                     placeholder="Enter your total experience in months"
                     keyboardType="numeric"
                     value={form.experience}
@@ -1623,7 +1628,7 @@ const FreelancerSignup = ({ navigation, route }) => {
                       </View>
                       <TextInput
                         style={styles.textInput}
-                        placeholderTextColor="#A098AE"
+                        placeholderTextColor={isDark ? "#888888" : "#A098AE"}
                         placeholder="Enter your city"
                         value={form.city}
                         onChangeText={(v) =>
@@ -1639,7 +1644,7 @@ const FreelancerSignup = ({ navigation, route }) => {
                       </View>
                       <TextInput
                         style={styles.textInput}
-                        placeholderTextColor="#A098AE"
+                        placeholderTextColor={isDark ? "#888888" : "#A098AE"}
                         placeholder="Enter your state"
                         value={form.state}
                         onChangeText={(v) =>
@@ -1658,7 +1663,7 @@ const FreelancerSignup = ({ navigation, route }) => {
                       <View style={styles.inputContainer}>
                         <TextInput
                           style={styles.textInput}
-                          placeholderTextColor="#A098AE"
+                          placeholderTextColor={isDark ? "#888888" : "#A098AE"}
                           placeholder="Enter a language (e.g. English)"
                           value={languageInput}
                           onChangeText={setLanguageInput}
@@ -1714,7 +1719,7 @@ const FreelancerSignup = ({ navigation, route }) => {
                       </View>
                       <TextInput
                         style={styles.textInput}
-                        placeholderTextColor="#A098AE"
+                        placeholderTextColor={isDark ? "#888888" : "#A098AE"}
                         placeholder="Search or add your skills"
                         value={skillInput}
                         onChangeText={setSkillInput}
@@ -1761,7 +1766,7 @@ const FreelancerSignup = ({ navigation, route }) => {
                             <Award size={20} color="#7C3AED" />
                           </View>
                           <TextInput
-                            placeholderTextColor="#A098AE"
+                            placeholderTextColor={isDark ? "#888888" : "#A098AE"}
                             style={styles.textInput}
                             placeholder="Certificate name"
                             value={cert.name || ""}
@@ -1801,7 +1806,7 @@ const FreelancerSignup = ({ navigation, route }) => {
                             <Building size={20} color="#7C3AED" />
                           </View>
                           <TextInput
-                            placeholderTextColor="#A098AE"
+                            placeholderTextColor={isDark ? "#888888" : "#A098AE"}
                             style={styles.textInput}
                             placeholder="University / Institute"
                             value={cert.university || ""}
@@ -1823,7 +1828,7 @@ const FreelancerSignup = ({ navigation, route }) => {
                             <Calendar size={20} color="#7C3AED" />
                           </View>
                           <TextInput
-                            placeholderTextColor="#A098AE"
+                            placeholderTextColor={isDark ? "#888888" : "#A098AE"}
                             style={styles.textInput}
                             placeholder="Year"
                             keyboardType="numeric"
@@ -1898,7 +1903,7 @@ const FreelancerSignup = ({ navigation, route }) => {
                     <Search size={20} color="#7C3AED" />
                   </View>
                   <TextInput
-                    placeholderTextColor="#A098AE"
+                    placeholderTextColor={isDark ? "#888888" : "#A098AE"}
                     style={styles.textInput}
                     placeholder="Search services (e.g. Graphic Design, Web Dev)..."
                     value={searchQuery}
@@ -2344,7 +2349,7 @@ const FreelancerSignup = ({ navigation, route }) => {
               <TextInput
                 style={styles.modalInput}
                 placeholder="e.g. AI Prompt Engineering, Video Editing..."
-                placeholderTextColor="#A098AE"
+                placeholderTextColor={isDark ? "#888888" : "#A098AE"}
                 value={suggestedServiceForm.serviceName}
                 onChangeText={(text) =>
                   setSuggestedServiceForm((prev) => ({ ...prev, serviceName: text }))
@@ -2355,7 +2360,7 @@ const FreelancerSignup = ({ navigation, route }) => {
               <TextInput
                 style={[styles.modalInput, { height: 80, textAlignVertical: "top" }]}
                 placeholder="Briefly describe what this service involves..."
-                placeholderTextColor="#A098AE"
+                placeholderTextColor={isDark ? "#888888" : "#A098AE"}
                 multiline={true}
                 numberOfLines={3}
                 value={suggestedServiceForm.description}
@@ -2412,7 +2417,7 @@ const FreelancerSignup = ({ navigation, route }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (currentTheme, isDark) => StyleSheet.create({
   scrollContainer: {
     flexGrow: 1,
     paddingHorizontal: 16,
@@ -2466,7 +2471,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   card: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: isDark ? "#1E1E1E" : "#FFFFFF",
     borderRadius: 16,
     padding: 16,
     shadowColor: "#000",
@@ -2475,35 +2480,37 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 6,
     marginBottom: 14,
+    borderWidth: isDark ? 1 : 0,
+    borderColor: isDark ? "#2A2A2A" : "transparent",
   },
   fieldLabel: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#1F1D2B",
+    color: isDark ? "#FFFFFF" : "#1F1D2B",
     marginBottom: 5,
   },
   subFieldLabel: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#1F1D2B",
+    color: isDark ? "#FFFFFF" : "#1F1D2B",
     marginTop: 6,
     marginBottom: 6,
   },
   fieldHelperText: {
     fontSize: 11.5,
-    color: "#8E8EA9",
+    color: isDark ? "#AAA" : "#8E8EA9",
     marginTop: 3,
     marginBottom: 10,
   },
   optionalText: {
     fontSize: 12,
-    color: "#8E8EA9",
+    color: isDark ? "#AAA" : "#8E8EA9",
     fontWeight: "400",
   },
   sectionNumberTitle: {
     fontSize: 13.5,
     fontWeight: "700",
-    color: "#1F1D2B",
+    color: isDark ? "#FFFFFF" : "#1F1D2B",
     marginTop: 12,
     marginBottom: 10,
   },
@@ -2515,9 +2522,9 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FAFAFC",
+    backgroundColor: isDark ? "#2A2A2A" : "#FAFAFC",
     borderWidth: 1,
-    borderColor: "#E9E3F4",
+    borderColor: isDark ? "#3A3A3A" : "#E9E3F4",
     borderRadius: 12,
     paddingHorizontal: 8,
     minHeight: 48,
@@ -2527,7 +2534,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 8,
-    backgroundColor: "#F3E8FF",
+    backgroundColor: isDark ? "#3A2A55" : "#F3E8FF",
     justifyContent: "center",
     alignItems: "center",
     marginRight: 8,
@@ -2538,7 +2545,7 @@ const styles = StyleSheet.create({
     paddingRight: 6,
     marginRight: 6,
     borderRightWidth: 1,
-    borderRightColor: "#E9E3F4",
+    borderRightColor: isDark ? "#444" : "#E9E3F4",
   },
   countryFlag: {
     fontSize: 15,
@@ -2547,12 +2554,12 @@ const styles = StyleSheet.create({
   countryCodeText: {
     fontSize: 13.5,
     fontWeight: "600",
-    color: "#1F1D2B",
+    color: isDark ? "#FFFFFF" : "#1F1D2B",
   },
   textInput: {
     flex: 1,
     fontSize: 13.5,
-    color: "#1F1D2B",
+    color: isDark ? "#FFFFFF" : "#1F1D2B",
     paddingVertical: 8,
   },
   eyeIconButton: {
@@ -2638,22 +2645,22 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FAFAFC",
+    backgroundColor: isDark ? "#2A2A2A" : "#FAFAFC",
     borderWidth: 1.5,
-    borderColor: "#E9E3F4",
+    borderColor: isDark ? "#3A3A3A" : "#E9E3F4",
     borderRadius: 16,
     padding: 12,
     minHeight: 70,
   },
   freelancerTypeCardSelected: {
     borderColor: "#6D28D9",
-    backgroundColor: "#F5F0FF",
+    backgroundColor: isDark ? "#3A2A55" : "#F5F0FF",
   },
   typeIconBox: {
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: "#F3E8FF",
+    backgroundColor: isDark ? "#3A2A55" : "#F3E8FF",
     justifyContent: "center",
     alignItems: "center",
     marginRight: 8,
@@ -2661,11 +2668,11 @@ const styles = StyleSheet.create({
   typeCardTitle: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#1F1D2B",
+    color: isDark ? "#FFFFFF" : "#1F1D2B",
   },
   typeCardSubtext: {
     fontSize: 11,
-    color: "#8E8EA9",
+    color: isDark ? "#AAA" : "#8E8EA9",
   },
   radioGroupRow: {
     flexDirection: "row",
@@ -2684,7 +2691,7 @@ const styles = StyleSheet.create({
     height: 18,
     borderRadius: 9,
     borderWidth: 2,
-    borderColor: "#D4C5ED",
+    borderColor: isDark ? "#555" : "#D4C5ED",
     justifyContent: "center",
     alignItems: "center",
     marginRight: 6,
@@ -2700,14 +2707,14 @@ const styles = StyleSheet.create({
   },
   radioLabelText: {
     fontSize: 13,
-    color: "#1F1D2B",
+    color: isDark ? "#FFFFFF" : "#1F1D2B",
     fontWeight: "500",
     flexShrink: 1,
   },
   textareaContainer: {
-    backgroundColor: "#FAFAFC",
+    backgroundColor: isDark ? "#2A2A2A" : "#FAFAFC",
     borderWidth: 1,
-    borderColor: "#E9E3F4",
+    borderColor: isDark ? "#3A3A3A" : "#E9E3F4",
     borderRadius: 12,
     padding: 10,
     marginBottom: 14,
@@ -2720,24 +2727,24 @@ const styles = StyleSheet.create({
   textareaHeaderLabel: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#7C3AED",
+    color: isDark ? "#C4B5FD" : "#7C3AED",
   },
   textareaInput: {
     minHeight: 90,
     textAlignVertical: "top",
     fontSize: 14,
-    color: "#1F1D2B",
+    color: isDark ? "#FFFFFF" : "#1F1D2B",
   },
   textareaCharCounter: {
     fontSize: 12,
-    color: "#A098AE",
+    color: isDark ? "#AAA" : "#A098AE",
     textAlign: "right",
     marginTop: 4,
   },
   langInputCardContainer: {
-    backgroundColor: "#FAFAFC",
+    backgroundColor: isDark ? "#2A2A2A" : "#FAFAFC",
     borderWidth: 1,
-    borderColor: "#E9E3F4",
+    borderColor: isDark ? "#3A3A3A" : "#E9E3F4",
     borderRadius: 16,
     padding: 12,
     marginBottom: 16,
@@ -2745,7 +2752,7 @@ const styles = StyleSheet.create({
   addedLanguagesLabel: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#1F1D2B",
+    color: isDark ? "#FFFFFF" : "#1F1D2B",
     marginTop: 8,
     marginBottom: 6,
   },
@@ -2773,21 +2780,21 @@ const styles = StyleSheet.create({
   langTagBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F3E8FF",
+    backgroundColor: isDark ? "#3A2A55" : "#F3E8FF",
     borderRadius: 20,
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderWidth: 1,
-    borderColor: "#E9E3F4",
+    borderColor: isDark ? "#4A3A65" : "#E9E3F4",
   },
   langTagTitle: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#1F1D2B",
+    color: isDark ? "#FFFFFF" : "#1F1D2B",
     marginRight: 6,
   },
   langTagLevelBox: {
-    backgroundColor: "#E9D5FF",
+    backgroundColor: isDark ? "#4A3A65" : "#E9D5FF",
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 8,
@@ -2796,7 +2803,7 @@ const styles = StyleSheet.create({
   langTagLevelText: {
     fontSize: 10,
     fontWeight: "700",
-    color: "#5B21B6",
+    color: isDark ? "#DDD6FE" : "#5B21B6",
   },
   tagRemoveBtn: {
     padding: 2,
@@ -2824,7 +2831,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 52,
     borderRadius: 14,
-    backgroundColor: "#FEE2E2",
+    backgroundColor: isDark ? "#451A1A" : "#FEE2E2",
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 16,
@@ -2836,7 +2843,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: "#6D28D9",
     borderStyle: "dashed",
-    backgroundColor: "#FAFAFC",
+    backgroundColor: isDark ? "#2A2A2A" : "#FAFAFC",
     borderRadius: 14,
     height: 48,
     marginVertical: 8,
@@ -2870,9 +2877,9 @@ const styles = StyleSheet.create({
     flex: 1.5,
     height: 160,
     borderWidth: 1.5,
-    borderColor: "#C4B5FD",
+    borderColor: isDark ? "#6D28D9" : "#C4B5FD",
     borderStyle: "dashed",
-    backgroundColor: "#FAFAFC",
+    backgroundColor: isDark ? "#2A2A2A" : "#FAFAFC",
     borderRadius: 16,
     justifyContent: "center",
     alignItems: "center",
@@ -2886,7 +2893,7 @@ const styles = StyleSheet.create({
   },
   portfolioUploadBoxSubtext: {
     fontSize: 11,
-    color: "#8E8EA9",
+    color: isDark ? "#AAA" : "#8E8EA9",
   },
   portfolioRightCol: {
     flex: 1,
@@ -2895,9 +2902,9 @@ const styles = StyleSheet.create({
   portfolioSmallUploadBox: {
     height: 75,
     borderWidth: 1.5,
-    borderColor: "#C4B5FD",
+    borderColor: isDark ? "#6D28D9" : "#C4B5FD",
     borderStyle: "dashed",
-    backgroundColor: "#FAFAFC",
+    backgroundColor: isDark ? "#2A2A2A" : "#FAFAFC",
     borderRadius: 16,
     justifyContent: "center",
     alignItems: "center",
@@ -2917,9 +2924,9 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 80,
     borderWidth: 1.5,
-    borderColor: "#C4B5FD",
+    borderColor: isDark ? "#6D28D9" : "#C4B5FD",
     borderStyle: "dashed",
-    backgroundColor: "#FAFAFC",
+    backgroundColor: isDark ? "#2A2A2A" : "#FAFAFC",
     borderRadius: 16,
     justifyContent: "center",
     alignItems: "center",
@@ -2928,9 +2935,9 @@ const styles = StyleSheet.create({
   portfolioFullWidthBox: {
     height: 70,
     borderWidth: 1.5,
-    borderColor: "#C4B5FD",
+    borderColor: isDark ? "#6D28D9" : "#C4B5FD",
     borderStyle: "dashed",
-    backgroundColor: "#FAFAFC",
+    backgroundColor: isDark ? "#2A2A2A" : "#FAFAFC",
     borderRadius: 16,
     justifyContent: "center",
     alignItems: "center",
@@ -2948,7 +2955,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     position: "relative",
     overflow: "hidden",
-    backgroundColor: "#F5F0FF",
+    backgroundColor: isDark ? "#2A2A2A" : "#F5F0FF",
   },
   portfolioPreviewImg: {
     width: "100%",
@@ -2959,9 +2966,9 @@ const styles = StyleSheet.create({
     width: "100%",
     height: "100%",
     borderRadius: 12,
-    backgroundColor: "#FEF2F2",
+    backgroundColor: isDark ? "#3A1A1A" : "#FEF2F2",
     borderWidth: 1,
-    borderColor: "#FECACA",
+    borderColor: isDark ? "#5A2A2A" : "#FECACA",
     justifyContent: "center",
     alignItems: "center",
     padding: 4,
@@ -3001,7 +3008,7 @@ const styles = StyleSheet.create({
   infoBannerBox: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F3E8FF",
+    backgroundColor: isDark ? "#2D1B4E" : "#F3E8FF",
     borderRadius: 14,
     padding: 14,
     marginVertical: 12,
@@ -3019,11 +3026,11 @@ const styles = StyleSheet.create({
   infoBannerTitle: {
     fontSize: 13,
     fontWeight: "700",
-    color: "#5B21B6",
+    color: isDark ? "#E2D8F7" : "#5B21B6",
   },
   infoBannerText: {
     fontSize: 12,
-    color: "#6D28D9",
+    color: isDark ? "#C4B5FD" : "#6D28D9",
     marginTop: 2,
   },
   selectedServicesContainer: {
@@ -3032,7 +3039,7 @@ const styles = StyleSheet.create({
   selectedServicesTitle: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#1F1D2B",
+    color: isDark ? "#FFFFFF" : "#1F1D2B",
     marginBottom: 6,
   },
   purpleTagBadge: {
@@ -3052,21 +3059,21 @@ const styles = StyleSheet.create({
   serviceCardItem: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FAFAFC",
+    backgroundColor: isDark ? "#2A2A2A" : "#FAFAFC",
     borderWidth: 1,
-    borderColor: "#E9E3F4",
+    borderColor: isDark ? "#3A3A3A" : "#E9E3F4",
     borderRadius: 14,
     padding: 12,
     marginBottom: 8,
   },
   serviceCardItemSelected: {
     borderColor: "#6D28D9",
-    backgroundColor: "#F5F0FF",
+    backgroundColor: isDark ? "#3A2A55" : "#F5F0FF",
   },
   serviceItemName: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#1F1D2B",
+    color: isDark ? "#FFFFFF" : "#1F1D2B",
   },
   purpleTextBold: {
     color: "#6D28D9",
@@ -3074,7 +3081,7 @@ const styles = StyleSheet.create({
   },
   serviceItemDesc: {
     fontSize: 12,
-    color: "#8E8EA9",
+    color: isDark ? "#AAA" : "#8E8EA9",
     marginTop: 2,
   },
   checkboxCircle: {
@@ -3082,7 +3089,7 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: 11,
     borderWidth: 1.5,
-    borderColor: "#D4C5ED",
+    borderColor: isDark ? "#555" : "#D4C5ED",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -3096,7 +3103,7 @@ const styles = StyleSheet.create({
   },
   noResultsTitle: {
     fontSize: 14,
-    color: "#8E8EA9",
+    color: isDark ? "#AAA" : "#8E8EA9",
   },
   primaryButton: {
     height: 48,
@@ -3146,13 +3153,13 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: "#6D28D9",
     borderRadius: 12,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: isDark ? "#2A2A2A" : "#FFFFFF",
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
   },
   secondaryHalfButtonText: {
-    color: "#6D28D9",
+    color: isDark ? "#C4B5FD" : "#6D28D9",
     fontSize: 14.5,
     fontWeight: "600",
   },
@@ -3162,13 +3169,13 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: "#6D28D9",
     borderRadius: 12,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: isDark ? "#2A2A2A" : "#FFFFFF",
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
   },
   saveDraftButtonText: {
-    color: "#6D28D9",
+    color: isDark ? "#C4B5FD" : "#6D28D9",
     fontSize: 14.5,
     fontWeight: "600",
   },
@@ -3189,7 +3196,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#F3E8FF",
+    backgroundColor: isDark ? "#2D1B4E" : "#F3E8FF",
     borderWidth: 1,
     borderColor: "#C084FC",
     borderRadius: 12,
@@ -3199,11 +3206,11 @@ const styles = StyleSheet.create({
   suggestedBadgeTitle: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#6D28D9",
+    color: isDark ? "#E2D8F7" : "#6D28D9",
   },
   suggestedBadgeSubtitle: {
     fontSize: 12,
-    color: "#7E22CE",
+    color: isDark ? "#C4B5FD" : "#7E22CE",
     marginTop: 2,
   },
   suggestServiceTriggerBtn: {
@@ -3214,15 +3221,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: "#DDD6FE",
+    borderColor: isDark ? "#6D28D9" : "#DDD6FE",
     borderStyle: "dashed",
-    backgroundColor: "#FAF5FF",
+    backgroundColor: isDark ? "#2A2A2A" : "#FAF5FF",
     marginVertical: 10,
   },
   suggestServiceTriggerText: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#6D28D9",
+    color: isDark ? "#C4B5FD" : "#6D28D9",
   },
   modalOverlay: {
     flex: 1,
@@ -3233,7 +3240,7 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     width: "100%",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: isDark ? "#1E1E1E" : "#FFFFFF",
     borderRadius: 20,
     padding: 20,
     maxHeight: "85%",

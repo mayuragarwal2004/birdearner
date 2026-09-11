@@ -79,9 +79,11 @@ const UserServicesSection = React.memo(({
 const getStyles = (currentTheme) => StyleSheet.create({
   servicesContainer: {
     marginBottom: 12,
-    backgroundColor: currentTheme.theme === 'dark' ? '#1f2937' : '#F8F4FF',
+    backgroundColor: currentTheme.isDark ? '#1E1E1E' : '#F8F4FF',
     padding: 12,
     borderRadius: 16,
+    borderWidth: currentTheme.isDark ? 1 : 0,
+    borderColor: '#2A2A2A',
   },
   headerRow: {
     flexDirection: 'row',
@@ -97,9 +99,9 @@ const getStyles = (currentTheme) => StyleSheet.create({
   editButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: currentTheme.theme === 'dark' ? '#2e1f4a' : '#FFF',
+    backgroundColor: currentTheme.isDark ? '#2A2A2A' : '#FFF',
     borderWidth: 1,
-    borderColor: '#E5D5FF',
+    borderColor: currentTheme.isDark ? '#3A3A3A' : '#E5D5FF',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
@@ -133,7 +135,7 @@ const getStyles = (currentTheme) => StyleSheet.create({
   },
   servicesSubtext: {
     fontSize: 13,
-    color: '#762BAD',
+    color: currentTheme.isDark ? '#A78BFA' : '#762BAD',
     fontStyle: 'italic',
   },
   noServicesContainer: {

@@ -47,6 +47,7 @@ const ChevronDown = getIcon("ChevronDown");
 const Bookmark = getIcon("Bookmark");
 import apiService from "../lib/apiService";
 import { useAuth } from "../context/NewAuthContext";
+import { useTheme } from "../context/ThemeContext";
 import PickerModal from "../components/CustomPicker";
 
 const DESIGNATION_OPTIONS = [
@@ -148,6 +149,10 @@ const createSchema = (mode) => {
 
 const ClientSignup = ({ navigation, route }) => {
   const { register, user, userData, userProfile, refreshUserData } = useAuth();
+  const { theme, themeStyles } = useTheme();
+  const currentTheme = themeStyles[theme] || themeStyles.light;
+  const isDark = theme === "dark";
+  const styles = getStyles(currentTheme, isDark);
 
   // Extract route params to determine mode and data
   const {
@@ -619,9 +624,9 @@ const ClientSignup = ({ navigation, route }) => {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#2E0854" }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: isDark ? "#121212" : "#2E0854" }}>
       <LinearGradient
-        colors={["#2B0855", "#3B0A75", "#160233"]}
+        colors={isDark ? ["#121212", "#1E1E1E", "#121212"] : ["#2B0855", "#3B0A75", "#160233"]}
         style={{ flex: 1 }}
       >
         <KeyboardAvoidingView
@@ -677,7 +682,7 @@ const ClientSignup = ({ navigation, route }) => {
                   </View>
                   <TextInput
                     style={styles.textInput}
-                    placeholderTextColor="#A098AE"
+                    placeholderTextColor={isDark ? "#888888" : "#A098AE"}
                     placeholder="Enter your full name"
                     value={form.full_name}
                     onChangeText={(v) => setForm({ ...form, full_name: v })}
@@ -698,7 +703,7 @@ const ClientSignup = ({ navigation, route }) => {
                   </View>
                   <TextInput
                     style={styles.textInput}
-                    placeholderTextColor="#A098AE"
+                    placeholderTextColor={isDark ? "#888888" : "#A098AE"}
                     placeholder="Enter your mobile number"
                     value={form.mobile}
                     onChangeText={(v) => setForm({ ...form, mobile: v })}
@@ -714,7 +719,7 @@ const ClientSignup = ({ navigation, route }) => {
                   </View>
                   <TextInput
                     style={styles.textInput}
-                    placeholderTextColor="#A098AE"
+                    placeholderTextColor={isDark ? "#888888" : "#A098AE"}
                     placeholder="Enter your email address"
                     value={form.email}
                     onChangeText={(v) => setForm({ ...form, email: v })}
@@ -731,7 +736,7 @@ const ClientSignup = ({ navigation, route }) => {
                   </View>
                   <TextInput
                     style={styles.textInput}
-                    placeholderTextColor="#A098AE"
+                    placeholderTextColor={isDark ? "#888888" : "#A098AE"}
                     placeholder="Enter your password"
                     value={form.password}
                     onChangeText={(v) => setForm({ ...form, password: v })}
@@ -757,7 +762,7 @@ const ClientSignup = ({ navigation, route }) => {
                   </View>
                   <TextInput
                     style={styles.textInput}
-                    placeholderTextColor="#A098AE"
+                    placeholderTextColor={isDark ? "#888888" : "#A098AE"}
                     placeholder="Confirm your password"
                     value={form.confirmPassword}
                     onChangeText={(v) => setForm({ ...form, confirmPassword: v })}
@@ -915,7 +920,7 @@ const ClientSignup = ({ navigation, route }) => {
                       </View>
                       <TextInput
                         style={styles.textInput}
-                        placeholderTextColor="#A098AE"
+                        placeholderTextColor={isDark ? "#888888" : "#A098AE"}
                         placeholder="Address"
                         value={form.city}
                         onChangeText={(v) =>
@@ -931,7 +936,7 @@ const ClientSignup = ({ navigation, route }) => {
                       </View>
                       <TextInput
                         style={styles.textInput}
-                        placeholderTextColor="#A098AE"
+                        placeholderTextColor={isDark ? "#888888" : "#A098AE"}
                         placeholder="Address Line 2"
                         value={form.heading}
                         onChangeText={(v) => setForm({ ...form, heading: v })}
@@ -958,7 +963,7 @@ const ClientSignup = ({ navigation, route }) => {
                           }
                         }}
                         placeholder="Pin Code"
-                        placeholderTextColor="#A098AE"
+                        placeholderTextColor={isDark ? "#888888" : "#A098AE"}
                       />
                     </View>
                   </View>
@@ -1000,7 +1005,7 @@ const ClientSignup = ({ navigation, route }) => {
                   </View>
                   <TextInput
                     style={styles.textAreaInput}
-                    placeholderTextColor="#A098AE"
+                    placeholderTextColor={isDark ? "#888888" : "#A098AE"}
                     placeholder="Tell us something about yourself..."
                     value={form.bio}
                     multiline
@@ -1090,7 +1095,7 @@ const ClientSignup = ({ navigation, route }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (currentTheme, isDark) => StyleSheet.create({
   scrollContainer: {
     flexGrow: 1,
     paddingHorizontal: 16,
@@ -1143,7 +1148,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   card: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: isDark ? "#1E1E1E" : "#FFFFFF",
     borderRadius: 16,
     padding: 16,
     shadowColor: "#000",
@@ -1152,31 +1157,33 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 6,
     marginBottom: 14,
+    borderWidth: isDark ? 1 : 0,
+    borderColor: isDark ? "#2A2A2A" : "transparent",
   },
   fieldLabel: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#1F1D2B",
+    color: isDark ? "#FFFFFF" : "#1F1D2B",
     marginBottom: 5,
   },
   subFieldLabel: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#1F1D2B",
+    color: isDark ? "#FFFFFF" : "#1F1D2B",
     marginTop: 6,
     marginBottom: 6,
   },
   optionalText: {
     fontSize: 12,
     fontWeight: "400",
-    color: "#8E8EA9",
+    color: isDark ? "#AAA" : "#8E8EA9",
   },
   inputContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FAFAFC",
+    backgroundColor: isDark ? "#2A2A2A" : "#FAFAFC",
     borderWidth: 1,
-    borderColor: "#E9E3F4",
+    borderColor: isDark ? "#3A3A3A" : "#E9E3F4",
     borderRadius: 12,
     paddingHorizontal: 8,
     minHeight: 48,
@@ -1186,7 +1193,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 8,
-    backgroundColor: "#F3E8FF",
+    backgroundColor: isDark ? "#3A2A55" : "#F3E8FF",
     justifyContent: "center",
     alignItems: "center",
     marginRight: 8,
@@ -1197,7 +1204,7 @@ const styles = StyleSheet.create({
     paddingRight: 6,
     marginRight: 6,
     borderRightWidth: 1,
-    borderRightColor: "#E9E3F4",
+    borderRightColor: isDark ? "#444" : "#E9E3F4",
   },
   countryFlag: {
     fontSize: 15,
@@ -1206,12 +1213,12 @@ const styles = StyleSheet.create({
   countryCodeText: {
     fontSize: 13.5,
     fontWeight: "600",
-    color: "#1F1D2B",
+    color: isDark ? "#FFFFFF" : "#1F1D2B",
   },
   textInput: {
     flex: 1,
     fontSize: 13.5,
-    color: "#1F1D2B",
+    color: isDark ? "#FFFFFF" : "#1F1D2B",
     paddingVertical: 8,
   },
   eyeIconButton: {
@@ -1251,7 +1258,7 @@ const styles = StyleSheet.create({
   },
   checkboxText: {
     fontSize: 12.5,
-    color: "#6E6B7B",
+    color: isDark ? "#AAA" : "#6E6B7B",
     flex: 1,
     lineHeight: 17,
   },
@@ -1262,7 +1269,7 @@ const styles = StyleSheet.create({
   sectionNumberTitle: {
     fontSize: 13.5,
     fontWeight: "700",
-    color: "#1F1D2B",
+    color: isDark ? "#FFFFFF" : "#1F1D2B",
     marginTop: 10,
     marginBottom: 10,
   },
@@ -1277,7 +1284,7 @@ const styles = StyleSheet.create({
     borderStyle: "dashed",
     borderWidth: 1.5,
     borderColor: "#8B5CF6",
-    backgroundColor: "#F5F0FF",
+    backgroundColor: isDark ? "#2A2A2A" : "#F5F0FF",
     justifyContent: "center",
     alignItems: "center",
     position: "relative",
@@ -1302,7 +1309,7 @@ const styles = StyleSheet.create({
   },
   avatarSubtext: {
     fontSize: 11.5,
-    color: "#8E8EA9",
+    color: isDark ? "#AAA" : "#8E8EA9",
     marginTop: 6,
   },
   removeImageLink: {
@@ -1324,14 +1331,14 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#E9E3F4",
+    borderColor: isDark ? "#3A3A3A" : "#E9E3F4",
     borderStyle: "dashed",
-    backgroundColor: "#FAFAFC",
+    backgroundColor: isDark ? "#2A2A2A" : "#FAFAFC",
     gap: 6,
   },
   coverUploadText: {
     fontSize: 12.5,
-    color: "#6D28D9",
+    color: isDark ? "#C4B5FD" : "#6D28D9",
     fontWeight: "600",
   },
   coverPreviewContainer: {
@@ -1370,7 +1377,7 @@ const styles = StyleSheet.create({
     height: 18,
     borderRadius: 9,
     borderWidth: 2,
-    borderColor: "#C4B5FD",
+    borderColor: isDark ? "#555" : "#C4B5FD",
     justifyContent: "center",
     alignItems: "center",
     marginRight: 6,
@@ -1386,7 +1393,7 @@ const styles = StyleSheet.create({
   },
   radioLabelText: {
     fontSize: 13,
-    color: "#1F1D2B",
+    color: isDark ? "#FFFFFF" : "#1F1D2B",
     fontWeight: "500",
     flexShrink: 1,
   },
@@ -1399,9 +1406,9 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   textAreaContainer: {
-    backgroundColor: "#FAFAFC",
+    backgroundColor: isDark ? "#2A2A2A" : "#FAFAFC",
     borderWidth: 1,
-    borderColor: "#E9E3F4",
+    borderColor: isDark ? "#3A3A3A" : "#E9E3F4",
     borderRadius: 12,
     padding: 10,
     minHeight: 90,
@@ -1416,7 +1423,7 @@ const styles = StyleSheet.create({
   },
   textAreaInput: {
     fontSize: 13.5,
-    color: "#1F1D2B",
+    color: isDark ? "#FFFFFF" : "#1F1D2B",
     paddingLeft: 26,
     paddingTop: 0,
     height: 60,
@@ -1424,7 +1431,7 @@ const styles = StyleSheet.create({
   },
   charCountText: {
     fontSize: 10.5,
-    color: "#8E8EA9",
+    color: isDark ? "#AAA" : "#8E8EA9",
     textAlign: "right",
     marginTop: 3,
   },
@@ -1455,7 +1462,7 @@ const styles = StyleSheet.create({
   checkboxLabel: {
     flex: 1,
     fontSize: 12,
-    color: "#6E6B7B",
+    color: isDark ? "#AAA" : "#6E6B7B",
     lineHeight: 17,
   },
   linkText: {
@@ -1472,7 +1479,7 @@ const styles = StyleSheet.create({
   outlinedButton: {
     flex: 1,
     height: 48,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: isDark ? "#2A2A2A" : "#FFFFFF",
     borderWidth: 1.5,
     borderColor: "#6D28D9",
     borderRadius: 12,
@@ -1481,7 +1488,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   outlinedButtonText: {
-    color: "#6D28D9",
+    color: isDark ? "#C4B5FD" : "#6D28D9",
     fontSize: 14.5,
     fontWeight: "600",
   },
@@ -1504,13 +1511,13 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: "#6D28D9",
     borderRadius: 12,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: isDark ? "#2A2A2A" : "#FFFFFF",
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
   },
   saveDraftButtonText: {
-    color: "#6D28D9",
+    color: isDark ? "#C4B5FD" : "#6D28D9",
     fontSize: 14.5,
     fontWeight: "600",
   },

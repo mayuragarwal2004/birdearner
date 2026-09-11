@@ -1,7 +1,7 @@
-// components/PickerModal.js
 import React, { useState, useCallback } from 'react';
 import { Modal, View, Text, TouchableOpacity, FlatList, StyleSheet, TextInput } from 'react-native';
 import { AntDesign, Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../context/ThemeContext';
 
 export default function PickerModal({
   items,
@@ -15,6 +15,10 @@ export default function PickerModal({
   disabled = false,
   leftIcon = null,
 }) {
+  const { theme, themeStyles, isDark: contextIsDark } = useTheme();
+  const currentTheme = themeStyles[theme] || themeStyles.light;
+  const isDark = Boolean(contextIsDark || theme === 'dark');
+
   const [modalVisible, setModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -26,9 +30,14 @@ export default function PickerModal({
 
   return (
     <View style={[styles.wrapper, style]}>
-      {label ? <Text style={styles.label}>{label}</Text> : null}
+      {label ? <Text style={[styles.label, isDark && { color: "#FFFFFF" }]}>{label}</Text> : null}
       <TouchableOpacity
-        style={[styles.inputBox, disabled && styles.disabledBox, innerStyle]}
+        style={[
+          styles.inputBox, 
+          disabled && styles.disabledBox, 
+          isDark && { backgroundColor: "#2A2A2A", borderColor: "#3A3A3A" },
+          innerStyle
+        ]}
         onPress={() => !disabled && setModalVisible(true)}
         disabled={disabled}
       >
@@ -39,6 +48,7 @@ export default function PickerModal({
             ellipsizeMode="tail"
             style={[
               styles.selectedText, 
+              isDark && { color: "#FFFFFF" },
               !value && styles.placeholderText, 
               disabled && styles.disabledText,
               textStyle
@@ -61,19 +71,19 @@ export default function PickerModal({
         onRequestClose={() => setModalVisible(false)}
       >
         <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={() => setModalVisible(false)}>
-          <View style={styles.modalContainer}>
-            <View style={styles.searchContainer}>
-              <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
+          <View style={[styles.modalContainer, isDark && { backgroundColor: "#1E1E1E" }]}>
+            <View style={[styles.searchContainer, isDark && { backgroundColor: "#2A2A2A", borderBottomColor: "#333" }]}>
+              <Ionicons name="search" size={20} color={isDark ? "#AAA" : "#666"} style={styles.searchIcon} />
               <TextInput
-                style={styles.searchInput}
+                style={[styles.searchInput, isDark && { color: "#FFF" }]}
                 placeholder="Search..."
                 value={searchQuery}
                 onChangeText={setSearchQuery}
-                placeholderTextColor="#999"
+                placeholderTextColor={isDark ? "#888" : "#999"}
               />
               {searchQuery !== '' && (
                 <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButton}>
-                  <Ionicons name="close-circle" size={20} color="#666" />
+                  <Ionicons name="close-circle" size={20} color={isDark ? "#AAA" : "#666"} />
                 </TouchableOpacity>
               )}
             </View>
@@ -82,18 +92,18 @@ export default function PickerModal({
               keyExtractor={(item, index) => (item && item.value !== undefined ? `${item.value}-${index}` : index.toString())}
               ListEmptyComponent={() => (
                 <View style={styles.emptyContainer}>
-                  <Text style={styles.emptyText}>No matches found</Text>
+                  <Text style={[styles.emptyText, isDark && { color: "#AAA" }]}>No matches found</Text>
                 </View>
               )}
               renderItem={({ item }) => (
                 <TouchableOpacity
-                  style={styles.option}
+                  style={[styles.option, isDark && { borderBottomColor: "#2A2A2A" }]}
                   onPress={() => {
                     onValueChange(item.value);
                     setModalVisible(false);
                   }}
                 >
-                  <Text style={styles.optionText}>{item.label}</Text>
+                  <Text style={[styles.optionText, isDark && { color: "#FFF" }]}>{item.label}</Text>
                 </TouchableOpacity>
               )}
               ListFooterComponent={<View style={{ height: 20 }} />}

@@ -173,9 +173,10 @@ const ServiceListingScreen = ({ navigation, route }) => {
 const getStyles = (theme, isDark) => {
   const text = theme.text || "#101114";
   const muted = theme.subText || "#656B7A";
-  const border = theme.border || "#E7E1EF";
-  const soft = isDark ? "#2A2034" : "#F3EAFF";
-  const bg = isDark ? "#1A1023" : "#FFFFFF";
+  const border = isDark ? "#2A2A2A" : (theme.border || "#E7E1EF");
+  const soft = isDark ? "#2A2A2A" : "#F3EAFF";
+  const bg = isDark ? "#121212" : "#FFFFFF";
+  const cardBg = isDark ? "#1E1E1E" : "#FFFFFF";
 
   return StyleSheet.create({
     container: {
@@ -195,6 +196,7 @@ const getStyles = (theme, isDark) => {
       borderRadius: 18,
       alignItems: "center",
       justifyContent: "center",
+      backgroundColor: isDark ? "#2A2A2A" : "#F3EAFF",
     },
     headerTitle: {
       fontSize: 18,
@@ -231,7 +233,7 @@ const getStyles = (theme, isDark) => {
     },
     card: {
       width: "48%",
-      backgroundColor: bg,
+      backgroundColor: cardBg,
       borderRadius: 16,
       marginBottom: 14,
       borderWidth: 1,
@@ -256,7 +258,7 @@ const getStyles = (theme, isDark) => {
       marginHorizontal: 10,
       fontSize: 12,
       fontWeight: "700",
-      color: PURPLE,
+      color: isDark ? "#A78BFA" : PURPLE,
     },
     cardDescription: {
       marginTop: 4,

@@ -222,7 +222,7 @@ const getStyles = (currentTheme) =>
       height: 44,
       borderRadius: 22,
       backgroundColor:
-        currentTheme.theme === "dark" ? "#1f2937" : "#F3E8FF",
+        currentTheme.isDark ? "#2A2A2A" : "#F3E8FF",
       alignItems: "center",
       justifyContent: "center",
     },

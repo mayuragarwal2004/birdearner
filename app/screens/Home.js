@@ -96,8 +96,9 @@ const HomeScreen = () => {
 
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
+  const isDark = theme === "dark";
 
-  const styles = getStyles(currentTheme);
+  const styles = getStyles(currentTheme, isDark);
 
   const fetchOrderRecords = async () => {
     try {
@@ -543,15 +544,21 @@ const StatItem = ({ icon, iconBg, value, label, styles }) => {
   );
 };
 
-const getStyles = (currentTheme) =>
-  StyleSheet.create({
+const getStyles = (currentTheme, isDark) => {
+  const bg = currentTheme.background || "#F8FAFC";
+  const cardBg = currentTheme.cardBackground || (isDark ? "#1E1E1E" : "#FFFFFF");
+  const text = currentTheme.text || "#0F172A";
+  const subText = currentTheme.subText || "#64748B";
+  const border = currentTheme.border || (isDark ? "#2E2E2E" : "#F1F5F9");
+
+  return StyleSheet.create({
     safeArea: {
       flex: 1,
-      backgroundColor: "#F8FAFC",
+      backgroundColor: bg,
     },
     safeContainer: {
       flex: 1,
-      backgroundColor: "#F8FAFC",
+      backgroundColor: bg,
       paddingHorizontal: 16,
       paddingTop: 10,
     },
@@ -574,13 +581,13 @@ const getStyles = (currentTheme) =>
     welcomeText: {
       fontSize: 16,
       fontWeight: "600",
-      color: "#5B21B6",
+      color: isDark ? "#C084FC" : "#5B21B6",
       textAlign: "center",
     },
     usernameText: {
       fontSize: 24,
       fontWeight: "bold",
-      color: "#0F172A",
+      color: text,
       marginTop: 2,
       textAlign: "center",
     },
@@ -631,7 +638,7 @@ const getStyles = (currentTheme) =>
       marginLeft: 8,
     },
     widgetTitleDark: {
-      color: "#0F172A",
+      color: text,
       fontSize: 16,
       fontWeight: "bold",
       marginLeft: 8,
@@ -649,12 +656,12 @@ const getStyles = (currentTheme) =>
       fontWeight: "600",
     },
     viewDetailsTextPurple: {
-      color: "#6B21A8",
+      color: isDark ? "#C084FC" : "#6B21A8",
       fontSize: 12,
       fontWeight: "bold",
     },
     profileInnerCard: {
-      backgroundColor: "#FFFFFF",
+      backgroundColor: cardBg,
       borderRadius: 16,
       padding: 14,
       flexDirection: "row",
@@ -674,21 +681,21 @@ const getStyles = (currentTheme) =>
       borderColor: "#4C1D95",
       alignItems: "center",
       justifyContent: "center",
-      backgroundColor: "#FFF",
+      backgroundColor: cardBg,
     },
     levelLabel: {
       fontSize: 10,
-      color: "#64748B",
+      color: subText,
     },
     levelNumber: {
       fontSize: 24,
       fontWeight: "bold",
-      color: "#0F172A",
+      color: text,
       marginVertical: -2,
     },
     levelStatus: {
       fontSize: 10,
-      color: "#4C1D95",
+      color: isDark ? "#C084FC" : "#4C1D95",
       fontWeight: "bold",
     },
     levelStarBadge: {
@@ -707,7 +714,7 @@ const getStyles = (currentTheme) =>
     verticalDivider: {
       width: 1,
       height: "85%",
-      backgroundColor: "#F1F5F9",
+      backgroundColor: border,
       marginHorizontal: 10,
     },
     profileStatsSection: {
@@ -742,40 +749,40 @@ const getStyles = (currentTheme) =>
     profileStatValue: {
       fontSize: 14,
       fontWeight: "bold",
-      color: "#0F172A",
+      color: text,
     },
     profileStatLabel: {
       fontSize: 9,
-      color: "#64748B",
+      color: subText,
     },
     gridVerticalDivider: {
       width: 1,
       height: 28,
-      backgroundColor: "#F1F5F9",
+      backgroundColor: border,
       marginHorizontal: 4,
     },
     gridVerticalDividerSmall: {
       width: 1,
       height: 24,
-      backgroundColor: "#F1F5F9",
+      backgroundColor: border,
       marginHorizontal: 2,
     },
     gridHorizontalDivider: {
       height: 1,
-      backgroundColor: "#F1F5F9",
+      backgroundColor: border,
       marginVertical: 8,
     },
     widgetCardWhite: {
-      backgroundColor: "#FFFFFF",
+      backgroundColor: cardBg,
       borderRadius: 20,
       padding: 16,
       marginBottom: 16,
       borderWidth: 1,
-      borderColor: "#F1F5F9",
+      borderColor: border,
       elevation: 2,
       shadowColor: "#000",
       shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.04,
+      shadowOpacity: isDark ? 0.2 : 0.04,
       shadowRadius: 8,
     },
     iconCircle: {
@@ -806,27 +813,27 @@ const getStyles = (currentTheme) =>
     statValueText: {
       fontSize: 14,
       fontWeight: "bold",
-      color: "#0F172A",
+      color: text,
       marginBottom: 2,
     },
     statLabelText: {
       fontSize: 10,
-      color: "#64748B",
+      color: subText,
       textAlign: "center",
     },
     statsColumnDivider: {
       width: 1,
       height: 40,
-      backgroundColor: "#F1F5F9",
+      backgroundColor: border,
     },
     completeProfileWidget: {
       flexDirection: "row",
-      backgroundColor: "#FDF8FF",
+      backgroundColor: isDark ? "#1E1A26" : "#FDF8FF",
       borderRadius: 20,
       padding: 16,
       marginBottom: 16,
       borderWidth: 1,
-      borderColor: "#F3E8FF",
+      borderColor: isDark ? "#3A2A55" : "#F3E8FF",
       alignItems: "center",
     },
     clipboardGraphicContainer: {
@@ -840,10 +847,10 @@ const getStyles = (currentTheme) =>
     clipboardBoard: {
       width: 70,
       height: 80,
-      backgroundColor: "#FFFFFF",
+      backgroundColor: isDark ? "#2A2A2A" : "#FFFFFF",
       borderRadius: 10,
       borderWidth: 1.5,
-      borderColor: "#DDD6FE",
+      borderColor: isDark ? "#3A2A55" : "#DDD6FE",
       position: "relative",
       alignItems: "center",
       paddingTop: 12,
@@ -870,7 +877,7 @@ const getStyles = (currentTheme) =>
       width: 28,
       height: 28,
       borderRadius: 14,
-      backgroundColor: "#F3E8FF",
+      backgroundColor: isDark ? "#3A2A55" : "#F3E8FF",
       alignItems: "center",
       justifyContent: "center",
       marginBottom: 6,
@@ -882,14 +889,14 @@ const getStyles = (currentTheme) =>
     clipboardLineLong: {
       width: "80%",
       height: 3,
-      backgroundColor: "#DDD6FE",
+      backgroundColor: isDark ? "#3A2A55" : "#DDD6FE",
       borderRadius: 2,
       marginBottom: 3,
     },
     clipboardLineShort: {
       width: "50%",
       height: 3,
-      backgroundColor: "#DDD6FE",
+      backgroundColor: isDark ? "#3A2A55" : "#DDD6FE",
       borderRadius: 2,
     },
     pencilGraphic: {
@@ -911,12 +918,12 @@ const getStyles = (currentTheme) =>
     completeProfileTitle: {
       fontSize: 16,
       fontWeight: "bold",
-      color: "#4C1D95",
+      color: isDark ? "#C084FC" : "#4C1D95",
       marginBottom: 2,
     },
     completeProfileSubtitle: {
       fontSize: 12,
-      color: "#64748B",
+      color: subText,
       marginBottom: 10,
     },
     progressBlocks: {
@@ -930,7 +937,7 @@ const getStyles = (currentTheme) =>
       borderRadius: 3,
       marginHorizontal: 2,
     },
-    bgGray: { backgroundColor: "#E2E8F0" },
+    bgGray: { backgroundColor: isDark ? "#333" : "#E2E8F0" },
     bgRed: { backgroundColor: "#EF4444" },
     bgOrange: { backgroundColor: "#F97316" },
     bgYellow: { backgroundColor: "#EAB308" },
@@ -951,12 +958,12 @@ const getStyles = (currentTheme) =>
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
-      backgroundColor: "#FFFFFF",
+      backgroundColor: cardBg,
       borderRadius: 16,
       padding: 14,
       marginBottom: 16,
       borderWidth: 1,
-      borderColor: "#F1F5F9",
+      borderColor: border,
     },
     smartMessagesLeft: {
       flexDirection: "row",
@@ -978,30 +985,30 @@ const getStyles = (currentTheme) =>
     smartMessagesTitle: {
       fontSize: 14,
       fontWeight: "bold",
-      color: "#4C1D95",
+      color: isDark ? "#C084FC" : "#4C1D95",
       marginBottom: 2,
     },
     smartMessagesSubtitle: {
       fontSize: 11,
-      color: "#0F172A",
+      color: text,
       fontWeight: "600",
       marginBottom: 2,
     },
     smartMessagesDesc: {
       fontSize: 10,
-      color: "#64748B",
+      color: subText,
     },
     viewMessagesBtn: {
       flexDirection: "row",
       alignItems: "center",
       borderWidth: 1,
-      borderColor: "#DDD6FE",
+      borderColor: isDark ? "#3A2A55" : "#DDD6FE",
       borderRadius: 20,
       paddingHorizontal: 12,
       paddingVertical: 6,
     },
     viewMessagesText: {
-      color: "#6B21A8",
+      color: isDark ? "#C084FC" : "#6B21A8",
       fontSize: 11,
       fontWeight: "bold",
       marginLeft: 4,
@@ -1010,12 +1017,12 @@ const getStyles = (currentTheme) =>
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
-      backgroundColor: "#FFFFFF",
+      backgroundColor: cardBg,
       borderRadius: 16,
       padding: 14,
       marginBottom: 16,
       borderWidth: 1,
-      borderColor: "#F1F5F9",
+      borderColor: border,
     },
     whatsNewLeft: {
       flexDirection: "row",
@@ -1026,7 +1033,7 @@ const getStyles = (currentTheme) =>
       width: 40,
       height: 40,
       borderRadius: 20,
-      backgroundColor: "#F3E8FF",
+      backgroundColor: isDark ? "#3A2A55" : "#F3E8FF",
       alignItems: "center",
       justifyContent: "center",
       marginRight: 10,
@@ -1038,12 +1045,12 @@ const getStyles = (currentTheme) =>
     whatsNewTitle: {
       fontSize: 14,
       fontWeight: "bold",
-      color: "#0F172A",
+      color: text,
       marginBottom: 2,
     },
     whatsNewSubtitle: {
       fontSize: 11,
-      color: "#64748B",
+      color: subText,
       lineHeight: 15,
     },
     whatsNewBellGraphic: {
@@ -1111,5 +1118,6 @@ const getStyles = (currentTheme) =>
       fontWeight: "bold",
     },
   });
+};
 
 export default HomeScreen;

@@ -168,7 +168,7 @@ const getStyles = (currentTheme) => StyleSheet.create({
     borderWidth: 1,
     borderColor: currentTheme.isDark ? "#333" : "#E0E0E0",
     marginBottom: 16,
-    backgroundColor: currentTheme.isDark ? "#121212" : "#FFF",
+    backgroundColor: currentTheme.isDark ? "#1E1E1E" : "#FFF",
   },
   selectedCard: {
     borderColor: "#762BAD",
@@ -219,7 +219,7 @@ const getStyles = (currentTheme) => StyleSheet.create({
   optionTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: '#000',
+    color: currentTheme.text,
   },
   badge: {
     flexDirection: "row",

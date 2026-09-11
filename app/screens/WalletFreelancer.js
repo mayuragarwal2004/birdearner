@@ -22,7 +22,7 @@ const WalletFreelancerScreen = ({ navigation }) => {
   const currentTheme = themeStyles[theme];
   
   const isDark = theme === "dark";
-  const primaryColor = isDark ? "#C4B5FD" : (currentTheme.primary || "#4B0082");
+  const primaryColor = isDark ? "#A855F7" : "#4B0082";
   
   const styles = useMemo(() => getStyles(currentTheme, primaryColor), [currentTheme, primaryColor]);
 

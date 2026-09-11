@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import apiService from "../../lib/apiService";
+import { useTheme } from "../../context/ThemeContext";
 
 const NegotiationPanel = ({
   role = "client",
@@ -26,6 +27,11 @@ const NegotiationPanel = ({
   onViewProposalDetails,
   jobId = null,
 }) => {
+  const { theme, themeStyles } = useTheme();
+  const currentTheme = themeStyles[theme] || themeStyles.light;
+  const isDark = theme === "dark";
+  const styles = getStyles(currentTheme, isDark);
+
   const isClient = role === "client";
 
   const topTitle = isClient ? `${otherPartyName}'s Offer` : "Client's Offer";
@@ -379,12 +385,12 @@ const NegotiationPanel = ({
 
 export default NegotiationPanel;
 
-const styles = StyleSheet.create({
+const getStyles = (currentTheme, isDark) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: currentTheme.surface || "#F8FAFC",
     borderRightWidth: 1,
-    borderRightColor: "#E2E8F0",
+    borderRightColor: currentTheme.border || "#E2E8F0",
     padding: 8,
   },
   headerRow: {
@@ -396,11 +402,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 13,
     fontWeight: "700",
-    color: "#1E293B",
+    color: currentTheme.text || "#1E293B",
   },
   subtitle: {
     fontSize: 9,
-    color: "#64748B",
+    color: currentTheme.subText || "#64748B",
     marginTop: 1,
   },
   refreshButton: {
@@ -423,7 +429,7 @@ const styles = StyleSheet.create({
   offerTitleText: {
     fontSize: 11,
     fontWeight: "600",
-    color: "#334155",
+    color: currentTheme.text || "#334155",
   },
   amountDisplay: {
     fontSize: 16,
@@ -438,17 +444,17 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   inputContainer: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: isDark ? "#2A2A3D" : "#FFFFFF",
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: "#CBD5E1",
+    borderColor: isDark ? "#444458" : "#CBD5E1",
     paddingHorizontal: 4,
     paddingVertical: 2,
     marginBottom: 6,
   },
   textInput: {
     fontSize: 12,
-    color: "#0F172A",
+    color: currentTheme.text || "#0F172A",
     textAlign: "center",
     padding: 2,
   },
@@ -473,12 +479,12 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: "#E2E8F0",
+    backgroundColor: currentTheme.border || "#E2E8F0",
   },
   vsBadge: {
-    backgroundColor: "#F1F5F9",
+    backgroundColor: isDark ? "#2A2A3D" : "#F1F5F9",
     borderWidth: 1,
-    borderColor: "#CBD5E1",
+    borderColor: isDark ? "#444458" : "#CBD5E1",
     borderRadius: 10,
     paddingHorizontal: 8,
     paddingVertical: 2,
@@ -487,12 +493,12 @@ const styles = StyleSheet.create({
   vsText: {
     fontSize: 10,
     fontWeight: "600",
-    color: "#64748B",
+    color: currentTheme.subText || "#64748B",
   },
   infoCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F3E8FF",
+    backgroundColor: isDark ? "#3A2A55" : "#F3E8FF",
     borderRadius: 8,
     padding: 8,
     marginTop: 12,
@@ -500,7 +506,7 @@ const styles = StyleSheet.create({
   },
   infoText: {
     fontSize: 10,
-    color: "#5B21B6",
+    color: isDark ? "#E9D5FF" : "#5B21B6",
     flex: 1,
     lineHeight: 14,
   },
@@ -511,7 +517,7 @@ const styles = StyleSheet.create({
   couponToggle: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F3E8FF",
+    backgroundColor: isDark ? "#3A2A55" : "#F3E8FF",
     borderRadius: 8,
     padding: 8,
     gap: 4,
@@ -519,14 +525,14 @@ const styles = StyleSheet.create({
   couponToggleText: {
     fontSize: 11,
     fontWeight: "600",
-    color: "#6D28D9",
+    color: isDark ? "#C4B5FD" : "#6D28D9",
     flex: 1,
   },
   appliedCouponCard: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#ECFDF5",
+    backgroundColor: isDark ? "#064E3B" : "#ECFDF5",
     borderRadius: 8,
     padding: 8,
     marginTop: 6,
@@ -539,17 +545,17 @@ const styles = StyleSheet.create({
   appliedCouponText: {
     fontSize: 12,
     fontWeight: "700",
-    color: "#059669",
+    color: isDark ? "#6EE7B7" : "#059669",
   },
   appliedCouponMin: {
     fontSize: 10,
-    color: "#6B7280",
+    color: isDark ? "#A7F3D0" : "#6B7280",
     marginTop: 2,
   },
   couponMessageCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#ECFDF5",
+    backgroundColor: isDark ? "#064E3B" : "#ECFDF5",
     borderRadius: 8,
     padding: 8,
     marginTop: 6,
@@ -559,7 +565,7 @@ const styles = StyleSheet.create({
   couponMessageText: {
     fontSize: 10,
     fontWeight: "600",
-    color: "#059669",
+    color: isDark ? "#6EE7B7" : "#059669",
     flex: 1,
     lineHeight: 14,
   },
@@ -567,10 +573,10 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   couponItem: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: isDark ? "#2A2A3D" : "#FFFFFF",
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: isDark ? "#444458" : "#E2E8F0",
     padding: 8,
     marginBottom: 6,
   },
@@ -580,11 +586,11 @@ const styles = StyleSheet.create({
   couponItemTitle: {
     fontSize: 11,
     fontWeight: "700",
-    color: "#6D28D9",
+    color: isDark ? "#C4B5FD" : "#6D28D9",
   },
   couponItemMin: {
     fontSize: 9,
-    color: "#6B7280",
+    color: isDark ? "#9CA3AF" : "#6B7280",
     marginTop: 2,
   },
   couponItemTextDisabled: {
@@ -599,13 +605,13 @@ const styles = StyleSheet.create({
   proposalButton: {
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#6D28D9",
+    borderColor: isDark ? "#A855F7" : "#6D28D9",
     paddingVertical: 8,
     alignItems: "center",
   },
   proposalButtonText: {
     fontSize: 11,
     fontWeight: "600",
-    color: "#6D28D9",
+    color: isDark ? "#C4B5FD" : "#6D28D9",
   },
 });

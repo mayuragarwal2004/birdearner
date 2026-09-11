@@ -55,7 +55,7 @@ const ProfileOverview = ({ navigation }) => {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         
         {/* Top Level Card */}
-        <View style={[styles.topLevelCard, { backgroundColor: isDark ? '#1F2937' : '#FFFFFF' }]}>
+        <View style={[styles.topLevelCard, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF', borderColor: isDark ? '#2A2A2A' : '#F3E8FF' }]}>
           
           {/* Level Ring Container */}
           <View style={styles.levelBadgeContainer}>
@@ -65,20 +65,20 @@ const ProfileOverview = ({ navigation }) => {
             <Sparkle size={16} color="#F59E0B" weight="fill" style={styles.sparkleTR} />
             <Sparkle size={12} color="#A855F7" weight="fill" style={styles.sparkleBR} />
             
-            <View style={styles.levelRingOuter}>
+            <View style={[styles.levelRingOuter, { backgroundColor: isDark ? '#2A2A2A' : '#FFF' }]}>
               <View style={styles.levelBadgeIconBg}>
                 <LinearGradient colors={['#9333EA', '#6B21A8']} style={styles.hexagonIconContainer}>
                   <Star size={20} color="#FFF" weight="fill" />
                 </LinearGradient>
               </View>
-              <Text style={styles.levelTitleText}>{levelName}</Text>
+              <Text style={[styles.levelTitleText, { color: isDark ? '#FFF' : '#0F172A' }]}>{levelName}</Text>
               <Text style={styles.levelSubTitleText}>Beginner</Text>
             </View>
           </View>
 
           {/* Stepper Line & Steps */}
           <View style={styles.stepperContainer}>
-            <View style={styles.stepperLineBg} />
+            <View style={[styles.stepperLineBg, isDark && { backgroundColor: '#333' }]} />
             <View style={styles.stepperLineActive} />
             
             <View style={styles.stepItem}>
@@ -89,40 +89,40 @@ const ProfileOverview = ({ navigation }) => {
             </View>
 
             <View style={styles.stepItem}>
-              <View style={[styles.stepCircle, styles.stepCircleInactive]}>
-                <Text style={styles.stepNumberInactive}>2</Text>
+              <View style={[styles.stepCircle, styles.stepCircleInactive, isDark && { backgroundColor: '#333' }]}>
+                <Text style={[styles.stepNumberInactive, isDark && { color: '#AAA' }]}>2</Text>
               </View>
-              <Text style={styles.stepLabelInactive}>Level 2</Text>
+              <Text style={[styles.stepLabelInactive, isDark && { color: '#AAA' }]}>Level 2</Text>
             </View>
 
             <View style={styles.stepItem}>
-              <View style={[styles.stepCircle, styles.stepCircleInactive]}>
-                <Text style={styles.stepNumberInactive}>3</Text>
+              <View style={[styles.stepCircle, styles.stepCircleInactive, isDark && { backgroundColor: '#333' }]}>
+                <Text style={[styles.stepNumberInactive, isDark && { color: '#AAA' }]}>3</Text>
               </View>
-              <Text style={styles.stepLabelInactive}>Level 3</Text>
+              <Text style={[styles.stepLabelInactive, isDark && { color: '#AAA' }]}>Level 3</Text>
             </View>
 
             <View style={styles.stepItem}>
-              <View style={[styles.stepCircle, styles.stepCircleInactive]}>
-                <Text style={styles.stepNumberInactive}>4</Text>
+              <View style={[styles.stepCircle, styles.stepCircleInactive, isDark && { backgroundColor: '#333' }]}>
+                <Text style={[styles.stepNumberInactive, isDark && { color: '#AAA' }]}>4</Text>
               </View>
-              <Text style={styles.stepLabelInactive}>Level 4</Text>
+              <Text style={[styles.stepLabelInactive, isDark && { color: '#AAA' }]}>Level 4</Text>
             </View>
 
             <View style={styles.stepItem}>
-              <View style={[styles.stepCircle, styles.stepCircleInactive]}>
-                <Text style={styles.stepNumberInactive}>5</Text>
+              <View style={[styles.stepCircle, styles.stepCircleInactive, isDark && { backgroundColor: '#333' }]}>
+                <Text style={[styles.stepNumberInactive, isDark && { color: '#AAA' }]}>5</Text>
               </View>
-              <Text style={styles.stepLabelInactive}>Top Rated</Text>
+              <Text style={[styles.stepLabelInactive, isDark && { color: '#AAA' }]}>Top Rated</Text>
             </View>
           </View>
 
           {/* Info Box */}
-          <View style={styles.infoBox}>
-            <View style={styles.infoIconCircle}>
-              <TrendUp size={20} color="#7C3AED" />
+          <View style={[styles.infoBox, { backgroundColor: isDark ? '#2D1B4E' : '#F5F0FF', borderColor: isDark ? '#4A1D96' : '#EDE9FE' }]}>
+            <View style={[styles.infoIconCircle, isDark && { backgroundColor: '#3A2A55' }]}>
+              <TrendUp size={20} color={isDark ? '#C4B5FD' : '#7C3AED'} />
             </View>
-            <Text style={styles.infoBoxText}>
+            <Text style={[styles.infoBoxText, { color: isDark ? '#E9D5FF' : '#4C1D95' }]}>
               Complete more jobs and maintain great performance to reach higher levels and unlock more opportunities.
             </Text>
           </View>
@@ -153,54 +153,54 @@ const ProfileOverview = ({ navigation }) => {
           </LinearGradient>
 
           {/* Insights Grid Container */}
-          <View style={[styles.insightsGrid, { backgroundColor: isDark ? '#1F2937' : '#FAF8FF' }]}>
+          <View style={[styles.insightsGrid, { backgroundColor: isDark ? '#121212' : '#FAF8FF' }]}>
             
             {/* Row 1: 3 cards */}
             <View style={styles.gridRow3}>
               {/* Card 1: Success Score */}
-              <View style={[styles.insightCard3, { backgroundColor: isDark ? '#374151' : '#FFFFFF' }]}>
-                <View style={[styles.insightIconBg, { backgroundColor: '#D1FAE5' }]}>
-                  <Target size={22} color="#10B981" />
+              <View style={[styles.insightCard3, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF', borderColor: isDark ? '#2A2A2A' : '#F1F5F9' }]}>
+                <View style={[styles.insightIconBg, { backgroundColor: isDark ? '#064E3B' : '#D1FAE5' }]}>
+                  <Target size={22} color={isDark ? '#6EE7B7' : '#10B981'} />
                 </View>
                 <Text style={[styles.insightValue, { color: isDark ? '#FFF' : '#0F172A' }]}>{successScore}%</Text>
-                <Text style={styles.insightLabel}>Success Score</Text>
+                <Text style={[styles.insightLabel, isDark && { color: '#AAA' }]}>Success Score</Text>
                 <View style={styles.progressContainer}>
-                  <View style={styles.progressBarBg}>
+                  <View style={[styles.progressBarBg, isDark && { backgroundColor: '#333' }]}>
                     <View style={[styles.progressBarFill, { backgroundColor: '#10B981', width: `${Math.min(100, Math.max(0, successScore))}%` }]} />
                   </View>
                   <View style={styles.progressFooterRow}>
-                    <Text style={styles.progressFooterText}>0</Text>
-                    <Text style={styles.progressFooterText}>100</Text>
+                    <Text style={[styles.progressFooterText, isDark && { color: '#888' }]}>0</Text>
+                    <Text style={[styles.progressFooterText, isDark && { color: '#888' }]}>100</Text>
                   </View>
                 </View>
               </View>
 
               {/* Card 2: Rating */}
-              <View style={[styles.insightCard3, { backgroundColor: isDark ? '#374151' : '#FFFFFF' }]}>
-                <View style={[styles.insightIconBg, { backgroundColor: '#EDE9FE' }]}>
-                  <Star size={22} color="#7C3AED" />
+              <View style={[styles.insightCard3, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF', borderColor: isDark ? '#2A2A2A' : '#F1F5F9' }]}>
+                <View style={[styles.insightIconBg, { backgroundColor: isDark ? '#3A2A55' : '#EDE9FE' }]}>
+                  <Star size={22} color={isDark ? '#C4B5FD' : '#7C3AED'} />
                 </View>
                 <Text style={[styles.insightValue, { color: isDark ? '#FFF' : '#0F172A' }]}>{ratingVal}</Text>
-                <Text style={styles.insightLabel}>Rating</Text>
+                <Text style={[styles.insightLabel, isDark && { color: '#AAA' }]}>Rating</Text>
                 <View style={styles.progressContainer}>
-                  <View style={styles.progressBarBg}>
+                  <View style={[styles.progressBarBg, isDark && { backgroundColor: '#333' }]}>
                     <View style={[styles.progressBarFill, { backgroundColor: '#7C3AED', width: `${Math.min(100, (parseFloat(ratingVal) / 5.0) * 100)}%` }]} />
                   </View>
                   <View style={styles.progressFooterRight}>
-                    <Text style={styles.progressFooterText}>/ 5.0</Text>
+                    <Text style={[styles.progressFooterText, isDark && { color: '#888' }]}>/ 5.0</Text>
                   </View>
                 </View>
               </View>
 
               {/* Card 3: Avg. Response Time */}
-              <View style={[styles.insightCard3, { backgroundColor: isDark ? '#374151' : '#FFFFFF' }]}>
-                <View style={[styles.insightIconBg, { backgroundColor: '#FFEDD5' }]}>
-                  <Clock size={22} color="#F97316" />
+              <View style={[styles.insightCard3, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF', borderColor: isDark ? '#2A2A2A' : '#F1F5F9' }]}>
+                <View style={[styles.insightIconBg, { backgroundColor: isDark ? '#4A2810' : '#FFEDD5' }]}>
+                  <Clock size={22} color={isDark ? '#FDBA74' : '#F97316'} />
                 </View>
                 <Text style={[styles.insightValue, { color: isDark ? '#FFF' : '#0F172A' }]}>1 hr</Text>
-                <Text style={styles.insightLabel}>Avg. Response Time</Text>
+                <Text style={[styles.insightLabel, isDark && { color: '#AAA' }]}>Avg. Response Time</Text>
                 <View style={styles.progressContainer}>
-                  <View style={styles.progressBarBg}>
+                  <View style={[styles.progressBarBg, isDark && { backgroundColor: '#333' }]}>
                     <View style={[styles.progressBarFill, { backgroundColor: '#F97316', width: '40%' }]} />
                   </View>
                 </View>
@@ -210,28 +210,28 @@ const ProfileOverview = ({ navigation }) => {
             {/* Row 2: 2 cards */}
             <View style={styles.gridRow2}>
               {/* Card 4: Flags (Reported) */}
-              <View style={[styles.insightCard2, { backgroundColor: isDark ? '#374151' : '#FFFFFF' }]}>
-                <View style={[styles.insightIconBg, { backgroundColor: '#FEE2E2' }]}>
-                  <Flag size={22} color="#EF4444" />
+              <View style={[styles.insightCard2, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF', borderColor: isDark ? '#2A2A2A' : '#F1F5F9' }]}>
+                <View style={[styles.insightIconBg, { backgroundColor: isDark ? '#451A1A' : '#FEE2E2' }]}>
+                  <Flag size={22} color={isDark ? '#FCA5A5' : '#EF4444'} />
                 </View>
                 <Text style={[styles.insightValue, { color: isDark ? '#FFF' : '#0F172A' }]}>{flagsCount}</Text>
-                <Text style={styles.insightLabel}>Flags (Reported)</Text>
-                <Text style={styles.insightSubLabel}>Total reports received</Text>
+                <Text style={[styles.insightLabel, isDark && { color: '#AAA' }]}>Flags (Reported)</Text>
+                <Text style={[styles.insightSubLabel, isDark && { color: '#888' }]}>Total reports received</Text>
               </View>
 
               {/* Card 5: Response Rate */}
-              <View style={[styles.insightCard2, { backgroundColor: isDark ? '#374151' : '#FFFFFF' }]}>
-                <View style={[styles.insightIconBg, { backgroundColor: '#D1FAE5' }]}>
-                  <ChatCircleText size={22} color="#10B981" />
+              <View style={[styles.insightCard2, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF', borderColor: isDark ? '#2A2A2A' : '#F1F5F9' }]}>
+                <View style={[styles.insightIconBg, { backgroundColor: isDark ? '#064E3B' : '#D1FAE5' }]}>
+                  <ChatCircleText size={22} color={isDark ? '#6EE7B7' : '#10B981'} />
                 </View>
                 <Text style={[styles.insightValue, { color: isDark ? '#FFF' : '#0F172A' }]}>{responseRate}%</Text>
-                <Text style={styles.insightLabel}>Response Rate</Text>
+                <Text style={[styles.insightLabel, isDark && { color: '#AAA' }]}>Response Rate</Text>
                 <View style={styles.progressContainer}>
-                  <View style={styles.progressBarBg}>
+                  <View style={[styles.progressBarBg, isDark && { backgroundColor: '#333' }]}>
                     <View style={[styles.progressBarFill, { backgroundColor: '#10B981', width: `${Math.min(100, Math.max(0, responseRate))}%` }]} />
                   </View>
                   <View style={styles.progressFooterCenter}>
-                    <Text style={styles.progressFooterText}>Target: 70%+</Text>
+                    <Text style={[styles.progressFooterText, isDark && { color: '#888' }]}>Target: 70%+</Text>
                   </View>
                 </View>
               </View>
@@ -242,14 +242,14 @@ const ProfileOverview = ({ navigation }) => {
 
         {/* Motivational Banners */}
         {/* Banner 1: Light purple */}
-        <View style={[styles.bannerLight, { backgroundColor: isDark ? '#2E1F4A' : '#F5F0FF', borderColor: '#EDE9FE' }]}>
+        <View style={[styles.bannerLight, { backgroundColor: isDark ? '#2D1B4E' : '#F5F0FF', borderColor: isDark ? '#4A1D96' : '#EDE9FE' }]}>
           <View style={styles.bannerStarCircle}>
             <Star size={18} color="#FFF" weight="fill" />
           </View>
           <View style={styles.bannerTextCol}>
             <Text style={styles.bannerTextBold}>
-              <Text style={{ fontWeight: 'bold', color: '#6D28D9' }}>Great job! </Text>
-              <Text style={{ color: '#4B5563', fontWeight: '500' }}>Consistently performing well helps you earn more trust and better opportunities.</Text>
+              <Text style={{ fontWeight: 'bold', color: isDark ? '#C4B5FD' : '#6D28D9' }}>Great job! </Text>
+              <Text style={{ color: isDark ? '#E9D5FF' : '#4B5563', fontWeight: '500' }}>Consistently performing well helps you earn more trust and better opportunities.</Text>
             </Text>
           </View>
         </View>

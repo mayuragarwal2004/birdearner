@@ -161,7 +161,7 @@ const FreelancerJobHistory = ({ navigation }) => {
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color={currentTheme.text || "#000"} />
+          <Ionicons name="arrow-back" size={22} color={isDark ? "#FFFFFF" : PURPLE} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Job History</Text>
         <TouchableOpacity style={styles.refreshButton} onPress={onRefresh}>
@@ -373,10 +373,12 @@ const getStyles = (currentTheme, isDark) => {
       backgroundColor: surface,
     },
     backButton: {
-      width: 36,
-      height: 36,
+      width: 38,
+      height: 38,
+      borderRadius: 19,
+      backgroundColor: isDark ? "#2A2A2A" : SOFT_PURPLE,
       justifyContent: "center",
-      alignItems: "flex-start",
+      alignItems: "center",
     },
     headerTitle: {
       color: text,

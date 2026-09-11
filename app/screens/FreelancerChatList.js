@@ -131,44 +131,50 @@ const FreelancerChatList = () => {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <SafeSpinner size={42} color="#3b006b" />
-        <Text style={{ color: currentTheme.subText }}>Loading chats...</Text>
-      </View>
+      <SafeAreaView style={{ flex: 1, backgroundColor: currentTheme.background || "#fff" }}>
+        <View style={styles.loadingContainer}>
+          <SafeSpinner size={42} color={currentTheme.isDark ? "#A855F7" : "#3b006b"} />
+          <Text style={{ color: currentTheme.subText }}>Loading chats...</Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
   if (error) {
     return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorMessage}>Failed to load threads. Please try again later.</Text>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.retryButton}>
-          <Text style={styles.retryButtonText}>Go Back</Text>
-        </TouchableOpacity>
-      </View>
+      <SafeAreaView style={{ flex: 1, backgroundColor: currentTheme.background || "#fff" }}>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorMessage}>Failed to load threads. Please try again later.</Text>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.retryButton}>
+            <Text style={styles.retryButtonText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
     );
   }
 
   if (chatThreads.length === 0) {
     return (
-      <View style={styles.emptyContainer}>
-        <Text style={styles.emptyMessage}>No job threads.</Text>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={styles.backButtonText}>Go Back</Text>
-        </TouchableOpacity>
-      </View>
+      <SafeAreaView style={{ flex: 1, backgroundColor: currentTheme.background || "#fff" }}>
+        <View style={styles.emptyContainer}>
+          <Text style={[styles.emptyMessage, { color: currentTheme.subText || '#6D6D6D' }]}>No job threads.</Text>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={22} color={currentTheme.isDark ? "#FFFFFF" : "#3b006b"} />
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={{flex: 1}}>
-    <View style={styles.container}>
-      <View style={styles.main}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={currentTheme.text || 'black'} />
-        </TouchableOpacity>
-        <Text style={styles.header}>Freelancer Inbox</Text>
-      </View>
+    <SafeAreaView style={{ flex: 1, backgroundColor: currentTheme.background || "#fff" }}>
+      <View style={styles.container}>
+        <View style={styles.main}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={22} color={currentTheme.isDark ? "#FFFFFF" : "#3b006b"} />
+          </TouchableOpacity>
+          <Text style={styles.header}>Freelancer Inbox</Text>
+        </View>
       <FlatList
         data={chatThreads}
         keyExtractor={(item) => item.id}
@@ -204,8 +210,16 @@ const getStyles = (currentTheme) =>
       marginBottom: 20,
       display: "flex",
       flexDirection: "row",
-      gap: 100,
       alignItems: "center"
+    },
+    backButton: {
+      width: 38,
+      height: 38,
+      borderRadius: 19,
+      backgroundColor: currentTheme.isDark ? "#2A2A2A" : "#F3EAFF",
+      justifyContent: "center",
+      alignItems: "center",
+      marginRight: 20,
     },
     header: {
       fontSize: 24,
@@ -224,7 +238,7 @@ const getStyles = (currentTheme) =>
     jobContainer: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: currentTheme.cardBackground || '#F5F5F5',
+      backgroundColor: currentTheme.isDark ? '#1E1E1E' : (currentTheme.cardBackground || '#F5F5F5'),
       borderTopRightRadius: 10,
       borderBottomRightRadius: 10,
       borderTopLeftRadius: 40,
@@ -235,7 +249,9 @@ const getStyles = (currentTheme) =>
       shadowOffset: { width: 0, height: 2 },
       shadowRadius: 5,
       elevation: 2,
-      height: 70
+      height: 70,
+      borderWidth: currentTheme.isDark ? 1 : 0,
+      borderColor: currentTheme.isDark ? '#2A2A2A' : 'transparent',
     },
     avatar: {
       width: 80,
@@ -250,7 +266,7 @@ const getStyles = (currentTheme) =>
     jobTitle: {
       fontSize: 16,
       fontWeight: 'bold',
-      color: '#5A4CAE',
+      color: currentTheme.isDark ? '#A855F7' : '#5A4CAE',
     },
     username: {
       fontSize: 14,

@@ -753,7 +753,7 @@ const getStyles = (currentTheme, isDark) => {
       flex: 1,
       minHeight: 42,
       borderRadius: 12,
-      backgroundColor: "#FFFFFF",
+      backgroundColor: isDark ? "#2A2A2A" : "#FFFFFF",
       flexDirection: "row",
       alignItems: "center",
       paddingHorizontal: 12,
@@ -761,7 +761,7 @@ const getStyles = (currentTheme, isDark) => {
     },
     searchInput: {
       flex: 1,
-      color: "#0F172A",
+      color: text,
       fontSize: 13,
       fontWeight: "600",
       paddingVertical: Platform.OS === "ios" ? 10 : 6,

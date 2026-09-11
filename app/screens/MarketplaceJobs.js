@@ -648,7 +648,7 @@ const getStyles = (currentTheme) =>
       height: 44,
       borderRadius: 22,
       backgroundColor:
-        currentTheme.theme === "dark" ? "#1f2937" : "#F3E8FF",
+        currentTheme.isDark ? "#2A2A2A" : "#F3E8FF",
       alignItems: "center",
       justifyContent: "center",
     },
@@ -680,7 +680,7 @@ const getStyles = (currentTheme) =>
       flexDirection: "row",
       alignItems: "center",
       gap: 6,
-      backgroundColor: currentTheme.cardBackground || "#F3E8FF",
+      backgroundColor: currentTheme.isDark ? "#1E1E1E" : "#F3E8FF",
       paddingVertical: 8,
       paddingHorizontal: 14,
       borderRadius: 10,
@@ -732,7 +732,7 @@ const getStyles = (currentTheme) =>
     jobCard: {
       flexDirection: "row",
       alignItems: "center",
-      backgroundColor: currentTheme.cardBackground || "#f5f5f5",
+      backgroundColor: currentTheme.isDark ? "#1E1E1E" : "#f5f5f5",
       borderTopLeftRadius: 100,
       borderBottomLeftRadius: 100,
       borderBottomRightRadius: 10,
@@ -743,6 +743,8 @@ const getStyles = (currentTheme) =>
       shadowRadius: 5,
       shadowOffset: { width: 0, height: 2 },
       elevation: 3,
+      borderWidth: currentTheme.isDark ? 1 : 0,
+      borderColor: currentTheme.isDark ? "#2A2A2A" : "transparent",
     },
     profileImage: {
       width: 80,
@@ -802,7 +804,7 @@ const getStyles = (currentTheme) =>
     },
     filterSheet: {
       height: "55%",
-      backgroundColor: currentTheme.background || "#fff",
+      backgroundColor: currentTheme.isDark ? "#121212" : "#fff",
       borderTopLeftRadius: 20,
       borderTopRightRadius: 20,
       overflow: "hidden",
@@ -821,7 +823,7 @@ const getStyles = (currentTheme) =>
       height: 36,
       borderRadius: 18,
       backgroundColor:
-        currentTheme.theme === "dark" ? "#1f2937" : "#F3E8FF",
+        currentTheme.isDark ? "#2A2A2A" : "#F3E8FF",
       alignItems: "center",
       justifyContent: "center",
     },
@@ -846,7 +848,7 @@ const getStyles = (currentTheme) =>
     filterLeftPanel: {
       width: "30%",
       backgroundColor:
-        currentTheme.theme === "dark" ? "#1a1a2e" : "#F8F4FF",
+        currentTheme.isDark ? "#1E1E1E" : "#F8F4FF",
       borderRightWidth: 1,
       borderRightColor: currentTheme.border || "#F3E8FF",
     },
@@ -860,7 +862,7 @@ const getStyles = (currentTheme) =>
     },
     filterCategoryItemActive: {
       backgroundColor:
-        currentTheme.theme === "dark" ? "#2a1a3e" : "#FFFFFF",
+        currentTheme.isDark ? "#2D1B4E" : "#FFFFFF",
     },
     filterActiveIndicator: {
       position: "absolute",
@@ -883,7 +885,7 @@ const getStyles = (currentTheme) =>
     },
     filterRightPanel: {
       flex: 1,
-      backgroundColor: currentTheme.background || "#fff",
+      backgroundColor: currentTheme.isDark ? "#121212" : "#fff",
     },
     filterOptionContent: {
       padding: 16,
@@ -911,11 +913,11 @@ const getStyles = (currentTheme) =>
       borderRadius: 12,
       marginBottom: 8,
       backgroundColor:
-        currentTheme.theme === "dark" ? "#374151" : "#F8F4FF",
+        currentTheme.isDark ? "#1E1E1E" : "#F8F4FF",
     },
     filterOptionRowActive: {
       backgroundColor:
-        currentTheme.theme === "dark" ? "#4B0082" : "#F3E8FF",
+        currentTheme.isDark ? "#2D1B4E" : "#F3E8FF",
       borderWidth: 1,
       borderColor: "#762BAD",
     },
@@ -934,7 +936,7 @@ const getStyles = (currentTheme) =>
     },
     filterCountBadge: {
       backgroundColor:
-        currentTheme.theme === "dark" ? "#4B0082" : "#EDE4FB",
+        currentTheme.isDark ? "#3A2A55" : "#EDE4FB",
       borderRadius: 10,
       minWidth: 22,
       height: 22,
@@ -956,7 +958,7 @@ const getStyles = (currentTheme) =>
       paddingBottom: 20,
       borderTopWidth: 1,
       borderTopColor: currentTheme.border || "#F3E8FF",
-      backgroundColor: currentTheme.background || "#fff",
+      backgroundColor: currentTheme.isDark ? "#121212" : "#fff",
     },
     filterBottomInfo: {
       flexDirection: "row",

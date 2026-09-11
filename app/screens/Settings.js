@@ -65,7 +65,8 @@ const SettingsScreen = ({ navigation }) => {
   } = useAuth();
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
-  const styles = useMemo(() => getStyles(currentTheme), [currentTheme]);
+  const isDark = theme === "dark";
+  const styles = useMemo(() => getStyles(currentTheme, isDark), [currentTheme, isDark]);
 
   const [switchingRole, setSwitchingRole] = useState(false);
 
@@ -407,13 +408,12 @@ function SettingsRow({ item, isLast, styles, onPress }) {
   );
 }
 
-const getStyles = (currentTheme) => {
+const getStyles = (currentTheme, isDark) => {
   const surface = currentTheme.background || "#FFFFFF";
-  const card = currentTheme.cardBackground || surface;
+  const card = currentTheme.cardBackground || (isDark ? "#1A1A1A" : "#FFFFFF");
   const text = currentTheme.text || "#101114";
   const muted = currentTheme.subText || "#656B7A";
   const border = currentTheme.border || BORDER;
-  const isDark = surface === "#000000";
 
   return StyleSheet.create({
     safeArea: {

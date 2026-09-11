@@ -280,7 +280,7 @@ const getStyles = (currentTheme, insets) =>
       height: 40,
       borderRadius: 20,
       backgroundColor:
-        currentTheme.theme === "dark" ? "#1f2937" : "#F3E8FF",
+        currentTheme.isDark ? "#2A2A2A" : "#F3E8FF",
       alignItems: "center",
       justifyContent: "center",
     },
@@ -296,7 +296,7 @@ const getStyles = (currentTheme, insets) =>
     resetText: {
       fontSize: 14,
       fontWeight: "600",
-      color: "#762BAD",
+      color: currentTheme.isDark ? "#A855F7" : "#762BAD",
     },
     twoPanelContainer: {
       flex: 1,
@@ -305,7 +305,7 @@ const getStyles = (currentTheme, insets) =>
     leftPanel: {
       width: "30%",
       backgroundColor:
-        currentTheme.theme === "dark" ? "#1a1a2e" : "#F8F4FF",
+        currentTheme.isDark ? "#1E1E1E" : "#F8F4FF",
       borderRightWidth: 1,
       borderRightColor: currentTheme.border || "#F3E8FF",
     },
@@ -319,7 +319,7 @@ const getStyles = (currentTheme, insets) =>
     },
     categoryItemActive: {
       backgroundColor:
-        currentTheme.theme === "dark" ? "#2a1a3e" : "#FFFFFF",
+        currentTheme.isDark ? "#2D1B4E" : "#FFFFFF",
     },
     activeIndicator: {
       position: "absolute",
@@ -338,11 +338,11 @@ const getStyles = (currentTheme, insets) =>
     },
     categoryTextActive: {
       fontWeight: "700",
-      color: "#762BAD",
+      color: currentTheme.isDark ? "#C4B5FD" : "#762BAD",
     },
     rightPanel: {
       flex: 1,
-      backgroundColor: currentTheme.background || "#fff",
+      backgroundColor: currentTheme.isDark ? "#121212" : "#fff",
     },
     rightPanelScroll: {
       flex: 1,
@@ -362,7 +362,7 @@ const getStyles = (currentTheme, insets) =>
     serviceActionText: {
       fontSize: 13,
       fontWeight: "600",
-      color: "#762BAD",
+      color: currentTheme.isDark ? "#A855F7" : "#762BAD",
     },
     optionRow: {
       flexDirection: "row",
@@ -373,11 +373,11 @@ const getStyles = (currentTheme, insets) =>
       borderRadius: 12,
       marginBottom: 8,
       backgroundColor:
-        currentTheme.theme === "dark" ? "#374151" : "#F8F4FF",
+        currentTheme.isDark ? "#1E1E1E" : "#F8F4FF",
     },
     optionRowActive: {
       backgroundColor:
-        currentTheme.theme === "dark" ? "#4B0082" : "#F3E8FF",
+        currentTheme.isDark ? "#2D1B4E" : "#F3E8FF",
       borderWidth: 1,
       borderColor: "#762BAD",
     },
@@ -392,11 +392,11 @@ const getStyles = (currentTheme, insets) =>
     },
     optionTextActive: {
       fontWeight: "600",
-      color: "#762BAD",
+      color: currentTheme.isDark ? "#C4B5FD" : "#762BAD",
     },
     countBadge: {
       backgroundColor:
-        currentTheme.theme === "dark" ? "#4B0082" : "#EDE4FB",
+        currentTheme.isDark ? "#3A2A55" : "#EDE4FB",
       borderRadius: 10,
       minWidth: 22,
       height: 22,
@@ -407,7 +407,7 @@ const getStyles = (currentTheme, insets) =>
     countBadgeText: {
       fontSize: 11,
       fontWeight: "600",
-      color: "#762BAD",
+      color: currentTheme.isDark ? "#C4B5FD" : "#762BAD",
     },
     bottomBar: {
       flexDirection: "row",

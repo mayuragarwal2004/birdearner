@@ -95,7 +95,7 @@ const DistanceSlider = ({
 
 const getStyles = (currentTheme) => StyleSheet.create({
   sliderWrapper: {
-    backgroundColor: currentTheme.theme === 'dark' ? '#1f2937' : '#FFFFFF',
+    backgroundColor: currentTheme.isDark ? '#1E1E1E' : '#FFFFFF',
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
@@ -104,8 +104,8 @@ const getStyles = (currentTheme) => StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
-    borderWidth: currentTheme.theme === 'dark' ? 1 : 0,
-    borderColor: '#374151',
+    borderWidth: currentTheme.isDark ? 1 : 0,
+    borderColor: '#2A2A2A',
   },
   distanceTextContainer: {
     flexDirection: "row",
@@ -145,10 +145,10 @@ const getStyles = (currentTheme) => StyleSheet.create({
     height: 36,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E5D5FF',
+    borderColor: currentTheme.isDark ? '#3A3A3A' : '#E5D5FF',
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: currentTheme.theme === 'dark' ? '#2e1f4a' : '#FFF',
+    backgroundColor: currentTheme.isDark ? '#2A2A2A' : '#FFF',
   },
   customSliderWrapper: {
     flex: 1,
@@ -208,7 +208,7 @@ const getStyles = (currentTheme) => StyleSheet.create({
     borderRadius: 1,
   },
   sliderLabel: {
-    color: "#762BAD",
+    color: currentTheme.isDark ? '#A78BFA' : '#762BAD',
     fontSize: 13,
     fontWeight: "600",
     textAlign: "center",

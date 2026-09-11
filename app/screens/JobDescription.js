@@ -593,15 +593,23 @@ const JobDescriptionScreen = ({ route, navigation }) => {
 };
 
 // Styles
-const getStyles = (currentTheme) =>
-  StyleSheet.create({
+const getStyles = (currentTheme) => {
+  const isDark = currentTheme.background === "#121212" || currentTheme.background === "#000000";
+  const bg = currentTheme.background || "#FFFFFF";
+  const cardBg = currentTheme.cardBackground || (isDark ? "#1E1E1E" : "#FFFFFF");
+  const text = currentTheme.text || "#1F192F";
+  const subText = currentTheme.subText || "#6B7280";
+  const border = currentTheme.border || (isDark ? "#333333" : "#F0EBFF");
+  const softPurple = isDark ? "rgba(123,44,255,0.2)" : "#F3E8FF";
+
+  return StyleSheet.create({
     safeArea: {
       flex: 1,
-      backgroundColor: "#FFFFFF",
+      backgroundColor: bg,
     },
     scrollView: {
       flex: 1,
-      backgroundColor: "#FFFFFF",
+      backgroundColor: bg,
     },
     scrollContent: {
       paddingHorizontal: 16,
@@ -623,9 +631,9 @@ const getStyles = (currentTheme) =>
       justifyContent: "space-between",
       paddingHorizontal: 16,
       paddingVertical: 12,
-      backgroundColor: "#FFFFFF",
+      backgroundColor: cardBg,
       borderBottomWidth: 1,
-      borderBottomColor: "#F3F4F6",
+      borderBottomColor: border,
     },
     headerIconButton: {
       padding: 6,
@@ -638,11 +646,11 @@ const getStyles = (currentTheme) =>
     headerTitle: {
       fontSize: 18,
       fontWeight: "700",
-      color: "#1F192F",
+      color: text,
     },
     headerSubtitle: {
       fontSize: 12,
-      color: "#6B7280",
+      color: subText,
       marginTop: 2,
     },
     modeBadgeContainer: {
@@ -663,15 +671,15 @@ const getStyles = (currentTheme) =>
       fontWeight: "600",
     },
     card: {
-      backgroundColor: "#FFFFFF",
+      backgroundColor: cardBg,
       borderRadius: 16,
       padding: 14,
       marginBottom: 12,
       borderWidth: 1,
-      borderColor: "#F0EBFF",
-      shadowColor: "#6B21A8",
+      borderColor: border,
+      shadowColor: "#000",
       shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.03,
+      shadowOpacity: isDark ? 0.2 : 0.03,
       shadowRadius: 6,
       elevation: 1,
     },
@@ -684,14 +692,14 @@ const getStyles = (currentTheme) =>
       width: 32,
       height: 32,
       borderRadius: 16,
-      backgroundColor: "#F3E8FF",
+      backgroundColor: softPurple,
       justifyContent: "center",
       alignItems: "center",
     },
     cardHeaderTitle: {
       fontSize: 14,
       fontWeight: "700",
-      color: "#1F192F",
+      color: text,
       marginLeft: 10,
     },
     cardContentPadding: {
@@ -700,12 +708,12 @@ const getStyles = (currentTheme) =>
     clientNameText: {
       fontSize: 15,
       fontWeight: "700",
-      color: "#1F192F",
+      color: text,
       marginBottom: 2,
     },
     clientMetaText: {
       fontSize: 12,
-      color: "#6B7280",
+      color: subText,
       marginBottom: 4,
     },
     locationPinRow: {
@@ -714,11 +722,11 @@ const getStyles = (currentTheme) =>
     },
     companyNameText: {
       fontSize: 12,
-      color: "#6B7280",
+      color: subText,
     },
     jobDescriptionBodyText: {
       fontSize: 13,
-      color: "#374151",
+      color: isDark ? "#D1D5DB" : "#374151",
       lineHeight: 19,
     },
     skillsContainer: {
@@ -729,12 +737,12 @@ const getStyles = (currentTheme) =>
     skillsLabel: {
       fontSize: 12,
       fontWeight: "700",
-      color: "#6B21A8",
+      color: isDark ? "#C084FC" : "#6B21A8",
       marginRight: 4,
     },
     skillsText: {
       fontSize: 12,
-      color: "#4B5563",
+      color: subText,
     },
     paymentMethodRow: {
       flexDirection: "row",
@@ -744,7 +752,7 @@ const getStyles = (currentTheme) =>
       width: 34,
       height: 34,
       borderRadius: 10,
-      backgroundColor: "#F3E8FF",
+      backgroundColor: softPurple,
       justifyContent: "center",
       alignItems: "center",
     },
@@ -755,11 +763,11 @@ const getStyles = (currentTheme) =>
     paymentTitle: {
       fontSize: 14,
       fontWeight: "700",
-      color: "#1F192F",
+      color: text,
     },
     paymentSubtitle: {
       fontSize: 11,
-      color: "#6B7280",
+      color: subText,
       marginTop: 2,
     },
     gridRow: {
@@ -780,30 +788,30 @@ const getStyles = (currentTheme) =>
       width: 26,
       height: 26,
       borderRadius: 13,
-      backgroundColor: "#F3E8FF",
+      backgroundColor: softPurple,
       justifyContent: "center",
       alignItems: "center",
     },
     rupeeIconSymbol: {
       fontSize: 13,
       fontWeight: "700",
-      color: "#6B21A8",
+      color: isDark ? "#C084FC" : "#6B21A8",
     },
     gridCardLabel: {
       fontSize: 13,
       fontWeight: "700",
-      color: "#1F192F",
+      color: text,
       marginLeft: 8,
     },
     gridCardValue: {
       fontSize: 14,
       fontWeight: "700",
-      color: "#111827",
+      color: isDark ? "#F3F4F6" : "#111827",
       marginTop: 2,
     },
     gridCardSubtext: {
       fontSize: 11,
-      color: "#6B7280",
+      color: subText,
       marginTop: 2,
     },
     attachmentsRow: {
@@ -818,11 +826,11 @@ const getStyles = (currentTheme) =>
     attachmentsTitle: {
       fontSize: 14,
       fontWeight: "700",
-      color: "#6B21A8",
+      color: isDark ? "#C084FC" : "#6B21A8",
     },
     attachmentsSubtext: {
       fontSize: 11,
-      color: "#6B7280",
+      color: subText,
       marginTop: 2,
     },
     statusCardRow: {
@@ -836,7 +844,7 @@ const getStyles = (currentTheme) =>
     statusLabelText: {
       fontSize: 14,
       fontWeight: "700",
-      color: "#1F192F",
+      color: text,
       marginBottom: 4,
     },
     statusBadgeRow: {
@@ -844,7 +852,7 @@ const getStyles = (currentTheme) =>
       alignItems: "center",
     },
     statusPill: {
-      backgroundColor: "#DCFCE7",
+      backgroundColor: isDark ? "rgba(34,197,94,0.2)" : "#DCFCE7",
       paddingHorizontal: 8,
       paddingVertical: 2,
       borderRadius: 6,
@@ -853,11 +861,11 @@ const getStyles = (currentTheme) =>
     statusPillText: {
       fontSize: 11,
       fontWeight: "700",
-      color: "#166534",
+      color: isDark ? "#4ADE80" : "#166534",
     },
     statusNoticeText: {
       fontSize: 11,
-      color: "#6B7280",
+      color: subText,
     },
     actionsContainer: {
       marginTop: 16,
@@ -878,21 +886,22 @@ const getStyles = (currentTheme) =>
       fontWeight: "700",
     },
     secondaryReportButton: {
-      backgroundColor: "#FFFFFF",
+      backgroundColor: cardBg,
       borderRadius: 12,
       borderWidth: 1,
-      borderColor: "#FCA5A5",
+      borderColor: isDark ? "rgba(239,68,68,0.4)" : "#FCA5A5",
       paddingVertical: 14,
       flexDirection: "row",
       justifyContent: "center",
       alignItems: "center",
     },
     secondaryReportButtonText: {
-      color: "#DC2626",
+      color: isDark ? "#F87171" : "#DC2626",
       fontSize: 16,
       fontWeight: "700",
     },
   });
+};
 
 export default JobDescriptionScreen;
 

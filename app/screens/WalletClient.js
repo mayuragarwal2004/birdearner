@@ -22,9 +22,10 @@ const WalletClientScreen = ({ navigation }) => {
   const currentTheme = themeStyles[theme];
   
   const isDark = theme === "dark";
-  const primaryColor = isDark ? "#C4B5FD" : (currentTheme.primary || "#4B0082");
+  const primaryColor = isDark ? "#A855F7" : "#4B0082";
+  const buttonColor = isDark ? "#7B2CFF" : "#4B0082";
   
-  const styles = useMemo(() => getStyles(currentTheme, primaryColor), [currentTheme, primaryColor]);
+  const styles = useMemo(() => getStyles(currentTheme, primaryColor, buttonColor), [currentTheme, primaryColor, buttonColor]);
 
   useEffect(() => {
     const unsubscribe = navigation.addListener("focus", () => {
@@ -109,7 +110,7 @@ const WalletClientScreen = ({ navigation }) => {
   );
 };
 
-const getStyles = (currentTheme, primaryColor) =>
+const getStyles = (currentTheme, primaryColor, buttonColor) =>
   StyleSheet.create({
     safeArea: {
       flex: 1,
@@ -183,10 +184,15 @@ const getStyles = (currentTheme, primaryColor) =>
     },
     addAmountButton: {
       marginTop: 20,
-      backgroundColor: primaryColor,
-      paddingVertical: 12,
-      paddingHorizontal: 24,
-      borderRadius: 12,
+      backgroundColor: buttonColor || "#7B2CFF",
+      paddingVertical: 14,
+      paddingHorizontal: 28,
+      borderRadius: 14,
+      elevation: 3,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.2,
+      shadowRadius: 4,
     },
     addAmountButtonText: {
       color: "#FFF",

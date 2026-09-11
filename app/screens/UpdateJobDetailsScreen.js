@@ -651,17 +651,24 @@ const UpdateJobDetailsScreen = ({ route, navigation }) => {
   );
 };
 
-const getStyles = (currentTheme) =>
-  StyleSheet.create({
+const getStyles = (currentTheme) => {
+  const isDark = currentTheme.background === "#121212" || currentTheme.background === "#000000";
+  const bg = currentTheme.background || "#FFFFFF";
+  const cardBg = currentTheme.cardBackground || (isDark ? "#1E1E1E" : "#FFFFFF");
+  const text = currentTheme.text || "#101114";
+  const subText = currentTheme.subText || "#656B7A";
+  const border = currentTheme.border || (isDark ? "#333333" : "#E7E1EF");
+  const inputBg = isDark ? "#2A2A2A" : "#FFFFFF";
+
+  return StyleSheet.create({
     container1: {
       flex: 1,
-      backgroundColor: currentTheme.background || "#fff",
+      backgroundColor: bg,
       padding: 10,
-      // paddingTop: 40,
     },
     container: {
       flex: 1,
-      backgroundColor: currentTheme.background || "#fff",
+      backgroundColor: bg,
       padding: 20,
       paddingTop: 40,
     },
@@ -692,37 +699,40 @@ const getStyles = (currentTheme) =>
     jobTitle: {
       fontSize: 18,
       fontWeight: "bold",
-      color: currentTheme.primary || "#4e2587",
+      color: isDark ? "#C084FC" : (currentTheme.primary || "#4e2587"),
       flex: 1,
     },
     flagIcon: {
       marginLeft: 10,
     },
     jobDetails: {
-      backgroundColor: currentTheme.subText || "#f9f9f9",
+      backgroundColor: cardBg,
       padding: 10,
       borderRadius: 10,
       marginBottom: 20,
+      borderWidth: 1,
+      borderColor: border,
       shadowColor: "#000",
-      shadowOpacity: 0.1,
+      shadowOpacity: isDark ? 0.2 : 0.1,
       shadowRadius: 5,
       shadowOffset: { width: 0, height: 2 },
       elevation: 3,
     },
     detailText: {
       fontSize: 14,
-      color: "#4e2587",
+      color: text,
       marginBottom: 10,
     },
     boldText: {
       fontWeight: "bold",
+      color: text,
     },
     jobDescription: {
       marginBottom: 20,
     },
     descriptionText: {
       fontSize: 14,
-      color: "#555",
+      color: subText,
       lineHeight: 22,
       marginBottom: 10,
     },
@@ -732,7 +742,7 @@ const getStyles = (currentTheme) =>
     attachedFilesTitle: {
       fontSize: 16,
       fontWeight: "bold",
-      color: "#4e2587",
+      color: isDark ? "#C084FC" : "#4e2587",
       marginBottom: 10,
     },
     filePreviewContainer: {
@@ -744,14 +754,13 @@ const getStyles = (currentTheme) =>
     filePreview: {
       width: 80,
       height: 80,
-      backgroundColor: "#ccc",
+      backgroundColor: isDark ? "#333" : "#ccc",
       borderRadius: 5,
       marginRight: 10,
       marginBottom: 10,
     },
     applyButton: {
       backgroundColor: "#4e2587",
-      // paddingHorizontal: 15,
       borderRadius: 25,
       alignItems: "center",
       marginBottom: 20,
@@ -763,10 +772,10 @@ const getStyles = (currentTheme) =>
       fontSize: 24,
     },
     alreadyapplyButtonText: {
-      color: "#36454F",
+      color: isDark ? "#AAA" : "#36454F",
       fontWeight: "bold",
       fontSize: 24,
-      backgroundColor: "#c2c2c2",
+      backgroundColor: isDark ? "#333" : "#c2c2c2",
       borderRadius: 25,
       alignItems: "center",
       marginBottom: 20,
@@ -774,64 +783,21 @@ const getStyles = (currentTheme) =>
       textAlign: "center",
     },
     reportText: {
-      color: "#555",
+      color: subText,
       textAlign: "center",
       textDecorationLine: "underline",
       fontSize: 14,
     },
-    detailText: {
-      fontSize: 14,
-      color: "#595858",
-      marginBottom: 10,
-    },
     skillText: {
       fontSize: 14,
-      color: currentTheme.subText || "#595858",
+      color: subText,
       marginBottom: 10,
-    },
-    detailText: {
-      color: currentTheme.subText,
-    },
-    boldText: {
-      fontWeight: "bold",
     },
     desText: {
       fontWeight: "bold",
       fontSize: 16,
       marginBottom: 3,
-      color: currentTheme.text,
-    },
-    jobDescription: {
-      marginBottom: 20,
-    },
-    descriptionText: {
-      fontSize: 14,
-      color: "#555",
-      lineHeight: 22,
-      marginBottom: 10,
-    },
-    attachedFilesContainer: {
-      marginBottom: 30,
-    },
-    attachedFilesTitle: {
-      fontSize: 16,
-      fontWeight: "bold",
-      color: "#4e2587",
-      marginBottom: 10,
-    },
-    filePreviewContainer: {
-      flexDirection: "row",
-      flexWrap: "wrap",
-      gap: 20,
-      justifyContent: "center",
-    },
-    filePreview: {
-      width: 80,
-      height: 80,
-      backgroundColor: "#ccc",
-      borderRadius: 5,
-      marginRight: 10,
-      marginBottom: 10,
+      color: text,
     },
     applyButtoncon: {
       flex: 1,
@@ -839,18 +805,10 @@ const getStyles = (currentTheme) =>
       justifyContent: "center",
       gap: 15,
       shadowColor: "#000000",
-      shadowOffset: {
-        width: 0,
-        height: 3,
-      },
+      shadowOffset: { width: 0, height: 3 },
       shadowOpacity: 0.17,
       shadowRadius: 3.05,
       elevation: 4,
-    },
-    applyButtonText: {
-      color: "#fff",
-      fontWeight: "bold",
-      fontSize: 20,
     },
     conColor: {
       backgroundColor: "#00871E",
@@ -859,13 +817,6 @@ const getStyles = (currentTheme) =>
       alignItems: "center",
       marginBottom: 20,
       paddingVertical: 10,
-      shadowColor: "#000000",
-      shadowOffset: {
-        width: 0,
-        height: 3,
-      },
-      shadowOpacity: 0.17,
-      shadowRadius: 3.05,
       elevation: 4,
     },
     repColor: {
@@ -875,48 +826,39 @@ const getStyles = (currentTheme) =>
       alignItems: "center",
       marginBottom: 20,
       paddingVertical: 10,
-      shadowColor: "#000000",
-      shadowOffset: {
-        width: 0,
-        height: 3,
-      },
-      shadowOpacity: 0.17,
-      shadowRadius: 3.05,
       elevation: 4,
     },
-    reportText: {
-      color: "#555",
-      textAlign: "center",
-      textDecorationLine: "underline",
-      fontSize: 14,
-    },
-
     editForm1: {
       padding: 20,
-      backgroundColor: "#fff",
+      backgroundColor: bg,
     },
     label1: {
       fontSize: 16,
       fontWeight: "bold",
       marginVertical: 10,
+      color: text,
     },
     input1: {
       borderWidth: 1,
-      borderColor: "#ccc",
-      borderRadius: 5,
+      borderColor: border,
+      borderRadius: 8,
       padding: 10,
       fontSize: 14,
       marginBottom: 15,
+      color: text,
+      backgroundColor: inputBg,
     },
     textArea1: {
       borderWidth: 1,
-      borderColor: "#ccc",
-      borderRadius: 5,
+      borderColor: border,
+      borderRadius: 8,
       padding: 10,
       fontSize: 14,
       height: 100,
       textAlignVertical: "top",
       marginBottom: 15,
+      color: text,
+      backgroundColor: inputBg,
     },
     attachedFilesContainer1: {
       marginTop: 20,
@@ -924,6 +866,7 @@ const getStyles = (currentTheme) =>
     attachedFilesTitle1: {
       fontSize: 16,
       fontWeight: "bold",
+      color: text,
     },
     filePreviewContainer1: {
       flexDirection: "row",
@@ -950,7 +893,7 @@ const getStyles = (currentTheme) =>
     },
     uploadButton1: {
       fontSize: 14,
-      color: "#4e2587",
+      color: isDark ? "#C084FC" : "#4e2587",
       marginTop: 10,
       textDecorationLine: "underline",
     },
@@ -988,22 +931,22 @@ const getStyles = (currentTheme) =>
       alignItems: "center",
       paddingVertical: 4,
       paddingHorizontal: 8,
-      backgroundColor: "#f0f0f0",
+      backgroundColor: isDark ? "#2A2A2A" : "#f0f0f0",
       borderRadius: 12,
       gap: 4,
     },
     walletToggleText: {
       fontSize: 12,
-      color: "#6A0DAD",
+      color: isDark ? "#C084FC" : "#6A0DAD",
       fontWeight: "500",
     },
     walletInfoContainer: {
-      backgroundColor: "#f8f9fa",
+      backgroundColor: cardBg,
       padding: 12,
       borderRadius: 8,
       marginBottom: 10,
       borderWidth: 1,
-      borderColor: "#e9ecef",
+      borderColor: border,
     },
     walletInfoRow: {
       flexDirection: "row",
@@ -1013,7 +956,7 @@ const getStyles = (currentTheme) =>
     },
     walletInfoLabel: {
       fontSize: 14,
-      color: "#6c757d",
+      color: subText,
       fontWeight: "500",
     },
     walletInfoAmount: {
@@ -1028,13 +971,13 @@ const getStyles = (currentTheme) =>
     },
     walletInfoTotal: {
       fontSize: 14,
-      color: "#343a40",
+      color: text,
       fontWeight: "600",
     },
     inputError: {
       borderColor: "#DC3545",
       borderWidth: 1.5,
-      backgroundColor: "#fef2f2",
+      backgroundColor: isDark ? "rgba(220,53,69,0.15)" : "#fef2f2",
     },
     errorContainer: {
       marginTop: 5,
@@ -1050,14 +993,14 @@ const getStyles = (currentTheme) =>
       alignItems: "center",
       paddingVertical: 6,
       paddingHorizontal: 12,
-      backgroundColor: "#f8f9ff",
+      backgroundColor: isDark ? "#2A1B3D" : "#f8f9ff",
       borderRadius: 12,
       alignSelf: "flex-start",
       gap: 4,
     },
     addMoneyText: {
       fontSize: 12,
-      color: "#6A0DAD",
+      color: isDark ? "#C084FC" : "#6A0DAD",
       fontWeight: "600",
     },
     budgetValidationContainer: {
@@ -1101,7 +1044,7 @@ const getStyles = (currentTheme) =>
     },
     addSkillText: {
       fontSize: 14,
-      color: "#6A0DAD",
+      color: isDark ? "#C084FC" : "#6A0DAD",
       fontWeight: "600",
     },
     
@@ -1111,7 +1054,7 @@ const getStyles = (currentTheme) =>
     },
     helperText1: {
       fontSize: 12,
-      color: "#888",
+      color: subText,
       marginBottom: 12,
       lineHeight: 18,
     },
@@ -1124,9 +1067,9 @@ const getStyles = (currentTheme) =>
       paddingVertical: 12,
       borderRadius: 10,
       borderWidth: 1,
-      borderColor: "#ccc",
+      borderColor: border,
       alignItems: "center",
-      backgroundColor: "#fff",
+      backgroundColor: cardBg,
     },
     durationOptionActive: {
       borderColor: "#6A0DAD",
@@ -1135,11 +1078,12 @@ const getStyles = (currentTheme) =>
     durationOptionText: {
       fontSize: 14,
       fontWeight: "600",
-      color: "#333",
+      color: subText,
     },
     durationOptionTextActive: {
       color: "#fff",
     },
   });
+};
 
 export default UpdateJobDetailsScreen;
