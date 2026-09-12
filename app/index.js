@@ -175,7 +175,8 @@ const Stack = createStackNavigator();
 function MainTabs() {
   const { userData } = useAuth();
   const { isKeyboardVisible } = useKeyboard();
-  const isClient = userData?.role === "CLIENT";
+  const roleStr = (userData?.role || "").toLowerCase();
+  const isClient = roleStr === "client";
   const navigation = useNavigation();
 
   const currentRoute = useNavigationState((state) => {
@@ -191,36 +192,75 @@ function MainTabs() {
     return current?.name;
   });
 
-  const clientAllowedRoutes = [
-    "Home",
-    "HomeScreen",
-    "ClientHome",
-    "Job Posted",
-    "JobsPosted",
-    "JobsPostedScreen",
-    "Job Requirements",
-    "JobRequirements",
-    "AI Bird",
-    "Bird",
-    "BirdAI",
-    "Settings",
+  const hiddenRoutes = [
+    // Chat & Messaging Sub-screens
+    "ClientChat",
+    "FreelancerChat",
+    "ClientChatList",
+    "FreelancerChatList",
+    "Inbox",
+    "Chat",
+    "Chatlist",
+    "JobDetailsChat",
+
+    // Home & Notification Sub-screens
+    "Notification",
+    "ServiceListing",
+    "SettleBalance",
+    "EarningsOverview",
+    "OrdersOverview",
+    "ProfileOverview",
+    "WithdrawalEarning",
+    "Withdrawal Earning",
+
+    // Job & Marketplace Sub-screens
+    "AppliersScreen",
+    "JobDetails",
+    "JobSubmissionTimmer",
+    "JobPostedSuccess",
+    "MarketplaceJobs",
+    "JobFilterScreen",
+    "JobPriority",
+    "JobDescription",
+    "Offers",
+    "ReviewGive",
+    "ReviewsScreen",
+    "SubmitSolution",
+    "ViewSolutions",
+    "UpdateJobDetailsScreen",
+
+    // Settings & Profile Sub-screens
+    "MyProfile",
+    "MyReview",
+    "Availability",
+    "Password update",
+    "Email update",
+    "Bank Account details",
+    "Notifications Setting",
+    "Appearance",
+    "WalletFreelancer",
+    "WalletClient",
+    "TransactionHistoryClient",
+    "TransactionHistoryFreelancer",
+    "Payment",
+    "DeleteAccount",
+    "Security",
+    "TermsAndConditions",
+    "TermsAndConditionsScreen",
+    "Feedback",
+    "PrivacyPolicy",
+    "PrivacyPolicyScreen",
+    "BlogsAndForum",
+    "Portfolio",
+    "PortfolioCom",
+    "FreelancerJobHistory",
+    "ManageAddresses",
+    "ClientSignup",
+    "FreelancerSignup",
+    "OtpVerification",
   ];
 
-  const freelancerAllowedRoutes = [
-    "Home",
-    "HomeScreen",
-    "Leaderboard",
-    "LeaderboardScreen",
-    "Marketplace",
-    "MarketplaceScreen",
-    "AI Bird",
-    "Bird",
-    "BirdAI",
-    "Settings",
-  ];
-
-  const allowedRoutes = isClient ? clientAllowedRoutes : freelancerAllowedRoutes;
-  const hideTabBar = Boolean(currentRoute && !allowedRoutes.includes(currentRoute));
+  const hideTabBar = Boolean(currentRoute && hiddenRoutes.includes(currentRoute));
 
   const tabScreens = isClient
     ? [
