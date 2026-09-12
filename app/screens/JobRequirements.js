@@ -1193,7 +1193,7 @@ const JobRequirementsScreen = ({ navigation }) => {
           <Ionicons name="arrow-back" size={24} color={currentTheme.text || "#000"} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>Job Requirements</Text>
+          <Text style={styles.headerTitle}>Create Job</Text>
           <Text style={styles.headerSubtitle}>Fill in the details to post your job</Text>
         </View>
         <View style={styles.headerSpacer} />

@@ -266,7 +266,7 @@ function MainTabs() {
     ? [
       { name: "Home", getComponent: getClientHomeStack },
       { name: "Job Posted", getComponent: getJobStack },
-      { name: "Job Requirements", getComponent: getJobRequirementStack },
+      { name: "Create Job", getComponent: getJobRequirementStack },
       { name: "AI Bird", getComponent: getBirdScreen },
       { name: "Settings", getComponent: getSettingsProfileTab },
     ]
@@ -341,7 +341,7 @@ function renderTabIcon(route, focused) {
 
   const lucideIcons = {
     "Job Posted": Briefcase,
-    "Job Requirements": Plus,
+    "Create Job": Plus,
     Home: House,
     "Leaderboard": ChartColumn,
   };

@@ -84,7 +84,7 @@ const ServiceListingScreen = ({ navigation, route }) => {
           serviceType: category.toLowerCase(),
         })
       );
-      navigation.navigate("Job Requirements");
+      navigation.navigate("Create Job");
     } catch (error) {
       console.error("Failed to save service selection:", error);
     }

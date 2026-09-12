@@ -321,7 +321,7 @@ export default function ProfileScreen({ route, navigation }) {
           serviceType: service.category === "FREELANCE" ? "freelance" : "household",
         })
       );
-      navigation.navigate("MainTabs", { screen: "Job Requirements" });
+      navigation.navigate("MainTabs", { screen: "Create Job" });
     } catch (error) {
       console.error("Failed to start job request:", error);
       Alert.alert("Error", "Unable to start a job request for this service.");

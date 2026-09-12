@@ -280,10 +280,10 @@ const ClientHomeScreen = () => {
         );
       }
 
-      navigation.navigate("Job Requirements");
+      navigation.navigate("Create Job");
     } catch (error) {
       console.error("Failed to open job requirements from promo:", error);
-      navigation.navigate("Job Requirements");
+      navigation.navigate("Create Job");
     }
   };
 
@@ -552,7 +552,7 @@ const ClientHomeScreen = () => {
               </Text>
               <TouchableOpacity
                 style={styles.emptyJobBtn}
-                onPress={() => navigation.navigate("Job Requirements")}
+                onPress={() => navigation.navigate("Create Job")}
               >
                 <Text style={styles.emptyJobBtnText}>Post a job</Text>
               </TouchableOpacity>
