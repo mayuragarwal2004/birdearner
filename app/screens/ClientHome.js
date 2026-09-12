@@ -75,6 +75,49 @@ const getStatusMeta = (status, isDark) => {
   };
 };
 
+const getClientProfileCompletion = (userData, userProfile) => {
+  const client = userData?.client || (userProfile?.organizationType || userProfile?.companyName ? userProfile : {});
+  if (!client || (Object.keys(client).length === 0 && !userData?.client)) {
+    return 0;
+  }
+
+  let completed = 0;
+  const total = 5;
+
+  // 1. Basic user info & contact
+  if (userData?.fullName && (userData?.email || userData?.mobile)) {
+    completed += 1;
+  }
+
+  // 2. Organization / Account Type / Client ID
+  if (client?.organizationType || client?.companyName || client?.id) {
+    completed += 1;
+  }
+
+  // 3. Location / Address
+  if (
+    client?.city ||
+    client?.state ||
+    client?.country ||
+    client?.zipcode ||
+    (userData?.addresses && userData.addresses.length > 0)
+  ) {
+    completed += 1;
+  }
+
+  // 4. Profile Description or Cover/Profile Photo
+  if (client?.profileDescription || client?.coverPhoto || userData?.profilePhoto) {
+    completed += 1;
+  }
+
+  // 5. Terms Accepted / Client Profile Created
+  if (client?.termsAccepted || client?.id) {
+    completed += 1;
+  }
+
+  return Math.round((completed / total) * 100);
+};
+
 const ClientHomeScreen = () => {
   const [search, setSearch] = useState("");
   const [ongoingJobs, setOngoingJobs] = useState([]);
@@ -89,7 +132,12 @@ const ClientHomeScreen = () => {
   const [loadingPromos, setLoadingPromos] = useState(true);
 
   const servicesRef = useRef(null);
-  const { userData } = useAuth();
+  const { userData, userProfile } = useAuth();
+
+  useEffect(() => {
+    const clientProfile = userData?.client || (userProfile?.organizationType || userProfile?.companyName ? userProfile : null);
+    setProfilePercentage(getClientProfileCompletion(userData, clientProfile));
+  }, [userData, userProfile]);
   const navigation = useNavigation();
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
@@ -635,27 +683,6 @@ const ClientHomeScreen = () => {
             ))}
           </View>
         </View>
-
-        {/* Profile completion */}
-        {!client?.termsAccepted && profilePercentage !== 100 && (
-          <View style={styles.profileCard}>
-            <Text style={styles.profileTitle}>Complete Your Profile</Text>
-            <Text style={styles.profileSubtitle}>
-              Your profile is {profilePercentage}% complete
-            </Text>
-            <View style={styles.progressTrack}>
-              <View
-                style={[styles.progressFill, { width: `${profilePercentage}%` }]}
-              />
-            </View>
-            <TouchableOpacity
-              style={styles.profileCta}
-              onPress={handleCompleteProfile}
-            >
-              <Text style={styles.profileCtaText}>Complete Now</Text>
-            </TouchableOpacity>
-          </View>
-        )}
       </ScrollView>
 
       <TouchableOpacity style={styles.fab} onPress={openInbox} activeOpacity={0.9}>
@@ -1053,50 +1080,135 @@ const getStyles = (currentTheme, isDark) => {
       fontSize: 11,
       fontWeight: "700",
     },
-    profileCard: {
+    completeProfileWidget: {
+      flexDirection: "row",
+      backgroundColor: isDark ? "#1E1A26" : "#FDF8FF",
+      borderRadius: 20,
+      padding: 16,
       marginTop: 16,
       marginHorizontal: 16,
-      borderRadius: 14,
+      marginBottom: 16,
       borderWidth: 1,
-      borderColor: border,
-      backgroundColor: card,
-      padding: 14,
+      borderColor: isDark ? "#3A2A55" : "#F3E8FF",
+      alignItems: "center",
     },
-    profileTitle: {
-      color: text,
-      fontSize: 15,
-      fontWeight: "700",
+    clipboardGraphicContainer: {
+      width: 90,
+      height: 90,
+      position: "relative",
+      alignItems: "center",
+      justifyContent: "center",
+      marginRight: 12,
     },
-    profileSubtitle: {
-      color: muted,
+    clipboardBoard: {
+      width: 70,
+      height: 80,
+      backgroundColor: isDark ? "#2A2A2A" : "#FFFFFF",
+      borderRadius: 10,
+      borderWidth: 1.5,
+      borderColor: isDark ? "#3A2A55" : "#DDD6FE",
+      position: "relative",
+      alignItems: "center",
+      paddingTop: 12,
+      elevation: 2,
+      shadowColor: "#6B21A8",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.08,
+      shadowRadius: 4,
+    },
+    clipboardHeaderBar: {
+      position: "absolute",
+      top: -8,
+      width: 32,
+      height: 12,
+      backgroundColor: "#7C3AED",
+      borderRadius: 4,
+    },
+    clipboardBody: {
+      alignItems: "center",
+      width: "100%",
+      paddingHorizontal: 8,
+    },
+    clipboardAvatarCircle: {
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      backgroundColor: isDark ? "#3A2A55" : "#F3E8FF",
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: 6,
+    },
+    clipboardTextLines: {
+      width: "100%",
+      alignItems: "center",
+    },
+    clipboardLineLong: {
+      width: "80%",
+      height: 3,
+      backgroundColor: isDark ? "#3A2A55" : "#DDD6FE",
+      borderRadius: 2,
+      marginBottom: 3,
+    },
+    clipboardLineShort: {
+      width: "50%",
+      height: 3,
+      backgroundColor: isDark ? "#3A2A55" : "#DDD6FE",
+      borderRadius: 2,
+    },
+    pencilGraphic: {
+      position: "absolute",
+      bottom: -6,
+      right: -6,
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      backgroundColor: "#7C3AED",
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 2,
+      borderColor: "#FFF",
+    },
+    completeProfileRight: {
+      flex: 1,
+    },
+    completeProfileTitle: {
+      fontSize: 16,
+      fontWeight: "bold",
+      color: isDark ? "#C084FC" : "#4C1D95",
+      marginBottom: 2,
+    },
+    completeProfileSubtitle: {
       fontSize: 12,
-      fontWeight: "600",
-      marginTop: 4,
+      color: isDark ? "#A098AE" : "#64748B",
       marginBottom: 10,
     },
-    progressTrack: {
+    progressBlocks: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginBottom: 12,
+    },
+    progressBlock: {
       height: 6,
-      borderRadius: 999,
-      backgroundColor: isDark ? "#2A2A2A" : "#EDE7F6",
-      overflow: "hidden",
+      flex: 1,
+      borderRadius: 3,
+      marginHorizontal: 2,
     },
-    progressFill: {
-      height: "100%",
-      backgroundColor: PURPLE,
-      borderRadius: 999,
+    bgGray: { backgroundColor: isDark ? "#333" : "#E2E8F0" },
+    bgRed: { backgroundColor: "#EF4444" },
+    bgOrange: { backgroundColor: "#F97316" },
+    bgYellow: { backgroundColor: "#EAB308" },
+    bgPurple: { backgroundColor: "#7C3AED" },
+    bgGreen: { backgroundColor: "#16A34A" },
+    completeNowBtn: {
+      backgroundColor: "#4C1D95",
+      paddingVertical: 10,
+      borderRadius: 12,
+      alignItems: "center",
     },
-    profileCta: {
-      marginTop: 10,
-      alignSelf: "flex-start",
-      backgroundColor: PURPLE,
-      borderRadius: 8,
-      paddingHorizontal: 14,
-      paddingVertical: 7,
-    },
-    profileCtaText: {
-      color: "#FFFFFF",
-      fontSize: 12,
-      fontWeight: "700",
+    completeNowText: {
+      color: "#FFF",
+      fontWeight: "bold",
+      fontSize: 14,
     },
     fab: {
       position: "absolute",

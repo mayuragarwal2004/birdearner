@@ -49,34 +49,58 @@ const parseArray = (value) => {
 };
 
 const getFreelancerProfileCompletion = (userData, userProfile) => {
-  const profile = userProfile || userData?.freelancer || {};
+  const profile = userData?.freelancer || (userProfile?.freelancerCategory || userProfile?.selectedServices || userProfile?.profileHeading ? userProfile : {});
+  if (!profile || (Object.keys(profile).length === 0 && !userData?.freelancer)) {
+    return 0;
+  }
+
   let completed = 0;
-  const total = 5;
+  const total = 15;
 
-  if (userData?.fullName && userData?.email) completed += 1;
+  // 1. Name
+  if (userData?.fullName) completed += 1;
 
-  if (parseArray(profile.selectedServices).length > 0) completed += 1;
+  // 2. Email
+  if (userData?.email) completed += 1;
 
-  if (profile.profileHeading && profile.profileDescription) completed += 1;
+  // 3. Phone
+  if (userData?.mobile || profile?.mobileNumber) completed += 1;
 
-  if (
-    profile.highestQualification &&
-    profile.experience !== null &&
-    profile.experience !== undefined &&
-    profile.city &&
-    profile.state
-  ) {
-    completed += 1;
-  }
+  // 4. Profile photo
+  if (profile?.profilePhoto || userData?.profilePhoto || profile?.coverPhoto) completed += 1;
 
-  if (
-    profile.profilePhoto &&
-    profile.coverPhoto &&
-    parseArray(profile.portfolioImages).length > 0 &&
-    profile.termsAccepted
-  ) {
-    completed += 1;
-  }
+  // 5. Freelancer type / Organization type
+  if (profile?.freelancerCategory || profile?.organizationType || profile?.companyName) completed += 1;
+
+  // 6. Write about yourself / Bio / Heading / Description
+  if (profile?.profileHeading || profile?.profileDescription || profile?.bio) completed += 1;
+
+  // 7. Date of birth
+  if (userData?.dob) completed += 1;
+
+  // 8. Gender
+  if (userData?.gender) completed += 1;
+
+  // 9. Experience / Qualification
+  if ((profile?.experience !== null && profile?.experience !== undefined) || profile?.highestQualification) completed += 1;
+
+  // 10. Location (City / State / Country / Address)
+  if (profile?.city || profile?.state || profile?.country || (userData?.addresses && userData.addresses.length > 0)) completed += 1;
+
+  // 11. Languages
+  if (parseArray(profile?.languages).length > 0) completed += 1;
+
+  // 12. Skills
+  if (parseArray(profile?.skills).length > 0) completed += 1;
+
+  // 13. Certification
+  if (parseArray(profile?.certifications).length > 0) completed += 1;
+
+  // 14. Services (at least 1)
+  if (parseArray(profile?.selectedServices).length > 0) completed += 1;
+
+  // 15. Portfolio (at least 1 image or PDF)
+  if (parseArray(profile?.portfolioImages).length > 0) completed += 1;
 
   return Math.round((completed / total) * 100);
 };
@@ -390,51 +414,53 @@ const HomeScreen = () => {
         </View>
 
         {/* Complete Profile Widget */}
-        {profilePercentage < 100 ? (
-          <View style={styles.completeProfileWidget}>
-            {/* Left Graphic Illustration */}
-            <View style={styles.clipboardGraphicContainer}>
-              <View style={styles.clipboardBoard}>
-                <View style={styles.clipboardHeaderBar} />
-                <View style={styles.clipboardBody}>
-                  <View style={styles.clipboardAvatarCircle}>
-                    <Ionicons name="person" size={20} color="#7C3AED" />
-                  </View>
-                  <View style={styles.clipboardTextLines}>
-                    <View style={styles.clipboardLineLong} />
-                    <View style={styles.clipboardLineShort} />
-                  </View>
+        <View style={styles.completeProfileWidget}>
+          {/* Left Graphic Illustration */}
+          <View style={styles.clipboardGraphicContainer}>
+            <View style={styles.clipboardBoard}>
+              <View style={styles.clipboardHeaderBar} />
+              <View style={styles.clipboardBody}>
+                <View style={styles.clipboardAvatarCircle}>
+                  <Ionicons name="person" size={20} color="#7C3AED" />
                 </View>
-                {/* Pencil edit graphic */}
-                <View style={styles.pencilGraphic}>
-                  <Ionicons name="pencil" size={14} color="#FFF" />
+                <View style={styles.clipboardTextLines}>
+                  <View style={styles.clipboardLineLong} />
+                  <View style={styles.clipboardLineShort} />
                 </View>
               </View>
-              <Sparkle size={10} color="#A855F7" weight="fill" style={{ position: 'absolute', top: 4, left: 2 }} />
-              <Sparkle size={12} color="#A855F7" weight="fill" style={{ position: 'absolute', bottom: 8, right: 0 }} />
-            </View>
-
-            {/* Right Text & Progress */}
-            <View style={styles.completeProfileRight}>
-              <Text style={styles.completeProfileTitle}>Complete Your Profile</Text>
-              <Text style={styles.completeProfileSubtitle}>
-                Your profile is {String(profilePercentage || 80)}% complete
-              </Text>
-
-              <View style={styles.progressBlocks}>
-                <View style={[styles.progressBlock, profilePercentage >= 20 ? styles.bgRed : styles.bgGray]} />
-                <View style={[styles.progressBlock, profilePercentage >= 40 ? styles.bgOrange : styles.bgGray]} />
-                <View style={[styles.progressBlock, profilePercentage >= 60 ? styles.bgYellow : styles.bgGray]} />
-                <View style={[styles.progressBlock, profilePercentage >= 80 ? styles.bgPurple : styles.bgGray]} />
-                <View style={[styles.progressBlock, profilePercentage === 100 ? styles.bgGreen : styles.bgGray]} />
+              {/* Pencil edit graphic */}
+              <View style={styles.pencilGraphic}>
+                <Ionicons name="pencil" size={14} color="#FFF" />
               </View>
-
-              <TouchableOpacity style={styles.completeNowBtn} onPress={handleCompleteProfile}>
-                <Text style={styles.completeNowText}>Complete Now {">"}</Text>
-              </TouchableOpacity>
             </View>
+            <Sparkle size={10} color="#A855F7" weight="fill" style={{ position: 'absolute', top: 4, left: 2 }} />
+            <Sparkle size={12} color="#A855F7" weight="fill" style={{ position: 'absolute', bottom: 8, right: 0 }} />
           </View>
-        ) : null}
+
+          {/* Right Text & Progress */}
+          <View style={styles.completeProfileRight}>
+            <Text style={styles.completeProfileTitle}>
+              {profilePercentage >= 100 ? "Profile Complete" : "Complete Your Profile"}
+            </Text>
+            <Text style={styles.completeProfileSubtitle}>
+              Your profile is {String(profilePercentage)}% complete
+            </Text>
+
+            <View style={styles.progressBlocks}>
+              <View style={[styles.progressBlock, profilePercentage >= 20 ? styles.bgRed : styles.bgGray]} />
+              <View style={[styles.progressBlock, profilePercentage >= 40 ? styles.bgOrange : styles.bgGray]} />
+              <View style={[styles.progressBlock, profilePercentage >= 60 ? styles.bgYellow : styles.bgGray]} />
+              <View style={[styles.progressBlock, profilePercentage >= 80 ? styles.bgPurple : styles.bgGray]} />
+              <View style={[styles.progressBlock, profilePercentage >= 100 ? styles.bgGreen : styles.bgGray]} />
+            </View>
+
+            <TouchableOpacity style={styles.completeNowBtn} onPress={handleCompleteProfile}>
+              <Text style={styles.completeNowText}>
+                {profilePercentage >= 100 ? "Edit Profile >" : "Complete Now >"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
 
         {/* Smart Messages Box */}
         <View style={styles.smartMessagesBox}>
