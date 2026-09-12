@@ -26,6 +26,7 @@ const NegotiationPanel = ({
   onRefresh,
   onViewProposalDetails,
   jobId = null,
+  onClose = null,
 }) => {
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme] || themeStyles.light;
@@ -160,13 +161,15 @@ const NegotiationPanel = ({
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       {/* Header */}
       <View style={styles.headerRow}>
-        <View>
+        {onClose && (
+          <TouchableOpacity onPress={onClose} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={20} color={currentTheme.text || "#000"} />
+          </TouchableOpacity>
+        )}
+        <View style={{ flex: 1, marginLeft: onClose ? 4 : 0 }}>
           <Text style={styles.title}>Negotiation</Text>
           <Text style={styles.subtitle}>Discuss budget & timeline</Text>
         </View>
-        <TouchableOpacity onPress={onRefresh} style={styles.refreshButton}>
-          <Ionicons name="refresh-outline" size={20} color="#6D28D9" />
-        </TouchableOpacity>
       </View>
 
       {/* Top Offer Section */}
@@ -205,14 +208,6 @@ const NegotiationPanel = ({
             />
           </View>
         ) : null}
-        <TouchableOpacity
-          style={[styles.updateButton, { borderColor: topColor }]}
-          disabled={true}
-        >
-          <Text style={[styles.updateButtonText, { color: topColor }]}>
-            Update Offer
-          </Text>
-        </TouchableOpacity>
       </View>
 
       {/* VS Divider */}
@@ -409,8 +404,17 @@ const getStyles = (currentTheme, isDark) => StyleSheet.create({
     color: currentTheme.subText || "#64748B",
     marginTop: 1,
   },
+  backButton: {
+    padding: 2,
+    marginRight: 4,
+    justifyContent: "center",
+  },
   refreshButton: {
     padding: 2,
+  },
+  closeButton: {
+    padding: 2,
+    marginLeft: 6,
   },
   offerBlock: {
     marginVertical: 2,

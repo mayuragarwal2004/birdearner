@@ -47,9 +47,9 @@ const getStyles = (currentTheme) => StyleSheet.create({
   actionButtons: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 10,
+    marginBottom: 6,
     gap: 10,
-    marginTop: 25,
+    marginTop: 8,
     paddingHorizontal: 15,
   },
   acceptButton: {

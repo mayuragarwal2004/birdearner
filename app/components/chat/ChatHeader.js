@@ -15,7 +15,9 @@ const ChatHeader = ({
   showMenu,
   setShowMenu,
   onMenuAction,
-  menuOptions
+  menuOptions,
+  showNegotiationBtn = false,
+  onToggleNegotiation = null,
 }) => {
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
@@ -79,13 +81,28 @@ const getStyles = (currentTheme) => StyleSheet.create({
     alignItems: "center",
     flex: 1,
     flexDirection: "column",
-    marginHorizontal: 16,
+    marginHorizontal: 12,
   },
   username: {
     fontSize: 20,
     fontWeight: "600",
     color: currentTheme.primary || "#5c2d91",
     paddingVertical: 2,
+  },
+  negotiationHeaderBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#7B2CFF',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 14,
+    marginRight: 8,
+    gap: 4,
+  },
+  negotiationHeaderBtnText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
   },
   assignedBanner: {
     backgroundColor: "#FFE0E0",
