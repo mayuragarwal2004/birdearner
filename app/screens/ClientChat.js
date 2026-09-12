@@ -27,7 +27,7 @@ const getStyles = (currentTheme, isKeyboardVisible) =>
     container: {
       flex: 1,
       backgroundColor: currentTheme.background || "#F1F5F9",
-      paddingBottom: isKeyboardVisible ? 0 : (Platform.OS === "ios" ? 85 : 70), // Dynamic padding based on keyboard visibility
+      paddingBottom: 0,
     },
     negotiationBarTrigger: {
       flexDirection: 'row',
@@ -1287,7 +1287,8 @@ const ClientChat = ({ route, navigation }) => {
           {renderDeadlineSection()}
 
           <FlatList
-            data={messages}
+            inverted={Boolean(messages && messages.length > 0)}
+            data={[...(messages || [])].reverse()}
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
               <MessageItem

@@ -18,10 +18,7 @@ const HomeStack = () => (
     <Stack.Screen
       name="Inbox"
       getComponent={() => require("../screens/Inbox").default}
-      options={{
-        headerShown: false,
-        tabBarStyle: { display: "block" },
-      }}
+      options={{ headerShown: false }}
     />
     <Stack.Screen
       name="FreelancerChatList"

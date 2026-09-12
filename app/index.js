@@ -117,14 +117,12 @@ const linking = {
   ],
   config: {
     screens: {
-      // Direct access to ProfileScreen (view another user's profile)
       ProfileScreen: {
         path: "/profile/:userId",
         parse: {
           userId: (userId) => userId,
         },
       },
-      // Password Reset
       ResetPassword: {
         path: "/auth/reset-password/:token",
         parse: {
@@ -136,21 +134,17 @@ const linking = {
 };
 
 export default function MainApp() {
-  // Add debugging for deep links
   React.useEffect(() => {
     const handleDeepLink = (url) => {
-      // Handle deep link navigation logic here
       // TODO: Implement proper deep link routing
     };
 
-    // Handle initial URL if app was opened via deep link
     Linking.getInitialURL().then((url) => {
       if (url) {
         handleDeepLink(url);
       }
     });
 
-    // Handle deep links while app is running
     const subscription = Linking.addEventListener("url", ({ url }) => {
       handleDeepLink(url);
     });
@@ -178,20 +172,16 @@ export default function MainApp() {
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
 
-// MainTabs Component - Now used only after profile setup is complete
 function MainTabs() {
   const { userData } = useAuth();
   const { isKeyboardVisible } = useKeyboard();
   const isClient = userData?.role === "CLIENT";
   const navigation = useNavigation();
 
-  // Get the current route to conditionally hide tab bar
   const currentRoute = useNavigationState((state) => {
     if (!state) return null;
-    // Get the focused route from the tab navigator
     const tabState = state.routes[state.index];
     if (!tabState) return null;
-    // For nested stacks, traverse to find the innermost route
     let current = tabState;
     while (current.state) {
       const innerState = current.state;
@@ -201,8 +191,36 @@ function MainTabs() {
     return current?.name;
   });
 
-  // Hide tab bar for JobDetails and JobPostedSuccess screens
-  const hideTabBar = currentRoute === "JobDetails" || currentRoute === "JobPostedSuccess";
+  const clientAllowedRoutes = [
+    "Home",
+    "HomeScreen",
+    "ClientHome",
+    "Job Posted",
+    "JobsPosted",
+    "JobsPostedScreen",
+    "Job Requirements",
+    "JobRequirements",
+    "AI Bird",
+    "Bird",
+    "BirdAI",
+    "Settings",
+  ];
+
+  const freelancerAllowedRoutes = [
+    "Home",
+    "HomeScreen",
+    "Leaderboard",
+    "LeaderboardScreen",
+    "Marketplace",
+    "MarketplaceScreen",
+    "AI Bird",
+    "Bird",
+    "BirdAI",
+    "Settings",
+  ];
+
+  const allowedRoutes = isClient ? clientAllowedRoutes : freelancerAllowedRoutes;
+  const hideTabBar = Boolean(currentRoute && !allowedRoutes.includes(currentRoute));
 
   const tabScreens = isClient
     ? [
@@ -263,48 +281,37 @@ function MainTabs() {
   );
 }
 
-// Role-based Dashboard Router - Routes to appropriate dashboard
 function RoleDashboardRouter() {
   const { userData } = useAuth();
 
   if (!userData) {
-    return null; // This shouldn't happen in authenticated state
+    return null;
   }
 
-  // Route directly to role-specific dashboard
-  // The dashboard will handle profile setup internally
   const DashboardStack =
     userData.role === "CLIENT" ? getClientHomeStack() : getHomeStack();
   return <DashboardStack />;
 }
 
-// Function to render tab icons
 function renderTabIcon(route, focused) {
   const activeColor = "#FFFFFF";
   const inactiveColor = "#C4B5FD";
 
-  // Material Icons mapping
   const materialIcons = {};
 
-  // Lucide icons mapping
   const lucideIcons = {
     "Job Posted": Briefcase,
-    "Job Posted": ClipboardPen,
     "Job Requirements": Plus,
     Home: House,
     "Leaderboard": ChartColumn,
   };
 
-  // Custom SVG icons mapping
   const customSvgIcons = {
-    // Enable these custom SVGs - you can uncomment others as needed
     "AI Bird": BirdEarnerSvg,
     Profile: UserSvg,
     Settings: UserSvg,
     Marketplace: MarketplaceSvg,
   };
-
-  const materialIcon = materialIcons[route.name];
   const lucideIcon = lucideIcons[route.name];
   const customSvgIcon = customSvgIcons[route.name];
 
