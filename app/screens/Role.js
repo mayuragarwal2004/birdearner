@@ -51,7 +51,7 @@ const Role = ({ navigation }) => {
                 style={styles.clientImage}
               />
             </View>
-            <Text style={styles.roleText}>Client</Text>
+            <Text style={styles.clientRoleText}>Client</Text>
           </TouchableOpacity>
 
           {/* Freelancer Option */}
@@ -66,7 +66,7 @@ const Role = ({ navigation }) => {
                 style={styles.freelancerImage}
               />
             </View>
-            <Text style={styles.roleText}>Freelancer</Text>
+            <Text style={styles.freelancerRoleText}>Freelancer</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -166,7 +166,14 @@ const styles = StyleSheet.create({
     resizeMode: "cover",
     transform: [{ scale: 1.28 }],
   },
-  roleText: {
+  clientRoleText: {
+    fontSize: 22,
+    fontWeight: "bold",
+    color: "#FFFFFF",
+    marginTop: 20,
+    textAlign: "center",
+  },
+  freelancerRoleText: {
     fontSize: 22,
     fontWeight: "bold",
     color: "#000000",
