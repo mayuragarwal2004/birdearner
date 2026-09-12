@@ -1354,53 +1354,53 @@ const ClientChat = ({ route, navigation }) => {
             isUploading={isUploading}
             uploadProgress={uploadProgress}
           />
-        </View>
 
-        {isNegotiationOpen && (
-          <View style={styles.drawerOverlay}>
-            <TouchableOpacity
-              style={styles.drawerBackdrop}
-              activeOpacity={1}
-              onPress={() => setIsNegotiationOpen(false)}
-            />
-            <View style={styles.drawerContainer}>
+          {isNegotiationOpen && (
+            <View style={styles.drawerOverlay}>
               <TouchableOpacity
-                style={styles.drawerToggleHandle}
+                style={styles.drawerBackdrop}
+                activeOpacity={1}
                 onPress={() => setIsNegotiationOpen(false)}
-                activeOpacity={0.85}
-              >
-                <Ionicons name="chevron-back" size={18} color="#FFFFFF" />
-              </TouchableOpacity>
-
-              <NegotiationPanel
-                role="client"
-                otherPartyName={
-                  route.params.freelancer?.user?.fullName ||
-                  route.params.freelancer?.fullName ||
-                  route.params.freelancer?.name ||
-                  "Freelancer"
-                }
-                clientOffer={clientOffer}
-                freelancerOffer={freelancerOffer}
-                agreedAmount={agreedAmount}
-                clientDays={clientDays}
-                freelancerDays={freelancerDays}
-                agreedDays={agreedDays}
-                isNegotiable={isNegotiable}
-                onUpdateOffer={updateOffer}
-                onRefresh={() => {
-                  mutateThread?.();
-                  mutateMessages?.();
-                }}
-                onViewProposalDetails={() => {
-                  navigation.navigate("JobDetailsChat", { jobId: job?.id || route.params.jobId });
-                }}
-                jobId={job?.id || route.params.jobId}
-                onClose={() => setIsNegotiationOpen(false)}
               />
+              <View style={styles.drawerContainer}>
+                <TouchableOpacity
+                  style={styles.drawerToggleHandle}
+                  onPress={() => setIsNegotiationOpen(false)}
+                  activeOpacity={0.85}
+                >
+                  <Ionicons name="chevron-back" size={18} color="#FFFFFF" />
+                </TouchableOpacity>
+
+                <NegotiationPanel
+                  role="client"
+                  otherPartyName={
+                    route.params.freelancer?.user?.fullName ||
+                    route.params.freelancer?.fullName ||
+                    route.params.freelancer?.name ||
+                    "Freelancer"
+                  }
+                  clientOffer={clientOffer}
+                  freelancerOffer={freelancerOffer}
+                  agreedAmount={agreedAmount}
+                  clientDays={clientDays}
+                  freelancerDays={freelancerDays}
+                  agreedDays={agreedDays}
+                  isNegotiable={isNegotiable}
+                  onUpdateOffer={updateOffer}
+                  onRefresh={() => {
+                    mutateThread?.();
+                    mutateMessages?.();
+                  }}
+                  onViewProposalDetails={() => {
+                    navigation.navigate("JobDetailsChat", { jobId: job?.id || route.params.jobId });
+                  }}
+                  jobId={job?.id || route.params.jobId}
+                  onClose={() => setIsNegotiationOpen(false)}
+                />
+              </View>
             </View>
-          </View>
-        )}
+          )}
+        </View>
 
         <WarningModal
           visible={modalVisible}
