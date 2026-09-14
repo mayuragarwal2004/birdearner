@@ -94,8 +94,8 @@ const EmailUpdateScreen = ({ navigation }) => {
     }
 
     // Server/API specific errors
-    if (error.message.includes("Email already in use") || error.message.includes("email_exists")) {
-      showToast("error", "Email Unavailable", "This email is already registered. Please try another.");
+    if (error.message.includes("already in use") || error.message.includes("Email already") || error.message.includes("email_exists") || error.message.includes("already registered")) {
+      showToast("error", "Email Already Registered", "This email address is already in use by another account.");
       return;
     }
 

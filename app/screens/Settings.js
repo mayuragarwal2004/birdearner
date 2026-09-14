@@ -47,10 +47,10 @@ const getEmail = (userData, userProfile) =>
   userData?.email || userProfile?.email || userProfile?.user?.email || "Email not added";
 
 const getPhone = (userData, userProfile) =>
-  userProfile?.mobileNumber ||
+  userData?.mobile ||
+  userProfile?.user?.mobile ||
   userProfile?.phone ||
   userProfile?.phoneNumber ||
-  userData?.mobile ||
   userData?.phone ||
   userData?.phoneNumber ||
   "Phone not added";
@@ -198,6 +198,11 @@ const SettingsScreen = ({ navigation }) => {
                 route: "ManageAddresses",
               },
             ]),
+        {
+          label: "Edit Account Credentials",
+          icon: "key-outline",
+          route: "AccountDetailsUpdate",
+        },
         {
           label: "Security",
           icon: "shield-checkmark-outline",

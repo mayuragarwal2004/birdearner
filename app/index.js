@@ -77,6 +77,7 @@ const getPrivacyPolicyScreen = () => require("./screens/PrivacyPolicyScreen").de
 const getClientSignupScreen = () => require("./screens/ClientSignup").default;
 const getFreelancerSignupScreen = () => require("./screens/FreelancerSignup").default;
 const getOtpVerificationScreen = () => require("./screens/OtpVerification").default;
+const getAccountDetailsUpdateScreen = () => require("./screens/AccountDetailsUpdate").default;
 
 // Toast Configuration
 const toastConfig = {
@@ -785,45 +786,45 @@ const styles = StyleSheet.create({
     height: 80,
     width: "90%",
     backgroundColor: "#fff",
-    borderRadius: 10,
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    borderLeftWidth: 5,
-    justifyContent: "center",
+    width: "90%",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 14,
+    borderLeftWidth: 6,
     shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 6,
+    marginHorizontal: 16,
+    marginTop: 10,
   },
   successToast: {
-    borderLeftColor: "#28a745",
-    backgroundColor: "#d4edda",
+    borderLeftColor: "#10B981",
+    backgroundColor: "#ECFDF5",
   },
   errorToast: {
-    borderLeftColor: "#dc3545",
-    backgroundColor: "#f8d7da",
+    borderLeftColor: "#F43F5E",
+    backgroundColor: "#FFF1F2",
   },
   warningToast: {
-    borderLeftColor: "#ffc107",
-    backgroundColor: "#fff3cd",
+    borderLeftColor: "#F59E0B",
+    backgroundColor: "#FEF3C7",
   },
   infoToast: {
-    borderLeftColor: "#17a2b8",
-    backgroundColor: "#d1ecf1",
+    borderLeftColor: "#7B2CFF",
+    backgroundColor: "#F3E8FF",
   },
   toastTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#333",
-    marginBottom: 5,
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#0F172A",
+    marginBottom: 2,
   },
   toastMessage: {
-    fontSize: 14,
-    color: "#666",
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#334155",
     lineHeight: 18,
   },
 });

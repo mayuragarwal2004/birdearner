@@ -3,7 +3,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 
-const DEV_API_BASE_URL = "https://plaza-allow-yeah-observer.trycloudflare.com/api";
+const DEV_API_BASE_URL = "https://ltd-organ-fold-notify.trycloudflare.com/api";
 // const DEV_API_BASE_URL = "https://api.birdearner.com/api";
 
 const PROD_API_BASE_URL = "https://api.birdearner.com/api";
@@ -233,15 +233,17 @@ class ApiService {
           throw authError;
         }
 
-        throw new Error(
+        const apiErr = new Error(
           data.message || `HTTP error! status: ${response.status}`
         );
+        apiErr.status = response.status;
+        throw apiErr;
       }
 
       return data;
     } catch (error) {
-      // Avoid noisy duplicate logs once session expiry is already being handled
-      if (!error?.isAuthError) {
+      // Suppress noisy console.error terminal logs for expected client/validation errors (HTTP 4xx status)
+      if (!error?.isAuthError && (!error?.status || error.status >= 500)) {
         console.error(`API Error for ${endpoint}:`, error);
       }
       throw error;
@@ -498,6 +500,20 @@ class ApiService {
     }
 
     throw new Error(response.message || "Email update failed");
+  }
+
+  // Update mobile
+  async updateMobile(newMobile, password) {
+    const response = await this.makeRequest("/auth/update-mobile", {
+      method: "PUT",
+      body: JSON.stringify({ newMobile, password }),
+    });
+
+    if (response.success) {
+      return response;
+    }
+
+    throw new Error(response.message || "Mobile number update failed");
   }
 
   // User endpoints

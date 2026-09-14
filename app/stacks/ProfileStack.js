@@ -135,6 +135,11 @@ const ProfileStack = ({ initialRouteName = "MyProfile" }) => (
       getComponent={() => require("../screens/FreelancerSignup").default}
       options={{ headerShown: false }}
     />
+    <Stack.Screen
+      name="AccountDetailsUpdate"
+      getComponent={() => require("../screens/AccountDetailsUpdate").default}
+      options={{ headerShown: false }}
+    />
   </Stack.Navigator>
 );
 

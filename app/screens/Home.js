@@ -64,7 +64,7 @@ const getFreelancerProfileCompletion = (userData, userProfile) => {
   if (userData?.email) completed += 1;
 
   // 3. Phone
-  if (userData?.mobile || profile?.mobileNumber) completed += 1;
+  if (userData?.mobile || profile?.user?.mobile || profile?.mobile) completed += 1;
 
   // 4. Profile photo
   if (profile?.profilePhoto || userData?.profilePhoto || profile?.coverPhoto) completed += 1;
