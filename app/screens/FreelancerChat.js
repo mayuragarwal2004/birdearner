@@ -709,6 +709,36 @@ const FreelancerChat = ({ route, navigation }) => {
     }
   };
 
+  const handleBlock = async () => {
+    try {
+      const api = ApiService;
+      await api.init();
+      const res = await api.makeRequest(`/chats/block`, {
+        method: "POST",
+        body: JSON.stringify({
+          threadId: thread.id,
+          userId: userData.id,
+          blockedUserId: route.params.client?.user?.id || route.params.client?.userId || route.params.client?.id,
+        }),
+      });
+
+      if (res.success) {
+        Toast.show({
+          type: "success",
+          text1: "Success",
+          text2: "User blocked successfully",
+        });
+        navigation.goBack();
+      }
+    } catch (err) {
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: "Failed to block user",
+      });
+    }
+  };
+
   const handleMenuAction = (action) => {
     switch (action) {
       case "Negotiation & Offers":
