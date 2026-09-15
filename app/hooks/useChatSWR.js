@@ -35,10 +35,12 @@ export const useChatThread = (jobId, freelancerId, clientId) => {
         return response.data;
       } catch (err) {
         console.error('Failed to fetch thread:', err);
+        const errorText = err?.message || err?.data?.message || err?.response?.data?.message || "Cannot apply for booking at this time";
         Toast.show({
           type: "error",
-          text1: "Error",
-          text2: "Failed to load chat thread"
+          text1: "Booking Access Restricted",
+          text2: errorText,
+          visibilityTime: 4500,
         });
         throw err;
       }
@@ -476,7 +478,7 @@ export const useChatData = (role, params) => {
         return 'BLOCKED';
       }
       const jobSt = job?.jobStatus?.toUpperCase();
-      if (["CANCELLED", "CANCELLED_BY_CLIENT", "CANCELLED_BY_FREELANCER", "CANCELLED_SCOPE_MISMATCH", "COMPLETED"].includes(jobSt)) {
+      if (["CANCELLED", "CANCELLED_BY_CLIENT", "CANCELLED_BY_FREELANCER", "CANCELLED_SCOPE_MISMATCH", "DEADLINE_EXPIRED", "COMPLETED"].includes(jobSt)) {
         return jobSt;
       }
       return thread?.status || 'PENDING';

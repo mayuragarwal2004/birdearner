@@ -20,6 +20,8 @@ import { useAuth } from "../context/NewAuthContext";
 import { useTheme } from "../context/ThemeContext";
 import apiService from "../lib/apiService";
 
+import Toast from "react-native-toast-message";
+
 const JobDescriptionScreen = ({ route, navigation }) => {
   const { job } = route.params || {};
   const { userData, refreshUserData, userProfile } = useAuth();
@@ -49,6 +51,24 @@ const JobDescriptionScreen = ({ route, navigation }) => {
 
       // Refresh user data to get the latest balance
       await refreshUserData();
+
+      // Check if freelancer is under 24-hour cooldown lock
+      if (
+        userData?.role === "FREELANCER" &&
+        userProfile?.cooldownExpiresAt &&
+        new Date(userProfile.cooldownExpiresAt) > new Date()
+      ) {
+        const hoursRemaining = Math.ceil(
+          (new Date(userProfile.cooldownExpiresAt).getTime() - Date.now()) / (1000 * 60 * 60)
+        );
+        Toast.show({
+          type: "error",
+          text1: "Booking Access Locked",
+          text2: `Cannot apply for 24 hours due to a recent cancellation or missed deadline (${hoursRemaining}h remaining).`,
+          visibilityTime: 4000,
+        });
+        return;
+      }
 
       // Check if user is a freelancer and has a negative balance
       if (

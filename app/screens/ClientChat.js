@@ -1072,13 +1072,12 @@ const ClientChat = ({ route, navigation }) => {
       return null;
     }
 
-    const isCancelled = ["CANCELLED", "CANCELLED_BY_CLIENT", "CANCELLED_BY_FREELANCER", "CANCELLED_SCOPE_MISMATCH"].includes(job?.jobStatus);
+    const isCancelled = ["CANCELLED", "CANCELLED_BY_CLIENT", "CANCELLED_BY_FREELANCER", "CANCELLED_SCOPE_MISMATCH", "DEADLINE_EXPIRED"].includes(job?.jobStatus);
     const pType = (job?.projectType || job?.jobType || '').toLowerCase();
     const isOnSite = pType.includes('on-site') || (!pType.includes('remote') && job?.location?.toLowerCase() !== 'remote');
     const activeStatuses = ["ACCEPTED", "IN_PROGRESS", "CONFIRMED", "FREELANCER_TRAVELLING", "ARRIVED", "JOB_STARTED", "WORK_SUBMITTED"];
     const isActive = activeStatuses.includes(chatStatus) || activeStatuses.includes(job?.jobStatus?.toUpperCase());
 
-    const isDeadlineOver = job?.deadlineDate && new Date(job.deadlineDate) < new Date();
     const isCompleted = job?.jobStatus === "COMPLETED";
 
     return (
@@ -1094,21 +1093,6 @@ const ClientChat = ({ route, navigation }) => {
               timeContainer: styles.timeContainer,
             }}
           />
-        ) : isDeadlineOver && !isCompleted ? (
-          <View style={styles.timeBoxCon}>
-            <View style={styles.penaltyText}>
-              <Text style={styles.penaltyTextContent}>Deadline has passed</Text>
-            </View>
-            <TouchableOpacity
-              style={[styles.conColor, submittingProjComp && { opacity: 0.6 }]}
-              onPress={handleConfirmProjComp}
-              disabled={submittingProjComp}
-            >
-              <Text style={styles.applyButtonText}>
-                {submittingProjComp ? "Processing..." : "Confirm Project Completion"}
-              </Text>
-            </TouchableOpacity>
-          </View>
         ) : isCompleted ? (
           <View style={styles.conColorc}>
             <Text style={styles.completedText}>Project Completed ✓</Text>

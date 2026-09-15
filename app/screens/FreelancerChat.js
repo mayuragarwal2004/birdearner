@@ -862,7 +862,7 @@ const FreelancerChat = ({ route, navigation }) => {
           {Boolean(job?.assignedFreelancerId) && (
             <View style={styles.deadlineContainer}>
               <View style={styles.deadlineTimerContainer}>
-                {["CANCELLED", "CANCELLED_BY_CLIENT", "CANCELLED_BY_FREELANCER", "CANCELLED_SCOPE_MISMATCH"].includes(job?.jobStatus) ? (
+                {["CANCELLED", "CANCELLED_BY_CLIENT", "CANCELLED_BY_FREELANCER", "CANCELLED_SCOPE_MISMATCH", "DEADLINE_EXPIRED"].includes(job?.jobStatus) ? (
                   <DeadlineTimer
                     jobCancelled={true}
                     style={{
