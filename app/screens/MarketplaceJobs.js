@@ -24,17 +24,15 @@ import {
 } from "phosphor-react-native";
 
 import { useTheme } from "../context/ThemeContext";
-import { useMarketplaceJobs } from "../hooks/marketplace";
+import { useMarketplaceJobs, useUserServices } from "../hooks/marketplace";
 import { useAuth } from "../context/NewAuthContext";
-
-// Module-level cache: survives all navigations, re-renders, and remounts
-let _cachedFreelancerServices = null;
 
 const MarketplaceJobs = ({ navigation, route }) => {
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
   const styles = getStyles(currentTheme);
   const { userData } = useAuth();
+  const { userServices } = useUserServices();
 
   const {
     jobs,
@@ -60,17 +58,6 @@ const MarketplaceJobs = ({ navigation, route }) => {
   const [tempSortBy, setTempSortBy] = useState("none");
   const [activeCategory, setActiveCategory] = useState("sort");
 
-  // Capture freelancer services into module-level cache (once, permanently)
-  if (_cachedFreelancerServices === null) {
-    if (routeUserServices && Array.isArray(routeUserServices)) {
-      _cachedFreelancerServices = routeUserServices
-        .filter((s) => s && s.id && s.name)
-        .map((s) => ({ id: s.id, name: s.name }));
-    } else {
-      _cachedFreelancerServices = [];
-    }
-  }
-
   // Fetch jobs when screen mounts
   useEffect(() => {
     fetchJobs(
@@ -84,12 +71,38 @@ const MarketplaceJobs = ({ navigation, route }) => {
     );
   }, []);
 
+  // Dynamically load all of the freelancer's own services for filter section
+  const availableServices = useMemo(() => {
+    const map = new Map();
+
+    const list = Array.isArray(userServices) && userServices.length > 0 ? userServices : (routeUserServices || []);
+    list.forEach((s) => {
+      if (s && s.id && s.name) {
+        map.set(String(s.id), { id: String(s.id), name: s.name });
+      }
+    });
+
+    // Fallback if freelancer has no specific services selected
+    if (map.size === 0) {
+      const rawJobs = getAllJobs();
+      rawJobs.forEach((job) => {
+        if (job.serviceId && job.serviceName) {
+          map.set(String(job.serviceId), { id: String(job.serviceId), name: job.serviceName });
+        } else if (job.serviceName) {
+          map.set(String(job.serviceName), { id: String(job.serviceName), name: job.serviceName });
+        }
+      });
+    }
+
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [userServices, routeUserServices, getAllJobs]);
+
   // Freelancer service IDs for pre-filtering
   const freelancerServiceIds = useMemo(() => {
-    return (_cachedFreelancerServices || []).map((s) => s.id);
-  }, []);
+    return availableServices.map((s) => s.id);
+  }, [availableServices]);
 
-  // Pre-filter: only show jobs matching the freelancer's own services
+  // Pre-filter: show jobs matching the freelancer's own services
   const allJobs = useMemo(() => {
     const rawJobs = getAllJobs();
     if (freelancerServiceIds.length === 0) return rawJobs;
@@ -97,13 +110,6 @@ const MarketplaceJobs = ({ navigation, route }) => {
       (job) => job.serviceId && freelancerServiceIds.includes(job.serviceId)
     );
   }, [getAllJobs, freelancerServiceIds]);
-
-  // Use only freelancer's own services for filtering
-  const availableServices = useMemo(() => {
-    return [...(_cachedFreelancerServices || [])].sort((a, b) =>
-      a.name.localeCompare(b.name)
-    );
-  }, []);
 
   // Count jobs per service for badge display
   const serviceJobCounts = useMemo(() => {

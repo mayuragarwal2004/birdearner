@@ -323,6 +323,22 @@ const getStyles = (currentTheme, isKeyboardVisible) =>
       flex: 1,
       lineHeight: 13,
     },
+    blockedBanner: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: "#FEF2F2",
+      paddingVertical: 14,
+      paddingHorizontal: 16,
+      borderTopWidth: 1,
+      borderColor: "#FCA5A5",
+    },
+    blockedBannerText: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: "#DC2626",
+      textAlign: "center",
+    },
     limit: {
       backgroundColor: currentTheme.surface || "#FFFFFF",
       marginHorizontal: 16,
@@ -511,6 +527,7 @@ const ClientChat = ({ route, navigation }) => {
   const [reviewMessageId, setReviewMessageId] = useState(null);
   const [submittingReview, setSubmittingReview] = useState(false);
   const [showOtpModal, setShowOtpModal] = useState(false);
+  const [submittingProjComp, setSubmittingProjComp] = useState(false);
 
   const api = ApiService;
 
@@ -755,9 +772,9 @@ const ClientChat = ({ route, navigation }) => {
       const res = await api.makeRequest(`/chats/block`, {
         method: "POST",
         body: JSON.stringify({
-          threadId: thread.id,
+          threadId: thread?.id,
           userId: userData.id,
-          blockedUserId: route.params.freelancer.user.id,
+          blockedUserId: route.params?.freelancer?.user?.id || route.params?.freelancer?.userId || route.params?.freelancer?.id,
         }),
       });
 
@@ -767,13 +784,14 @@ const ClientChat = ({ route, navigation }) => {
           text1: "Success",
           text2: "User blocked successfully",
         });
-        navigation.goBack();
+        await mutateThread?.();
       }
     } catch (err) {
+      const isAlready = err.message?.toLowerCase().includes("already blocked");
       Toast.show({
-        type: "error",
-        text1: "Error",
-        text2: "Failed to block user",
+        type: isAlready ? "info" : "error",
+        text1: isAlready ? "Already Blocked" : "Error",
+        text2: err.message || "Failed to block user",
       });
     }
   };
@@ -869,9 +887,10 @@ const ClientChat = ({ route, navigation }) => {
         mutateMessages();
       }
     } catch (err) {
+      const isBlocked = err.message?.toLowerCase().includes("blocked");
       Toast.show({
         type: "error",
-        text1: "Error",
+        text1: isBlocked ? "Cannot Assign Freelancer" : "Error",
         text2: err.message || "Failed to assign freelancer"
       });
     }
@@ -1045,6 +1064,14 @@ const ClientChat = ({ route, navigation }) => {
   };
 
   const renderDeadlineSection = () => {
+    if (!job) return null;
+
+    // Only render deadline, completion, and OTP controls if job is assigned to this freelancer
+    const targetFreelancerId = route.params?.freelancer?.id || route.params?.freelancerId;
+    if (!job?.assignedFreelancerId || (targetFreelancerId && job.assignedFreelancerId !== targetFreelancerId)) {
+      return null;
+    }
+
     const isCancelled = ["CANCELLED", "CANCELLED_BY_CLIENT", "CANCELLED_BY_FREELANCER", "CANCELLED_SCOPE_MISMATCH"].includes(job?.jobStatus);
     const pType = (job?.projectType || job?.jobType || '').toLowerCase();
     const isOnSite = pType.includes('on-site') || (!pType.includes('remote') && job?.location?.toLowerCase() !== 'remote');
@@ -1073,11 +1100,12 @@ const ClientChat = ({ route, navigation }) => {
               <Text style={styles.penaltyTextContent}>Deadline has passed</Text>
             </View>
             <TouchableOpacity
-              style={styles.conColor}
+              style={[styles.conColor, submittingProjComp && { opacity: 0.6 }]}
               onPress={handleConfirmProjComp}
+              disabled={submittingProjComp}
             >
               <Text style={styles.applyButtonText}>
-                Confirm Project Completion
+                {submittingProjComp ? "Processing..." : "Confirm Project Completion"}
               </Text>
             </TouchableOpacity>
           </View>
@@ -1130,17 +1158,12 @@ const ClientChat = ({ route, navigation }) => {
   };
 
   const handleConfirmProjComp = async () => {
+    if (submittingProjComp) return;
+    setSubmittingProjComp(true);
     try {
       await api.init();
 
-      console.log(job?.paymentMethod);
-      console.log(job);
-
-
-
       if (job?.paymentMethod === 'CASH') {
-        console.log("Budget amount", job.budgetAmount);
-        // For cash payments, create special message for payment flow
         const res = await api.makeRequest(`/jobs/${route.params.jobId || route.params.projectId}/complete-cash`, {
           method: "POST",
           body: JSON.stringify({
@@ -1155,13 +1178,11 @@ const ClientChat = ({ route, navigation }) => {
           Toast.show({
             type: "success",
             text1: "Success",
-            text2: "Project completion initiated",
+            text2: res.message || "Project completion initiated",
           });
-          // Refresh messages to show the new payment flow message using SWR
-          mutateMessages(); // This will trigger a refresh
+          mutateMessages();
         }
       } else {
-        // For platform payments, use existing flow
         const res = await api.makeRequest(`/jobs/${route.params.jobId || route.params.projectId}/complete`, {
           method: "PATCH",
           body: JSON.stringify({
@@ -1170,7 +1191,6 @@ const ClientChat = ({ route, navigation }) => {
         });
 
         if (res.success) {
-          // Trigger review request immediately after completion
           try {
             await api.makeRequest('/chats/review-request/client', {
               method: 'POST',
@@ -1188,7 +1208,6 @@ const ClientChat = ({ route, navigation }) => {
             text1: "Success",
             text2: "Project marked as completed",
           });
-          // Refresh to show review request
           mutateMessages();
           mutateJob();
         }
@@ -1197,8 +1216,10 @@ const ClientChat = ({ route, navigation }) => {
       Toast.show({
         type: "error",
         text1: "Error",
-        text2: "Failed to mark project as completed",
+        text2: err.message || "Failed to mark project as completed",
       });
+    } finally {
+      setSubmittingProjComp(false);
     }
   };
 
@@ -1342,18 +1363,27 @@ const ClientChat = ({ route, navigation }) => {
             </View>
           )}
 
-          <ChatInput
-            onSend={handleSendMessage}
-            onFilePick={handleFilePick}
-            onRemoveFile={handleRemoveFile}
-            characterLimit={characterLimit}
-            charactersRemaining={charactersRemaining}
-            onInputChange={setCurrentInputLength}
-            fileInfo={fileInfo}
-            sending={sending}
-            isUploading={isUploading}
-            uploadProgress={uploadProgress}
-          />
+          {chatStatus === "BLOCKED" ? (
+            <View style={styles.blockedBanner}>
+              <Ionicons name="lock-closed-outline" size={18} color="#EF4444" style={{ marginRight: 8 }} />
+              <Text style={styles.blockedBannerText}>
+                This conversation has been blocked. You cannot send messages.
+              </Text>
+            </View>
+          ) : (
+            <ChatInput
+              onSend={handleSendMessage}
+              onFilePick={handleFilePick}
+              onRemoveFile={handleRemoveFile}
+              characterLimit={characterLimit}
+              charactersRemaining={charactersRemaining}
+              onInputChange={setCurrentInputLength}
+              fileInfo={fileInfo}
+              sending={sending}
+              isUploading={isUploading}
+              uploadProgress={uploadProgress}
+            />
+          )}
 
           {isNegotiationOpen && (
             <View style={styles.drawerOverlay}>

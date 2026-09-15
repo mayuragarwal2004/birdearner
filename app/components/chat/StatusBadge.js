@@ -6,6 +6,8 @@ const StatusBadge = ({ status }) => {
     switch (status) {
       case 'ACCEPTED':
         return styles.statusAccepted;
+      case 'BLOCKED':
+        return styles.statusBlocked;
       case 'REJECTED':
       case 'CANCELLED':
       case 'CANCELLED_BY_CLIENT':
@@ -55,6 +57,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#10B981",
   },
   statusRejected: {
+    backgroundColor: "#EF4444",
+  },
+  statusBlocked: {
     backgroundColor: "#EF4444",
   },
   statusCompleted: {

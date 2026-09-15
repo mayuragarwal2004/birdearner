@@ -308,6 +308,22 @@ const getStyles = (currentTheme, isKeyboardVisible) =>
       marginTop: 6,
       fontWeight: '600',
     },
+    blockedBanner: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: "#FEF2F2",
+      paddingVertical: 14,
+      paddingHorizontal: 16,
+      borderTopWidth: 1,
+      borderColor: "#FCA5A5",
+    },
+    blockedBannerText: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: "#DC2626",
+      textAlign: "center",
+    },
     modalOverlay: {
       flex: 1,
       backgroundColor: 'rgba(0, 0, 0, 0.6)',
@@ -716,7 +732,7 @@ const FreelancerChat = ({ route, navigation }) => {
       const res = await api.makeRequest(`/chats/block`, {
         method: "POST",
         body: JSON.stringify({
-          threadId: thread.id,
+          threadId: thread?.id,
           userId: userData.id,
           blockedUserId: route.params.client?.user?.id || route.params.client?.userId || route.params.client?.id,
         }),
@@ -728,13 +744,14 @@ const FreelancerChat = ({ route, navigation }) => {
           text1: "Success",
           text2: "User blocked successfully",
         });
-        navigation.goBack();
+        await mutateThread?.();
       }
     } catch (err) {
+      const isAlready = err.message?.toLowerCase().includes("already blocked");
       Toast.show({
-        type: "error",
-        text1: "Error",
-        text2: "Failed to block user",
+        type: isAlready ? "info" : "error",
+        text1: isAlready ? "Already Blocked" : "Error",
+        text2: err.message || "Failed to block user",
       });
     }
   };
@@ -842,9 +859,7 @@ const FreelancerChat = ({ route, navigation }) => {
             </TouchableOpacity>
           )}
 
-          {(() => {
-            return true;
-          })() && (
+          {Boolean(job?.assignedFreelancerId) && (
             <View style={styles.deadlineContainer}>
               <View style={styles.deadlineTimerContainer}>
                 {["CANCELLED", "CANCELLED_BY_CLIENT", "CANCELLED_BY_FREELANCER", "CANCELLED_SCOPE_MISMATCH"].includes(job?.jobStatus) ? (
@@ -972,18 +987,27 @@ const FreelancerChat = ({ route, navigation }) => {
             </View>
           )}
 
-          <ChatInput
-            onSend={handleSendMessage}
-            onFilePick={handleFilePick}
-            onRemoveFile={handleRemoveFile}
-            characterLimit={characterLimit}
-            charactersRemaining={charactersRemaining}
-            onInputChange={setCurrentInputLength}
-            fileInfo={fileInfo}
-            sending={sending}
-            isUploading={isUploading}
-            uploadProgress={uploadProgress}
-          />
+          {chatStatus === "BLOCKED" ? (
+            <View style={styles.blockedBanner}>
+              <Ionicons name="lock-closed-outline" size={18} color="#EF4444" style={{ marginRight: 8 }} />
+              <Text style={styles.blockedBannerText}>
+                This conversation has been blocked. You cannot send messages.
+              </Text>
+            </View>
+          ) : (
+            <ChatInput
+              onSend={handleSendMessage}
+              onFilePick={handleFilePick}
+              onRemoveFile={handleRemoveFile}
+              characterLimit={characterLimit}
+              charactersRemaining={charactersRemaining}
+              onInputChange={setCurrentInputLength}
+              fileInfo={fileInfo}
+              sending={sending}
+              isUploading={isUploading}
+              uploadProgress={uploadProgress}
+            />
+          )}
 
           {isNegotiationOpen && (
             <View style={styles.drawerOverlay}>

@@ -472,6 +472,9 @@ export const useChatData = (role, params) => {
 
     // Computed values
     chatStatus: (() => {
+      if (thread?.status === 'BLOCKED') {
+        return 'BLOCKED';
+      }
       const jobSt = job?.jobStatus?.toUpperCase();
       if (["CANCELLED", "CANCELLED_BY_CLIENT", "CANCELLED_BY_FREELANCER", "CANCELLED_SCOPE_MISMATCH", "COMPLETED"].includes(jobSt)) {
         return jobSt;
