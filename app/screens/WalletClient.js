@@ -85,16 +85,12 @@ const WalletClientScreen = ({ navigation }) => {
                 ₹{walletData?.totalBalance?.toFixed(2) || "0.00"}
               </Text>
 
-              {walletData?.reservedAmount > 0 && (
-                <Text style={styles.secondaryBalance}>
-                  Reserved: ₹{walletData?.reservedAmount?.toFixed(2)}
-                </Text>
-              )}
-              {walletData?.availableBalance > 0 && (
-                <Text style={[styles.secondaryBalance, { color: "#4CAF50" }]}>
-                  Available: ₹{walletData?.availableBalance?.toFixed(2)}
-                </Text>
-              )}
+              <Text style={styles.secondaryBalance}>
+                Reserved: ₹{walletData?.reservedAmount !== undefined && walletData?.reservedAmount !== null ? Number(walletData.reservedAmount).toFixed(2) : "0.00"}
+              </Text>
+              <Text style={[styles.secondaryBalance, { color: "#4CAF50" }]}>
+                Available: ₹{walletData?.availableBalance !== undefined && walletData?.availableBalance !== null ? Number(walletData.availableBalance).toFixed(2) : "0.00"}
+              </Text>
 
               <TouchableOpacity
                 style={styles.addAmountButton}
