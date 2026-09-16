@@ -151,6 +151,7 @@ const OnSiteOtpModal = ({
       setShowPriceChangeModal(false);
       await fetchLatestJob();
       onJobUpdated?.();
+      onClose?.();
     } catch (err) {
       Alert.alert("Error", err.message || "Failed to submit price change request");
     } finally {
@@ -172,6 +173,7 @@ const OnSiteOtpModal = ({
       }
       await fetchLatestJob();
       onJobUpdated?.();
+      onClose?.();
     } catch (err) {
       if (err.message && err.message.includes("Insufficient wallet balance")) {
         Alert.alert(
@@ -437,8 +439,8 @@ const OnSiteOtpModal = ({
                     </View>
                   )}
 
-                  {/* Request Price Change Button for Freelancer (after OTP verification) */}
-                  {isStarted && !Boolean(jobData?.priceChangeRequested) && !isDisputed && (
+                  {/* Request Price Change Button for Freelancer (after OTP verification - Max 1 per job) */}
+                  {isStarted && !Boolean(jobData?.priceChangeRequested) && !Boolean(jobData?.hasPriceChangeBeenRequested) && !isDisputed && (
                     <TouchableOpacity
                       style={styles.requestPriceChangeBtn}
                       onPress={() => {
@@ -452,6 +454,17 @@ const OnSiteOtpModal = ({
                       <Ionicons name="pricetag-outline" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
                       <Text style={styles.buttonText}>Request Price Change (Scope Mismatch)</Text>
                     </TouchableOpacity>
+                  )}
+
+                  {/* Info Badge if price change request was already raised for this job */}
+                  {isStarted && !Boolean(jobData?.priceChangeRequested) && Boolean(jobData?.hasPriceChangeBeenRequested) && (
+                    <View style={[styles.infoBox, { backgroundColor: "#1E293B", borderColor: "#334155" }]}>
+                      <Ionicons name="information-circle-outline" size={24} color="#94A3B8" />
+                      <Text style={[styles.infoTitle, { color: "#94A3B8", fontSize: 13, marginTop: 4 }]}>Price Change Limit Reached</Text>
+                      <Text style={[styles.infoSubtitle, { color: "#64748B", fontSize: 12, textAlign: "center" }]}>
+                        A price change request has already been submitted for this job (Limit: 1 per job).
+                      </Text>
+                    </View>
                   )}
 
                   {/* Pending Price Request Info Box for Freelancer */}

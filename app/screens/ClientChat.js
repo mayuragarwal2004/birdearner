@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { View, StyleSheet, FlatList, Text, TouchableOpacity, Modal, Alert, Platform, Keyboard } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
 import * as DocumentPicker from 'expo-document-picker';
@@ -562,6 +563,14 @@ const ClientChat = ({ route, navigation }) => {
     mutateThread,
   } = useChatData("client", route.params);
 
+  useFocusEffect(
+    useCallback(() => {
+      mutateJob?.();
+      mutateMessages?.();
+      mutateThread?.();
+    }, [mutateJob, mutateMessages, mutateThread])
+  );
+
   // Safety guard for when user logs out but screen is still in transition/stack
   if (!userData) {
     return (
@@ -1068,6 +1077,12 @@ const ClientChat = ({ route, navigation }) => {
     }
   };
 
+  useEffect(() => {
+    if (job?.priceChangeRequested) {
+      setShowOtpModal(true);
+    }
+  }, [job?.priceChangeRequested]);
+
   const renderDeadlineSection = () => {
     if (!job) return null;
 
@@ -1120,26 +1135,39 @@ const ClientChat = ({ route, navigation }) => {
           </View>
         )}
 
-        {/* On-Site Job: Show OTP Button for Client below deadline timer */}
+        {/* On-Site Job / Price Change: Show OTP / Price Change Review Button for Client below deadline timer */}
         {isOnSite && !isCancelled && (
           <TouchableOpacity
             style={{
-              backgroundColor: "#111827",
-              paddingVertical: 6,
-              paddingHorizontal: 12,
-              borderRadius: 8,
+              backgroundColor: job?.priceChangeRequested ? "#F59E0B" : "#111827",
+              paddingVertical: 8,
+              paddingHorizontal: 14,
+              borderRadius: 10,
               flexDirection: "row",
               alignItems: "center",
               justifyContent: "center",
-              marginTop: 4,
+              marginTop: 6,
               borderWidth: 1,
-              borderColor: "#374151",
+              borderColor: job?.priceChangeRequested ? "#F59E0B" : "#374151",
             }}
             onPress={() => setShowOtpModal(true)}
             activeOpacity={0.8}
           >
-            <Ionicons name="key-outline" size={14} color="#F59E0B" style={{ marginRight: 6 }} />
-            <Text style={{ color: "#FFFFFF", fontWeight: "700", fontSize: 12 }}>Show OTP</Text>
+            <Ionicons
+              name={job?.priceChangeRequested ? "warning" : "key-outline"}
+              size={16}
+              color={job?.priceChangeRequested ? "#0F172A" : "#F59E0B"}
+              style={{ marginRight: 6 }}
+            />
+            <Text
+              style={{
+                color: job?.priceChangeRequested ? "#0F172A" : "#FFFFFF",
+                fontWeight: "800",
+                fontSize: 12,
+              }}
+            >
+              {job?.priceChangeRequested ? "⚠️ Review Price Request" : "Show OTP"}
+            </Text>
           </TouchableOpacity>
         )}
       </View>
@@ -1302,6 +1330,52 @@ const ClientChat = ({ route, navigation }) => {
               activeOpacity={0.85}
             >
               <Ionicons name="menu" size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+          )}
+
+          {/* PRICE CHANGE REQUEST ALERT BANNER FOR CLIENT */}
+          {Boolean(job?.priceChangeRequested) && (
+            <TouchableOpacity
+              style={{
+                backgroundColor: "#1E1B4B",
+                borderWidth: 1.5,
+                borderColor: "#F59E0B",
+                borderRadius: 14,
+                padding: 14,
+                marginHorizontal: 12,
+                marginTop: 8,
+                marginBottom: 8,
+                elevation: 5,
+              }}
+              onPress={() => setShowOtpModal(true)}
+              activeOpacity={0.85}
+            >
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <Ionicons name="warning" size={20} color="#F59E0B" />
+                  <Text style={{ color: "#F59E0B", fontWeight: "800", fontSize: 14, letterSpacing: 0.3 }}>
+                    PRICE CHANGE REQUESTED
+                  </Text>
+                </View>
+                <View style={{ backgroundColor: "#F59E0B", paddingVertical: 4, paddingHorizontal: 10, borderRadius: 6 }}>
+                  <Text style={{ color: "#0F172A", fontWeight: "800", fontSize: 11 }}>ACTION REQUIRED</Text>
+                </View>
+              </View>
+
+              <Text style={{ color: "#E2E8F0", fontSize: 13, lineHeight: 18, marginBottom: 8 }}>
+                Freelancer requested to update booking amount from <Text style={{ textDecorationLine: "line-through", color: "#94A3B8" }}>₹{job.budgetAmount}</Text> to <Text style={{ fontWeight: "800", color: "#38BDF8" }}>₹{job.priceChangeRequested}</Text>.
+              </Text>
+
+              {Boolean(job?.priceChangeReason) && (
+                <View style={{ backgroundColor: "#0F172A", padding: 8, borderRadius: 8, marginBottom: 10 }}>
+                  <Text style={{ color: "#94A3B8", fontSize: 11, fontWeight: "700", marginBottom: 2 }}>Reason:</Text>
+                  <Text style={{ color: "#F1F5F9", fontSize: 12 }} numberOfLines={2}>{job.priceChangeReason}</Text>
+                </View>
+              )}
+
+              <View style={{ backgroundColor: "#22C55E", paddingVertical: 10, borderRadius: 10, alignItems: "center", justifyContent: "center" }}>
+                <Text style={{ color: "#FFFFFF", fontWeight: "800", fontSize: 13 }}>Tap to Review (Accept / Cancel)</Text>
+              </View>
             </TouchableOpacity>
           )}
 

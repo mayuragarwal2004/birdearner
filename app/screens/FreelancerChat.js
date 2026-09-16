@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { View, StyleSheet, FlatList, Text, TouchableOpacity, Modal, Alert, Platform, Keyboard } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useFocusEffect } from "@react-navigation/native";
 import Toast from "react-native-toast-message";
 import * as DocumentPicker from 'expo-document-picker';
 import { useTheme } from "../context/ThemeContext";
@@ -488,6 +489,14 @@ const FreelancerChat = ({ route, navigation }) => {
     mutateThread,
   } = useChatData("freelancer", route.params);
 
+  useFocusEffect(
+    useCallback(() => {
+      mutateJob?.();
+      mutateMessages?.();
+      mutateThread?.();
+    }, [mutateJob, mutateMessages, mutateThread])
+  );
+
   // Safety guard for when user logs out but screen is still in transition/stack
   if (!userData) {
     return (
@@ -873,6 +882,34 @@ const FreelancerChat = ({ route, navigation }) => {
               activeOpacity={0.85}
             >
               <Ionicons name="menu" size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+          )}
+
+          {/* PENDING PRICE CHANGE REQUEST BANNER FOR FREELANCER */}
+          {Boolean(job?.priceChangeRequested) && (
+            <TouchableOpacity
+              style={{
+                backgroundColor: "#1E1B4B",
+                borderWidth: 1,
+                borderColor: "#F59E0B",
+                borderRadius: 12,
+                padding: 12,
+                marginHorizontal: 12,
+                marginTop: 8,
+                marginBottom: 8,
+              }}
+              onPress={() => setShowOtpModal(true)}
+              activeOpacity={0.85}
+            >
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 2 }}>
+                <Ionicons name="time-outline" size={18} color="#F59E0B" />
+                <Text style={{ color: "#F59E0B", fontWeight: "700", fontSize: 13 }}>
+                  Price Change Pending Client Approval
+                </Text>
+              </View>
+              <Text style={{ color: "#CBD5E1", fontSize: 12 }}>
+                Requested ₹{job.priceChangeRequested} (Original: ₹{job.budgetAmount}). Waiting for client to respond.
+              </Text>
             </TouchableOpacity>
           )}
 

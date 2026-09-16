@@ -116,10 +116,10 @@ export const useJobDetails = (jobId) => {
       }
     },
     {
-      refreshInterval: 60000, // Refresh every minute (job details change less frequently)
+      refreshInterval: 5000, // Refresh every 5 seconds for real-time status & price change updates
       revalidateOnFocus: true,
       revalidateOnReconnect: true,
-      dedupingInterval: 10000,
+      dedupingInterval: 2000,
     }
   );
 
