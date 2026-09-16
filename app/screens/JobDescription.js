@@ -46,36 +46,53 @@ const JobDescriptionScreen = ({ route, navigation }) => {
       return;
     }
 
+    setIsCheckingBalance(true);
     try {
-      setIsCheckingBalance(true);
-
-      // Refresh user data to get the latest balance
-      await refreshUserData();
-
-      // Check if freelancer is under 24-hour cooldown lock
-      if (
-        userData?.role === "FREELANCER" &&
-        userProfile?.cooldownExpiresAt &&
-        new Date(userProfile.cooldownExpiresAt) > new Date()
-      ) {
+      // 1. Always check the local cached profile first (instant, no network)
+      const cachedProfile = userProfile;
+      const cachedCooldown = cachedProfile?.cooldownExpiresAt;
+      if (cachedCooldown && new Date(cachedCooldown) > new Date()) {
         const hoursRemaining = Math.ceil(
-          (new Date(userProfile.cooldownExpiresAt).getTime() - Date.now()) / (1000 * 60 * 60)
+          (new Date(cachedCooldown).getTime() - Date.now()) / (1000 * 60 * 60)
         );
-        Toast.show({
-          type: "error",
-          text1: "Booking Access Locked",
-          text2: `Cannot apply for 24 hours due to a recent cancellation or missed deadline (${hoursRemaining}h remaining).`,
-          visibilityTime: 4000,
-        });
+        Alert.alert(
+          "Booking Access Locked",
+          `You cannot apply for jobs due to a recent cancellation.\n\nCooldown expires in ${hoursRemaining} hour(s).`,
+          [{ text: "OK" }]
+        );
         return;
       }
 
-      // Check if user is a freelancer and has a negative balance
-      if (
-        userData?.role === "FREELANCER" &&
-        userProfile &&
-        parseFloat(userProfile.withdrawableAmount) < 0
-      ) {
+      // 2. Also fetch fresh data from server to catch recent cooldowns
+      let freshProfile = null;
+      if (userData?.id) {
+        try {
+          const freshUserData = await apiService.getUserById(userData.id);
+          freshProfile = freshUserData?.freelancer || freshUserData?.client || null;
+        } catch (e) {
+          console.log("Could not fetch fresh profile, using cached:", e.message);
+        }
+      }
+
+      // Use fresh profile if available, otherwise use cached
+      const profile = freshProfile || cachedProfile;
+
+      // Check cooldown from fresh/cached profile
+      const cooldownExpiry = profile?.cooldownExpiresAt;
+      if (cooldownExpiry && new Date(cooldownExpiry) > new Date()) {
+        const hoursRemaining = Math.ceil(
+          (new Date(cooldownExpiry).getTime() - Date.now()) / (1000 * 60 * 60)
+        );
+        Alert.alert(
+          "Booking Access Locked",
+          `You cannot apply for jobs due to a recent cancellation.\n\nCooldown expires in ${hoursRemaining} hour(s).`,
+          [{ text: "OK" }]
+        );
+        return;
+      }
+
+      // Check negative balance
+      if (profile && parseFloat(profile.withdrawableAmount) < 0) {
         Alert.alert(
           "Outstanding Fees",
           "You have a negative balance due to unpaid platform fees. Please settle your outstanding fees before applying for new jobs.",
@@ -84,7 +101,7 @@ const JobDescriptionScreen = ({ route, navigation }) => {
         return;
       }
 
-      // Extract required params
+      // All checks passed — navigate to chat
       const jobId = job.id || job.jobId;
       const full_name =
         job.client?.user?.fullName || job.client?.companyName || "";
@@ -92,11 +109,12 @@ const JobDescriptionScreen = ({ route, navigation }) => {
       navigation.navigate("FreelancerChat", { jobId, full_name, client });
     } catch (error) {
       console.error("Error during application check:", error);
-      const jobId = job?.id || job?.jobId;
-      const full_name =
-        job?.client?.user?.fullName || job?.client?.companyName || "";
-      const client = job?.client;
-      navigation.navigate("FreelancerChat", { jobId, full_name, client });
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: error.message || "Failed to verify eligibility. Please try again.",
+        visibilityTime: 4000,
+      });
     } finally {
       setIsCheckingBalance(false);
     }
@@ -608,6 +626,7 @@ const JobDescriptionScreen = ({ route, navigation }) => {
           </TouchableOpacity>
         </View>
       </ScrollView>
+      <Toast />
     </SafeAreaView>
   );
 };

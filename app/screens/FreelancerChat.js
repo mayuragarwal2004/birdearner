@@ -12,6 +12,7 @@ import ChatInput from "../components/chat/ChatInput";
 import AssignmentBanner from "../components/chat/freelancer/AssignmentBanner";
 import FreelancerCancelJobModal from "../components/chat/freelancer/FreelancerCancelJobModal";
 import ReportModal from "../components/chat/ReportModal";
+import DisputeModal from "../components/chat/DisputeModal";
 import NegotiationPanel from "../components/chat/NegotiationPanel";
 import { useChatData } from "../hooks/useChatSWR";
 import { useAuth } from "../context/NewAuthContext";
@@ -448,6 +449,7 @@ const FreelancerChat = ({ route, navigation }) => {
   const [reviewMessageId, setReviewMessageId] = useState(null);
   const [reportModalVisible, setReportModalVisible] = useState(false);
   const [cancelModalVisible, setCancelModalVisible] = useState(false);
+  const [disputeModalVisible, setDisputeModalVisible] = useState(false);
   const [selectedReportReason, setSelectedReportReason] = useState(null);
   const [submittingReport, setSubmittingReport] = useState(false);
   const [fileInfo, setFileInfo] = useState(null);
@@ -780,6 +782,9 @@ const FreelancerChat = ({ route, navigation }) => {
       case "Cancel Job":
         setCancelModalVisible(true);
         break;
+      case "Raise Dispute":
+        setDisputeModalVisible(true);
+        break;
       default:
         break;
     }
@@ -820,14 +825,26 @@ const FreelancerChat = ({ route, navigation }) => {
               const pType = (job?.projectType || job?.jobType || '').toLowerCase();
               const isOnSite = pType === 'on-site' || (pType !== 'remote' && job?.location?.toLowerCase() !== 'remote');
               const canRequestCompletion = isMyJob && !isCompleted && (chatStatus === 'IN_PROGRESS' || chatStatus === 'ACCEPTED') && (!isOnSite || ['JOB_STARTED', 'WORK_COMPLETED', 'PAYMENT_RELEASED'].includes(job?.jobStatus));
+
+              // Check if on-site job is past OTP+5min window (cancel blocked, must raise dispute)
+              const otpVerified = !!job?.otpVerifiedAt;
+              const postOtpExpiry = job?.postOtpCancellationWindowExpiresAt ? new Date(job.postOtpCancellationWindowExpiresAt).getTime() : 0;
+              const isPastPostOtpWindow = otpVerified && postOtpExpiry > 0 && Date.now() > postOtpExpiry;
+              const isOnSiteCancelBlocked = isOnSite && isPastPostOtpWindow;
               
               if (isCompleted) {
                 baseOptions.push("Write Review");
                 return baseOptions;
               }
+              if (isMyJob && (chatStatus === 'ACCEPTED' || chatStatus === 'IN_PROGRESS')) {
+                if (isOnSiteCancelBlocked) {
+                  baseOptions.push("Raise Dispute");
+                } else {
+                  baseOptions.push("Cancel Job");
+                }
+              }
               if (canRequestCompletion) {
-                baseOptions.push("Request Project Completion", "Cancel Job");
-                return baseOptions;
+                baseOptions.push("Request Project Completion");
               }
               return baseOptions;
             })()
@@ -1070,6 +1087,16 @@ const FreelancerChat = ({ route, navigation }) => {
           onConfirm={handleCancelJob}
           onCancel={() => setCancelModalVisible(false)}
           jobBudget={job?.budgetAmount}
+        />
+
+        <DisputeModal
+          visible={disputeModalVisible}
+          onClose={() => setDisputeModalVisible(false)}
+          jobId={job?.id || route.params.jobId}
+          onDisputeRaised={() => {
+            mutateJob?.();
+            mutateThread?.();
+          }}
         />
 
         <ReviewFormModal
