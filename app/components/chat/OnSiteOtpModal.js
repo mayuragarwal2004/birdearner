@@ -21,6 +21,13 @@ const DISPUTE_REASON_CHIPS = [
   "Freelancer failed to show up / delayed",
 ];
 
+const PRICE_CHANGE_REASON_CHIPS = [
+  "Additional work required",
+  "Scope larger than described",
+  "Parts & materials needed",
+  "Unexpected complication on site",
+];
+
 const OnSiteOtpModal = ({
   visible,
   onClose,
@@ -39,6 +46,12 @@ const OnSiteOtpModal = ({
   const [selectedReasonChip, setSelectedReasonChip] = useState(DISPUTE_REASON_CHIPS[0]);
   const [customReasonText, setCustomReasonText] = useState("");
 
+  // Request Price Change Modal state
+  const [showPriceChangeModal, setShowPriceChangeModal] = useState(false);
+  const [requestedPriceInput, setRequestedPriceInput] = useState("");
+  const [selectedPriceReason, setSelectedPriceReason] = useState(PRICE_CHANGE_REASON_CHIPS[0]);
+  const [customExplanationText, setCustomExplanationText] = useState("");
+
   const isClient = userRole === "client";
 
   // Merge parentJob and fetchedJob so we always have up-to-date data
@@ -50,6 +63,7 @@ const OnSiteOtpModal = ({
     } else {
       setOtpInput("");
       setShowDisputeReasonModal(false);
+      setShowPriceChangeModal(false);
     }
   }, [visible, jobId]);
 
@@ -110,6 +124,71 @@ const OnSiteOtpModal = ({
     }
   };
 
+  const handleRequestPriceChange = async () => {
+    const numPrice = Number(requestedPriceInput);
+    const currentBudget = Number(jobData.budgetAmount || 0);
+
+    if (isNaN(numPrice) || numPrice <= 0) {
+      Alert.alert("Validation Error", "Please enter a valid positive price amount.");
+      return;
+    }
+    if (numPrice <= currentBudget) {
+      Alert.alert(
+        "Invalid Price",
+        `Requested price (₹${numPrice}) must be greater than the original price (₹${currentBudget}).`
+      );
+      return;
+    }
+    try {
+      setActionLoading(true);
+      await apiService.requestPriceChange(
+        jobId,
+        numPrice,
+        selectedPriceReason,
+        customExplanationText
+      );
+      Alert.alert("Success", "Price change request submitted to the client.");
+      setShowPriceChangeModal(false);
+      await fetchLatestJob();
+      onJobUpdated?.();
+    } catch (err) {
+      Alert.alert("Error", err.message || "Failed to submit price change request");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRespondToPriceChange = async (accept) => {
+    try {
+      setActionLoading(true);
+      await apiService.respondToPriceChange(jobId, accept);
+      if (accept) {
+        Alert.alert("Price Accepted", "You have accepted the revised booking price.");
+      } else {
+        Alert.alert(
+          "Booking Cancelled",
+          "Booking was cancelled due to scope/price mismatch. No penalty applied."
+        );
+      }
+      await fetchLatestJob();
+      onJobUpdated?.();
+    } catch (err) {
+      if (err.message && err.message.includes("Insufficient wallet balance")) {
+        Alert.alert(
+          "Insufficient Balance",
+          err.message,
+          [
+            { text: "OK", style: "cancel" },
+          ]
+        );
+      } else {
+        Alert.alert("Error", err.message || "Failed to respond to price change request");
+      }
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   if (!visible) return null;
 
   const jobStatus = (jobData?.jobStatus || jobData?.status || "OPEN").toUpperCase();
@@ -164,6 +243,76 @@ const OnSiteOtpModal = ({
               {/* CLIENT VIEW */}
               {isClient && (
                 <View style={styles.sectionBox}>
+                  {/* Pending Price Change Request Banner for Client */}
+                  {Boolean(jobData?.priceChangeRequested) && (
+                    <View style={styles.priceChangeBannerContainer}>
+                      <View style={styles.priceChangeHeader}>
+                        <Ionicons name="warning-outline" size={22} color="#F59E0B" />
+                        <Text style={styles.priceChangeHeaderTitle}>Price Change Requested</Text>
+                      </View>
+                      <Text style={styles.priceChangeSubtext}>
+                        Freelancer discovered additional work required at site.
+                      </Text>
+
+                      <View style={styles.priceComparisonBox}>
+                        <View style={styles.priceRow}>
+                          <Text style={styles.priceLabel}>Original Price:</Text>
+                          <Text style={styles.priceOriginal}>₹{jobData.budgetAmount}</Text>
+                        </View>
+                        <View style={styles.priceRow}>
+                          <Text style={styles.priceLabel}>New Requested Price:</Text>
+                          <Text style={styles.priceRequested}>₹{jobData.priceChangeRequested}</Text>
+                        </View>
+                        <View style={styles.priceRow}>
+                          <Text style={styles.priceLabel}>Additional Amount:</Text>
+                          <Text style={styles.priceDiff}>
+                            + ₹{(Number(jobData.priceChangeRequested) - Number(jobData.budgetAmount)).toFixed(2)}
+                          </Text>
+                        </View>
+                      </View>
+
+                      {Boolean(jobData?.priceChangeReason) && (
+                        <View style={styles.reasonBox}>
+                          <Text style={styles.reasonBoxTitle}>Reason & Details:</Text>
+                          <Text style={styles.reasonBoxText}>{jobData.priceChangeReason}</Text>
+                        </View>
+                      )}
+
+                      <View style={styles.priceActionRow}>
+                        <TouchableOpacity
+                          style={styles.acceptPriceButton}
+                          onPress={() => handleRespondToPriceChange(true)}
+                          disabled={actionLoading}
+                        >
+                          <Ionicons name="checkmark-circle-outline" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
+                          <Text style={styles.buttonText}>Accept New Price</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          style={styles.refusePriceButton}
+                          onPress={() => {
+                            Alert.alert(
+                              "Cancel Due to Price Change",
+                              "Are you sure you want to cancel this booking due to scope/price mismatch? No penalties will be applied.",
+                              [
+                                { text: "No, Keep Booking", style: "cancel" },
+                                {
+                                  text: "Yes, Cancel",
+                                  style: "destructive",
+                                  onPress: () => handleRespondToPriceChange(false),
+                                },
+                              ]
+                            );
+                          }}
+                          disabled={actionLoading}
+                        >
+                          <Ionicons name="close-circle-outline" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
+                          <Text style={styles.buttonText}>Cancel Due to Price Change</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  )}
+
                   {hasOtpCode || isArrived ? (
                     // Freelancer has requested OTP / Arrived -> Show OTP to Client
                     <View style={styles.otpDisplayContainer}>
@@ -287,10 +436,38 @@ const OnSiteOtpModal = ({
                       </Text>
                     </View>
                   )}
+
+                  {/* Request Price Change Button for Freelancer (after OTP verification) */}
+                  {isStarted && !Boolean(jobData?.priceChangeRequested) && !isDisputed && (
+                    <TouchableOpacity
+                      style={styles.requestPriceChangeBtn}
+                      onPress={() => {
+                        setRequestedPriceInput("");
+                        setSelectedPriceReason(PRICE_CHANGE_REASON_CHIPS[0]);
+                        setCustomExplanationText("");
+                        setShowPriceChangeModal(true);
+                      }}
+                      disabled={actionLoading}
+                    >
+                      <Ionicons name="pricetag-outline" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
+                      <Text style={styles.buttonText}>Request Price Change (Scope Mismatch)</Text>
+                    </TouchableOpacity>
+                  )}
+
+                  {/* Pending Price Request Info Box for Freelancer */}
+                  {Boolean(jobData?.priceChangeRequested) && (
+                    <View style={styles.pendingRequestInfoBox}>
+                      <Ionicons name="time-outline" size={24} color="#F59E0B" />
+                      <Text style={styles.infoTitle}>Price Change Pending</Text>
+                      <Text style={styles.infoSubtitle}>
+                        Requested ₹{jobData.priceChangeRequested} (Original: ₹{jobData.budgetAmount}). Waiting for client to accept or cancel.
+                      </Text>
+                    </View>
+                  )}
                 </View>
               )}
 
-              {/* Dispute Option for both — directly opens Reason Modal inside Pop-up without navigating away */}
+              {/* Dispute Option for both */}
               {["JOB_STARTED", "IN_PROGRESS", "FREELANCER_TRAVELLING", "ARRIVED"].includes(jobStatus) && (
                 <TouchableOpacity
                   style={styles.disputeButton}
@@ -313,6 +490,96 @@ const OnSiteOtpModal = ({
             </View>
           )}
         </View>
+
+        {/* Inner Modal: Request Price Change */}
+        <Modal
+          visible={showPriceChangeModal}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowPriceChangeModal(false)}
+        >
+          <View style={styles.innerModalOverlay}>
+            <View style={styles.innerModalCard}>
+              <View style={styles.innerModalHeader}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <Ionicons name="pricetag-outline" size={22} color="#A855F7" />
+                  <Text style={[styles.innerModalTitle, { color: "#A855F7" }]}>Request Price Change</Text>
+                </View>
+                <TouchableOpacity onPress={() => setShowPriceChangeModal(false)}>
+                  <Ionicons name="close-circle" size={24} color="#94A3B8" />
+                </TouchableOpacity>
+              </View>
+
+              <Text style={styles.reasonPromptText}>Original Booking Price: ₹{jobData.budgetAmount}</Text>
+
+              <Text style={[styles.reasonPromptText, { marginTop: 8 }]}>New Requested Price (₹):</Text>
+              <TextInput
+                style={styles.priceInput}
+                placeholder={`e.g. ${Number(jobData.budgetAmount || 0) + 500}`}
+                placeholderTextColor="#64748B"
+                keyboardType="numeric"
+                value={requestedPriceInput}
+                onChangeText={setRequestedPriceInput}
+              />
+
+              <Text style={[styles.reasonPromptText, { marginTop: 10 }]}>Reason for Price Increase:</Text>
+              <ScrollView style={{ maxHeight: 120 }} showsVerticalScrollIndicator={false}>
+                {PRICE_CHANGE_REASON_CHIPS.map((chip) => {
+                  const isSelected = selectedPriceReason === chip;
+                  return (
+                    <TouchableOpacity
+                      key={chip}
+                      style={[styles.reasonChip, isSelected && styles.priceChipSelected]}
+                      onPress={() => setSelectedPriceReason(chip)}
+                    >
+                      <Ionicons
+                        name={isSelected ? "checkmark-circle" : "radio-button-off"}
+                        size={16}
+                        color={isSelected ? "#A855F7" : "#64748B"}
+                        style={{ marginRight: 8 }}
+                      />
+                      <Text style={[styles.reasonChipText, isSelected && styles.priceChipTextSelected]}>
+                        {chip}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+
+              <Text style={[styles.reasonPromptText, { marginTop: 10, marginBottom: 4 }]}>Explanation:</Text>
+              <TextInput
+                style={styles.reasonTextInput}
+                placeholder="Explain why additional work/materials are required..."
+                placeholderTextColor="#64748B"
+                multiline
+                numberOfLines={3}
+                value={customExplanationText}
+                onChangeText={setCustomExplanationText}
+              />
+
+              <View style={styles.innerModalButtonRow}>
+                <TouchableOpacity
+                  style={styles.innerCancelBtn}
+                  onPress={() => setShowPriceChangeModal(false)}
+                >
+                  <Text style={styles.innerCancelBtnText}>Cancel</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.submitPriceBtn}
+                  onPress={handleRequestPriceChange}
+                  disabled={actionLoading}
+                >
+                  {actionLoading ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <Text style={styles.innerSubmitBtnText}>Submit Request</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
 
         {/* Inner Modal: Select Dispute Reason */}
         <Modal
@@ -731,6 +998,141 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontWeight: "700",
     fontSize: 13,
+  },
+  priceChangeBannerContainer: {
+    backgroundColor: "#1E1B4B",
+    borderWidth: 1,
+    borderColor: "#4338CA",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+  },
+  priceChangeHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 4,
+  },
+  priceChangeHeaderTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#F59E0B",
+  },
+  priceChangeSubtext: {
+    fontSize: 12,
+    color: "#C7D2FE",
+    marginBottom: 12,
+  },
+  priceComparisonBox: {
+    backgroundColor: "#0F172A",
+    borderRadius: 12,
+    padding: 12,
+    gap: 6,
+    marginBottom: 12,
+  },
+  priceRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  priceLabel: {
+    fontSize: 12,
+    color: "#94A3B8",
+    fontWeight: "600",
+  },
+  priceOriginal: {
+    fontSize: 13,
+    color: "#94A3B8",
+    textDecorationLine: "line-through",
+  },
+  priceRequested: {
+    fontSize: 14,
+    color: "#38BDF8",
+    fontWeight: "700",
+  },
+  priceDiff: {
+    fontSize: 14,
+    color: "#22C55E",
+    fontWeight: "800",
+  },
+  reasonBox: {
+    backgroundColor: "#1E293B",
+    padding: 10,
+    borderRadius: 10,
+    marginBottom: 14,
+  },
+  reasonBoxTitle: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#A5B4FC",
+    marginBottom: 4,
+  },
+  reasonBoxText: {
+    fontSize: 12,
+    color: "#E2E8F0",
+    lineHeight: 16,
+  },
+  priceActionRow: {
+    gap: 10,
+  },
+  acceptPriceButton: {
+    flexDirection: "row",
+    backgroundColor: "#22C55E",
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  refusePriceButton: {
+    flexDirection: "row",
+    backgroundColor: "#EF4444",
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  requestPriceChangeBtn: {
+    flexDirection: "row",
+    backgroundColor: "#A855F7",
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 10,
+  },
+  pendingRequestInfoBox: {
+    alignItems: "center",
+    backgroundColor: "#1E293B",
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#F59E0B",
+    marginTop: 10,
+  },
+  priceInput: {
+    backgroundColor: "#0F172A",
+    borderWidth: 1,
+    borderColor: "#475569",
+    borderRadius: 10,
+    padding: 12,
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    marginBottom: 10,
+  },
+  priceChipSelected: {
+    borderColor: "#A855F7",
+    backgroundColor: "rgba(168, 85, 247, 0.15)",
+  },
+  priceChipTextSelected: {
+    color: "#F8FAFC",
+    fontWeight: "700",
+  },
+  submitPriceBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    backgroundColor: "#A855F7",
   },
 });
 

@@ -3,7 +3,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 
-const DEV_API_BASE_URL = "https://monkey-fancy-savannah-quality.trycloudflare.com/api";
+const DEV_API_BASE_URL = "https://grades-served-youth-happen.trycloudflare.com/api";
 // const DEV_API_BASE_URL = "https://api.birdearner.com/api";
 
 const PROD_API_BASE_URL = "https://api.birdearner.com/api";
@@ -2223,6 +2223,28 @@ class ApiService {
     } catch (error) {
       console.warn("Failed to fetch home promos:", error?.message);
     }
+  }
+
+  async requestPriceChange(jobId, requestedAmount, reason, explanation = "") {
+    return await this.makeRequest(`/jobs/${jobId}/price-change`, {
+      method: "POST",
+      body: JSON.stringify({
+        type: "REQUEST",
+        requestedAmount: Number(requestedAmount),
+        reason: String(reason),
+        explanation: String(explanation),
+      }),
+    });
+  }
+
+  async respondToPriceChange(jobId, accept) {
+    return await this.makeRequest(`/jobs/${jobId}/price-change`, {
+      method: "POST",
+      body: JSON.stringify({
+        type: "RESPOND",
+        accept: Boolean(accept),
+      }),
+    });
   }
 
   async transcribeAudio(audioUri) {
