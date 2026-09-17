@@ -3,7 +3,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 
-const DEV_API_BASE_URL = "https://girls-screensavers-moms-juice.trycloudflare.com/api";
+const DEV_API_BASE_URL = "https://fri-feof-nicole-pine.trycloudflare.com/api";
 // const DEV_API_BASE_URL = "https://api.birdearner.com/api";
 
 const PROD_API_BASE_URL = "https://api.birdearner.com/api";
@@ -1555,6 +1555,25 @@ class ApiService {
       throw new Error(
         `Failed to fetch freelancer wallet info: ${error.message}`
       );
+    }
+  }
+
+  // Get wallet transaction history with job details & wallet snapshot
+  async getWalletTransactions(userType = null, page = 1, limit = 20) {
+    try {
+      const params = new URLSearchParams();
+      if (userType) params.append("userType", userType);
+      params.append("page", page.toString());
+      params.append("limit", limit.toString());
+
+      const response = await this.makeRequest(`/wallet/transactions?${params.toString()}`);
+      return response;
+    } catch (error) {
+      if (error?.isAuthError) {
+        throw error;
+      }
+      console.error("Wallet transaction history error:", error);
+      throw new Error(`Failed to fetch wallet transactions: ${error.message}`);
     }
   }
 

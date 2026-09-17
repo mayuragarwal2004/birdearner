@@ -7,10 +7,13 @@ import {
   FlatList,
   Alert,
   RefreshControl,
+  Modal,
+  ScrollView,
 } from "react-native";
 import SafeSpinner from "../components/SafeSpinner";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ArrowLeft, Wallet, ClockCounterClockwise } from "phosphor-react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../context/NewAuthContext";
 import { useTheme } from "../context/ThemeContext";
 import apiService from "../lib/apiService";
@@ -18,8 +21,13 @@ import apiService from "../lib/apiService";
 const TransactionHistoryFreelancerScreen = ({ navigation }) => {
   const { userData } = useAuth();
   const [paymentHistory, setPaymentHistory] = useState([]);
+  const [walletSnapshot, setWalletSnapshot] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Selected Transaction Pop-up Modal state
+  const [selectedTx, setSelectedTx] = useState(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
 
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
@@ -46,9 +54,12 @@ const TransactionHistoryFreelancerScreen = ({ navigation }) => {
       const historyResponse = await apiService.getFreelancerTransactionHistory();
       if (historyResponse.success) {
         setPaymentHistory(historyResponse.data.transactions || []);
+        if (historyResponse.data.walletInfo) {
+          setWalletSnapshot(historyResponse.data.walletInfo);
+        }
       }
     } catch (error) {
-      console.error("Error fetching transaction history:", error);
+      console.error("Error fetching freelancer transaction history:", error);
       Alert.alert("Error", "Failed to load transaction history. Please try again.");
     } finally {
       setLoading(false);
@@ -59,6 +70,11 @@ const TransactionHistoryFreelancerScreen = ({ navigation }) => {
   const onRefresh = () => {
     setRefreshing(true);
     fetchTransactionHistory();
+  };
+
+  const openTxDetail = (tx) => {
+    setSelectedTx(tx);
+    setShowDetailModal(true);
   };
 
   const formatTransactionType = (type) => {
@@ -77,6 +93,24 @@ const TransactionHistoryFreelancerScreen = ({ navigation }) => {
     }
   };
 
+  const getTxBadgeInfo = (item) => {
+    const type = item?.transactionType;
+    const absAmount = Math.abs(Number(item?.amount || 0)).toFixed(2);
+    
+    if (["DEPOSIT", "JOB_PAYMENT", "JOB_RELEASE", "BONUS"].includes(type)) {
+      return {
+        formattedAmount: `+₹${absAmount}`,
+        color: "#4CAF50",
+        isCredit: true
+      };
+    }
+    return {
+      formattedAmount: `-₹${absAmount}`,
+      color: "#FF3B30",
+      isCredit: false
+    };
+  };
+
   const renderItem = ({ item }) => {
     const createdAt = item?.createdAt || item?.date;
     const date = new Date(createdAt);
@@ -92,34 +126,44 @@ const TransactionHistoryFreelancerScreen = ({ navigation }) => {
       hour12: true,
     });
 
-    const isDebit = [
-      "DEPOSIT", "JOB_REFUND", "JOB_RELEASE", "BONUS", 
-      "PLATFORM_FEE", "PENALTY", "WITHDRAWAL"
-    ].includes(item?.transactionType);
-    const isCredit = ["JOB_PAYMENT"].includes(item?.transactionType);
+    const badgeInfo = getTxBadgeInfo(item);
+    const displayJobName = item?.jobTitle ? `Job: ${item.jobTitle}` : null;
 
     return (
-      <View style={styles.paymentItem}>
+      <TouchableOpacity
+        style={styles.paymentItem}
+        onPress={() => openTxDetail(item)}
+        activeOpacity={0.7}
+      >
         <View style={styles.paymentItemHeader}>
           <View style={styles.paymentItemLeft}>
-            <View style={[styles.transactionDot, { backgroundColor: isCredit ? "#4CAF50" : "#FF3B30" }]} />
-            <View>
+            <View style={[styles.transactionDot, { backgroundColor: badgeInfo.color }]} />
+            <View style={{ flex: 1 }}>
+              {displayJobName && (
+                <Text style={styles.jobTitleText} numberOfLines={1}>
+                  {displayJobName}
+                </Text>
+              )}
               <Text style={styles.transactionName}>{formatTransactionType(item?.transactionType)}</Text>
               {item?.description && (
                 <Text style={styles.transactionDescription} numberOfLines={1}>{item.description}</Text>
               )}
             </View>
           </View>
-          <Text style={[styles.transactionAmount, { color: isCredit ? "#4CAF50" : "#FF3B30" }]}>
-            {isDebit ? "-" : "+"}₹{parseFloat(item?.amount || 0).toFixed(2)}
-          </Text>
+
+          <View style={{ alignItems: "flex-end", justifyContent: "center" }}>
+            <Text style={[styles.transactionAmount, { color: badgeInfo.color }]}>
+              {badgeInfo.formattedAmount}
+            </Text>
+            <Ionicons name="chevron-forward" size={16} color={currentTheme.subText || "#94A3B8"} style={{ marginTop: 2 }} />
+          </View>
         </View>
 
         <View style={styles.paymentItemFooter}>
           <Text style={styles.transactionDate}>{formattedDate} | {formattedTime}</Text>
           <Text style={styles.transactionBalance}>Bal: ₹{parseFloat(item?.balanceAfter || 0).toFixed(2)}</Text>
         </View>
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -147,6 +191,26 @@ const TransactionHistoryFreelancerScreen = ({ navigation }) => {
           </View>
         ) : (
           <View style={styles.content}>
+            {/* Top Current Wallet Status Overview Banner */}
+            {walletSnapshot && (
+              <View style={styles.topOverviewCard}>
+                <View style={styles.topOverviewRow}>
+                  <View>
+                    <Text style={styles.topOverviewLabel}>Withdrawable Balance</Text>
+                    <Text style={styles.topOverviewValue}>
+                      ₹{Number(walletSnapshot.wallet || 0).toFixed(2)}
+                    </Text>
+                  </View>
+                  <View style={{ alignItems: "flex-end" }}>
+                    <Text style={styles.topOverviewLabel}>Total Earnings</Text>
+                    <Text style={[styles.topOverviewValue, { color: "#4CAF50" }]}>
+                      ₹{Number(walletSnapshot.totalEarnings || 0).toFixed(2)}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            )}
+
             {paymentHistory.length > 0 ? (
               <FlatList
                 data={paymentHistory}
@@ -179,6 +243,101 @@ const TransactionHistoryFreelancerScreen = ({ navigation }) => {
             )}
           </View>
         )}
+
+        {/* Transaction Detail Pop-up Modal */}
+        <Modal
+          visible={showDetailModal}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowDetailModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalCard}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Transaction Details</Text>
+                <TouchableOpacity onPress={() => setShowDetailModal(false)}>
+                  <Ionicons name="close-circle" size={26} color={currentTheme.subText || "#94A3B8"} />
+                </TouchableOpacity>
+              </View>
+
+              {selectedTx && (
+                <ScrollView style={{ maxHeight: 400 }}>
+                  <View style={styles.modalAmountBox}>
+                    <Text style={[styles.modalAmount, { color: getTxBadgeInfo(selectedTx).color }]}>
+                      {getTxBadgeInfo(selectedTx).formattedAmount}
+                    </Text>
+                    <Text style={styles.modalTxType}>{formatTransactionType(selectedTx.transactionType)}</Text>
+                  </View>
+
+                  <View style={styles.detailDivider} />
+
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Job Name:</Text>
+                    <Text style={styles.detailValueBold}>
+                      {selectedTx.jobTitle || "N/A (General Wallet Transaction)"}
+                    </Text>
+                  </View>
+
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Description:</Text>
+                    <Text style={styles.detailValue}>{selectedTx.description || "N/A"}</Text>
+                  </View>
+
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Date & Time:</Text>
+                    <Text style={styles.detailValue}>{new Date(selectedTx.createdAt).toLocaleString()}</Text>
+                  </View>
+
+                  {selectedTx.referenceId && (
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Reference ID:</Text>
+                      <Text style={styles.detailValue}>{selectedTx.referenceId}</Text>
+                    </View>
+                  )}
+
+                  <View style={styles.snapshotBox}>
+                    <Text style={styles.snapshotTitle}>Wallet Balance Snapshot</Text>
+                    
+                    <View style={styles.snapshotRow}>
+                      <Text style={styles.snapshotLabel}>Previous Wallet Balance:</Text>
+                      <Text style={styles.snapshotValue}>
+                        ₹{Number(selectedTx.balanceBefore !== null && selectedTx.balanceBefore !== undefined ? selectedTx.balanceBefore : walletSnapshot?.wallet || 0).toFixed(2)}
+                      </Text>
+                    </View>
+
+                    <View style={styles.snapshotRow}>
+                      <Text style={styles.snapshotLabel}>Current Wallet Balance:</Text>
+                      <Text style={[styles.snapshotValue, { color: primaryColor }]}>
+                        ₹{Number(selectedTx.balanceAfter !== null && selectedTx.balanceAfter !== undefined ? selectedTx.balanceAfter : walletSnapshot?.wallet || 0).toFixed(2)}
+                      </Text>
+                    </View>
+
+                    <View style={styles.snapshotRow}>
+                      <Text style={styles.snapshotLabel}>Transaction Amount:</Text>
+                      <Text style={[styles.snapshotValue, { color: "#4CAF50" }]}>
+                        ₹{Number(selectedTx.amount || 0).toFixed(2)}
+                      </Text>
+                    </View>
+
+                    <View style={styles.snapshotRow}>
+                      <Text style={styles.snapshotLabel}>Total Earnings:</Text>
+                      <Text style={[styles.snapshotValue, { color: "#4CAF50" }]}>
+                        ₹{Number(walletSnapshot?.totalEarnings || 0).toFixed(2)}
+                      </Text>
+                    </View>
+                  </View>
+                </ScrollView>
+              )}
+
+              <TouchableOpacity
+                style={styles.closeBtn}
+                onPress={() => setShowDetailModal(false)}
+              >
+                <Text style={styles.closeBtnText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
       </View>
     </SafeAreaView>
   );
@@ -198,7 +357,7 @@ const getStyles = (currentTheme, primaryColor) =>
       alignItems: "center",
       paddingHorizontal: 24,
       paddingTop: 20,
-      marginBottom: 30,
+      marginBottom: 20,
       justifyContent: "space-between",
     },
     backButton: {
@@ -218,10 +377,38 @@ const getStyles = (currentTheme, primaryColor) =>
     headerTitle: {
       fontSize: 18,
       fontWeight: "700",
-      color: currentTheme.text || "#000",
+      color: currentTheme.text || "#000000",
     },
     rightPlaceholder: {
       width: 36,
+    },
+    content: {
+      flex: 1,
+      paddingHorizontal: 16,
+    },
+    topOverviewCard: {
+      backgroundColor: currentTheme.cardBackground || "#F8FAFC",
+      borderRadius: 16,
+      padding: 16,
+      marginBottom: 14,
+      borderWidth: 1,
+      borderColor: currentTheme.border || "#E2E8F0",
+    },
+    topOverviewRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    topOverviewLabel: {
+      fontSize: 12,
+      color: currentTheme.subText || "#64748B",
+      fontWeight: "600",
+      marginBottom: 2,
+    },
+    topOverviewValue: {
+      fontSize: 18,
+      fontWeight: "800",
+      color: currentTheme.text || "#0F172A",
     },
     loadingContainer: {
       flex: 1,
@@ -230,23 +417,19 @@ const getStyles = (currentTheme, primaryColor) =>
     },
     loadingText: {
       marginTop: 12,
-      fontSize: 14,
-      color: currentTheme.subText || "#666",
-    },
-    content: {
-      flex: 1,
-      paddingHorizontal: 24,
+      fontSize: 15,
+      color: currentTheme.text || "#000",
     },
     historyList: {
       paddingBottom: 20,
     },
     paymentItem: {
-      backgroundColor: currentTheme.cardBackground || "#F9FAFB",
-      borderRadius: 12,
-      padding: 16,
-      marginBottom: 12,
+      backgroundColor: currentTheme.cardBackground || "#F8FAFC",
+      borderRadius: 14,
+      padding: 14,
+      marginBottom: 10,
       borderWidth: 1,
-      borderColor: currentTheme.border || "#E5E7EB",
+      borderColor: currentTheme.border || "#E2E8F0",
     },
     paymentItemHeader: {
       flexDirection: "row",
@@ -255,24 +438,31 @@ const getStyles = (currentTheme, primaryColor) =>
     },
     paymentItemLeft: {
       flexDirection: "row",
-      alignItems: "center",
+      alignItems: "flex-start",
       flex: 1,
-      marginRight: 12,
+      marginRight: 8,
     },
     transactionDot: {
-      width: 8,
-      height: 8,
-      borderRadius: 4,
+      width: 10,
+      height: 10,
+      borderRadius: 5,
       marginRight: 10,
+      marginTop: 4,
+    },
+    jobTitleText: {
+      fontSize: 13,
+      fontWeight: "700",
+      color: primaryColor,
+      marginBottom: 2,
     },
     transactionName: {
       fontSize: 14,
       fontWeight: "600",
-      color: currentTheme.text || "#000",
+      color: currentTheme.text || "#000000",
     },
     transactionDescription: {
       fontSize: 12,
-      color: currentTheme.subText || "#666",
+      color: currentTheme.subText || "#666666",
       marginTop: 2,
     },
     transactionAmount: {
@@ -282,59 +472,162 @@ const getStyles = (currentTheme, primaryColor) =>
     paymentItemFooter: {
       flexDirection: "row",
       justifyContent: "space-between",
-      marginTop: 8,
+      alignItems: "center",
+      marginTop: 10,
       paddingTop: 8,
       borderTopWidth: 1,
-      borderTopColor: currentTheme.border || "#E5E7EB",
+      borderTopColor: currentTheme.border || "#F1F5F9",
     },
     transactionDate: {
-      fontSize: 12,
-      color: currentTheme.subText || "#666",
+      fontSize: 11,
+      color: currentTheme.subText || "#999999",
     },
     transactionBalance: {
       fontSize: 12,
-      color: currentTheme.subText || "#666",
-      fontWeight: "500",
+      fontWeight: "600",
+      color: currentTheme.text || "#333333",
     },
     emptyContainer: {
       flex: 1,
       justifyContent: "center",
       alignItems: "center",
-      paddingBottom: 60,
+      paddingVertical: 60,
     },
     emptyIconContainer: {
-      alignItems: "center",
-      marginBottom: 20,
+      marginBottom: 16,
     },
     emptyIconBackground: {
       width: 80,
       height: 80,
       borderRadius: 40,
-      backgroundColor: currentTheme.border || "#E5E7EB",
+      backgroundColor: primaryColor + "15",
       justifyContent: "center",
       alignItems: "center",
     },
     clockBadge: {
       position: "absolute",
-      bottom: -4,
-      right: -4,
+      bottom: 0,
+      right: 0,
+      backgroundColor: primaryColor,
+      borderRadius: 10,
       width: 24,
       height: 24,
-      borderRadius: 12,
-      backgroundColor: primaryColor,
       justifyContent: "center",
       alignItems: "center",
     },
     emptyTitle: {
-      fontSize: 16,
+      fontSize: 18,
       fontWeight: "700",
       color: currentTheme.text || "#000",
       marginBottom: 6,
     },
     emptySubtitle: {
-      fontSize: 13,
+      fontSize: 14,
       color: currentTheme.subText || "#666",
       textAlign: "center",
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: "rgba(0, 0, 0, 0.65)",
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 20,
+    },
+    modalCard: {
+      width: "100%",
+      backgroundColor: currentTheme.cardBackground || "#FFFFFF",
+      borderRadius: 20,
+      padding: 20,
+      elevation: 5,
+    },
+    modalHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 16,
+    },
+    modalTitle: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: currentTheme.text || "#000",
+    },
+    modalAmountBox: {
+      alignItems: "center",
+      marginVertical: 10,
+    },
+    modalAmount: {
+      fontSize: 32,
+      fontWeight: "bold",
+    },
+    modalTxType: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: currentTheme.subText || "#64748B",
+      marginTop: 4,
+      textTransform: "uppercase",
+    },
+    detailDivider: {
+      height: 1,
+      backgroundColor: currentTheme.border || "#E2E8F0",
+      marginVertical: 14,
+    },
+    detailRow: {
+      marginBottom: 12,
+    },
+    detailLabel: {
+      fontSize: 12,
+      color: currentTheme.subText || "#64748B",
+      marginBottom: 2,
+    },
+    detailValueBold: {
+      fontSize: 15,
+      fontWeight: "700",
+      color: primaryColor,
+    },
+    detailValue: {
+      fontSize: 14,
+      fontWeight: "500",
+      color: currentTheme.text || "#0F172A",
+    },
+    snapshotBox: {
+      backgroundColor: currentTheme.background || "#F1F5F9",
+      padding: 14,
+      borderRadius: 12,
+      marginTop: 10,
+      borderWidth: 1,
+      borderColor: currentTheme.border || "#CBD5E1",
+    },
+    snapshotTitle: {
+      fontSize: 13,
+      fontWeight: "700",
+      color: currentTheme.text || "#0F172A",
+      marginBottom: 10,
+    },
+    snapshotRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginBottom: 6,
+    },
+    snapshotLabel: {
+      fontSize: 13,
+      color: currentTheme.subText || "#475569",
+    },
+    snapshotValue: {
+      fontSize: 13,
+      fontWeight: "700",
+      color: currentTheme.text || "#0F172A",
+    },
+    closeBtn: {
+      marginTop: 18,
+      backgroundColor: primaryColor,
+      paddingVertical: 12,
+      borderRadius: 12,
+      alignItems: "center",
+    },
+    closeBtnText: {
+      color: "#FFFFFF",
+      fontWeight: "700",
+      fontSize: 15,
     },
   });
 

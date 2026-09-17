@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import SafeSpinner from "../components/SafeSpinner";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ArrowLeft } from "phosphor-react-native";
+import { ArrowLeft, ClockCounterClockwise } from "phosphor-react-native";
 import { useAuth } from "../context/NewAuthContext";
 import { useTheme } from "../context/ThemeContext";
 import apiService from "../lib/apiService";
@@ -102,6 +102,15 @@ const WalletFreelancerScreen = ({ navigation }) => {
                   <Text style={styles.settleButtonText}>Settle Outstanding Balance</Text>
                 </TouchableOpacity>
               )}
+
+              <TouchableOpacity
+                style={styles.historyButton}
+                onPress={() => navigation.navigate("TransactionHistoryFreelancer")}
+                activeOpacity={0.7}
+              >
+                <ClockCounterClockwise size={18} color={primaryColor} weight="bold" style={{ marginRight: 8 }} />
+                <Text style={styles.historyButtonText}>View Transaction History</Text>
+              </TouchableOpacity>
             </View>
           </View>
         )}
@@ -193,6 +202,22 @@ const getStyles = (currentTheme, primaryColor) =>
       color: "#FFF",
       fontWeight: "bold",
       fontSize: 16,
+    },
+    historyButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginTop: 20,
+      paddingVertical: 10,
+      paddingHorizontal: 18,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: primaryColor,
+      backgroundColor: "transparent",
+    },
+    historyButtonText: {
+      color: primaryColor,
+      fontWeight: "700",
+      fontSize: 14,
     },
   });
 

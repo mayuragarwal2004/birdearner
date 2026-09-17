@@ -52,6 +52,10 @@ const OnSiteOtpModal = ({
   const [selectedPriceReason, setSelectedPriceReason] = useState(PRICE_CHANGE_REASON_CHIPS[0]);
   const [customExplanationText, setCustomExplanationText] = useState("");
 
+  // Scope Mismatch Cancellation Modal state
+  const [showScopeMismatchModal, setShowScopeMismatchModal] = useState(false);
+  const [scopeMismatchReasonText, setScopeMismatchReasonText] = useState("");
+
   const isClient = userRole === "client";
 
   // Merge parentJob and fetchedJob so we always have up-to-date data
@@ -64,6 +68,7 @@ const OnSiteOtpModal = ({
       setOtpInput("");
       setShowDisputeReasonModal(false);
       setShowPriceChangeModal(false);
+      setShowScopeMismatchModal(false);
     }
   }, [visible, jobId]);
 
@@ -477,6 +482,21 @@ const OnSiteOtpModal = ({
                       </Text>
                     </View>
                   )}
+
+                  {/* Cannot Complete - Scope Mismatch Button for Freelancer (after OTP verification) */}
+                  {isStarted && !isDisputed && (
+                    <TouchableOpacity
+                      style={[styles.dangerButton, { marginTop: 10, backgroundColor: "#DC2626" }]}
+                      onPress={() => {
+                        setScopeMismatchReasonText("");
+                        setShowScopeMismatchModal(true);
+                      }}
+                      disabled={actionLoading}
+                    >
+                      <Ionicons name="alert-circle-outline" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
+                      <Text style={styles.buttonText}>Cannot Complete — Scope Mismatch</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               )}
 
@@ -671,6 +691,70 @@ const OnSiteOtpModal = ({
                     <ActivityIndicator size="small" color="#FFFFFF" />
                   ) : (
                     <Text style={styles.innerSubmitBtnText}>Submit Dispute</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Inner Modal: Scope Mismatch Cancellation */}
+        <Modal
+          visible={showScopeMismatchModal}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowScopeMismatchModal(false)}
+        >
+          <View style={styles.innerModalOverlay}>
+            <View style={styles.innerModalCard}>
+              <View style={styles.innerModalHeader}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <Ionicons name="alert-circle" size={22} color="#EF4444" />
+                  <Text style={[styles.innerModalTitle, { color: "#EF4444" }]}>Scope Mismatch</Text>
+                </View>
+                <TouchableOpacity onPress={() => setShowScopeMismatchModal(false)}>
+                  <Ionicons name="close-circle" size={24} color="#94A3B8" />
+                </TouchableOpacity>
+              </View>
+
+              <Text style={styles.reasonPromptText}>
+                Explain why actual work differs from job description (Mandatory):
+              </Text>
+              <TextInput
+                style={[styles.reasonTextInput, { height: 90, marginTop: 8, color: "#FFFFFF" }]}
+                placeholder="e.g. Client requested compressor replacement instead of basic AC cooling repair..."
+                placeholderTextColor="#64748B"
+                multiline
+                numberOfLines={3}
+                value={scopeMismatchReasonText}
+                onChangeText={setScopeMismatchReasonText}
+              />
+
+              <View style={{ flexDirection: "row", gap: 10, marginTop: 16, justifyContent: "flex-end" }}>
+                <TouchableOpacity
+                  style={styles.innerCancelBtn}
+                  onPress={() => setShowScopeMismatchModal(false)}
+                >
+                  <Text style={styles.innerCancelBtnText}>Cancel</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.innerSubmitBtn, { backgroundColor: "#DC2626" }]}
+                  onPress={() => {
+                    const reason = scopeMismatchReasonText.trim();
+                    if (!reason) {
+                      Alert.alert("Reason Required", "Please enter a mandatory explanation for the scope mismatch.");
+                      return;
+                    }
+                    setShowScopeMismatchModal(false);
+                    handlePhysicalProgress("CANCEL_SCOPE_MISMATCH", { reason });
+                  }}
+                  disabled={actionLoading}
+                >
+                  {actionLoading ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <Text style={styles.innerSubmitBtnText}>Submit & Cancel</Text>
                   )}
                 </TouchableOpacity>
               </View>
