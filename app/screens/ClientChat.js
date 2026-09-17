@@ -1093,6 +1093,7 @@ const ClientChat = ({ route, navigation }) => {
     }
 
     const isCancelled = ["CANCELLED", "CANCELLED_BY_CLIENT", "CANCELLED_BY_FREELANCER", "CANCELLED_SCOPE_MISMATCH", "DEADLINE_EXPIRED"].includes(job?.jobStatus);
+    const isDisputed = ["DISPUTE_OPEN", "DISPUTED"].includes(job?.jobStatus) || Boolean(job?.disputeId);
     const pType = (job?.projectType || job?.jobType || '').toLowerCase();
     const isOnSite = pType.includes('on-site') || (!pType.includes('remote') && job?.location?.toLowerCase() !== 'remote');
     const activeStatuses = ["ACCEPTED", "IN_PROGRESS", "CONFIRMED", "FREELANCER_TRAVELLING", "ARRIVED", "JOB_STARTED", "WORK_SUBMITTED"];
@@ -1113,6 +1114,17 @@ const ClientChat = ({ route, navigation }) => {
               timeContainer: styles.timeContainer,
             }}
           />
+        ) : isDisputed ? (
+          <DeadlineTimer
+            isDisputed={true}
+            style={{
+              timeBox: styles.timeBox,
+              timeText: styles.timeText,
+              unitText: styles.unitText,
+              completedText: styles.conColorc,
+              timeContainer: styles.timeContainer,
+            }}
+          />
         ) : isCompleted ? (
           <View style={styles.conColorc}>
             <Text style={styles.completedText}>Project Completed ✓</Text>
@@ -1123,6 +1135,7 @@ const ClientChat = ({ route, navigation }) => {
               deadline={job?.deadlineDate}
               jobCompleted={isCompleted}
               jobCancelled={false}
+              isDisputed={false}
               style={{
                 timeBox: styles.timeBox,
                 timeText: styles.timeText,

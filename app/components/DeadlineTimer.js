@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, StyleSheet } from "react-native";
 
-const DeadlineTimer = ({ deadline, jobCompleted, jobCancelled, style }) => {
+const DeadlineTimer = ({ deadline, jobCompleted, jobCancelled, isDisputed, style }) => {
   const [timeLeft, setTimeLeft] = useState("00d 00h 00m 00s");
 
   useEffect(() => {
-    if (!deadline || jobCompleted || jobCancelled) return;
+    if (!deadline || jobCompleted || jobCancelled || isDisputed) return;
 
     const timer = setInterval(() => {
       const deadlineDate = new Date(deadline);
@@ -27,7 +27,17 @@ const DeadlineTimer = ({ deadline, jobCompleted, jobCancelled, style }) => {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [deadline, jobCompleted, jobCancelled]);
+  }, [deadline, jobCompleted, jobCancelled, isDisputed]);
+
+  if (isDisputed) {
+    return (
+      <View style={[styles.timeContainer, style?.timeContainer]}>
+        <Text style={[styles.disputedText, style?.disputedText]}>
+          Timer Paused (Dispute Under Review)
+        </Text>
+      </View>
+    );
+  }
 
   if (jobCompleted) {
     return (
@@ -124,6 +134,12 @@ const styles = StyleSheet.create({
     color: "#DC2626",
     fontSize: 16,
     fontWeight: "bold",
+  },
+  disputedText: {
+    color: "#D97706",
+    fontSize: 15,
+    fontWeight: "bold",
+    textAlign: "center",
   },
 });
 

@@ -927,6 +927,17 @@ const FreelancerChat = ({ route, navigation }) => {
                       timeContainer: styles.timeContainer,
                     }}
                   />
+                ) : (["DISPUTE_OPEN", "DISPUTED"].includes(job?.jobStatus) || Boolean(job?.disputeId)) ? (
+                  <DeadlineTimer
+                    isDisputed={true}
+                    style={{
+                      timeBox: styles.timeBox,
+                      timeText: styles.timeText,
+                      unitText: styles.unitText,
+                      completedText: styles.conColorc,
+                      timeContainer: styles.timeContainer,
+                    }}
+                  />
                 ) : job?.jobStatus === "COMPLETED" ? (
                   <View style={styles.conColorc}>
                     <Text style={styles.completedText}>Project Completed ✓</Text>
@@ -936,6 +947,7 @@ const FreelancerChat = ({ route, navigation }) => {
                     deadline={job?.deadlineDate}
                     jobCompleted={false}
                     jobCancelled={false}
+                    isDisputed={false}
                     style={{
                       timeBox: styles.timeBox,
                       timeText: styles.timeText,
