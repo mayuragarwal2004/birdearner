@@ -300,7 +300,11 @@ function JobCard({ job, styles, isDark, onPress, onOptions }) {
   const service = job.service;
   const postedDate = formatDate(job.createdAt);
   const postedTime = formatTime(job.createdAt);
-  const deadline = formatDate(job.deadlineDate || job.deadline);
+  const workDays = job.workDurationDays || 1;
+  const isAssigned = !!job.assignedFreelancerId;
+  const deadlineLabel = isAssigned
+    ? `Due ${formatDate(job.workDeadline || job.deadlineDate || job.deadline)}`
+    : `Duration: ${workDays} ${workDays === 1 ? "Day" : "Days"}`;
   const budget = formatAmount(job.budgetAmount || job.budget);
   const iconTint = isDark ? "#B794FF" : PURPLE;
 
@@ -337,7 +341,7 @@ function JobCard({ job, styles, isDark, onPress, onOptions }) {
       <View style={styles.metaGrid}>
         <MetaItem styles={styles} icon={<CurrencyInr size={17} color={iconTint} />} label={budget} />
         <MetaItem styles={styles} icon={<CalendarBlank size={17} color={iconTint} />} label={`Posted ${postedDate}${postedTime ? `, ${postedTime}` : ""}`} />
-        <MetaItem styles={styles} icon={<CalendarBlank size={17} color={iconTint} />} label={`Due ${deadline}`} />
+        <MetaItem styles={styles} icon={<CalendarBlank size={17} color={iconTint} />} label={deadlineLabel} />
       </View>
 
       <View style={styles.jobBottomRow}>

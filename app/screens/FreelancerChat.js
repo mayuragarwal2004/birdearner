@@ -22,6 +22,7 @@ import ReviewFormModal from "../components/chat/ReviewFormModal";
 import OnSiteOtpModal from "../components/chat/OnSiteOtpModal";
 import SafeSpinner from "../components/SafeSpinner";
 import { Ionicons } from "@expo/vector-icons";
+import { getWhatsAppDateHeader, isDifferentCalendarDay } from "../utils/dateUtils";
 
 const getStyles = (currentTheme, isKeyboardVisible) =>
   StyleSheet.create({
@@ -30,6 +31,29 @@ const getStyles = (currentTheme, isKeyboardVisible) =>
       backgroundColor: currentTheme.background || "#F1F5F9",
       paddingBottom: 0,
       position: 'relative',
+    },
+    dateHeaderContainer: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginVertical: 10,
+      width: '100%',
+    },
+    dateHeaderBadge: {
+      backgroundColor: currentTheme.isDark ? '#2D2D3F' : '#E2E8F0',
+      paddingHorizontal: 12,
+      paddingVertical: 4,
+      borderRadius: 12,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.05,
+      shadowRadius: 2,
+      elevation: 1,
+    },
+    dateHeaderText: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: currentTheme.isDark ? '#94A3B8' : '#64748B',
+      textAlign: 'center',
     },
     negotiationBarTrigger: {
       flexDirection: 'row',
@@ -497,6 +521,15 @@ const FreelancerChat = ({ route, navigation }) => {
     }, [mutateJob, mutateMessages, mutateThread])
   );
 
+  const sortedChatMessages = React.useMemo(() => {
+    if (!messages || messages.length === 0) return [];
+    return [...messages].sort((a, b) => {
+      const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return timeB - timeA;
+    });
+  }, [messages]);
+
   // Safety guard for when user logs out but screen is still in transition/stack
   if (!userData) {
     return (
@@ -831,9 +864,11 @@ const FreelancerChat = ({ route, navigation }) => {
 
               const isMyJob = job?.assignedFreelancer?.user?.id === userData?.id || job?.assignedFreelancerId === userData?.id || job?.assignedFreelancerId === userData?.freelancer?.id;
               const isCompleted = job?.jobStatus === 'COMPLETED';
+              const isJobInactive = ['DISPUTE_RESOLVED', 'DISPUTE_OPEN', 'DISPUTED', 'CANCELLED', 'CANCELLED_BY_CLIENT', 'CANCELLED_BY_FREELANCER', 'CANCELLED_SCOPE_MISMATCH', 'DEADLINE_EXPIRED', 'COMPLETED', 'AUTO_ACCEPTED'].includes(job?.jobStatus);
+
               const pType = (job?.projectType || job?.jobType || '').toLowerCase();
               const isOnSite = pType === 'on-site' || (pType !== 'remote' && job?.location?.toLowerCase() !== 'remote');
-              const canRequestCompletion = isMyJob && !isCompleted && (chatStatus === 'IN_PROGRESS' || chatStatus === 'ACCEPTED') && (!isOnSite || ['JOB_STARTED', 'WORK_COMPLETED', 'PAYMENT_RELEASED'].includes(job?.jobStatus));
+              const canRequestCompletion = isMyJob && !isJobInactive && (chatStatus === 'IN_PROGRESS' || chatStatus === 'ACCEPTED') && (!isOnSite || ['JOB_STARTED', 'WORK_COMPLETED', 'PAYMENT_RELEASED'].includes(job?.jobStatus));
 
               // Check if on-site job is past OTP+5min window (cancel blocked, must raise dispute)
               const otpVerified = !!job?.otpVerifiedAt;
@@ -843,6 +878,9 @@ const FreelancerChat = ({ route, navigation }) => {
               
               if (isCompleted) {
                 baseOptions.push("Write Review");
+                return baseOptions;
+              }
+              if (isJobInactive) {
                 return baseOptions;
               }
               if (isMyJob && (chatStatus === 'ACCEPTED' || chatStatus === 'IN_PROGRESS')) {
@@ -999,27 +1037,44 @@ const FreelancerChat = ({ route, navigation }) => {
           )}
 
           <FlatList
-            inverted={Boolean(messages && messages.length > 0)}
-            data={[...(messages || [])].reverse()}
+            inverted={Boolean(sortedChatMessages && sortedChatMessages.length > 0)}
+            data={sortedChatMessages}
             keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <MessageItem
-                messageItem={item}
-                message={item.messageContent}
-                isCurrentUser={item.senderId === userData?.id}
-                media={item.userMedia}
-                isUploading={item.isUploading}
-                currentUserId={userData?.id}
-                userRole="freelancer"
-                onMessageUpdate={(type, data) => {
-                  if (type === 'review_press') {
-                    handleReviewPress(data);
-                  } else {
-                    mutateMessages();
-                  }
-                }}
-              />
-            )}
+            renderItem={({ item, index }) => {
+              const previousItemInTime = sortedChatMessages[index + 1];
+              const showDateHeader =
+                index === sortedChatMessages.length - 1 ||
+                isDifferentCalendarDay(item.createdAt, previousItemInTime?.createdAt);
+              const dateLabel = showDateHeader ? getWhatsAppDateHeader(item.createdAt) : null;
+
+              return (
+                <View style={{ width: '100%' }}>
+                  {showDateHeader && dateLabel ? (
+                    <View style={styles.dateHeaderContainer}>
+                      <View style={styles.dateHeaderBadge}>
+                        <Text style={styles.dateHeaderText}>{dateLabel}</Text>
+                      </View>
+                    </View>
+                  ) : null}
+                  <MessageItem
+                    messageItem={item}
+                    message={item.messageContent}
+                    isCurrentUser={item.senderId === userData?.id}
+                    media={item.userMedia}
+                    isUploading={item.isUploading}
+                    currentUserId={userData?.id}
+                    userRole="freelancer"
+                    onMessageUpdate={(type, data) => {
+                      if (type === 'review_press') {
+                        handleReviewPress(data);
+                      } else {
+                        mutateMessages();
+                      }
+                    }}
+                  />
+                </View>
+              );
+            }}
             style={styles.chatList}
             contentContainerStyle={styles.chatListContainer}
           />

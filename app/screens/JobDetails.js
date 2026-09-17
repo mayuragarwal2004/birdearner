@@ -571,9 +571,13 @@ const JobDetailsScreen = ({ route, navigation }) => {
                   </Text>
                 </View>
               </View>
-              {currentJob.workDeadline && (
+              {currentJob.assignedFreelancerId && (currentJob.workDeadline || currentJob.deadlineDate) ? (
                 <Text style={styles.statusNoticeText}>
-                  Work Deadline: {formatDate(currentJob.workDeadline)} ({currentJob.workDurationDays || 1} Day{currentJob.workDurationDays > 1 ? "s" : ""})
+                  Work Deadline: {formatDate(currentJob.workDeadline || currentJob.deadlineDate)} ({currentJob.workDurationDays || 1} Day{(currentJob.workDurationDays || 1) > 1 ? "s" : ""})
+                </Text>
+              ) : (
+                <Text style={styles.statusNoticeText}>
+                  Duration: {currentJob.workDurationDays || 1} Day{(currentJob.workDurationDays || 1) > 1 ? "s" : ""} (Deadline starts upon freelancer assignment)
                 </Text>
               )}
             </View>

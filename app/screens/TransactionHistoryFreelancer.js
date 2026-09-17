@@ -53,7 +53,13 @@ const TransactionHistoryFreelancerScreen = ({ navigation }) => {
       setLoading(true);
       const historyResponse = await apiService.getFreelancerTransactionHistory();
       if (historyResponse.success) {
-        setPaymentHistory(historyResponse.data.transactions || []);
+        const rawList = historyResponse.data.transactions || [];
+        const sortedList = [...rawList].sort((a, b) => {
+          const timeA = new Date(a.createdAt || a.date || 0).getTime();
+          const timeB = new Date(b.createdAt || b.date || 0).getTime();
+          return timeB - timeA;
+        });
+        setPaymentHistory(sortedList);
         if (historyResponse.data.walletInfo) {
           setWalletSnapshot(historyResponse.data.walletInfo);
         }

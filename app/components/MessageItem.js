@@ -27,45 +27,13 @@ const MessageItem = ({ messageItem, message, isCurrentUser, media = [], onMessag
 
   const formatTimestamp = (timestamp) => {
     if (!timestamp) return '';
-    
     const messageDate = new Date(timestamp);
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const messageDay = new Date(messageDate.getFullYear(), messageDate.getMonth(), messageDate.getDate());
-    
-    // Format time (12-hour format with AM/PM)
-    const timeString = messageDate.toLocaleTimeString('en-US', {
+    if (isNaN(messageDate.getTime())) return '';
+    return messageDate.toLocaleTimeString('en-US', {
       hour: 'numeric',
       minute: '2-digit',
       hour12: true
     });
-    
-    // Check if message is from today
-    if (messageDay.getTime() === today.getTime()) {
-      return timeString;
-    }
-    
-    // Check if message is from yesterday
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    if (messageDay.getTime() === yesterday.getTime()) {
-      return `Yesterday ${timeString}`;
-    }
-    
-    // Check if message is from this week
-    const weekAgo = new Date(today);
-    weekAgo.setDate(weekAgo.getDate() - 7);
-    if (messageDate > weekAgo) {
-      const dayName = messageDate.toLocaleDateString('en-US', { weekday: 'short' });
-      return `${dayName} ${timeString}`;
-    }
-    
-    // For older messages, show date and time
-    const dateString = messageDate.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric' 
-    });
-    return `${dateString} ${timeString}`;
   };
   
 
