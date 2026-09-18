@@ -335,21 +335,21 @@ const TransactionHistoryClientScreen = ({ navigation }) => {
                     <View style={styles.snapshotRow}>
                       <Text style={styles.snapshotLabel}>Current Reserved Value:</Text>
                       <Text style={[styles.snapshotValue, { color: "#F59E0B" }]}>
-                        ₹{Number(selectedTx.amount || 0).toFixed(2)}
+                        ₹{Number(selectedTx.currentReserveValue !== null && selectedTx.currentReserveValue !== undefined ? selectedTx.currentReserveValue : selectedTx.amount || 0).toFixed(2)}
                       </Text>
                     </View>
 
                     <View style={styles.snapshotRow}>
                       <Text style={styles.snapshotLabel}>Total Reserved Value:</Text>
                       <Text style={[styles.snapshotValue, { color: "#F59E0B" }]}>
-                        ₹{Number(walletSnapshot?.reservedAmount || 0).toFixed(2)}
+                        ₹{Number(selectedTx.reservedAfter !== null && selectedTx.reservedAfter !== undefined ? selectedTx.reservedAfter : walletSnapshot?.reservedAmount || 0).toFixed(2)}
                       </Text>
                     </View>
 
                     <View style={styles.snapshotRow}>
                       <Text style={styles.snapshotLabel}>Current Available Balance:</Text>
                       <Text style={[styles.snapshotValue, { color: "#4CAF50" }]}>
-                        ₹{Number(walletSnapshot?.availableBalance || 0).toFixed(2)}
+                        ₹{Number(selectedTx.availableAfter !== null && selectedTx.availableAfter !== undefined ? selectedTx.availableAfter : walletSnapshot?.availableBalance || 0).toFixed(2)}
                       </Text>
                     </View>
                   </View>
