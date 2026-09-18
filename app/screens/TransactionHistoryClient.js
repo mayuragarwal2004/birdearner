@@ -91,7 +91,7 @@ const TransactionHistoryClientScreen = ({ navigation }) => {
       case "JOB_REFUND": return "Job Refund";
       case "JOB_RESERVE": return "Job Reserve";
       case "JOB_RELEASE": return "Job Release";
-      case "PENALTY": return "Late Penalty";
+      case "PENALTY": return "Cancellation Penalty";
       case "BONUS": return "Early Bonus";
       case "PLATFORM_FEE": return "Platform Fee";
       default:

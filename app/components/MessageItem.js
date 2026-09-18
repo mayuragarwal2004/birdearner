@@ -6,10 +6,13 @@ import {
   TouchableOpacity,
   Image,
   Linking,
+  Modal,
+  Alert,
+  TextInput,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import apiService from "../lib/apiService";
-import { Modal } from "react-native";
+import Toast from "react-native-toast-message";
 import { useTheme } from "../context/ThemeContext";
 import CashPaymentMessage from "./chat/CashPaymentMessage";
 import CompletionRequestMessage from "./chat/CompletionRequestMessage";
@@ -22,6 +25,9 @@ const MessageItem = ({ messageItem, message, isCurrentUser, media = [], onMessag
   const [downloadingIndex, setDownloadingIndex] = useState(null);
   const [loadingImages, setLoadingImages] = useState({});
   const [fullImage, setFullImage] = useState(null); // { uri: string, name: string, index: number }
+  const [revisionModalVisible, setRevisionModalVisible] = useState(false);
+  const [revisionNotes, setRevisionNotes] = useState("");
+  const [submittingDecision, setSubmittingDecision] = useState(false);
 
   console.log({messageItem, message, isCurrentUser});
 
@@ -197,6 +203,172 @@ const MessageItem = ({ messageItem, message, isCurrentUser, media = [], onMessag
               )}
             </View>
           ))}
+
+          {/* Work Submission Card & Decision Actions for Remote Jobs */}
+          {(() => {
+            let msgData = {};
+            try {
+              if (messageItem?.messageData) {
+                msgData = typeof messageItem.messageData === "string" ? JSON.parse(messageItem.messageData) : messageItem.messageData;
+              }
+            } catch (e) {}
+
+            const isWorkSubmission = msgData?.isWorkSubmission || messageItem?.messageType === 'WORK_SUBMISSION' || msgData?.submissionStatus;
+            const submissionStatus = msgData?.submissionStatus || 'PENDING';
+
+            if (!isWorkSubmission) return null;
+
+            const handleAcceptSubmission = () => {
+              Alert.alert(
+                "Accept Work Submission",
+                "Are you sure you want to accept this work submission? This will complete the project and release payment to the freelancer.",
+                [
+                  { text: "Cancel", style: "cancel" },
+                  {
+                    text: "Accept & Complete",
+                    style: "default",
+                    onPress: async () => {
+                      try {
+                        setSubmittingDecision(true);
+                        await apiService.respondToWorkSubmissionMessage(messageItem.id, 'ACCEPT');
+                        Toast.show({
+                          type: 'success',
+                          text1: 'Work Accepted',
+                          text2: 'Project completed successfully!',
+                        });
+                        onMessageUpdate?.();
+                      } catch (err) {
+                        Alert.alert("Error", err.message || "Failed to accept submission");
+                      } finally {
+                        setSubmittingDecision(false);
+                      }
+                    }
+                  }
+                ]
+              );
+            };
+
+            const handleConfirmRevision = async () => {
+              if (!revisionNotes.trim()) {
+                Alert.alert("Required", "Please enter revision details.");
+                return;
+              }
+              try {
+                setSubmittingDecision(true);
+                setRevisionModalVisible(false);
+                await apiService.respondToWorkSubmissionMessage(messageItem.id, 'REVISE_REQUESTED', revisionNotes.trim());
+                Toast.show({
+                  type: 'info',
+                  text1: 'Revision Requested',
+                  text2: 'Freelancer has been notified to make changes.',
+                });
+                setRevisionNotes("");
+                onMessageUpdate?.();
+              } catch (err) {
+                Alert.alert("Error", err.message || "Failed to request revision");
+              } finally {
+                setSubmittingDecision(false);
+              }
+            };
+
+            const isClientUser = userRole?.toLowerCase() === 'client' || (!isCurrentUser && userRole?.toLowerCase() !== 'freelancer');
+
+            return (
+              <View style={styles.submissionBox}>
+                <View style={styles.submissionHeaderRow}>
+                  <MaterialIcons name="assignment" size={16} color="#3B82F6" />
+                  <Text style={styles.submissionTitle}>
+                    Work Submission {msgData.version ? `(v${msgData.version})` : ''}
+                  </Text>
+                </View>
+
+                {submissionStatus === 'PENDING' ? (
+                  isClientUser ? (
+                    <View style={styles.decisionButtonRow}>
+                      <TouchableOpacity
+                        style={[styles.decisionBtn, styles.acceptBtn, submittingDecision && { opacity: 0.6 }]}
+                        disabled={submittingDecision}
+                        onPress={handleAcceptSubmission}
+                      >
+                        <MaterialIcons name="check-circle" size={16} color="#FFFFFF" />
+                        <Text style={styles.decisionBtnText}>Accept</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={[styles.decisionBtn, styles.reviseBtn, submittingDecision && { opacity: 0.6 }]}
+                        disabled={submittingDecision}
+                        onPress={() => setRevisionModalVisible(true)}
+                      >
+                        <MaterialIcons name="edit" size={16} color="#FFFFFF" />
+                        <Text style={styles.decisionBtnText}>Revise Change</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <View style={styles.statusBadgePending}>
+                      <MaterialIcons name="hourglass-empty" size={14} color="#D97706" />
+                      <Text style={styles.statusBadgePendingText}>Pending Client Review</Text>
+                    </View>
+                  )
+                ) : submissionStatus === 'ACCEPTED' ? (
+                  <View style={styles.statusBadgeAccepted}>
+                    <MaterialIcons name="check-circle" size={14} color="#059669" />
+                    <Text style={styles.statusBadgeAcceptedText}>Accepted & Project Completed</Text>
+                  </View>
+                ) : submissionStatus === 'REVISE_REQUESTED' ? (
+                  <View style={styles.statusBadgeRevised}>
+                    <MaterialIcons name="rate-review" size={14} color="#EA580C" />
+                    <Text style={styles.statusBadgeRevisedText}>
+                      Revision Requested: {msgData.revisionNotes || 'Client requested revisions'}
+                    </Text>
+                  </View>
+                ) : null}
+
+                {/* Revision Modal */}
+                <Modal
+                  visible={revisionModalVisible}
+                  transparent={true}
+                  animationType="fade"
+                  onRequestClose={() => setRevisionModalVisible(false)}
+                >
+                  <View style={styles.modalOverlay}>
+                    <View style={styles.revisionModalCard}>
+                      <Text style={styles.revisionModalTitle}>Request Revision</Text>
+                      <Text style={styles.revisionModalSub}>
+                        Please describe the changes or revisions you would like the freelancer to make.
+                      </Text>
+                      <TextInput
+                        style={styles.revisionInput}
+                        multiline={true}
+                        numberOfLines={4}
+                        placeholder="Enter revision instructions..."
+                        placeholderTextColor="#94A3B8"
+                        value={revisionNotes}
+                        onChangeText={setRevisionNotes}
+                      />
+                      <View style={styles.revisionModalBtnRow}>
+                        <TouchableOpacity
+                          style={[styles.modalActionBtn, styles.cancelModalBtn]}
+                          onPress={() => {
+                            setRevisionModalVisible(false);
+                            setRevisionNotes("");
+                          }}
+                        >
+                          <Text style={styles.cancelModalBtnText}>Cancel</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          style={[styles.modalActionBtn, styles.submitRevisionBtn]}
+                          onPress={handleConfirmRevision}
+                        >
+                          <Text style={styles.submitRevisionBtnText}>Send Revision</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </View>
+                </Modal>
+              </View>
+            );
+          })()}
         </View>
       ) : message && (
         <Text
@@ -516,6 +688,159 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#6B7280",
     marginTop: 2,
+  },
+  submissionBox: {
+    marginTop: 10,
+    padding: 10,
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  submissionHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  submissionTitle: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#1E293B",
+    marginLeft: 6,
+  },
+  decisionButtonRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 6,
+  },
+  decisionBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+    gap: 4,
+  },
+  acceptBtn: {
+    backgroundColor: "#059669",
+  },
+  reviseBtn: {
+    backgroundColor: "#D97706",
+  },
+  decisionBtnText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  statusBadgePending: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 6,
+    backgroundColor: "#FEF3C7",
+    borderRadius: 6,
+    gap: 4,
+  },
+  statusBadgePendingText: {
+    fontSize: 12,
+    color: "#D97706",
+    fontWeight: "500",
+  },
+  statusBadgeAccepted: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 6,
+    backgroundColor: "#D1FAE5",
+    borderRadius: 6,
+    gap: 4,
+  },
+  statusBadgeAcceptedText: {
+    fontSize: 12,
+    color: "#059669",
+    fontWeight: "600",
+  },
+  statusBadgeRevised: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 6,
+    backgroundColor: "#FFEDD5",
+    borderRadius: 6,
+    gap: 4,
+  },
+  statusBadgeRevisedText: {
+    fontSize: 12,
+    color: "#EA580C",
+    fontWeight: "500",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  revisionModalCard: {
+    width: "100%",
+    maxWidth: 400,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    padding: 18,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  revisionModalTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#0F172A",
+    marginBottom: 4,
+  },
+  revisionModalSub: {
+    fontSize: 13,
+    color: "#64748B",
+    marginBottom: 12,
+  },
+  revisionInput: {
+    width: "100%",
+    minHeight: 80,
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
+    borderRadius: 8,
+    padding: 10,
+    textAlignVertical: "top",
+    fontSize: 14,
+    color: "#0F172A",
+    backgroundColor: "#F8FAFC",
+    marginBottom: 16,
+  },
+  revisionModalBtnRow: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 10,
+  },
+  modalActionBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 6,
+  },
+  cancelModalBtn: {
+    backgroundColor: "#F1F5F9",
+  },
+  cancelModalBtnText: {
+    color: "#475569",
+    fontWeight: "600",
+    fontSize: 13,
+  },
+  submitRevisionBtn: {
+    backgroundColor: "#D97706",
+  },
+  submitRevisionBtnText: {
+    color: "#FFFFFF",
+    fontWeight: "600",
+    fontSize: 13,
   },
 });
 

@@ -212,6 +212,7 @@ export const useChatData = (role, params) => {
       createdAt: new Date().toISOString(),
       messageType: messageType,
       attachments: formattedAttachments || null, // UI can handle null
+      messageData: attachmentData?.messageData || null,
       isOptimistic: true,
     };
 
@@ -246,6 +247,7 @@ export const useChatData = (role, params) => {
         messageContent: messageContent,
         messageType: messageType,
         attachments: formattedAttachments, // Use formattedAttachments (array or undefined)
+        messageData: attachmentData?.messageData,
         senderType: role.toUpperCase(),
       };
 

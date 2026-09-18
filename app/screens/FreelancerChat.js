@@ -643,6 +643,17 @@ const FreelancerChat = ({ route, navigation }) => {
       const messageToSend = messageContent.trim() || '';
       const attachmentData = fileData || fileInfo;
 
+      const pType = (job?.projectType || job?.jobType || '').toLowerCase();
+      const isRemoteJob = pType === 'remote';
+
+      let messageData = undefined;
+      if (attachmentData && isRemoteJob) {
+        messageData = {
+          isWorkSubmission: true,
+          submissionStatus: 'PENDING',
+        };
+      }
+
       // If file exists, send with attachment data
       if (attachmentData && (attachmentData.url || attachmentData.secure_url)) {
         await sendMessage(messageToSend, {
@@ -650,6 +661,7 @@ const FreelancerChat = ({ route, navigation }) => {
           attachmentName: attachmentData.originalName || attachmentData.name || 'attachment',
           attachmentSize: attachmentData.size || 0,
           attachmentMime: attachmentData.mimeType || attachmentData.mimetype || 'application/octet-stream',
+          messageData,
         });
       } else {
         // Send text-only message

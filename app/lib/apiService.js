@@ -3,7 +3,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 
-const DEV_API_BASE_URL = "https://availability-tmp-odds-startup.trycloudflare.com/api";
+const DEV_API_BASE_URL = "https://lights-bryan-athens-prince.trycloudflare.com/api";
 // const DEV_API_BASE_URL = "https://api.birdearner.com/api";
 
 const PROD_API_BASE_URL = "https://api.birdearner.com/api";
@@ -799,6 +799,19 @@ class ApiService {
       return response.data;
     } catch (error) {
       throw new Error(`Failed to respond to work: ${error.message}`);
+    }
+  }
+
+  // Respond to work submission attachment message (ACCEPT or REVISE_REQUESTED)
+  async respondToWorkSubmissionMessage(messageId, decision, revisionNotes = "") {
+    try {
+      const response = await this.makeRequest(`/chats/message/work-submission/respond`, {
+        method: "POST",
+        body: JSON.stringify({ messageId, decision, revisionNotes }),
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(`Failed to respond to submission: ${error.message}`);
     }
   }
 
