@@ -3,7 +3,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 
-const DEV_API_BASE_URL = "https://installations-humanities-chemical-thick.trycloudflare.com/api";
+const DEV_API_BASE_URL = "https://manufacture-october-distance-trend.trycloudflare.com/api";
 // const DEV_API_BASE_URL = "https://api.birdearner.com/api";
 
 const PROD_API_BASE_URL = "https://api.birdearner.com/api";
@@ -1222,11 +1222,6 @@ class ApiService {
       }
     } catch (err) {
       console.warn("Could not load full service catalog for lookup:", err.message);
-    }
-
-    // If freelancer has no specific selectedServices array, return all catalog services
-    if (!items.length && catalog.length > 0) {
-      return catalog;
     }
 
     if (!items.length) return [];

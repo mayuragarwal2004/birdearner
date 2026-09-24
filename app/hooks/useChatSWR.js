@@ -198,12 +198,31 @@ export const useChatData = (role, params) => {
     const messageType = attachmentData ? 'ATTACHMENT' : 'text';
 
     // Format attachments for backend (must be array or undefined for Zod)
-    const formattedAttachments = attachmentData ? [{
-      url: attachmentData.attachmentUrl,
-      name: attachmentData.attachmentName,
-      size: attachmentData.attachmentSize,
-      mimeType: attachmentData.attachmentMime,
-    }] : undefined;
+    let formattedAttachments = undefined;
+    if (attachmentData) {
+      if (Array.isArray(attachmentData)) {
+        formattedAttachments = attachmentData.map(item => ({
+          url: item.attachmentUrl || item.url || item.secure_url,
+          name: item.attachmentName || item.name || item.originalName || 'attachment',
+          size: item.attachmentSize || item.size || 0,
+          mimeType: item.attachmentMime || item.mimeType || item.mimetype || 'application/octet-stream',
+        }));
+      } else if (attachmentData.attachments && Array.isArray(attachmentData.attachments)) {
+        formattedAttachments = attachmentData.attachments.map(item => ({
+          url: item.attachmentUrl || item.url || item.secure_url,
+          name: item.attachmentName || item.name || item.originalName || 'attachment',
+          size: item.attachmentSize || item.size || 0,
+          mimeType: item.attachmentMime || item.mimeType || item.mimetype || 'application/octet-stream',
+        }));
+      } else if (attachmentData.attachmentUrl || attachmentData.url || attachmentData.secure_url) {
+        formattedAttachments = [{
+          url: attachmentData.attachmentUrl || attachmentData.url || attachmentData.secure_url,
+          name: attachmentData.attachmentName || attachmentData.name || attachmentData.originalName || 'attachment',
+          size: attachmentData.attachmentSize || attachmentData.size || 0,
+          mimeType: attachmentData.attachmentMime || attachmentData.mimeType || attachmentData.mimetype || 'application/octet-stream',
+        }];
+      }
+    }
 
     const optimisticMessage = {
       id: `temp-${Date.now()}`,

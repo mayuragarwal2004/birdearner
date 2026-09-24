@@ -9,6 +9,11 @@ import {
   Modal,
   Alert,
   TextInput,
+  KeyboardAvoidingView,
+  Platform,
+  TouchableWithoutFeedback,
+  Keyboard,
+  ActivityIndicator,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import apiService from "../lib/apiService";
@@ -255,8 +260,8 @@ const MessageItem = ({ messageItem, message, isCurrentUser, media = [], onMessag
               }
               try {
                 setSubmittingDecision(true);
-                setRevisionModalVisible(false);
                 await apiService.respondToWorkSubmissionMessage(messageItem.id, 'REVISE_REQUESTED', revisionNotes.trim());
+                setRevisionModalVisible(false);
                 Toast.show({
                   type: 'info',
                   text1: 'Revision Requested',
@@ -284,41 +289,52 @@ const MessageItem = ({ messageItem, message, isCurrentUser, media = [], onMessag
 
                 {submissionStatus === 'PENDING' ? (
                   isClientUser ? (
-                    <View style={styles.decisionButtonRow}>
-                      <TouchableOpacity
-                        style={[styles.decisionBtn, styles.acceptBtn, submittingDecision && { opacity: 0.6 }]}
-                        disabled={submittingDecision}
-                        onPress={handleAcceptSubmission}
-                      >
-                        <MaterialIcons name="check-circle" size={16} color="#FFFFFF" />
-                        <Text style={styles.decisionBtnText}>Accept</Text>
-                      </TouchableOpacity>
+                    msgData.reviewControlActive === false || msgData.isLatestForVersion === false ? (
+                      <View style={styles.statusBadgeSuperseded}>
+                        <MaterialIcons name="info-outline" size={14} color="#64748B" />
+                        <Text style={styles.statusBadgeSupersededText}>
+                          Submission updated (v{msgData.version || 1}) — see active review below
+                        </Text>
+                      </View>
+                    ) : (
+                      <View style={styles.decisionButtonRow}>
+                        <TouchableOpacity
+                          style={[styles.decisionBtn, styles.acceptBtn, submittingDecision && { opacity: 0.6 }]}
+                          disabled={submittingDecision}
+                          onPress={handleAcceptSubmission}
+                        >
+                          <MaterialIcons name="check-circle" size={16} color="#FFFFFF" />
+                          <Text style={styles.decisionBtnText}>Accept</Text>
+                        </TouchableOpacity>
 
-                      <TouchableOpacity
-                        style={[styles.decisionBtn, styles.reviseBtn, submittingDecision && { opacity: 0.6 }]}
-                        disabled={submittingDecision}
-                        onPress={() => setRevisionModalVisible(true)}
-                      >
-                        <MaterialIcons name="edit" size={16} color="#FFFFFF" />
-                        <Text style={styles.decisionBtnText}>Revise Change</Text>
-                      </TouchableOpacity>
-                    </View>
+                        <TouchableOpacity
+                          style={[styles.decisionBtn, styles.reviseBtn, submittingDecision && { opacity: 0.6 }]}
+                          disabled={submittingDecision}
+                          onPress={() => setRevisionModalVisible(true)}
+                        >
+                          <MaterialIcons name="edit" size={16} color="#FFFFFF" />
+                          <Text style={styles.decisionBtnText}>Revise Change</Text>
+                        </TouchableOpacity>
+                      </View>
+                    )
                   ) : (
                     <View style={styles.statusBadgePending}>
                       <MaterialIcons name="hourglass-empty" size={14} color="#D97706" />
-                      <Text style={styles.statusBadgePendingText}>Pending Client Review</Text>
+                      <Text style={styles.statusBadgePendingText}>
+                        {msgData.reviewControlActive === false ? `Submission Updated (v${msgData.version || 1})` : `v${msgData.version || 1} - Pending Client Review`}
+                      </Text>
                     </View>
                   )
                 ) : submissionStatus === 'ACCEPTED' ? (
                   <View style={styles.statusBadgeAccepted}>
                     <MaterialIcons name="check-circle" size={14} color="#059669" />
-                    <Text style={styles.statusBadgeAcceptedText}>Accepted & Project Completed</Text>
+                    <Text style={styles.statusBadgeAcceptedText}>v{msgData.version || 1} Accepted & Completed</Text>
                   </View>
                 ) : submissionStatus === 'REVISE_REQUESTED' ? (
                   <View style={styles.statusBadgeRevised}>
                     <MaterialIcons name="rate-review" size={14} color="#EA580C" />
                     <Text style={styles.statusBadgeRevisedText}>
-                      Revision Requested: {msgData.revisionNotes || 'Client requested revisions'}
+                      v{msgData.version || 1} Revision Requested: {msgData.revisionNotes || 'Client requested revisions'}
                     </Text>
                   </View>
                 ) : null}
@@ -328,43 +344,68 @@ const MessageItem = ({ messageItem, message, isCurrentUser, media = [], onMessag
                   visible={revisionModalVisible}
                   transparent={true}
                   animationType="fade"
-                  onRequestClose={() => setRevisionModalVisible(false)}
+                  statusBarTranslucent={true}
+                  onRequestClose={() => {
+                    if (!submittingDecision) {
+                      setRevisionModalVisible(false);
+                      setRevisionNotes("");
+                    }
+                  }}
                 >
-                  <View style={styles.modalOverlay}>
-                    <View style={styles.revisionModalCard}>
-                      <Text style={styles.revisionModalTitle}>Request Revision</Text>
-                      <Text style={styles.revisionModalSub}>
-                        Please describe the changes or revisions you would like the freelancer to make.
-                      </Text>
-                      <TextInput
-                        style={styles.revisionInput}
-                        multiline={true}
-                        numberOfLines={4}
-                        placeholder="Enter revision instructions..."
-                        placeholderTextColor="#94A3B8"
-                        value={revisionNotes}
-                        onChangeText={setRevisionNotes}
-                      />
-                      <View style={styles.revisionModalBtnRow}>
-                        <TouchableOpacity
-                          style={[styles.modalActionBtn, styles.cancelModalBtn]}
-                          onPress={() => {
-                            setRevisionModalVisible(false);
-                            setRevisionNotes("");
-                          }}
-                        >
-                          <Text style={styles.cancelModalBtnText}>Cancel</Text>
-                        </TouchableOpacity>
+                  <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                    <View style={styles.modalOverlay}>
+                      <KeyboardAvoidingView
+                        behavior={Platform.OS === "ios" ? "padding" : "height"}
+                        style={{ width: "100%", alignItems: "center" }}
+                      >
+                        <View style={styles.revisionModalCard}>
+                          <Text style={styles.revisionModalTitle}>Request Revision</Text>
+                          <Text style={styles.revisionModalSub}>
+                            Please describe the changes or revisions you would like the freelancer to make.
+                          </Text>
+                          <TextInput
+                            style={styles.revisionInput}
+                            multiline={true}
+                            numberOfLines={4}
+                            placeholder="Enter revision instructions..."
+                            placeholderTextColor="#94A3B8"
+                            value={revisionNotes}
+                            onChangeText={setRevisionNotes}
+                            autoFocus={true}
+                            editable={!submittingDecision}
+                          />
+                          <View style={styles.revisionModalBtnRow}>
+                            <TouchableOpacity
+                              style={[styles.modalActionBtn, styles.cancelModalBtn]}
+                              disabled={submittingDecision}
+                              onPress={() => {
+                                setRevisionModalVisible(false);
+                                setRevisionNotes("");
+                              }}
+                            >
+                              <Text style={styles.cancelModalBtnText}>Cancel</Text>
+                            </TouchableOpacity>
 
-                        <TouchableOpacity
-                          style={[styles.modalActionBtn, styles.submitRevisionBtn]}
-                          onPress={handleConfirmRevision}
-                        >
-                          <Text style={styles.submitRevisionBtnText}>Send Revision</Text>
-                        </TouchableOpacity>
-                      </View>
+                            <TouchableOpacity
+                              style={[
+                                styles.modalActionBtn,
+                                styles.submitRevisionBtn,
+                                submittingDecision && { opacity: 0.6 }
+                              ]}
+                              disabled={submittingDecision}
+                              onPress={handleConfirmRevision}
+                            >
+                              {submittingDecision ? (
+                                <ActivityIndicator size="small" color="#FFFFFF" />
+                              ) : (
+                                <Text style={styles.submitRevisionBtnText}>Send Revision</Text>
+                              )}
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      </KeyboardAvoidingView>
                     </View>
-                  </View>
+                  </TouchableWithoutFeedback>
                 </Modal>
               </View>
             );
@@ -745,6 +786,19 @@ const styles = StyleSheet.create({
   statusBadgePendingText: {
     fontSize: 12,
     color: "#D97706",
+    fontWeight: "500",
+  },
+  statusBadgeSuperseded: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 6,
+    backgroundColor: "#F1F5F9",
+    borderRadius: 6,
+    gap: 4,
+  },
+  statusBadgeSupersededText: {
+    fontSize: 12,
+    color: "#64748B",
     fontWeight: "500",
   },
   statusBadgeAccepted: {

@@ -18,6 +18,7 @@ const ChatInput = ({
   charactersRemaining,
   onInputChange,
   fileInfo,
+  filesInfo,
   onRemoveFile,
   sending,
   isUploading,
@@ -28,18 +29,21 @@ const ChatInput = ({
   const currentTheme = themeStyles[theme];
   const styles = getStyles(currentTheme);
 
+  const activeFiles = filesInfo || (Array.isArray(fileInfo) ? fileInfo : fileInfo ? [fileInfo] : []);
+  const hasFiles = activeFiles.length > 0;
+
   const handleSend = () => {
-    if (input.trim() || (fileInfo && fileInfo.name)) {
-      onSend(input, fileInfo);
+    if (input.trim() || hasFiles) {
+      onSend(input, activeFiles);
       setInput("");
     }
   };
 
   return (
     <View style={styles.container}>
-      {fileInfo && (
+      {hasFiles && (
         <FilePreview
-          fileInfo={fileInfo}
+          filesInfo={activeFiles}
           onRemove={onRemoveFile}
         />
       )}
@@ -58,14 +62,13 @@ const ChatInput = ({
           editable={charactersRemaining !== 0}
         />
         
-        {!fileInfo && (
-          <TouchableOpacity
-            style={styles.attachButton}
-            onPress={onFilePick}
-          >
-            <MaterialIcons name="attach-file" size={20} color={currentTheme.text || "#64748B"} />
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity
+          style={styles.attachButton}
+          onPress={onFilePick}
+          disabled={isUploading}
+        >
+          <MaterialIcons name="attach-file" size={20} color={currentTheme.text || "#64748B"} />
+        </TouchableOpacity>
 
         {sending ? (
           <View style={styles.sendButton}>
@@ -81,7 +84,7 @@ const ChatInput = ({
       {isUploading && (
         <View style={styles.uploadProgress}>
           <Text style={styles.uploadText}>
-            Uploading file... {Math.round(uploadProgress)}%
+            Uploading attachment(s)... {Math.round(uploadProgress)}%
           </Text>
           <SafeSpinner size={18} color="#4C0183" />
         </View>

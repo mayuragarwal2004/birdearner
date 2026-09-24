@@ -71,53 +71,100 @@ const MarketplaceJobs = ({ navigation, route }) => {
     );
   }, []);
 
-  // Dynamically load all of the freelancer's own services for filter section
+  // Freelancer's own selected services
+  const userFreelancerServices = useMemo(() => {
+    let list = Array.isArray(userServices) && userServices.length > 0 ? userServices : [];
+    if (!list.length && Array.isArray(routeUserServices) && routeUserServices.length > 0) {
+      list = routeUserServices;
+    }
+    if (!list.length && userData?.freelancer?.selectedServices) {
+      const raw = userData.freelancer.selectedServices;
+      list = Array.isArray(raw) ? raw : [];
+    }
+    return list.filter((s) => s && (s.id || s.name || typeof s === "string"));
+  }, [userServices, routeUserServices, userData]);
+
+  // Dynamically load ONLY the freelancer's own services for filter section
   const availableServices = useMemo(() => {
     const map = new Map();
 
-    const list = Array.isArray(userServices) && userServices.length > 0 ? userServices : (routeUserServices || []);
-    list.forEach((s) => {
-      if (s && s.id && s.name) {
-        map.set(String(s.id), { id: String(s.id), name: s.name });
+    userFreelancerServices.forEach((s) => {
+      const id = typeof s === "object" ? (s.id || s.name) : String(s);
+      const name = typeof s === "object" ? (s.name || s.id) : String(s);
+      if (id && name) {
+        const key = String(id);
+        if (!map.has(key)) {
+          map.set(key, { id: key, name: String(name) });
+        }
       }
     });
 
-    // Fallback if freelancer has no specific services selected
-    if (map.size === 0) {
-      const rawJobs = getAllJobs();
-      rawJobs.forEach((job) => {
-        if (job.serviceId && job.serviceName) {
-          map.set(String(job.serviceId), { id: String(job.serviceId), name: job.serviceName });
-        } else if (job.serviceName) {
-          map.set(String(job.serviceName), { id: String(job.serviceName), name: job.serviceName });
-        }
-      });
-    }
-
     return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
-  }, [userServices, routeUserServices, getAllJobs]);
+  }, [userFreelancerServices]);
 
-  // Freelancer service IDs for pre-filtering
-  const freelancerServiceIds = useMemo(() => {
-    return availableServices.map((s) => s.id);
-  }, [availableServices]);
+  // Freelancer service IDs and Names for strict pre-filtering
+  const freelancerServiceSets = useMemo(() => {
+    const ids = new Set();
+    const names = new Set();
 
-  // Pre-filter: show jobs matching the freelancer's own services
+    userFreelancerServices.forEach((s) => {
+      if (typeof s === "object") {
+        if (s.id) ids.add(String(s.id));
+        if (s.name) names.add(String(s.name).toLowerCase().trim());
+      } else if (typeof s === "string" && s.trim()) {
+        ids.add(s.trim());
+        names.add(s.toLowerCase().trim());
+      }
+    });
+
+    return { ids, names };
+  }, [userFreelancerServices]);
+
+  // Pre-filter: show ONLY jobs matching the freelancer's own services
   const allJobs = useMemo(() => {
     const rawJobs = getAllJobs();
-    if (freelancerServiceIds.length === 0) return rawJobs;
-    return rawJobs.filter(
-      (job) => job.serviceId && freelancerServiceIds.includes(job.serviceId)
-    );
-  }, [getAllJobs, freelancerServiceIds]);
+    const { ids, names } = freelancerServiceSets;
+
+    // If freelancer has no selected services, show 0 jobs (do NOT show all jobs of application)
+    if (ids.size === 0 && names.size === 0) {
+      return [];
+    }
+
+    return rawJobs.filter((job) => {
+      if (!job) return false;
+
+      // 1. Match by serviceId
+      if (job.serviceId && ids.has(String(job.serviceId))) {
+        return true;
+      }
+
+      // 2. Match by serviceName
+      if (job.serviceName && names.has(String(job.serviceName).toLowerCase().trim())) {
+        return true;
+      }
+
+      // 3. Match by nested service object (service.id or service.name)
+      if (job.service) {
+        if (job.service.id && ids.has(String(job.service.id))) return true;
+        if (job.service.name && names.has(String(job.service.name).toLowerCase().trim())) return true;
+      }
+
+      // 4. Match by jobCategory / jobSubCategory
+      if (job.jobCategory && names.has(String(job.jobCategory).toLowerCase().trim())) return true;
+      if (job.jobSubCategory && names.has(String(job.jobSubCategory).toLowerCase().trim())) return true;
+
+      return false;
+    });
+  }, [getAllJobs, freelancerServiceSets]);
 
   // Count jobs per service for badge display
   const serviceJobCounts = useMemo(() => {
     const counts = {};
     allJobs.forEach((job) => {
-      const serviceId = job.serviceId;
-      if (serviceId) {
-        counts[serviceId] = (counts[serviceId] || 0) + 1;
+      const matchId = job.serviceId || job.service?.id || job.serviceName || job.service?.name;
+      if (matchId) {
+        const key = String(matchId);
+        counts[key] = (counts[key] || 0) + 1;
       }
     });
     return counts;

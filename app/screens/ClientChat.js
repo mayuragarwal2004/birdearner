@@ -542,7 +542,7 @@ const ClientChat = ({ route, navigation }) => {
   const [reportModalVisible, setReportModalVisible] = useState(false);
   const [selectedReportReason, setSelectedReportReason] = useState(null);
   const [submittingReport, setSubmittingReport] = useState(false);
-  const [fileInfo, setFileInfo] = useState(null);
+  const [filesInfo, setFilesInfo] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [sending, setSending] = useState(false);
@@ -657,94 +657,113 @@ const ClientChat = ({ route, navigation }) => {
     setShowMenu(false);
   };
 
-  // File picking functionality - Upload to Cloudinary via new chat route
+  // File picking functionality - Upload to Cloudinary (supports multiple files)
   const handleFilePick = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
         type: ['image/*', 'video/*', 'application/*'],
+        multiple: true,
+        copyToCacheDirectory: false,
       });
 
       if (result.canceled || !result.assets || result.assets.length === 0) return;
 
-      const file = result.assets[0];
-      const formData = new FormData();
-      formData.append('file', {
-        uri: file.uri,
-        name: file.name,
-        type: file.mimeType,
-      });
-
       setIsUploading(true);
+      setUploadProgress(0);
+
       try {
-        const response = await api.makeRequest(
-          '/chats/upload-chat-document',
-          {
-            method: 'POST',
-            body: formData,
-          }
-        );
+        const newUploadedFiles = [];
+        const totalFiles = result.assets.length;
 
-        if (response.success) {
-          setFileInfo({
+        for (let i = 0; i < totalFiles; i++) {
+          const file = result.assets[i];
+          const formData = new FormData();
+          formData.append('file', {
+            uri: file.uri,
             name: file.name,
-            url: response.secure_url,
-            cloudinaryPublicId: response.cloudinaryPublicId,
-            mimeType: file.mimeType,
-            size: file.size,
+            type: file.mimeType || 'application/octet-stream',
           });
 
-          Toast.show({
-            type: 'success',
-            text1: 'Success',
-            text2: 'File uploaded to cloud',
-          });
-        } else {
-          throw new Error(response.message || 'Upload failed');
+          const response = await api.makeRequest(
+            '/chats/upload-chat-document',
+            {
+              method: 'POST',
+              body: formData,
+            }
+          );
+
+          if (response.success) {
+            newUploadedFiles.push({
+              name: file.name,
+              url: response.secure_url,
+              cloudinaryPublicId: response.cloudinaryPublicId,
+              mimeType: file.mimeType,
+              size: file.size,
+            });
+          } else {
+            throw new Error(response.message || `Upload failed for ${file.name}`);
+          }
+          setUploadProgress(Math.round(((i + 1) / totalFiles) * 100));
         }
+
+        setFilesInfo(prev => [...(prev || []), ...newUploadedFiles]);
+        Toast.show({
+          type: 'success',
+          text1: 'Success',
+          text2: `${newUploadedFiles.length} file(s) uploaded`,
+        });
       } catch (uploadError) {
         console.error('Upload error:', uploadError);
         Toast.show({
           type: 'error',
           text1: 'Upload Failed',
-          text2: uploadError.message || 'Failed to upload file to cloud',
+          text2: uploadError.message || 'Failed to upload files to cloud',
         });
       } finally {
         setIsUploading(false);
+        setUploadProgress(0);
       }
     } catch (error) {
-      console.error('Error picking file:', error);
+      console.error('Error picking files:', error);
       Toast.show({
         type: 'error',
         text1: 'Error',
-        text2: 'Failed to pick file',
+        text2: 'Failed to pick files',
       });
     }
   };
 
   // Send message functionality
   const handleSendMessage = async (messageContent, fileData = null) => {
+    const activeFiles = fileData || filesInfo;
+    const hasFiles = Array.isArray(activeFiles) ? activeFiles.length > 0 : Boolean(activeFiles);
+
     // Validate message or file
-    if (!messageContent.trim() && !fileInfo && !fileData) return;
+    if (!messageContent.trim() && !hasFiles) return;
 
     setSending(true);
     try {
       const messageToSend = messageContent.trim() || '';
-      const attachmentData = fileData || fileInfo;
 
-      // If file exists, send with attachment data
-      if (attachmentData && (attachmentData.url || attachmentData.secure_url)) {
+      // If file(s) exist, send with attachment data
+      if (hasFiles) {
+        const filesArray = Array.isArray(activeFiles) ? activeFiles : [activeFiles];
+        const formattedAttachments = filesArray.map(f => ({
+          attachmentUrl: f.url || f.secure_url,
+          attachmentName: f.originalName || f.name || 'attachment',
+          attachmentSize: f.size || 0,
+          attachmentMime: f.mimeType || f.mimetype || 'application/octet-stream',
+        }));
+
         await sendMessage(messageToSend, {
-          attachmentUrl: attachmentData.url || attachmentData.secure_url,
-          attachmentName: attachmentData.originalName || attachmentData.name || 'attachment',
-          attachmentSize: attachmentData.size || 0,
-          attachmentMime: attachmentData.mimeType || attachmentData.mimetype || 'application/octet-stream',
+          attachments: formattedAttachments,
         });
       } else {
         // Send text-only message
         await sendMessage(messageToSend, undefined);
       }
 
-      setFileInfo(null); // Clear file after sending
+      setFilesInfo([]); // Clear files after sending
       setCurrentInputLength(0); // Reset input length after sending
     } catch (error) {
       console.error('Error sending message:', error);
@@ -759,8 +778,12 @@ const ClientChat = ({ route, navigation }) => {
   };
 
   // Remove attached file functionality
-  const handleRemoveFile = () => {
-    setFileInfo(null);
+  const handleRemoveFile = (indexToRemove) => {
+    if (typeof indexToRemove === 'number') {
+      setFilesInfo(prev => (prev || []).filter((_, idx) => idx !== indexToRemove));
+    } else {
+      setFilesInfo([]);
+    }
     setUploadProgress(0);
     setIsUploading(false);
   };
@@ -1515,7 +1538,7 @@ const ClientChat = ({ route, navigation }) => {
               characterLimit={characterLimit}
               charactersRemaining={charactersRemaining}
               onInputChange={setCurrentInputLength}
-              fileInfo={fileInfo}
+              filesInfo={filesInfo}
               sending={sending}
               isUploading={isUploading}
               uploadProgress={uploadProgress}
