@@ -194,8 +194,8 @@ export const useChatData = (role, params) => {
     console.log('Role:', role);
     console.log('userData:', userData);
 
-    // Determine message type based on attachment
-    const messageType = attachmentData ? 'ATTACHMENT' : 'text';
+    // Determine message type based on attachment or work submission
+    const messageType = attachmentData?.messageData?.isWorkSubmission ? 'WORK_SUBMISSION' : (attachmentData ? 'ATTACHMENT' : 'text');
 
     // Format attachments for backend (must be array or undefined for Zod)
     let formattedAttachments = undefined;

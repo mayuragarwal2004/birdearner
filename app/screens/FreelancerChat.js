@@ -656,15 +656,8 @@ const FreelancerChat = ({ route, navigation }) => {
       const pType = (job?.projectType || job?.jobType || '').toLowerCase();
       const isRemoteJob = pType === 'remote';
 
-      let messageData = undefined;
-      if (hasFiles && isRemoteJob) {
-        messageData = {
-          isWorkSubmission: true,
-          submissionStatus: 'PENDING',
-        };
-      }
 
-      // If file(s) exist, send with attachment data
+      // If file(s) exist, send attached files and work submission as separate units
       if (hasFiles) {
         const filesArray = Array.isArray(activeFiles) ? activeFiles : [activeFiles];
         const formattedAttachments = filesArray.map(f => ({
@@ -674,10 +667,24 @@ const FreelancerChat = ({ route, navigation }) => {
           attachmentMime: f.mimeType || f.mimetype || 'application/octet-stream',
         }));
 
-        await sendMessage(messageToSend, {
-          attachments: formattedAttachments,
-          messageData,
-        });
+        if (isRemoteJob) {
+          // Unit 1: Send attached files message
+          await sendMessage(messageToSend, {
+            attachments: formattedAttachments,
+          });
+
+          // Unit 2: Send Work Submission message with review controls below
+          await sendMessage("", {
+            messageData: {
+              isWorkSubmission: true,
+              submissionStatus: 'PENDING',
+            },
+          });
+        } else {
+          await sendMessage(messageToSend, {
+            attachments: formattedAttachments,
+          });
+        }
       } else {
         // Send text-only message
         await sendMessage(messageToSend, undefined);

@@ -144,7 +144,7 @@ const MessageItem = ({ messageItem, message, isCurrentUser, media = [], onMessag
         </View>
       </Modal>
 
-      {messageItem?.messageType === 'ATTACHMENT' && messageItem?.attachments?.length > 0 ? (
+      {messageItem?.attachments?.length > 0 ? (
         <View>
           {/* Display caption if present */}
           {message && (
@@ -208,210 +208,8 @@ const MessageItem = ({ messageItem, message, isCurrentUser, media = [], onMessag
               )}
             </View>
           ))}
-
-          {/* Work Submission Card & Decision Actions for Remote Jobs */}
-          {(() => {
-            let msgData = {};
-            try {
-              if (messageItem?.messageData) {
-                msgData = typeof messageItem.messageData === "string" ? JSON.parse(messageItem.messageData) : messageItem.messageData;
-              }
-            } catch (e) {}
-
-            const isWorkSubmission = msgData?.isWorkSubmission || messageItem?.messageType === 'WORK_SUBMISSION' || msgData?.submissionStatus;
-            const submissionStatus = msgData?.submissionStatus || 'PENDING';
-
-            if (!isWorkSubmission) return null;
-
-            const handleAcceptSubmission = () => {
-              Alert.alert(
-                "Accept Work Submission",
-                "Are you sure you want to accept this work submission? This will complete the project and release payment to the freelancer.",
-                [
-                  { text: "Cancel", style: "cancel" },
-                  {
-                    text: "Accept & Complete",
-                    style: "default",
-                    onPress: async () => {
-                      try {
-                        setSubmittingDecision(true);
-                        await apiService.respondToWorkSubmissionMessage(messageItem.id, 'ACCEPT');
-                        Toast.show({
-                          type: 'success',
-                          text1: 'Work Accepted',
-                          text2: 'Project completed successfully!',
-                        });
-                        onMessageUpdate?.();
-                      } catch (err) {
-                        Alert.alert("Error", err.message || "Failed to accept submission");
-                      } finally {
-                        setSubmittingDecision(false);
-                      }
-                    }
-                  }
-                ]
-              );
-            };
-
-            const handleConfirmRevision = async () => {
-              if (!revisionNotes.trim()) {
-                Alert.alert("Required", "Please enter revision details.");
-                return;
-              }
-              try {
-                setSubmittingDecision(true);
-                await apiService.respondToWorkSubmissionMessage(messageItem.id, 'REVISE_REQUESTED', revisionNotes.trim());
-                setRevisionModalVisible(false);
-                Toast.show({
-                  type: 'info',
-                  text1: 'Revision Requested',
-                  text2: 'Freelancer has been notified to make changes.',
-                });
-                setRevisionNotes("");
-                onMessageUpdate?.();
-              } catch (err) {
-                Alert.alert("Error", err.message || "Failed to request revision");
-              } finally {
-                setSubmittingDecision(false);
-              }
-            };
-
-            const isClientUser = userRole?.toLowerCase() === 'client' || (!isCurrentUser && userRole?.toLowerCase() !== 'freelancer');
-
-            return (
-              <View style={styles.submissionBox}>
-                <View style={styles.submissionHeaderRow}>
-                  <MaterialIcons name="assignment" size={16} color="#3B82F6" />
-                  <Text style={styles.submissionTitle}>
-                    Work Submission {msgData.version ? `(v${msgData.version})` : ''}
-                  </Text>
-                </View>
-
-                {submissionStatus === 'PENDING' ? (
-                  isClientUser ? (
-                    msgData.reviewControlActive === false || msgData.isLatestForVersion === false ? (
-                      <View style={styles.statusBadgeSuperseded}>
-                        <MaterialIcons name="info-outline" size={14} color="#64748B" />
-                        <Text style={styles.statusBadgeSupersededText}>
-                          Submission updated (v{msgData.version || 1}) — see active review below
-                        </Text>
-                      </View>
-                    ) : (
-                      <View style={styles.decisionButtonRow}>
-                        <TouchableOpacity
-                          style={[styles.decisionBtn, styles.acceptBtn, submittingDecision && { opacity: 0.6 }]}
-                          disabled={submittingDecision}
-                          onPress={handleAcceptSubmission}
-                        >
-                          <MaterialIcons name="check-circle" size={16} color="#FFFFFF" />
-                          <Text style={styles.decisionBtnText}>Accept</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                          style={[styles.decisionBtn, styles.reviseBtn, submittingDecision && { opacity: 0.6 }]}
-                          disabled={submittingDecision}
-                          onPress={() => setRevisionModalVisible(true)}
-                        >
-                          <MaterialIcons name="edit" size={16} color="#FFFFFF" />
-                          <Text style={styles.decisionBtnText}>Revise Change</Text>
-                        </TouchableOpacity>
-                      </View>
-                    )
-                  ) : (
-                    <View style={styles.statusBadgePending}>
-                      <MaterialIcons name="hourglass-empty" size={14} color="#D97706" />
-                      <Text style={styles.statusBadgePendingText}>
-                        {msgData.reviewControlActive === false ? `Submission Updated (v${msgData.version || 1})` : `v${msgData.version || 1} - Pending Client Review`}
-                      </Text>
-                    </View>
-                  )
-                ) : submissionStatus === 'ACCEPTED' ? (
-                  <View style={styles.statusBadgeAccepted}>
-                    <MaterialIcons name="check-circle" size={14} color="#059669" />
-                    <Text style={styles.statusBadgeAcceptedText}>v{msgData.version || 1} Accepted & Completed</Text>
-                  </View>
-                ) : submissionStatus === 'REVISE_REQUESTED' ? (
-                  <View style={styles.statusBadgeRevised}>
-                    <MaterialIcons name="rate-review" size={14} color="#EA580C" />
-                    <Text style={styles.statusBadgeRevisedText}>
-                      v{msgData.version || 1} Revision Requested: {msgData.revisionNotes || 'Client requested revisions'}
-                    </Text>
-                  </View>
-                ) : null}
-
-                {/* Revision Modal */}
-                <Modal
-                  visible={revisionModalVisible}
-                  transparent={true}
-                  animationType="fade"
-                  statusBarTranslucent={true}
-                  onRequestClose={() => {
-                    if (!submittingDecision) {
-                      setRevisionModalVisible(false);
-                      setRevisionNotes("");
-                    }
-                  }}
-                >
-                  <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-                    <View style={styles.modalOverlay}>
-                      <KeyboardAvoidingView
-                        behavior={Platform.OS === "ios" ? "padding" : "height"}
-                        style={{ width: "100%", alignItems: "center" }}
-                      >
-                        <View style={styles.revisionModalCard}>
-                          <Text style={styles.revisionModalTitle}>Request Revision</Text>
-                          <Text style={styles.revisionModalSub}>
-                            Please describe the changes or revisions you would like the freelancer to make.
-                          </Text>
-                          <TextInput
-                            style={styles.revisionInput}
-                            multiline={true}
-                            numberOfLines={4}
-                            placeholder="Enter revision instructions..."
-                            placeholderTextColor="#94A3B8"
-                            value={revisionNotes}
-                            onChangeText={setRevisionNotes}
-                            autoFocus={true}
-                            editable={!submittingDecision}
-                          />
-                          <View style={styles.revisionModalBtnRow}>
-                            <TouchableOpacity
-                              style={[styles.modalActionBtn, styles.cancelModalBtn]}
-                              disabled={submittingDecision}
-                              onPress={() => {
-                                setRevisionModalVisible(false);
-                                setRevisionNotes("");
-                              }}
-                            >
-                              <Text style={styles.cancelModalBtnText}>Cancel</Text>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity
-                              style={[
-                                styles.modalActionBtn,
-                                styles.submitRevisionBtn,
-                                submittingDecision && { opacity: 0.6 }
-                              ]}
-                              disabled={submittingDecision}
-                              onPress={handleConfirmRevision}
-                            >
-                              {submittingDecision ? (
-                                <ActivityIndicator size="small" color="#FFFFFF" />
-                              ) : (
-                                <Text style={styles.submitRevisionBtnText}>Send Revision</Text>
-                              )}
-                            </TouchableOpacity>
-                          </View>
-                        </View>
-                      </KeyboardAvoidingView>
-                    </View>
-                  </TouchableWithoutFeedback>
-                </Modal>
-              </View>
-            );
-          })()}
         </View>
-      ) : message && (
+      ) : message ? (
         <Text
           style={[
             styles.messageText,
@@ -422,7 +220,205 @@ const MessageItem = ({ messageItem, message, isCurrentUser, media = [], onMessag
         >
           {message}
         </Text>
-      )}
+      ) : null}
+
+      {/* Work Submission Card & Decision Actions for Remote Jobs */}
+      {(() => {
+        let msgData = {};
+        try {
+          if (messageItem?.messageData) {
+            msgData = typeof messageItem.messageData === "string" ? JSON.parse(messageItem.messageData) : messageItem.messageData;
+          }
+        } catch (e) {}
+
+        const isWorkSubmission = msgData?.isWorkSubmission || messageItem?.messageType === 'WORK_SUBMISSION' || msgData?.submissionStatus;
+        const submissionStatus = msgData?.submissionStatus || 'PENDING';
+
+        if (!isWorkSubmission) return null;
+
+        // Hide previous unreviewed submission review buttons completely when superseded by newer attachments
+        if (submissionStatus === 'PENDING' && (msgData.reviewControlActive === false || msgData.isLatestForVersion === false)) {
+          return null;
+        }
+
+        const handleAcceptSubmission = () => {
+          Alert.alert(
+            "Accept Work Submission",
+            "Are you sure you want to accept this work submission? This will complete the project and release payment to the freelancer.",
+            [
+              { text: "Cancel", style: "cancel" },
+              {
+                text: "Accept & Complete",
+                style: "default",
+                onPress: async () => {
+                  try {
+                    setSubmittingDecision(true);
+                    await apiService.respondToWorkSubmissionMessage(messageItem.id, 'ACCEPT');
+                    Toast.show({
+                      type: 'success',
+                      text1: 'Work Accepted',
+                      text2: 'Project completed successfully!',
+                    });
+                    onMessageUpdate?.();
+                  } catch (err) {
+                    Alert.alert("Error", err.message || "Failed to accept submission");
+                  } finally {
+                    setSubmittingDecision(false);
+                  }
+                }
+              }
+            ]
+          );
+        };
+
+        const handleConfirmRevision = async () => {
+          if (!revisionNotes.trim()) {
+            Alert.alert("Required", "Please enter revision details.");
+            return;
+          }
+          try {
+            setSubmittingDecision(true);
+            await apiService.respondToWorkSubmissionMessage(messageItem.id, 'REVISE_REQUESTED', revisionNotes.trim());
+            setRevisionModalVisible(false);
+            Toast.show({
+              type: 'info',
+              text1: 'Revision Requested',
+              text2: 'Freelancer has been notified to make changes.',
+            });
+            setRevisionNotes("");
+            onMessageUpdate?.();
+          } catch (err) {
+            Alert.alert("Error", err.message || "Failed to request revision");
+          } finally {
+            setSubmittingDecision(false);
+          }
+        };
+
+        const isClientUser = userRole?.toLowerCase() === 'client' || (!isCurrentUser && userRole?.toLowerCase() !== 'freelancer');
+
+        return (
+          <View style={styles.submissionBox}>
+            <View style={styles.submissionHeaderRow}>
+              <MaterialIcons name="assignment" size={16} color="#3B82F6" />
+              <Text style={styles.submissionTitle}>
+                Work Submission {msgData.version ? `(v${msgData.version})` : ''}
+              </Text>
+            </View>
+
+            {submissionStatus === 'PENDING' ? (
+              isClientUser ? (
+                <View style={styles.decisionButtonRow}>
+                  <TouchableOpacity
+                    style={[styles.decisionBtn, styles.acceptBtn, submittingDecision && { opacity: 0.6 }]}
+                    disabled={submittingDecision}
+                    onPress={handleAcceptSubmission}
+                  >
+                    <MaterialIcons name="check-circle" size={16} color="#FFFFFF" />
+                    <Text style={styles.decisionBtnText}>Accept</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.decisionBtn, styles.reviseBtn, submittingDecision && { opacity: 0.6 }]}
+                    disabled={submittingDecision}
+                    onPress={() => setRevisionModalVisible(true)}
+                  >
+                    <MaterialIcons name="edit" size={16} color="#FFFFFF" />
+                    <Text style={styles.decisionBtnText}>Revise Change</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View style={styles.statusBadgePending}>
+                  <MaterialIcons name="hourglass-empty" size={14} color="#D97706" />
+                  <Text style={styles.statusBadgePendingText}>
+                    v{msgData.version || 1} - Pending Client Review
+                  </Text>
+                </View>
+              )
+            ) : submissionStatus === 'ACCEPTED' ? (
+              <View style={styles.statusBadgeAccepted}>
+                <MaterialIcons name="check-circle" size={14} color="#059669" />
+                <Text style={styles.statusBadgeAcceptedText}>v{msgData.version || 1} Accepted & Completed</Text>
+              </View>
+            ) : submissionStatus === 'REVISE_REQUESTED' ? (
+              <View style={styles.statusBadgeRevised}>
+                <MaterialIcons name="rate-review" size={14} color="#EA580C" />
+                <Text style={styles.statusBadgeRevisedText}>
+                  v{msgData.version || 1} Revision Requested: {msgData.revisionNotes || 'Client requested revisions'}
+                </Text>
+              </View>
+            ) : null}
+
+            {/* Revision Modal */}
+            <Modal
+              visible={revisionModalVisible}
+              transparent={true}
+              animationType="fade"
+              statusBarTranslucent={true}
+              onRequestClose={() => {
+                if (!submittingDecision) {
+                  setRevisionModalVisible(false);
+                  setRevisionNotes("");
+                }
+              }}
+            >
+              <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                <View style={styles.modalOverlay}>
+                  <KeyboardAvoidingView
+                    behavior={Platform.OS === "ios" ? "padding" : "height"}
+                    style={{ width: "100%", alignItems: "center" }}
+                  >
+                    <View style={styles.revisionModalCard}>
+                      <Text style={styles.revisionModalTitle}>Request Revision</Text>
+                      <Text style={styles.revisionModalSub}>
+                        Please describe the changes or revisions you would like the freelancer to make.
+                      </Text>
+                      <TextInput
+                        style={styles.revisionInput}
+                        multiline={true}
+                        numberOfLines={4}
+                        placeholder="Enter revision instructions..."
+                        placeholderTextColor="#94A3B8"
+                        value={revisionNotes}
+                        onChangeText={setRevisionNotes}
+                        autoFocus={true}
+                        editable={!submittingDecision}
+                      />
+                      <View style={styles.revisionModalBtnRow}>
+                        <TouchableOpacity
+                          style={[styles.modalActionBtn, styles.cancelModalBtn]}
+                          disabled={submittingDecision}
+                          onPress={() => {
+                            setRevisionModalVisible(false);
+                            setRevisionNotes("");
+                          }}
+                        >
+                          <Text style={styles.cancelModalBtnText}>Cancel</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          style={[
+                            styles.modalActionBtn,
+                            styles.submitRevisionBtn,
+                            submittingDecision && { opacity: 0.6 }
+                          ]}
+                          disabled={submittingDecision}
+                          onPress={handleConfirmRevision}
+                        >
+                          {submittingDecision ? (
+                            <ActivityIndicator size="small" color="#FFFFFF" />
+                          ) : (
+                            <Text style={styles.submitRevisionBtnText}>Send Revision</Text>
+                          )}
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </KeyboardAvoidingView>
+                </View>
+              </TouchableWithoutFeedback>
+            </Modal>
+          </View>
+        );
+      })()}
 
       {media?.length > 0 &&
         media.map((item, index) => {
