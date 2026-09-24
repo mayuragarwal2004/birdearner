@@ -88,7 +88,7 @@ const normalizeJobs = (jobs) =>
   });
 
 const JobsPostedScreen = ({ navigation }) => {
-  const { userProfile } = useAuth();
+  const { userData, userProfile } = useAuth();
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
   const isDark = theme === "dark";
@@ -115,14 +115,19 @@ const JobsPostedScreen = ({ navigation }) => {
     try {
       await apiService.init();
 
-      if (!userProfile?.id) {
+      const clientId = userData?.client?.id || userProfile?.id || userProfile?.clientId || userData?.id;
+
+      if (!clientId) {
         setJobs([]);
         cachedJobs.current = [];
         return;
       }
 
-      const response = await apiService.getJobsByClientId(userProfile.id, 1, 100);
-      const fetchedJobs = response?.jobs || response || [];
+      const response = await apiService.getJobsByClientId(clientId, 1, 100);
+      const fetchedJobs =
+        response?.jobs ||
+        response?.data?.jobs ||
+        (Array.isArray(response) ? response : []);
       const nextJobs = normalizeJobs(Array.isArray(fetchedJobs) ? fetchedJobs : []);
 
       if (JSON.stringify(nextJobs) !== JSON.stringify(cachedJobs.current)) {
@@ -141,7 +146,7 @@ const JobsPostedScreen = ({ navigation }) => {
   useEffect(() => {
     const unsubscribe = navigation.addListener("focus", fetchJobs);
     return unsubscribe;
-  }, [navigation, userProfile?.id]);
+  }, [navigation, userData?.client?.id, userProfile?.id, userData?.id]);
 
   const onRefresh = async () => {
     setRefreshing(true);
