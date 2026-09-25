@@ -106,6 +106,22 @@ const MessageItem = ({ messageItem, message, isCurrentUser, media = [], onMessag
       </View>
     );
   }
+  // Parse messageData if present to check work submission state
+  let msgData = {};
+  try {
+    if (messageItem?.messageData) {
+      msgData = typeof messageItem.messageData === "string" ? JSON.parse(messageItem.messageData) : messageItem.messageData;
+    }
+  } catch (e) {}
+
+  const isWorkSubmission = msgData?.isWorkSubmission || messageItem?.messageType === 'WORK_SUBMISSION' || msgData?.submissionStatus;
+  const submissionStatus = msgData?.submissionStatus || 'PENDING';
+  const isSupersededSubmission = isWorkSubmission && submissionStatus === 'PENDING' && (msgData.reviewControlActive === false || msgData.isLatestForVersion === false);
+
+  // If this message item is a superseded Work Submission message with no attachments or text, hide the entire bubble and timestamp
+  if (isSupersededSubmission && (!messageItem?.attachments || messageItem.attachments.length === 0) && (!message || !message.trim())) {
+    return null;
+  }
 
   return (
     <View
@@ -128,7 +144,7 @@ const MessageItem = ({ messageItem, message, isCurrentUser, media = [], onMessag
       >
         <View style={styles.fullScreenModal}>
           <Image
-            source={{ uri: fullImage?.uri }}
+            source={{ uri: apiService.loadImageURI(fullImage?.uri) || fullImage?.uri }}
             style={styles.fullScreenImage}
             resizeMode="contain"
           />
@@ -161,53 +177,67 @@ const MessageItem = ({ messageItem, message, isCurrentUser, media = [], onMessag
           )}
           
           {/* Display attachments */}
-          {messageItem.attachments.map((attachment, index) => (
-            <View key={index} style={styles.attachmentContainer}>
-              {attachment.mimeType?.startsWith('image/') ? (
-                // Image attachment
-                <TouchableOpacity
-                  onPress={() => setFullImage({ uri: attachment.url, name: attachment.name, index })}
-                >
-                  <Image
-                    source={{ uri: attachment.url }}
-                    style={styles.attachmentImage}
-                    onLoadStart={() => setLoadingImages(prev => ({ ...prev, [index]: true }))}
-                    onLoadEnd={() => setLoadingImages(prev => ({ ...prev, [index]: false }))}
-                  />
-                  {loadingImages[index] && (
-                    <View style={styles.imageLoadingOverlay}>
-                      <Text style={{ color: '#fff' }}>Loading...</Text>
+          {messageItem.attachments.map((attachment, index) => {
+            const rawUrl = attachment.url || attachment.attachmentUrl || attachment.path || attachment.secure_url || attachment.uri;
+            const imageUrl = apiService.loadImageURI(rawUrl);
+            const mime = attachment.mimeType || attachment.attachmentMime || attachment.type || attachment.mimetype || '';
+            const name = attachment.name || attachment.attachmentName || attachment.originalName || 'attachment';
+            const size = attachment.size || attachment.attachmentSize || 0;
+            const isImage = mime.startsWith('image/') || (typeof rawUrl === 'string' && (/\.(jpeg|jpg|gif|png|webp|heic|heif)$/i.test(rawUrl) || rawUrl.includes('image')));
+            const imgKey = `att-${messageItem.id || index}-${index}`;
+
+            return (
+              <View key={index} style={styles.attachmentContainer}>
+                {isImage ? (
+                  // Image attachment
+                  <TouchableOpacity
+                    onPress={() => setFullImage({ uri: imageUrl || rawUrl, name, index })}
+                  >
+                    <Image
+                      source={{ uri: imageUrl || rawUrl }}
+                      style={styles.attachmentImage}
+                      onLoadStart={() => setLoadingImages(prev => ({ ...prev, [imgKey]: true }))}
+                      onLoadEnd={() => setLoadingImages(prev => ({ ...prev, [imgKey]: false }))}
+                      onError={(e) => {
+                        console.error("Attachment image load error:", e.nativeEvent?.error, imageUrl);
+                        setLoadingImages(prev => ({ ...prev, [imgKey]: false }));
+                      }}
+                    />
+                    {loadingImages[imgKey] && (
+                      <View style={styles.imageLoadingOverlay}>
+                        <ActivityIndicator size="small" color="#ffffff" />
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                ) : (
+                  // File attachment
+                  <TouchableOpacity
+                    style={styles.fileAttachment}
+                    onPress={() => handleDownload(rawUrl, index)}
+                  >
+                    <MaterialIcons 
+                      name={getFileIcon(mime)} 
+                      size={24} 
+                      color="#3B82F6" 
+                    />
+                    <View style={{ flex: 1, marginLeft: 12 }}>
+                      <Text style={styles.attachmentName} numberOfLines={2}>
+                        {name}
+                      </Text>
+                      <Text style={styles.attachmentSize}>
+                        {formatFileSize(size)}
+                      </Text>
                     </View>
-                  )}
-                </TouchableOpacity>
-              ) : (
-                // File attachment
-                <TouchableOpacity
-                  style={styles.fileAttachment}
-                  onPress={() => handleDownload(attachment.url, index)}
-                >
-                  <MaterialIcons 
-                    name={getFileIcon(attachment.mimeType)} 
-                    size={24} 
-                    color="#3B82F6" 
-                  />
-                  <View style={{ flex: 1, marginLeft: 12 }}>
-                    <Text style={styles.attachmentName} numberOfLines={2}>
-                      {attachment.name}
-                    </Text>
-                    <Text style={styles.attachmentSize}>
-                      {formatFileSize(attachment.size)}
-                    </Text>
-                  </View>
-                  <MaterialIcons 
-                    name={downloadingIndex === index ? "hourglass-empty" : "download"} 
-                    size={20} 
-                    color="#3B82F6" 
-                  />
-                </TouchableOpacity>
-              )}
-            </View>
-          ))}
+                    <MaterialIcons 
+                      name={downloadingIndex === index ? "hourglass-empty" : "download"} 
+                      size={20} 
+                      color="#3B82F6" 
+                    />
+                  </TouchableOpacity>
+                )}
+              </View>
+            );
+          })}
         </View>
       ) : message ? (
         <Text
@@ -459,6 +489,12 @@ const MessageItem = ({ messageItem, message, isCurrentUser, media = [], onMessag
                         }))
                       }
                       onLoadEnd={() =>
+                        setLoadingImages((prev) => ({
+                          ...prev,
+                          [item.id]: false,
+                        }))
+                      }
+                      onError={() =>
                         setLoadingImages((prev) => ({
                           ...prev,
                           [item.id]: false,

@@ -3,7 +3,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 
-const DEV_API_BASE_URL = "https://brunette-furthermore-strips-camera.trycloudflare.com/api";
+const DEV_API_BASE_URL = "https://inch-prominent-thought-editor.trycloudflare.com/api";
 // const DEV_API_BASE_URL = "https://api.birdearner.com/api";
 
 const PROD_API_BASE_URL = "https://api.birdearner.com/api";
@@ -1865,19 +1865,36 @@ class ApiService {
       return null;
     } else if (typeof uri !== "string") {
       return null;
-    } else if (uri.startsWith("http://") || uri.startsWith("https://")) {
-      return uri; // Return remote URL as is
-    } else if (uri.startsWith("/")) {
-      return `${this.baseURL}${uri}`; // Convert relative path to absolute URL
+    }
+
+    // Clean up broken Cloudinary overlay transformations (l_text) if present in old or new URLs
+    let cleanUri = uri;
+    if (cleanUri.includes("res.cloudinary.com") && (cleanUri.includes("l_text") || cleanUri.includes("l_text%3A"))) {
+      cleanUri = cleanUri.replace(/\/upload\/[^/]*l_text[^/]*\//, "/upload/");
+    }
+
+    if (cleanUri.startsWith("http://") || cleanUri.startsWith("https://")) {
+      return cleanUri; // Return remote URL as is
     } else if (
-      uri.startsWith("file://") ||
-      uri.startsWith("content://") ||
-      uri.startsWith("ph://") ||
-      uri.startsWith("assets-library://")
+      cleanUri.startsWith("file://") ||
+      cleanUri.startsWith("content://") ||
+      cleanUri.startsWith("ph://") ||
+      cleanUri.startsWith("assets-library://")
     ) {
-      return uri; // Local / device media URIs
-    } else if (uri.trim().length > 0) {
-      return `${this.baseURL}/${uri.trim()}`;
+      return cleanUri; // Local / device media URIs
+    } else if (cleanUri.startsWith("/")) {
+      if (this.baseURL.endsWith("/api") && cleanUri.startsWith("/api/")) {
+        const rootBase = this.baseURL.replace(/\/api\/?$/, "");
+        return `${rootBase}${cleanUri}`;
+      }
+      return `${this.baseURL}${cleanUri}`; // Convert relative path to absolute URL
+    } else if (cleanUri.trim().length > 0) {
+      const trimmed = cleanUri.trim();
+      if (this.baseURL.endsWith("/api") && trimmed.startsWith("api/")) {
+        const rootBase = this.baseURL.replace(/\/api\/?$/, "");
+        return `${rootBase}/${trimmed}`;
+      }
+      return `${this.baseURL}/${trimmed}`;
     } else {
       console.error("Invalid URI format:", uri);
       return null; // Return null for invalid URIs
