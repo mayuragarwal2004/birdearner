@@ -642,6 +642,16 @@ const ClientChat = ({ route, navigation }) => {
       case "Cancel Job":
         setCancelModalVisible(true);
         break;
+      case "Report No Submission":
+        Alert.alert(
+          "Report Freelancer — Work Not Submitted",
+          "The work deadline and 12-hour grace period have passed with no submission from the freelancer.\n\n• You get a full refund\n• Freelancer gets a 2% penalty, +1 strike and a 1-day cooldown\n• The job will be cancelled permanently\n\nThis action cannot be undone.",
+          [
+            { text: "Cancel", style: "cancel" },
+            { text: "Report", style: "destructive", onPress: handleReportNoSubmission },
+          ]
+        );
+        break;
       case "Raise Dispute":
         setDisputeModalVisible(true);
         break;
@@ -995,6 +1005,36 @@ const ClientChat = ({ route, navigation }) => {
         type: "error",
         text1: "Error",
         text2: "Failed to cancel job",
+      });
+    }
+  };
+
+  const handleReportNoSubmission = async () => {
+    try {
+      await api.init();
+      const res = await api.makeRequest(`/jobs/${route.params.jobId || route.params.projectId}/report-no-submission`, {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
+
+      if (res.success) {
+        await Promise.all([
+          mutateJob?.(),
+          mutateThread?.(),
+          mutateMessages?.(),
+        ]);
+        Toast.show({
+          type: "success",
+          text1: "Report Submitted",
+          text2: "Job closed with a full refund to you",
+        });
+        navigation.goBack();
+      }
+    } catch (err) {
+      Toast.show({
+        type: "error",
+        text1: "Cannot Submit Report",
+        text2: err.message || "Failed to report freelancer",
       });
     }
   };
@@ -1375,6 +1415,16 @@ const ClientChat = ({ route, navigation }) => {
                   baseOptions.push("Request Project Completion");
                 }
               }
+
+              // Remote job: deadline + 12h grace passed with no submission -> report freelancer
+              const workDeadlineTs = job?.workDeadline ? new Date(job.workDeadline).getTime() : 0;
+              const isGraceExpired = workDeadlineTs > 0 && Date.now() > workDeadlineTs + 12 * 60 * 60 * 1000;
+              const canReportNoSubmission = !isJobInactive && !isOnSite && isGraceExpired &&
+                ["CONFIRMED", "IN_PROGRESS"].includes(job?.jobStatus) &&
+                job?.assignedFreelancerId === route.params.freelancer.id;
+              if (canReportNoSubmission) {
+                baseOptions.push("Report No Submission");
+              }
               return baseOptions;
             })()
           }
@@ -1479,9 +1529,12 @@ const ClientChat = ({ route, navigation }) => {
                     isUploading={item.isUploading}
                     currentUserId={userData?.id}
                     userRole="client"
+                    jobStatus={jobStatus}
                     onMessageUpdate={(type, data) => {
                       if (type === 'review_press') {
                         handleReviewPress(data);
+                      } else if (type === 'dispute_press') {
+                        setDisputeModalVisible(true);
                       } else {
                         mutateMessages();
                       }

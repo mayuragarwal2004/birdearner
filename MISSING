@@ -1,0 +1,9 @@
+Intro = app\screens\Intro.js
+Login = app\screens\Login.js
+Signup = app\screens\Signup.js
+Role = app\screens\Role.js
+OtpVerification = app\screens\OtpVerification.js
+ClientSignup = app\screens\ClientSignup.js
+FreelancerSignup = app\screens\FreelancerSignup.js
+ForgotPassword = app\screens\ForgotPassword.js
+ResetPassword = app\screens\ResetPassword.js

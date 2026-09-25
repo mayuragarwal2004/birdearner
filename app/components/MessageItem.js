@@ -23,7 +23,7 @@ import CashPaymentMessage from "./chat/CashPaymentMessage";
 import CompletionRequestMessage from "./chat/CompletionRequestMessage";
 import ReviewRequestMessage from "./chat/ReviewRequestMessage";
 
-const MessageItem = ({ messageItem, message, isCurrentUser, media = [], onMessageUpdate, currentUserId, userRole }) => {
+const MessageItem = ({ messageItem, message, isCurrentUser, media = [], onMessageUpdate, currentUserId, userRole, jobStatus }) => {
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme] || themeStyles.light;
   const isDark = theme === "dark";
@@ -263,6 +263,8 @@ const MessageItem = ({ messageItem, message, isCurrentUser, media = [], onMessag
 
         const isWorkSubmission = msgData?.isWorkSubmission || messageItem?.messageType === 'WORK_SUBMISSION' || msgData?.submissionStatus;
         const submissionStatus = msgData?.submissionStatus || 'PENDING';
+        const jobStatusUpper = (jobStatus || '').toUpperCase();
+        const isJobDisputed = jobStatusUpper === 'DISPUTE_OPEN' || jobStatusUpper === 'DISPUTED';
 
         if (!isWorkSubmission) return null;
 
@@ -324,6 +326,23 @@ const MessageItem = ({ messageItem, message, isCurrentUser, media = [], onMessag
           }
         };
 
+        const handleRaiseDispute = () => {
+          Alert.alert(
+            "Raise Dispute",
+            "Raise a dispute for this work submission? An admin will review the case and resolve it.",
+            [
+              { text: "Cancel", style: "cancel" },
+              {
+                text: "Continue",
+                style: "default",
+                onPress: () => {
+                  onMessageUpdate?.('dispute_press', messageItem);
+                }
+              }
+            ]
+          );
+        };
+
         const isClientUser = userRole?.toLowerCase() === 'client' || (!isCurrentUser && userRole?.toLowerCase() !== 'freelancer');
 
         return (
@@ -335,7 +354,14 @@ const MessageItem = ({ messageItem, message, isCurrentUser, media = [], onMessag
               </Text>
             </View>
 
-            {submissionStatus === 'PENDING' ? (
+            {isJobDisputed ? (
+              <View style={styles.statusBadgeDisputed}>
+                <MaterialIcons name="gavel" size={14} color="#DC2626" />
+                <Text style={styles.statusBadgeDisputedText}>
+                  Dispute raised — under review by admin
+                </Text>
+              </View>
+            ) : submissionStatus === 'PENDING' ? (
               isClientUser ? (
                 <View style={styles.decisionButtonRow}>
                   <TouchableOpacity
@@ -354,6 +380,15 @@ const MessageItem = ({ messageItem, message, isCurrentUser, media = [], onMessag
                   >
                     <MaterialIcons name="edit" size={16} color="#FFFFFF" />
                     <Text style={styles.decisionBtnText}>Revise Change</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.decisionBtn, styles.disputeBtn, submittingDecision && { opacity: 0.6 }]}
+                    disabled={submittingDecision}
+                    onPress={handleRaiseDispute}
+                  >
+                    <MaterialIcons name="gavel" size={16} color="#FFFFFF" />
+                    <Text style={styles.decisionBtnText}>Raise Dispute</Text>
                   </TouchableOpacity>
                 </View>
               ) : (
@@ -782,25 +817,27 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
   decisionButtonRow: {
-    flexDirection: "row",
+    flexDirection: "column",
     gap: 8,
     marginTop: 6,
   },
   decisionBtn: {
-    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 8,
+    paddingVertical: 10,
     paddingHorizontal: 10,
     borderRadius: 6,
-    gap: 4,
+    gap: 6,
   },
   acceptBtn: {
     backgroundColor: "#059669",
   },
   reviseBtn: {
     backgroundColor: "#D97706",
+  },
+  disputeBtn: {
+    backgroundColor: "#EF4444",
   },
   decisionBtnText: {
     color: "#FFFFFF",
@@ -819,6 +856,21 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#D97706",
     fontWeight: "500",
+  },
+  statusBadgeDisputed: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 6,
+    backgroundColor: "#FEF2F2",
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#FECACA",
+    gap: 4,
+  },
+  statusBadgeDisputedText: {
+    fontSize: 12,
+    color: "#DC2626",
+    fontWeight: "600",
   },
   statusBadgeSuperseded: {
     flexDirection: "row",

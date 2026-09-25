@@ -1102,6 +1102,7 @@ const FreelancerChat = ({ route, navigation }) => {
                     isUploading={item.isUploading}
                     currentUserId={userData?.id}
                     userRole="freelancer"
+                    jobStatus={jobStatus}
                     onMessageUpdate={(type, data) => {
                       if (type === 'review_press') {
                         handleReviewPress(data);
