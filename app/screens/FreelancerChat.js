@@ -880,6 +880,14 @@ const FreelancerChat = ({ route, navigation }) => {
     }
   };
 
+  // Remote jobs: 12h grace period display (exact expiry from server, fallback = deadline + 12h)
+  const freePType = (job?.projectType || job?.jobType || '').toLowerCase();
+  const isOnSiteJob = freePType === 'on-site' || (freePType !== 'remote' && job?.location?.toLowerCase() !== 'remote');
+  const graceBaseTs = job?.workDeadline || job?.deadlineDate;
+  const graceExpiresAt = !isOnSiteJob && graceBaseTs
+    ? (job?.freelancerGracePeriodExpiresAt || new Date(new Date(graceBaseTs).getTime() + 12 * 60 * 60 * 1000).toISOString())
+    : null;
+
   return (
     <SafeAreaView
       style={{
@@ -1024,6 +1032,7 @@ const FreelancerChat = ({ route, navigation }) => {
                     jobCompleted={false}
                     jobCancelled={false}
                     isDisputed={false}
+                    graceExpiresAt={graceExpiresAt}
                     style={{
                       timeBox: styles.timeBox,
                       timeText: styles.timeText,

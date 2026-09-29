@@ -1192,6 +1192,11 @@ const ClientChat = ({ route, navigation }) => {
     const isDisputed = ["DISPUTE_OPEN", "DISPUTED"].includes(job?.jobStatus) || Boolean(job?.disputeId);
     const pType = (job?.projectType || job?.jobType || '').toLowerCase();
     const isOnSite = pType.includes('on-site') || (!pType.includes('remote') && job?.location?.toLowerCase() !== 'remote');
+    // Remote jobs: 12h grace period display (exact expiry from server, fallback = deadline + 12h)
+    const graceBaseTs = job?.workDeadline || job?.deadlineDate;
+    const graceExpiresAt = !isOnSite && graceBaseTs
+      ? (job?.freelancerGracePeriodExpiresAt || new Date(new Date(graceBaseTs).getTime() + 12 * 60 * 60 * 1000).toISOString())
+      : null;
     const activeStatuses = ["ACCEPTED", "IN_PROGRESS", "CONFIRMED", "FREELANCER_TRAVELLING", "ARRIVED", "JOB_STARTED", "WORK_SUBMITTED"];
     const isActive = activeStatuses.includes(chatStatus) || activeStatuses.includes(job?.jobStatus?.toUpperCase());
 
@@ -1232,6 +1237,7 @@ const ClientChat = ({ route, navigation }) => {
               jobCompleted={isCompleted}
               jobCancelled={false}
               isDisputed={false}
+              graceExpiresAt={graceExpiresAt}
               style={{
                 timeBox: styles.timeBox,
                 timeText: styles.timeText,
