@@ -68,6 +68,13 @@ const getStatusMeta = (status, isDark) => {
       bg: isDark ? "rgba(34,197,94,0.18)" : "#EAF8EF",
     };
   }
+  if (value === "AUTO_ACCEPTED") {
+    return {
+      label: "Auto Accepted",
+      color: isDark ? "#4ADE80" : "#16A34A",
+      bg: isDark ? "rgba(34,197,94,0.18)" : "#EAF8EF",
+    };
+  }
   return {
     label: value || "Job",
     color: isDark ? "#94A3B8" : "#64748B",

@@ -1201,6 +1201,7 @@ const ClientChat = ({ route, navigation }) => {
     const isActive = activeStatuses.includes(chatStatus) || activeStatuses.includes(job?.jobStatus?.toUpperCase());
 
     const isCompleted = job?.jobStatus === "COMPLETED";
+    const isAutoAccepted = job?.jobStatus === "AUTO_ACCEPTED";
 
     return (
       <View style={styles.deadlineContainer}>
@@ -1226,6 +1227,13 @@ const ClientChat = ({ route, navigation }) => {
               timeContainer: styles.timeContainer,
             }}
           />
+        ) : isAutoAccepted ? (
+          <View style={styles.conColorc}>
+            <Text style={styles.completedText}>Work Auto Accepted ✓</Text>
+            <Text style={[styles.completedText, { fontSize: 11, marginTop: 3, opacity: 0.9, textAlign: "center" }]}>
+              Review period expired — payment released to freelancer
+            </Text>
+          </View>
         ) : isCompleted ? (
           <View style={styles.conColorc}>
             <Text style={styles.completedText}>Project Completed ✓</Text>

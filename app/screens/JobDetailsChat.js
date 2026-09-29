@@ -265,7 +265,9 @@ const JobDetailsChatScreen = ({ route, navigation }) => {
   const skillsList = job.skillsRequired || job.skills || [];
   const rawStatus = (job.jobStatus || job.status || "OPEN").toUpperCase();
   const isCash = job.paymentMethod === "CASH" || !job.paymentMethod;
-  const statusText = (rawStatus === "REFUNDED" && isCash)
+  const statusText = (rawStatus === "AUTO_ACCEPTED")
+    ? "AUTO ACCEPTED"
+    : (rawStatus === "REFUNDED" && isCash)
     ? "CANCELLED (NO PAYMENT REQUIRED)"
     : (rawStatus === "DISPUTE_RESOLVED" && isCash)
     ? "DISPUTE RESOLVED (PAY FREELANCER IN CASH)"

@@ -25,9 +25,9 @@ const BORDER = "#E7E1EF";
 
 const getStatusMeta = (status, isDark = false) => {
   const value = (status || "PENDING").toUpperCase();
-  if (value === "COMPLETED") {
+  if (value === "COMPLETED" || value === "AUTO_ACCEPTED") {
     return {
-      label: "Completed",
+      label: value === "AUTO_ACCEPTED" ? "Auto Accepted" : "Completed",
       color: isDark ? "#4ADE80" : "#22C55E",
       bg: isDark ? "rgba(34,197,94,0.18)" : "#EAF8EF",
     };
@@ -104,7 +104,7 @@ const JobsPostedScreen = ({ navigation }) => {
 
   const summary = useMemo(() => {
     const total = jobs.length;
-    const open = jobs.filter((job) => !["COMPLETED", "CANCELLED", "REJECTED"].includes((job.jobStatus || "").toUpperCase())).length;
+    const open = jobs.filter((job) => !["COMPLETED", "AUTO_ACCEPTED", "CANCELLED", "REJECTED"].includes((job.jobStatus || "").toUpperCase())).length;
     const proposals = jobs.reduce((sum, job) => sum + Number(job.proposalCount || 0), 0);
     return { total, open, proposals };
   }, [jobs]);

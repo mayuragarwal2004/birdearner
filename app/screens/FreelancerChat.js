@@ -1022,6 +1022,13 @@ const FreelancerChat = ({ route, navigation }) => {
                       timeContainer: styles.timeContainer,
                     }}
                   />
+                ) : job?.jobStatus === "AUTO_ACCEPTED" ? (
+                  <View style={styles.conColorc}>
+                    <Text style={styles.completedText}>Work Auto Accepted ✓</Text>
+                    <Text style={[styles.completedText, { fontSize: 11, marginTop: 3, opacity: 0.9, textAlign: "center" }]}>
+                      Review period expired — payment released to your wallet
+                    </Text>
+                  </View>
                 ) : job?.jobStatus === "COMPLETED" ? (
                   <View style={styles.conColorc}>
                     <Text style={styles.completedText}>Project Completed ✓</Text>

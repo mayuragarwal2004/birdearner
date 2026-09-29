@@ -20,18 +20,16 @@ const ClientActions = ({
   // Don't show any actions if job is cancelled
   if (isCancelled) return null;
 
-  // Do NOT show accept/reject buttons if:
-  // 1. Job is already assigned (job.assignedFreelancerId or assignedFreelancer is present)
-  // 2. Job status is not OPEN (e.g. IN_PROGRESS, CONFIRMED, COMPLETED, ASSIGNED, etc.)
-  // 3. Chat status is ACCEPTED, REJECTED, BLOCKED, or COMPLETED
-  const isAssignedOrAccepted = 
-    Boolean(job?.assignedFreelancerId) ||
-    Boolean(job?.assignedFreelancer?.id) ||
-    (job?.jobStatus && job?.jobStatus?.toUpperCase() !== 'OPEN') ||
-    ['ACCEPTED', 'REJECTED', 'BLOCKED', 'COMPLETED'].includes(chatStatus?.toUpperCase());
+  // Show accept/reject buttons ONLY when job data is loaded AND job is strictly OPEN and unassigned.
+  // Fail-closed: while job is loading/undefined, never show the buttons.
+  const isJobOpenAndUnassigned =
+    Boolean(job?.jobStatus) &&
+    job.jobStatus.toUpperCase() === 'OPEN' &&
+    !job?.assignedFreelancerId &&
+    !job?.assignedFreelancer?.id &&
+    !['ACCEPTED', 'REJECTED', 'BLOCKED', 'COMPLETED'].includes((chatStatus || '').toUpperCase());
 
-  // Show accept/reject buttons ONLY when job is strictly OPEN and unassigned
-  if (!isAssignedOrAccepted) {
+  if (isJobOpenAndUnassigned) {
     return (
       <View style={styles.actionButtons}>
         <TouchableOpacity

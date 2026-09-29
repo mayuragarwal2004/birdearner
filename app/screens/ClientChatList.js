@@ -41,6 +41,14 @@ const getThreadStatusMeta = (thread, isDark = false) => {
       Icon: CheckCircle,
     };
   }
+  if (jobStatus === "AUTO_ACCEPTED") {
+    return {
+      label: "Auto Accepted",
+      color: isDark ? "#4ADE80" : "#22C55E",
+      bg: isDark ? "rgba(34,197,94,0.18)" : "#EAF8EF",
+      Icon: CheckCircle,
+    };
+  }
   if (threadStatus === "REJECTED" || jobStatus === "CANCELLED" || jobStatus === "REJECTED") {
     return {
       label: "Rejected",
