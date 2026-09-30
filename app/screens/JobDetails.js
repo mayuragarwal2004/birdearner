@@ -11,6 +11,7 @@ import {
   Platform,
   TextInput,
   ActivityIndicator,
+  Linking,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
@@ -66,10 +67,22 @@ const JobDetailsScreen = ({ route, navigation }) => {
     }
   }, []);
 
+  const refreshJob = useCallback(async (jobId) => {
+    try {
+      const fresh = await apiService.getJobById(jobId);
+      if (fresh) setCurrentJob((prev) => ({ ...prev, ...fresh }));
+    } catch (err) {
+      console.error("Failed to refresh job in JobDetails:", err);
+    }
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
       fetchWalletInfo();
-    }, [fetchWalletInfo])
+      if (currentJob?.id) {
+        refreshJob(currentJob.id);
+      }
+    }, [fetchWalletInfo, refreshJob, currentJob?.id])
   );
 
   const budgetNum = parseFloat(currentJob?.budget || currentJob?.budgetAmount || 0);
@@ -602,6 +615,53 @@ const JobDetailsScreen = ({ route, navigation }) => {
             </View>
           </View>
         </View>
+
+        {/* Submitted work (digital path): file + notes viewable by client/freelancer */}
+        {currentJob?.submittedWorkData?.fileUrl ? (
+          <View style={styles.card}>
+            <View style={styles.cardHeaderRow}>
+              <View style={styles.iconCircle}>
+                <Ionicons name="document-attach-outline" size={18} color="#6B21A8" />
+              </View>
+              <Text style={styles.cardHeaderTitle}>Submitted Work</Text>
+            </View>
+            <View style={styles.cardContentPadding}>
+              <Text style={styles.statusNoticeText}>
+                Version {currentJob.submittedWorkData.version || 1}
+                {currentJob.submittedWorkData.submittedAt
+                  ? ` • Submitted ${formatDate(currentJob.submittedWorkData.submittedAt)}`
+                  : ""}
+              </Text>
+              {currentJob.submittedWorkData.notes ? (
+                <Text style={{ fontSize: 13, color: "#4B5563", marginTop: 6 }}>
+                  {currentJob.submittedWorkData.notes}
+                </Text>
+              ) : null}
+              <TouchableOpacity
+                style={{
+                  backgroundColor: "#6B21A8",
+                  borderRadius: 10,
+                  paddingVertical: 10,
+                  alignItems: "center",
+                  marginTop: 10,
+                  flexDirection: "row",
+                  justifyContent: "center",
+                }}
+                activeOpacity={0.8}
+                onPress={() =>
+                  Linking.openURL(currentJob.submittedWorkData.fileUrl).catch(() =>
+                    Alert.alert("Error", "Unable to open the submitted file.")
+                  )
+                }
+              >
+                <Ionicons name="open-outline" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+                <Text style={{ color: "#FFFFFF", fontWeight: "700", fontSize: 13 }}>
+                  Open Submitted File
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : null}
 
         {/* Section for Wallet Balance & Payment Setup (when client is reviewing job before creation) */}
         {!currentJob.id && (

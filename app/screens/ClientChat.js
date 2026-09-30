@@ -655,6 +655,16 @@ const ClientChat = ({ route, navigation }) => {
       case "Raise Dispute":
         setDisputeModalVisible(true);
         break;
+      case "Mark Project Completed":
+        Alert.alert(
+          "Mark Project as Completed?",
+          "The work has been accepted and payment has been processed. Marking the project as completed will finalize this booking so you can leave a review.\n\nAre you sure?",
+          [
+            { text: "Cancel", style: "cancel" },
+            { text: "Complete Project", onPress: handleConfirmProjComp },
+          ]
+        );
+        break;
       case "Request Project Completion":
         handleRequestCompletion();
         break;
@@ -1416,6 +1426,18 @@ const ClientChat = ({ route, navigation }) => {
                 if (canRequestCompletion) {
                   baseOptions.push("Request Project Completion");
                 }
+              }
+
+              // After acceptance / auto-accept: allow client to finalize to COMPLETED (Write Review requires COMPLETED)
+              const isSettledAwaitingClose = ["WORK_ACCEPTED", "AUTO_ACCEPTED"].includes(job?.jobStatus);
+              if (
+                isSettledAwaitingClose &&
+                !job?.completedStatus &&
+                job?.assignedFreelancerId === route.params.freelancer.id &&
+                (chatStatus === "ACCEPTED" || chatStatus === "IN_PROGRESS") &&
+                (!isOnSite || ["JOB_STARTED", "WORK_COMPLETED", "PAYMENT_RELEASED"].includes(job?.jobStatus))
+              ) {
+                baseOptions.push("Mark Project Completed");
               }
 
               // Remote job: deadline + 12h grace passed with no submission -> report freelancer
