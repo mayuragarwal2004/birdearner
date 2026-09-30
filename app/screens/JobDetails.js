@@ -31,9 +31,6 @@ const JobDetailsScreen = ({ route, navigation }) => {
   const [walletData, setWalletData] = useState(null);
   const [walletLoading, setWalletLoading] = useState(false);
   const [otpInput, setOtpInput] = useState("");
-  const [workFileUrl, setWorkFileUrl] = useState("");
-  const [workNotes, setWorkNotes] = useState("");
-  const [showWorkModal, setShowWorkModal] = useState(false);
   const [priceModalVisible, setPriceModalVisible] = useState(false);
   const [requestedPrice, setRequestedPrice] = useState("");
   const [priceReason, setPriceReason] = useState("");
@@ -232,27 +229,6 @@ const JobDetailsScreen = ({ route, navigation }) => {
       if (res?.data) setCurrentJob({ ...currentJob, ...res.data });
     } catch (err) {
       Alert.alert("Error", err.message || "Failed to raise dispute");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSubmitWork = async () => {
-    if (!workFileUrl.trim()) {
-      Alert.alert("Validation Error", "Please provide a valid file URL/link for submission.");
-      return;
-    }
-    try {
-      setLoading(true);
-      const res = await apiService.submitDigitalWork(currentJob.id, {
-        fileUrl: workFileUrl.trim(),
-        notes: workNotes.trim(),
-      });
-      Alert.alert("Success", "Work submitted for review successfully.");
-      setShowWorkModal(false);
-      if (res?.data) setCurrentJob({ ...currentJob, ...res.data });
-    } catch (err) {
-      Alert.alert("Error", err.message || "Failed to submit work");
     } finally {
       setLoading(false);
     }
@@ -935,17 +911,7 @@ const JobDetailsScreen = ({ route, navigation }) => {
             </View>
           )}
 
-          {/* Digital Work Submission Flow */}
-          {isRemote && !isClient && (currentJob.jobStatus === "CONFIRMED" || currentJob.jobStatus === "IN_PROGRESS" || currentJob.jobStatus === "REVISION_REQUESTED") && (
-            <TouchableOpacity
-              style={styles.primaryConfirmButton}
-              onPress={() => setShowWorkModal(true)}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="cloud-upload-outline" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
-              <Text style={styles.primaryConfirmButtonText}>Submit Work Preview for Review</Text>
-            </TouchableOpacity>
-          )}
+          {/* Work submission now happens ONLY through chat file attachments */}
 
           {/* Work Submitted Review Banner for Client */}
           {currentJob.jobStatus === "WORK_SUBMITTED" && isClient && (
@@ -996,48 +962,6 @@ const JobDetailsScreen = ({ route, navigation }) => {
             <Text style={styles.secondaryCancelButtonText}>Go Back</Text>
           </TouchableOpacity>
         </View>
-
-        {/* Modal for Digital Work Upload */}
-        <Modal visible={showWorkModal} transparent animationType="slide">
-          <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", padding: 20 }}>
-            <View style={{ backgroundColor: "#FFF", borderRadius: 16, padding: 20 }}>
-              <Text style={{ fontSize: 18, fontWeight: "700", color: "#1F192F", marginBottom: 12 }}>
-                Submit Work Preview
-              </Text>
-              <Text style={{ fontSize: 12, color: "#6B7280", marginBottom: 10 }}>
-                Provide file preview URL or watermarked video link:
-              </Text>
-              <TextInput
-                style={{ borderWidth: 1, borderColor: "#DDD", borderRadius: 10, padding: 12, fontSize: 14, marginBottom: 12 }}
-                placeholder="https://preview.birdearner.com/file.mp4"
-                value={workFileUrl}
-                onChangeText={setWorkFileUrl}
-              />
-              <TextInput
-                style={{ borderWidth: 1, borderColor: "#DDD", borderRadius: 10, padding: 12, fontSize: 14, marginBottom: 16 }}
-                placeholder="Notes / instructions for client"
-                multiline
-                numberOfLines={3}
-                value={workNotes}
-                onChangeText={setWorkNotes}
-              />
-              <View style={{ flexDirection: "row", gap: 10 }}>
-                <TouchableOpacity
-                  style={{ flex: 1, paddingVertical: 12, borderWidth: 1, borderColor: "#DDD", borderRadius: 10, alignItems: "center" }}
-                  onPress={() => setShowWorkModal(false)}
-                >
-                  <Text style={{ color: "#666", fontWeight: "700" }}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={{ flex: 1, paddingVertical: 12, backgroundColor: "#6B21A8", borderRadius: 10, alignItems: "center" }}
-                  onPress={handleSubmitWork}
-                >
-                  <Text style={{ color: "#FFF", fontWeight: "700" }}>Submit Preview</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
 
         {/* Modal for Scope Mismatch Price Change */}
         <Modal visible={priceModalVisible} transparent animationType="slide">
