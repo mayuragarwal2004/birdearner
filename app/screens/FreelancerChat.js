@@ -777,7 +777,7 @@ const FreelancerChat = ({ route, navigation }) => {
           reviewerId: userData.id,
           revieweeId: route.params.client?.user?.id,
           jobId: route.params.jobId,
-          rating: averageRating,
+          rating: Math.round(averageRating),
           ratingDetails: ratings,
           reviewText: reviewText,
           reviewType: 'CLIENT',
@@ -910,7 +910,7 @@ const FreelancerChat = ({ route, navigation }) => {
 
               const isMyJob = job?.assignedFreelancer?.user?.id === userData?.id || job?.assignedFreelancerId === userData?.id || job?.assignedFreelancerId === userData?.freelancer?.id;
               const isCompleted = job?.jobStatus === 'COMPLETED';
-              const isJobInactive = ['DISPUTE_RESOLVED', 'DISPUTE_OPEN', 'DISPUTED', 'CANCELLED', 'CANCELLED_BY_CLIENT', 'CANCELLED_BY_FREELANCER', 'CANCELLED_SCOPE_MISMATCH', 'DEADLINE_EXPIRED', 'COMPLETED', 'AUTO_ACCEPTED'].includes(job?.jobStatus);
+              const isJobInactive = ['DISPUTE_RESOLVED', 'DISPUTE_OPEN', 'DISPUTED', 'CANCELLED', 'CANCELLED_BY_CLIENT', 'CANCELLED_BY_FREELANCER', 'CANCELLED_SCOPE_MISMATCH', 'DEADLINE_EXPIRED', 'WORK_ACCEPTED', 'COMPLETED', 'CLOSED', 'AUTO_ACCEPTED'].includes(job?.jobStatus);
 
               const pType = (job?.projectType || job?.jobType || '').toLowerCase();
               const isOnSite = pType === 'on-site' || (pType !== 'remote' && job?.location?.toLowerCase() !== 'remote');
@@ -1029,7 +1029,7 @@ const FreelancerChat = ({ route, navigation }) => {
                       Review period expired — payment released to your wallet
                     </Text>
                   </View>
-                ) : job?.jobStatus === "COMPLETED" ? (
+                ) : ["WORK_ACCEPTED", "COMPLETED", "CLOSED"].includes(job?.jobStatus) ? (
                   <View style={styles.conColorc}>
                     <Text style={styles.completedText}>Project Completed ✓</Text>
                   </View>

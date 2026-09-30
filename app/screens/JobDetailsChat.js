@@ -157,7 +157,8 @@ const JobDetailsChatScreen = ({ route, navigation }) => {
       case "ARRIVED": return "#F59E0B";
       case "JOB_STARTED": return "#6B21A8";
       case "WORK_ACCEPTED": return "#22C55E";
-      case "COMPLETED": return "#22C55E";
+      case "COMPLETED":
+      case "CLOSED": return "#22C55E";
       case "WORK_SUBMITTED": return "#3B82F6";
       case "AUTO_ACCEPTED": return "#22C55E";
       case "DISPUTE_RESOLVED": return "#22C55E";
@@ -182,7 +183,8 @@ const JobDetailsChatScreen = ({ route, navigation }) => {
       case "ARRIVED": return "#FFF7ED";
       case "JOB_STARTED": return "#F5F3FF";
       case "WORK_ACCEPTED": return "#DCFCE7";
-      case "COMPLETED": return "#DCFCE7";
+      case "COMPLETED":
+      case "CLOSED": return "#DCFCE7";
       case "WORK_SUBMITTED": return "#EFF6FF";
       case "AUTO_ACCEPTED": return "#DCFCE7";
       case "DISPUTE_RESOLVED": return "#DCFCE7";
@@ -267,6 +269,10 @@ const JobDetailsChatScreen = ({ route, navigation }) => {
   const isCash = job.paymentMethod === "CASH" || !job.paymentMethod;
   const statusText = (rawStatus === "AUTO_ACCEPTED")
     ? "AUTO ACCEPTED"
+    : (rawStatus === "WORK_ACCEPTED")
+    ? "WORK DONE"
+    : (rawStatus === "CLOSED")
+    ? "COMPLETED"
     : (rawStatus === "REFUNDED" && isCash)
     ? "CANCELLED (NO PAYMENT REQUIRED)"
     : (rawStatus === "DISPUTE_RESOLVED" && isCash)

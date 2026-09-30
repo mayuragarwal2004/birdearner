@@ -61,9 +61,9 @@ const getStatusMeta = (status, isDark) => {
       bg: isDark ? "rgba(245,158,11,0.2)" : "#FFF6DF",
     };
   }
-  if (value === "COMPLETED") {
+  if (value === "COMPLETED" || value === "CLOSED" || value === "WORK_ACCEPTED") {
     return {
-      label: "Completed",
+      label: value === "WORK_ACCEPTED" ? "Work Done" : "Completed",
       color: isDark ? "#4ADE80" : "#16A34A",
       bg: isDark ? "rgba(34,197,94,0.18)" : "#EAF8EF",
     };

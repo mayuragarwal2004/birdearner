@@ -117,7 +117,7 @@ const FreelancerChatList = () => {
             styles.statusIndicator,
             {
               backgroundColor:
-                jobStatus === 'completed'
+                ['completed', 'work_accepted', 'closed'].includes(jobStatus)
                   ? '#4CAF50'
                   : jobStatus === 'in-progress'
                     ? '#2196F3'

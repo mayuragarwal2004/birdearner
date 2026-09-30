@@ -1107,7 +1107,7 @@ const ClientChat = ({ route, navigation }) => {
           reviewerId: userData.id, // Use User ID
           revieweeId: route.params.freelancer.user.id, // Use Freelancer's User ID
           jobId: route.params.jobId || route.params.projectId,
-          rating: averageRating,
+          rating: Math.round(averageRating),
           ratingDetails: ratings, // Send detailed ratings
           reviewText: reviewText,
           reviewType: 'FREELANCER',
@@ -1200,7 +1200,7 @@ const ClientChat = ({ route, navigation }) => {
     const activeStatuses = ["ACCEPTED", "IN_PROGRESS", "CONFIRMED", "FREELANCER_TRAVELLING", "ARRIVED", "JOB_STARTED", "WORK_SUBMITTED"];
     const isActive = activeStatuses.includes(chatStatus) || activeStatuses.includes(job?.jobStatus?.toUpperCase());
 
-    const isCompleted = job?.jobStatus === "COMPLETED";
+    const isCompleted = ["WORK_ACCEPTED", "COMPLETED", "CLOSED"].includes(job?.jobStatus);
     const isAutoAccepted = job?.jobStatus === "AUTO_ACCEPTED";
 
     return (
@@ -1324,25 +1324,13 @@ const ClientChat = ({ route, navigation }) => {
         }
       } else {
         const res = await api.makeRequest(`/jobs/${route.params.jobId || route.params.projectId}/complete`, {
-          method: "PATCH",
+          method: "POST",
           body: JSON.stringify({
             userRole: "client",
           }),
         });
 
         if (res.success) {
-          try {
-            await api.makeRequest('/chats/review-request/client', {
-              method: 'POST',
-              body: JSON.stringify({
-                threadId: thread?.id,
-                jobId: route.params.jobId || route.params.projectId
-              })
-            });
-          } catch (e) {
-            console.error("Failed to trigger review request", e);
-          }
-
           Toast.show({
             type: "success",
             text1: "Success",
@@ -1402,7 +1390,7 @@ const ClientChat = ({ route, navigation }) => {
             (() => {
               const baseOptions = ["View Profile", "Block", "Report"];
 
-              const isJobInactive = ['DISPUTE_RESOLVED', 'DISPUTE_OPEN', 'DISPUTED', 'CANCELLED', 'CANCELLED_BY_CLIENT', 'CANCELLED_BY_FREELANCER', 'CANCELLED_SCOPE_MISMATCH', 'DEADLINE_EXPIRED', 'COMPLETED', 'AUTO_ACCEPTED'].includes(job?.jobStatus);
+              const isJobInactive = ['DISPUTE_RESOLVED', 'DISPUTE_OPEN', 'DISPUTED', 'CANCELLED', 'CANCELLED_BY_CLIENT', 'CANCELLED_BY_FREELANCER', 'CANCELLED_SCOPE_MISMATCH', 'DEADLINE_EXPIRED', 'WORK_ACCEPTED', 'COMPLETED', 'CLOSED', 'AUTO_ACCEPTED'].includes(job?.jobStatus);
               const pType = (job?.projectType || job?.jobType || '').toLowerCase();
               const isOnSite = pType === 'on-site' || (pType !== 'remote' && job?.location?.toLowerCase() !== 'remote');
               const canRequestCompletion = !isJobInactive && chatStatus === "IN_PROGRESS" && !job?.completedStatus && (!isOnSite || ['JOB_STARTED', 'WORK_COMPLETED', 'PAYMENT_RELEASED'].includes(job?.jobStatus));

@@ -24,9 +24,9 @@ const BORDER = "#E7E1EF";
 
 const getStatusMeta = (status, isDark = false) => {
   const value = (status || "PENDING").toUpperCase();
-  if (value === "COMPLETED" || value === "AUTO_ACCEPTED") {
+  if (value === "COMPLETED" || value === "AUTO_ACCEPTED" || value === "CLOSED" || value === "WORK_ACCEPTED") {
     return {
-      label: value === "AUTO_ACCEPTED" ? "Auto Accepted" : "Completed",
+      label: value === "AUTO_ACCEPTED" ? "Auto Accepted" : value === "WORK_ACCEPTED" ? "Work Done" : "Completed",
       color: isDark ? "#4ADE80" : "#22C55E",
       bg: isDark ? "rgba(34,197,94,0.18)" : "#EAF8EF",
     };

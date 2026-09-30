@@ -33,9 +33,17 @@ const getThreadStatusMeta = (thread, isDark = false) => {
   const jobStatus = (thread.jobStatus || thread.job?.status || thread.jobData?.status || "").toUpperCase();
   const threadStatus = (thread.status || "").toUpperCase();
 
-  if (jobStatus === "COMPLETED" || threadStatus === "COMPLETED") {
+  if (jobStatus === "COMPLETED" || jobStatus === "CLOSED" || threadStatus === "COMPLETED") {
     return {
       label: "Completed",
+      color: isDark ? "#4ADE80" : "#22C55E",
+      bg: isDark ? "rgba(34,197,94,0.18)" : "#EAF8EF",
+      Icon: CheckCircle,
+    };
+  }
+  if (jobStatus === "WORK_ACCEPTED") {
+    return {
+      label: "Work Done",
       color: isDark ? "#4ADE80" : "#22C55E",
       bg: isDark ? "rgba(34,197,94,0.18)" : "#EAF8EF",
       Icon: CheckCircle,

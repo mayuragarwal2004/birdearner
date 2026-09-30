@@ -94,6 +94,7 @@ const TransactionHistoryFreelancerScreen = ({ navigation }) => {
       case "PENALTY": return "Cancellation Penalty";
       case "BONUS": return "Early Bonus";
       case "PLATFORM_FEE": return "Platform Fee";
+      case "HOLD_RELEASE": return "Earnings Released";
       default:
         return type?.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()) || "Unknown";
     }
@@ -103,7 +104,7 @@ const TransactionHistoryFreelancerScreen = ({ navigation }) => {
     const type = item?.transactionType;
     const absAmount = Math.abs(Number(item?.amount || 0)).toFixed(2);
     
-    if (["DEPOSIT", "JOB_PAYMENT", "JOB_RELEASE", "BONUS"].includes(type)) {
+    if (["DEPOSIT", "JOB_PAYMENT", "JOB_RELEASE", "BONUS", "HOLD_RELEASE"].includes(type)) {
       return {
         formattedAmount: `+₹${absAmount}`,
         color: "#4CAF50",

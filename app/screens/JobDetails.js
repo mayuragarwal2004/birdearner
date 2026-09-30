@@ -246,6 +246,25 @@ const JobDetailsScreen = ({ route, navigation }) => {
   };
 
   const handleRespondWork = async (decision, notes = "") => {
+    if (decision === "ACCEPT") {
+      Alert.alert(
+        "Are you sure?",
+        "Please accept the work only after you have fully reviewed and are satisfied with the final result. Once accepted, the payment will be released according to BirdEarner's payment policy.",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Accept Work",
+            style: "default",
+            onPress: () => submitRespondWork("ACCEPT", notes),
+          },
+        ]
+      );
+      return;
+    }
+    await submitRespondWork(decision, notes);
+  };
+
+  const submitRespondWork = async (decision, notes = "") => {
     try {
       setLoading(true);
       const res = await apiService.respondToDigitalWork(currentJob.id, decision, notes);
@@ -567,7 +586,7 @@ const JobDetailsScreen = ({ route, navigation }) => {
               <View style={styles.statusBadgeRow}>
                 <View style={styles.statusPill}>
                   <Text style={styles.statusPillText}>
-                    {currentJob.jobStatus || "OPEN"}
+                    {currentJob.jobStatus === "WORK_ACCEPTED" ? "WORK DONE" : currentJob.jobStatus === "CLOSED" ? "COMPLETED" : currentJob.jobStatus || "OPEN"}
                   </Text>
                 </View>
               </View>
