@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -159,6 +159,19 @@ const normalizeFreelancerData = (data) => {
   };
 };
 
+// Derive the freelancer type from the first selected service's category
+// (legacy fallback for freelancers whose workType has never been persisted)
+const deriveWorkTypeFromServices = (serviceIds, services) => {
+  if (!Array.isArray(serviceIds) || serviceIds.length === 0) return null;
+  for (const id of serviceIds) {
+    const service = services.find((s) => s.id === id);
+    if (service?.category) {
+      return service.category === "HOUSEHOLD" ? "onsite" : "remote";
+    }
+  }
+  return null;
+};
+
 const assetSchema = z.any();
 
 // Create conditional schema based on mode
@@ -176,7 +189,18 @@ const createSchema = (mode) => {
     bio: z.string().optional(),
     gender: z.string().optional(),
     dob: z.union([z.date(), z.string()]).optional().nullable(),
-    certifications: z.array(z.string()).optional(),
+    certifications: z
+      .array(
+        z.union([
+          z.string(),
+          z.object({
+            name: z.string().optional(),
+            university: z.string().optional(),
+            year: z.string().optional(),
+          }),
+        ])
+      )
+      .optional(),
     socialLinks: z.array(z.string()).optional(),
     profileImage: z.any().optional(),
     coverImage: z.any().optional(),
@@ -269,7 +293,16 @@ const FreelancerSignup = ({ navigation, route }) => {
   const [suggestedService, setSuggestedService] = useState(null);
 
   // Languages & Freelancer mode state extensions
-  const [workType, setWorkType] = useState("remote"); // 'remote' or 'onsite'
+  const [workType, setWorkType] = useState(
+    initialFreelancer?.workType === "remote" || initialFreelancer?.workType === "onsite"
+      ? initialFreelancer.workType
+      : "remote"
+  ); // 'remote' or 'onsite'
+  // Tracks whether workType came from saved data or a manual card press,
+  // so legacy service-category derivation never overwrites an explicit choice
+  const workTypeHydratedRef = useRef(
+    initialFreelancer?.workType === "remote" || initialFreelancer?.workType === "onsite"
+  );
   const [freelancerCategory, setFreelancerCategory] = useState(initialFreelancer?.freelancerCategory || "");
   const [languageInput, setLanguageInput] = useState("");
   const [selectedProficiency, setSelectedProficiency] = useState("");
@@ -431,6 +464,11 @@ const FreelancerSignup = ({ navigation, route }) => {
       if (dataSource.freelancerCategory) {
         setFreelancerCategory(dataSource.freelancerCategory);
         setForm((prevForm) => ({ ...prevForm, freelancerCategory: dataSource.freelancerCategory }));
+      }
+
+      if (dataSource.workType === "remote" || dataSource.workType === "onsite") {
+        setWorkType(dataSource.workType);
+        workTypeHydratedRef.current = true;
       }
 
       if (dataSource.skills && Array.isArray(dataSource.skills) && dataSource.skills.length > 0) {
@@ -787,6 +825,25 @@ const FreelancerSignup = ({ navigation, route }) => {
     }
   }, [mode, profileData, userProfile, userData]);
 
+  // Legacy freelancers (workType never persisted): derive the type from the
+  // category of their first resolved service, only once services are loaded
+  useEffect(() => {
+    if (mode !== "update" || workTypeHydratedRef.current) return;
+    const dataSource = normalizeFreelancerData(profileData || userProfile || userData?.freelancer);
+    if (!dataSource) return;
+    if (dataSource.workType === "remote" || dataSource.workType === "onsite") {
+      setWorkType(dataSource.workType);
+      workTypeHydratedRef.current = true;
+      return;
+    }
+    if (!availableServices.length || !dataSource.selectedServices?.length) return;
+    const derived = deriveWorkTypeFromServices(dataSource.selectedServices, availableServices);
+    if (derived) {
+      setWorkType(derived);
+      workTypeHydratedRef.current = true;
+    }
+  }, [mode, profileData, userProfile, userData, availableServices]);
+
   useEffect(() => {
     const targetCategory = workType === "remote" ? "FREELANCE" : "HOUSEHOLD";
     const categoryServices = availableServices.filter(
@@ -943,6 +1000,7 @@ const FreelancerSignup = ({ navigation, route }) => {
   };
 
   const handleSubmit = async () => {
+    console.log("[Signup] Finish pressed | mode =", mode, "| step =", step);
     setIsLoading(true);
 
     if (mode !== "update") {
@@ -959,9 +1017,12 @@ const FreelancerSignup = ({ navigation, route }) => {
       }
     }
 
+    console.log("[Signup] client validation passed");
+
     const cleanedForm = {
       ...form,
       freelancerCategory,
+      workType,
       skills: skillsList,
       languages: languageList,
       certifications: form.certifications.filter((cert) => cert.name?.trim() !== "" || cert.university?.trim() !== ""),
@@ -976,10 +1037,11 @@ const FreelancerSignup = ({ navigation, route }) => {
           cleanedForm.profileImage,
           "freelancer_profile_photos"
         );
+        console.log("[Signup] profile photo upload:", result.success ? "OK" : (result.error || result.message));
         if (result.success) {
           cleanedForm.profileImage = result.url;
         } else {
-          showToast("error", "Error Uploading Profile Photo", result.message);
+          showToast("error", "Error Uploading Profile Photo", (result.error || result.message) || "Upload failed");
           setIsLoading(false);
           return;
         }
@@ -996,10 +1058,11 @@ const FreelancerSignup = ({ navigation, route }) => {
           cleanedForm.coverImage,
           "freelancer_cover_photos"
         );
+        console.log("[Signup] cover photo upload:", result.success ? "OK" : (result.error || result.message));
         if (result.success) {
           cleanedForm.coverImage = result.url;
         } else {
-          showToast("error", "Error Uploading Cover Photo", result.message);
+          showToast("error", "Error Uploading Cover Photo", (result.error || result.message) || "Upload failed");
           setIsLoading(false);
           return;
         }
@@ -1020,40 +1083,15 @@ const FreelancerSignup = ({ navigation, route }) => {
           !portfolioItem.uri.startsWith("http") &&
           !portfolioItem.uri.startsWith("/uploads")
         ) {
-          const formData = new FormData();
-          const isPdf = portfolioItem.fileType === "pdf" || isPdfFile(portfolioItem);
-          const fileName = portfolioItem.fileName || (isPdf ? `portfolio_${Date.now()}.pdf` : `portfolio_${Date.now()}.jpg`);
-          const mimeType = portfolioItem.mimeType || (isPdf ? "application/pdf" : "image/jpeg");
-
-          formData.append("file", {
-            uri: portfolioItem.uri,
-            type: mimeType,
-            name: fileName,
-          });
-          formData.append("category", "freelancer_portfolios");
-
-          try {
-            const response = await fetch(
-              `${apiService.baseURL}/upload?category=freelancer_portfolios`,
-              {
-                method: "POST",
-                headers: {
-                  Authorization: `Bearer ${apiService.token}`,
-                  Accept: "application/json",
-                },
-                body: formData,
-              }
-            );
-            const data = await response.json();
-            if (response.ok && data.data?.url) {
-              uploadedFiles.push(data.data.url);
-            } else {
-              showToast("error", "Upload Failed", data.message || `Failed to upload ${fileName}`);
-              setIsLoading(false);
-              return;
-            }
-          } catch (uploadError) {
-            showToast("error", "Upload Failed", uploadError.message);
+          const uploadRes = await apiService.uploadImage(
+            portfolioItem,
+            "freelancer_portfolios"
+          );
+          console.log(`[Signup] portfolio upload ${i + 1}:`, uploadRes.success ? "OK" : (uploadRes.error || uploadRes.message));
+          if (uploadRes.success && uploadRes.url) {
+            uploadedFiles.push(uploadRes.url);
+          } else {
+            showToast("error", "Upload Failed", (uploadRes.error || uploadRes.message) || `Failed to upload portfolio file`);
             setIsLoading(false);
             return;
           }
@@ -1089,6 +1127,7 @@ const FreelancerSignup = ({ navigation, route }) => {
       } : null;
 
       if (mode === "signup") {
+        console.log("[Signup] calling POST /signup/freelancer ...");
         result = await register({
           ...cleanedForm,
           mobile: form.mobile,
@@ -1096,6 +1135,7 @@ const FreelancerSignup = ({ navigation, route }) => {
           termsAccepted: form.termsAndConditions !== undefined ? form.termsAndConditions : (form.termsAccepted !== undefined ? form.termsAccepted : true),
           role: "FREELANCER",
         });
+        console.log("[Signup] register returned:", result ? "OK" : "null/false");
 
         if (result) {
           showToast("success", "Signup Complete", "Welcome to BirdEarner!");
@@ -1128,6 +1168,7 @@ const FreelancerSignup = ({ navigation, route }) => {
           termsAccepted: cleanedForm.termsAndConditions,
           fullName: cleanedForm.full_name,
           freelancerCategory: cleanedForm.freelancerCategory,
+          workType: cleanedForm.workType,
           skills: cleanedForm.skills,
           languages: cleanedForm.languages,
         };
@@ -1175,6 +1216,7 @@ const FreelancerSignup = ({ navigation, route }) => {
           fullName: cleanedForm.full_name,
           deletedImages: deletedImages,
           freelancerCategory: cleanedForm.freelancerCategory,
+          workType: cleanedForm.workType,
           skills: cleanedForm.skills,
           languages: cleanedForm.languages,
         };
@@ -1203,6 +1245,7 @@ const FreelancerSignup = ({ navigation, route }) => {
         navigation.goBack();
       }
     } catch (error) {
+      console.error("[Signup] submit error:", error);
       showToast(
         "error",
         `${mode.charAt(0).toUpperCase() + mode.slice(1)} Failed`,
@@ -1449,7 +1492,7 @@ const FreelancerSignup = ({ navigation, route }) => {
                       styles.freelancerTypeCard,
                       workType === "remote" && styles.freelancerTypeCardSelected,
                     ]}
-                    onPress={() => setWorkType("remote")}
+                    onPress={() => { workTypeHydratedRef.current = true; setWorkType("remote"); }}
                     activeOpacity={0.8}
                   >
                     <View style={styles.typeIconBox}>
@@ -1474,7 +1517,7 @@ const FreelancerSignup = ({ navigation, route }) => {
                       styles.freelancerTypeCard,
                       workType === "onsite" && styles.freelancerTypeCardSelected,
                     ]}
-                    onPress={() => setWorkType("onsite")}
+                    onPress={() => { workTypeHydratedRef.current = true; setWorkType("onsite"); }}
                     activeOpacity={0.8}
                   >
                     <View style={styles.typeIconBox}>

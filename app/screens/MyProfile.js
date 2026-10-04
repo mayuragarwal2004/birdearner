@@ -448,7 +448,11 @@ export default function ProfileScreen({ navigation }) {
                       icon="public"
                       label="Freelancer category"
                       value={
-                        userServices?.[0]?.category === "HOUSEHOLD"
+                        data?.workType === "onsite"
+                          ? "On-site"
+                          : data?.workType === "remote"
+                          ? "Remote"
+                          : userServices?.[0]?.category === "HOUSEHOLD"
                           ? "On-site"
                           : "Remote"
                       }

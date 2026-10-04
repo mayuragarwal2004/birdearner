@@ -574,11 +574,16 @@ function ClientAboutTab({ uiStyles, profileData }) {
 }
 
 function AboutTab({ uiStyles, profileData, services, certifications, selectedServices }) {
-  const primaryService = services?.[0]?.category
-    ? services[0].category === "FREELANCE"
+  const primaryService =
+    profileData?.workType === "onsite"
+      ? "On-site"
+      : profileData?.workType === "remote"
       ? "Remote"
-      : "On-site"
-    : profileData?.category || "Remote";
+      : services?.[0]?.category
+      ? services[0].category === "FREELANCE"
+        ? "Remote"
+        : "On-site"
+      : profileData?.category || "Remote";
 
   const skills = (
     services.length

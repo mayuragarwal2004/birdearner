@@ -3,7 +3,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 
-const DEV_API_BASE_URL = "https://solve-burlington-processor-specified.trycloudflare.com/api";
+const DEV_API_BASE_URL = "https://limit-coordination-arm-cloud.trycloudflare.com/api";
 // const DEV_API_BASE_URL = "https://api.birdearner.com/api";
 
 const PROD_API_BASE_URL = "https://api.birdearner.com/api";
@@ -44,12 +44,24 @@ const CATEGORIES = [
   "job_portfolios",
 ];
 
+// Timeout wrapper: a dead tunnel / unreachable fallback host must never hang requests
+const fetchWithTimeout = async (url, options = {}, timeoutMs = 12000) => {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+};
+
 class ApiService {
   constructor() {
     this.baseURL = API_BASE_URL;
     this.token = null;
     this.onUnauthorized = null;
     this._handlingUnauthorized = false;
+    this._tunnelFailing = false;
   }
 
   getBaseUrl() {
@@ -163,12 +175,30 @@ class ApiService {
       let responseText = "";
       let isHtmlOrBadGateway = false;
 
+      // Dev fast path: dead tunnel already detected — go straight to local API (skip tunnel round-trip)
+      let requestUrl = url;
+      let usedFastPath = false;
+      if (this._tunnelFailing && typeof __DEV__ !== "undefined" && __DEV__ && !url.includes(":3001")) {
+        requestUrl = `${Platform.OS === 'android' ? "http://10.0.2.2:3001/api" : "http://localhost:3001/api"}${endpoint}`;
+        usedFastPath = true;
+      }
+
       try {
-        response = await fetch(url, config);
+        console.log(`[API] -> ${requestUrl}`);
+        response = await fetchWithTimeout(requestUrl, config, 12000);
         responseText = await response.text();
-        isHtmlOrBadGateway = responseText.trim().startsWith("<") || responseText.includes("502 Bad Gateway") || response.status === 502 || response.status === 503;
+        console.log(`[API] <- ${requestUrl} status=${response.status}`);
+        isHtmlOrBadGateway = responseText.trim().startsWith("<") || responseText.includes("502 Bad Gateway") || responseText.includes("Cloudflare Tunnel error") || response.status === 502 || response.status === 503 || response.status === 530;
       } catch (netErr) {
+        console.warn(`[API] !! ${requestUrl} failed/timed out:`, netErr?.message || netErr);
         isHtmlOrBadGateway = true;
+      }
+
+      if (!usedFastPath && typeof __DEV__ !== "undefined" && __DEV__) {
+        // Tunnel just failed -> remember so subsequent requests skip it
+        this._tunnelFailing = isHtmlOrBadGateway || !response;
+        // Tunnel answered normally -> recovered, use it again
+        if (!isHtmlOrBadGateway && response) this._tunnelFailing = false;
       }
 
       // If Cloudflare URL returned HTML or failed in dev mode, try local API port 3001 fallback
@@ -177,18 +207,21 @@ class ApiService {
           ? ["http://10.0.2.2:3001/api", "http://192.168.1.106:3001/api", "http://192.168.1.106:3000/api", "http://localhost:3001/api"]
           : ["http://localhost:3001/api", "http://192.168.1.106:3001/api", "http://192.168.1.106:3000/api", "http://10.0.2.2:3001/api"];
 
+        console.log(`[API] primary failed for ${endpoint}, trying local fallback hosts...`);
         for (const fallbackHost of fallbackHosts) {
           try {
             const fallbackUrl = `${fallbackHost}${endpoint}`;
-            const fallbackRes = await fetch(fallbackUrl, config);
+            const fallbackRes = await fetchWithTimeout(fallbackUrl, config, 6000);
             const fallbackText = await fallbackRes.text();
             if (fallbackRes.ok && !fallbackText.trim().startsWith("<")) {
+              console.log(`[API] fallback OK via ${fallbackHost}`);
               return JSON.parse(fallbackText);
             }
           } catch (fbErr) {
             // Ignore fallback failure
           }
         }
+        console.warn(`[API] all fallback hosts failed for ${endpoint}`);
       }
 
       if (!response) {
@@ -305,13 +338,46 @@ class ApiService {
         headers["Authorization"] = `Bearer ${this.token}`;
       }
 
-      const response = await fetch(url, {
-        method: "POST",
-        headers,
-        body: formData,
-      });
+      const uploadConfig = { method: "POST", headers, body: formData };
 
-      const responseText = await response.text();
+      // Dev: try tunnel first, then local hosts — never hang
+      let uploadHosts = [this.baseURL];
+      if (typeof __DEV__ !== "undefined" && __DEV__) {
+        uploadHosts = uploadHosts.concat(
+          Platform.OS === "android"
+            ? ["http://10.0.2.2:3001/api", "http://192.168.1.106:3001/api", "http://localhost:3001/api"]
+            : ["http://localhost:3001/api", "http://192.168.1.106:3001/api", "http://10.0.2.2:3001/api"]
+        );
+      }
+
+      let response = null;
+      let responseText = "";
+      for (const host of uploadHosts) {
+        const uploadUrl = `${host}/upload`;
+        try {
+          console.log(`[Upload] -> ${uploadUrl} (${category})`);
+          response = await fetchWithTimeout(uploadUrl, uploadConfig, 30000);
+          responseText = await response.text();
+          console.log(`[Upload] <- ${uploadUrl} status=${response.status}`);
+          const bad =
+            responseText.trim().startsWith("<") ||
+            responseText.includes("Cloudflare Tunnel error") ||
+            response.status === 502 ||
+            response.status === 530;
+          if (!bad) break;
+        } catch (upErr) {
+          console.warn(`[Upload] !! ${uploadUrl} failed:`, upErr?.message || upErr);
+          response = null;
+        }
+      }
+
+      if (!response) {
+        return {
+          success: false,
+          message: "Network request failed during upload",
+        };
+      }
+
       let data;
       try {
         data = JSON.parse(responseText);
@@ -1923,24 +1989,70 @@ class ApiService {
 
       formData.append("category", category);
 
-      const response = await fetch(
-        `${this.baseURL}/upload?category=${category}`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${this.token}`,
-            Accept: "application/json",
-            // ⚠️ DO NOT manually set 'Content-Type' for FormData — let fetch handle it
-          },
-          body: formData,
+      const postUpload = async (url, timeoutMs = 30000) => {
+        try {
+          console.log(`[Upload] -> ${url}`);
+          const res = await fetchWithTimeout(
+            url,
+            {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${this.token}`,
+                Accept: "application/json",
+                // ⚠️ DO NOT manually set 'Content-Type' for FormData — let fetch handle it
+              },
+              body: formData,
+            },
+            timeoutMs
+          );
+          console.log(`[Upload] <- ${url} status=${res.status}`);
+          const json = await res.json();
+          return { res, json };
+        } catch (upErr) {
+          console.warn(`[Upload] !! ${url} failed:`, upErr?.message || upErr);
+          return null;
         }
-      );
+      };
 
-      const data = await response.json();
+      // Dev fast path: dead tunnel already detected — hit local API first
+      const devFastBase =
+        this._tunnelFailing && typeof __DEV__ !== "undefined" && __DEV__ && !this.baseURL.includes(":3001")
+          ? Platform.OS === "android"
+            ? "http://10.0.2.2:3001/api"
+            : "http://localhost:3001/api"
+          : null;
 
-      if (!response.ok) {
-        throw new Error(data?.message || "Upload failed");
+      let outcome = await postUpload(`${devFastBase || this.baseURL}/upload?category=${category}`);
+
+      // Remember tunnel health (only when the tunnel itself was tried)
+      if (typeof __DEV__ !== "undefined" && __DEV__ && !devFastBase) {
+        this._tunnelFailing = !outcome || !outcome.res.ok;
       }
+
+      // Dev fallback: dead Cloudflare tunnel (530/HTML/network) -> local API, same as makeRequest
+      if ((!outcome || !outcome.res.ok) && typeof __DEV__ !== "undefined" && __DEV__ && !this.baseURL.includes(":3001")) {
+        const fbHosts = Platform.OS === "android"
+          ? ["http://10.0.2.2:3001/api", "http://192.168.1.106:3001/api", "http://localhost:3001/api"]
+          : ["http://localhost:3001/api", "http://192.168.1.106:3001/api", "http://10.0.2.2:3001/api"];
+        console.log("[Upload] primary upload failed, trying local fallback hosts...");
+        for (const fb of fbHosts) {
+          const fbOutcome = await postUpload(`${fb}/upload?category=${category}`, 20000);
+          if (fbOutcome && fbOutcome.res.ok) {
+            outcome = fbOutcome;
+            break;
+          }
+        }
+      }
+
+      if (!outcome) {
+        throw new Error("Upload failed: no response from server");
+      }
+
+      if (!outcome.res.ok) {
+        throw new Error(outcome.json?.message || `Upload failed (HTTP ${outcome.res.status})`);
+      }
+
+      const data = outcome.json;
 
       return {
         success: true,
