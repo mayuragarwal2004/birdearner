@@ -94,3 +94,63 @@ export const generateSliderLines = () => {
   }
   return lines;
 };
+
+// ---------------- Part 5: Current-type Marketplace filtering ----------------
+
+// 'remote' | 'onsite' | null (null = no type set -> keep existing behavior)
+export const normalizeWorkType = (value) => {
+  const v = String(value || "").trim().toLowerCase();
+  if (v === "remote") return "remote";
+  if (v === "onsite" || v === "on-site" || v === "on_site") return "onsite";
+  return null;
+};
+
+// Same taxonomy as api/lib/service-limits.ts: HOUSEHOLD -> on-site, everything else -> remote
+export const serviceWorkTypeOf = (service) => {
+  const category = String(
+    (service && (service.category || service.Category)) || "FREELANCE"
+  )
+    .trim()
+    .toUpperCase();
+  return category === "HOUSEHOLD" ? "onsite" : "remote";
+};
+
+// Keep only services belonging to the current work type (inactive-type services stay stored, just hidden)
+export const filterServicesByWorkType = (services, workType) => {
+  const type = normalizeWorkType(workType);
+  if (!type) return Array.isArray(services) ? services : [];
+  if (!Array.isArray(services)) return [];
+  return services.filter((s) => serviceWorkTypeOf(s) === type);
+};
+
+// Job -> work type from existing payload: projectType/jobType ('Remote', 'REMOTE', 'On-site', 'on-site').
+// Returns null when unknown so unknown jobs are never dropped (preserves existing behavior).
+export const jobWorkTypeOf = (job) => {
+  const raw = String((job && (job.projectType || job.jobType)) || "")
+    .trim()
+    .toLowerCase();
+  if (!raw) return null;
+  return raw.includes("remote") ? "remote" : "onsite";
+};
+
+// Keep only jobs of the current type. No type set -> untouched list.
+export const filterJobsByWorkType = (jobs, workType) => {
+  const type = normalizeWorkType(workType);
+  if (!type) return Array.isArray(jobs) ? jobs : [];
+  if (!Array.isArray(jobs)) return [];
+  return jobs.filter((job) => {
+    const jobType = jobWorkTypeOf(job);
+    return jobType === null || jobType === type;
+  });
+};
+
+// Same filter across a categorized object { All, Immediate, High, Standard }
+export const filterCategorizedJobsByWorkType = (categorized, workType) => {
+  const type = normalizeWorkType(workType);
+  if (!type) return categorized || {};
+  const result = {};
+  Object.keys(categorized || {}).forEach((key) => {
+    result[key] = filterJobsByWorkType(categorized[key], type);
+  });
+  return result;
+};

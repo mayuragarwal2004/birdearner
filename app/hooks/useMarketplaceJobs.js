@@ -1,9 +1,14 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import apiService from '../lib/apiService';
 import Toast from 'react-native-toast-message';
+import { useAuth } from '../context/NewAuthContext';
+import { normalizeWorkType, filterCategorizedJobsByWorkType } from '../utils/marketplaceUtils';
 
 export const useMarketplaceJobs = () => {
-  const [jobs, setJobs] = useState({
+  const { userData } = useAuth();
+  const workType = normalizeWorkType(userData?.freelancer?.workType);
+
+  const [jobsRaw, setJobsRaw] = useState({
     All: [],
     Immediate: [],
     High: [],
@@ -12,6 +17,13 @@ export const useMarketplaceJobs = () => {
   const [loading, setLoading] = useState(true); // Only for initial load
   const [refreshing, setRefreshing] = useState(false);
   const [filterLoading, setFilterLoading] = useState(false); // For distance/filter changes
+
+  // Part 5: Marketplace always reflects the freelancer's CURRENT work type.
+  // No workType set -> jobs pass through untouched (existing behavior).
+  const jobs = useMemo(
+    () => filterCategorizedJobsByWorkType(jobsRaw, workType),
+    [jobsRaw, workType]
+  );
 
   const showToast = (type, text1, text2) => {
     Toast.show({ type, text1, text2, position: "top" });
@@ -49,7 +61,7 @@ export const useMarketplaceJobs = () => {
 
       //   console.log('Categorized jobs API response:', categorizedJobs);
 
-      setJobs(categorizedJobs);
+      setJobsRaw(categorizedJobs);
     } catch (error) {
       console.error("Error fetching jobs:", error);
       console.error("Error details:", {
@@ -58,7 +70,7 @@ export const useMarketplaceJobs = () => {
       });
       showToast("error", "Error", "Failed to fetch jobs. Please try again later.");
       // Set empty jobs on error
-      setJobs({
+      setJobsRaw({
         Immediate: [],
         High: [],
         Standard: [],

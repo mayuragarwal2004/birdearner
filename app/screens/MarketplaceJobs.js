@@ -32,7 +32,7 @@ const MarketplaceJobs = ({ navigation, route }) => {
   const currentTheme = themeStyles[theme];
   const styles = getStyles(currentTheme);
   const { userData } = useAuth();
-  const { userServices } = useUserServices();
+  const { userServices, workType } = useUserServices();
 
   const {
     jobs,
@@ -77,12 +77,14 @@ const MarketplaceJobs = ({ navigation, route }) => {
     if (!list.length && Array.isArray(routeUserServices) && routeUserServices.length > 0) {
       list = routeUserServices;
     }
-    if (!list.length && userData?.freelancer?.selectedServices) {
+    // Raw-id fallback only when no work type is set (legacy profiles); a typed
+    // freelancer with no resolved services of the current type sees no jobs.
+    if (!list.length && !workType && userData?.freelancer?.selectedServices) {
       const raw = userData.freelancer.selectedServices;
       list = Array.isArray(raw) ? raw : [];
     }
     return list.filter((s) => s && (s.id || s.name || typeof s === "string"));
-  }, [userServices, routeUserServices, userData]);
+  }, [userServices, routeUserServices, userData, workType]);
 
   // Dynamically load ONLY the freelancer's own services for filter section
   const availableServices = useMemo(() => {
