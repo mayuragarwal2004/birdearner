@@ -11,7 +11,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { PanResponder, Animated } from "react-native";
-import { Audio } from 'expo-av';
+import { createAudioPlayer } from "expo-audio";
 import { useTheme } from "../context/ThemeContext";
 import { useAuth } from "../context/NewAuthContext";
 import apiService from "../lib/apiService";
@@ -42,29 +42,25 @@ const JobPriority = ({ navigation, route }) => {
   // Add currentIndex state for priority navigation
   const initialIndex = priorities.indexOf(priority) !== -1 ? priorities.indexOf(priority) : 0;
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
-  const [sound, setSound] = useState();
+  const wheelSoundRef = React.useRef(null);
 
-  // Load sound effect
   async function playWheelSound() {
     try {
-      const { sound } = await Audio.Sound.createAsync(
-        require("../../assets/wheel-turn.mp3")
-      );
-      setSound(sound);
-      await sound.replayAsync();
+      if (!wheelSoundRef.current) {
+        wheelSoundRef.current = createAudioPlayer(require("../../assets/wheel-turn.mp3"));
+      }
+      await wheelSoundRef.current.seekTo(0);
+      wheelSoundRef.current.play();
     } catch (e) {
       // Ignore sound errors
     }
   }
 
-  // Unload sound on unmount
   useEffect(() => {
-    return sound
-      ? () => {
-        sound.unloadAsync();
-      }
-      : undefined;
-  }, [sound]);
+    return () => {
+      wheelSoundRef.current?.remove();
+    };
+  }, []);
 
   // Use the priority value from route.params or currentIndex
   const currentPriority = priorities[currentIndex] || priority;

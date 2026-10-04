@@ -13,7 +13,12 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { Audio } from "expo-av";
+import {
+  AudioModule,
+  RecordingPresets,
+  setAudioModeAsync,
+  useAudioRecorder,
+} from "expo-audio";
 
 let ExpoSpeechRecognitionModule = null;
 try {
@@ -74,6 +79,9 @@ const JobRequirementsScreen = ({ navigation }) => {
   const [skills, setSkills] = useState([""]);
   const [jobDes, setJobDes] = useState("");
   const [isRecording, setIsRecording] = useState(false);
+  const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const audioRecorderRef = useRef(audioRecorder);
+  audioRecorderRef.current = audioRecorder;
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [calculatedBirdFee, setCalculatedBirdFee] = useState(null);
   const [portfolioImages, setPortfolioImages] = useState([]);
@@ -894,7 +902,6 @@ const JobRequirementsScreen = ({ navigation }) => {
   const mapPreviewRef = useRef(null);
   const webRecognitionRef = useRef(null);
   const webMediaRecorderRef = useRef(null);
-  const audioRecordingRef = useRef(null);
   const initialTextRef = useRef("");
 
   useEffect(() => {
@@ -944,9 +951,9 @@ const JobRequirementsScreen = ({ navigation }) => {
           webMediaRecorderRef.current.stop();
         } catch (e) {}
       }
-      if (audioRecordingRef.current) {
+      if (audioRecorderRef.current) {
         try {
-          audioRecordingRef.current.stopAndUnloadAsync();
+          audioRecorderRef.current.stop();
         } catch (e) {}
       }
     };
@@ -984,14 +991,13 @@ const JobRequirementsScreen = ({ navigation }) => {
         setIsRecording(false);
         return;
       }
-      if (audioRecordingRef.current) {
-        const recording = audioRecordingRef.current;
-        audioRecordingRef.current = null;
+      if (audioRecorderRef.current?.isRecording) {
+        const recording = audioRecorderRef.current;
         setIsRecording(false);
         setIsTranscribing(true);
         try {
-          await recording.stopAndUnloadAsync();
-          const uri = recording.getURI();
+          await recording.stop();
+          const uri = recording.uri;
           if (uri) {
             const response = await apiService.transcribeAudio(uri);
             if (response && response.success && response.text) {
@@ -1150,30 +1156,26 @@ const JobRequirementsScreen = ({ navigation }) => {
       }
     }
 
-    // OPTION D: Universal Mobile Engine for Expo Go & Android Apps (expo-av)
+    // OPTION D: Record audio and send it to the transcription API
     try {
-      const permission = await Audio.requestPermissionsAsync();
+      const permission = await AudioModule.requestRecordingPermissionsAsync();
       if (!permission.granted) {
         Alert.alert(
           "Microphone Permission Required",
-          "Microphone access is currently disabled for this app. Please open Android Settings -> Apps -> Expo Go (or BirdEarner) -> Permissions -> Microphone and select 'Allow'."
+          "Microphone access is currently disabled for this app. Please open Android Settings -> Apps -> BirdEarner -> Permissions -> Microphone and select 'Allow'."
         );
         setIsRecording(false);
         return;
       }
 
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
-        shouldDuckAndroid: true,
-        playThroughEarpieceAndroid: false,
-        staysActiveInBackground: false,
+      await setAudioModeAsync({
+        allowsRecording: true,
+        playsInSilentMode: true,
       });
 
-      const { recording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY
-      );
-      audioRecordingRef.current = recording;
+      const recording = audioRecorderRef.current;
+      await recording.prepareToRecordAsync();
+      recording.record();
       setIsRecording(true);
       return;
     } catch (audioErr) {

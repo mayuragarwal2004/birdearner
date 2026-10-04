@@ -3,6 +3,14 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createStackNavigator } from "@react-navigation/stack";
 import { LinearGradient } from "expo-linear-gradient";
 import { View, StyleSheet, Platform, Text } from "react-native";
+import {
+  getMessaging,
+  getToken,
+  getInitialNotification,
+  onNotificationOpenedApp,
+  onMessage,
+} from "@react-native-firebase/messaging";
+import * as Notifications from "expo-notifications";
 import * as LucideIcons from "lucide-react-native";
 
 const getLucideIcon = (name) => LucideIcons[name]?.default || LucideIcons[name];
@@ -484,17 +492,28 @@ function renderLucideIcon(focused, IconComponent = LucideBird, iconColor) {
 // Main App Component
 export function App() {
   const { userData } = useAuth();
-  const getMessaging = () => require("@react-native-firebase/messaging").default;
 
   async function requestUserPermission() {
     try {
-      const messaging = getMessaging();
-      const authStatus = await messaging().requestPermission();
-      const enabled =
-        authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
-        authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+      const current = await Notifications.getPermissionsAsync();
+      let finalStatus = current.status;
+      let provisional =
+        current.ios?.status === Notifications.IosAuthorizationStatus.PROVISIONAL;
 
-      return enabled;
+      if (finalStatus !== "granted" && !provisional) {
+        const requested = await Notifications.requestPermissionsAsync({
+          ios: {
+            allowAlert: true,
+            allowBadge: true,
+            allowSound: true,
+          },
+        });
+        finalStatus = requested.status;
+        provisional =
+          requested.ios?.status === Notifications.IosAuthorizationStatus.PROVISIONAL;
+      }
+
+      return finalStatus === "granted" || provisional;
     } catch (error) {
       console.error("Error requesting push notification permission:", error);
       return false;
@@ -511,8 +530,7 @@ export function App() {
 
         const hasPermission = await requestUserPermission();
         if (hasPermission) {
-          const messaging = getMessaging();
-          const token = await messaging().getToken();
+          const token = await getToken(getMessaging());
           // Sending token to backend
           await apiService.registerPushToken(userData.id, userData.role, token);
           console.log("Push token registered once for this session:", token);
@@ -527,23 +545,21 @@ export function App() {
       const messaging = getMessaging();
 
       // Handle initial notification when app was opened from killed state
-      messaging()
-        .getInitialNotification()
-        .then(async (remoteMessage) => {
-          if (remoteMessage) {
-            console.log("Notification caused app to open from quit state:", remoteMessage);
-            // Navigate based on data if needed
-          }
-        });
+      getInitialNotification(messaging).then(async (remoteMessage) => {
+        if (remoteMessage) {
+          console.log("Notification caused app to open from quit state:", remoteMessage);
+          // Navigate based on data if needed
+        }
+      });
 
       // Handle notification when app is opened from background
-      const onNotificationOpenedAppSub = messaging().onNotificationOpenedApp(async (remoteMessage) => {
+      const onNotificationOpenedAppSub = onNotificationOpenedApp(messaging, async (remoteMessage) => {
         console.log("Notification caused app to open from background:", remoteMessage);
         // Navigate based on data if needed
       });
 
       // Handle foreground messages
-      const onMessageSub = messaging().onMessage(async (remoteMessage) => {
+      const onMessageSub = onMessage(messaging, async (remoteMessage) => {
         // Show Toast for foreground message instead of Alert
         Toast.show({
           type: 'info',

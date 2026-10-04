@@ -1,11 +1,8 @@
-import "dotenv/config";
-
 export default {
     expo: {
         owner: "birdearner",
         name: "BirdEarner",
         slug: "birdearner",
-        newArchEnabled: false,
         scheme: "birdearner",
         version: "1.1.0",
         orientation: "portrait",
@@ -22,8 +19,12 @@ export default {
             bundleIdentifier: "com.birdearner.birdearner",
             supportsTablet: false,
             googleServicesFile: "./GoogleService-Info.plist",
+            entitlements: {
+                "aps-environment": "production",
+            },
             infoPlist: {
                 ITSAppUsesNonExemptEncryption: false,
+                UIBackgroundModes: ["remote-notification"],
                 NSLocationWhenInUseUsageDescription:
                     "This app needs access to your location to display maps so that it can show you nearby jobs.",
                 NSPhotoLibraryUsageDescription:
@@ -48,6 +49,7 @@ export default {
                 "ACCESS_NETWORK_STATE",
                 "ACCESS_FINE_LOCATION",
                 "ACCESS_COARSE_LOCATION",
+                "POST_NOTIFICATIONS",
             ],
             package: "com.birdearner",
         },
@@ -55,9 +57,22 @@ export default {
             favicon: "./assets/logo.png",
         },
         plugins: [
-            "expo-router",
+            "@react-native-firebase/app",
+            "@react-native-firebase/messaging",
+            "@react-native-community/datetimepicker",
+            "expo-asset",
+            [
+                "expo-audio",
+                {
+                    microphonePermission:
+                        "Allow BirdEarner to use the microphone for voice input when creating a job.",
+                },
+            ],
             "expo-font",
+            "expo-image",
             "expo-location",
+            "expo-notifications",
+            "expo-status-bar",
             "expo-web-browser",
             "react-native-video",
             "expo-speech-recognition",
@@ -74,14 +89,16 @@ export default {
                 {
                     ios: {
                         useFrameworks: "static",
+                        deploymentTarget: "16.4",
+                    },
+                    android: {
+                        compileSdkVersion: 36,
+                        targetSdkVersion: 36,
                     },
                 },
             ],
         ],
         extra: {
-            router: {
-                origin: false,
-            },
             eas: {
                 projectId: "e9ba2ff2-13a3-4a7a-b07b-e184de3972f7",
             },

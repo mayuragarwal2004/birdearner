@@ -1,21 +1,20 @@
 import { useState, useRef } from 'react';
 import { Animated, PanResponder } from 'react-native';
-import { Audio } from 'expo-av';
+import { createAudioPlayer } from "expo-audio";
 import { MARKETPLACE_CONSTANTS } from '../utils/marketplaceUtils';
 
 export const usePriorityWheel = (onPriorityPress) => {
   const [priorityIndex, setPriorityIndex] = useState(0); // Start with "All" (index 0)
   const [rotation] = useState(new Animated.Value(0));
-  const [sound, setSound] = useState();
+  const wheelSoundRef = useRef(null);
 
-  // Play wheel sound
   const playWheelSound = async () => {
     try {
-      const { sound } = await Audio.Sound.createAsync(
-        require("../../assets/wheel-turn.mp3")
-      );
-      setSound(sound);
-      await sound.replayAsync();
+      if (!wheelSoundRef.current) {
+        wheelSoundRef.current = createAudioPlayer(require("../../assets/wheel-turn.mp3"));
+      }
+      await wheelSoundRef.current.seekTo(0);
+      wheelSoundRef.current.play();
     } catch (e) {
       // Ignore sound errors
     }
@@ -72,9 +71,8 @@ export const usePriorityWheel = (onPriorityPress) => {
   };
 
   const cleanupSound = () => {
-    if (sound) {
-      sound.unloadAsync();
-    }
+    wheelSoundRef.current?.remove();
+    wheelSoundRef.current = null;
   };
 
   return {
