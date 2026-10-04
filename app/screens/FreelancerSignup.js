@@ -215,7 +215,8 @@ const createSchema = (mode) => {
 
   const validateServicesConstraint = (data) => {
     const totalCount = (data.selectedServices?.length || 0) + (data.suggestedService ? 1 : 0);
-    return totalCount >= 1 && totalCount <= 5;
+    // Safety net only — precise 1-5 per-type rules are enforced by validatePerTypeLimits()
+    return totalCount >= 1 && totalCount <= 11;
   };
 
   if (mode === "signup") {
@@ -232,12 +233,12 @@ const createSchema = (mode) => {
         path: ["confirmPassword"],
       })
       .refine((data) => validateServicesConstraint(data), {
-        message: "Please select at least 1 service or suggest a service (maximum 5 total).",
+        message: "Please select at least 1 service or suggest a service (max 5 per type).",
         path: ["selectedServices"],
       });
   } else {
     return z.object(baseSchema).refine((data) => validateServicesConstraint(data), {
-      message: "Please select at least 1 service or suggest a service (maximum 5 total).",
+      message: "Please select at least 1 service or suggest a service (max 5 per type).",
       path: ["selectedServices"],
     });
   }
@@ -304,6 +305,34 @@ const FreelancerSignup = ({ navigation, route }) => {
     initialFreelancer?.workType === "remote" || initialFreelancer?.workType === "onsite"
   );
   const [freelancerCategory, setFreelancerCategory] = useState(initialFreelancer?.freelancerCategory || "");
+
+  // 14-day freelancer type-change cooldown (Part 4) — server enforces; this is UI gating + display
+  const TYPE_CHANGE_COOLDOWN_MS = 14 * 24 * 60 * 60 * 1000;
+  const typeChangedAtValue = initialFreelancer?.typeChangedAt || rawFreelancer?.typeChangedAt || null;
+  const getTypeCooldownRemainingMs = () => {
+    if (!typeChangedAtValue) return 0;
+    const last = new Date(typeChangedAtValue).getTime();
+    if (isNaN(last)) return 0;
+    const remaining = TYPE_CHANGE_COOLDOWN_MS - (Date.now() - last);
+    return remaining > 0 ? remaining : 0;
+  };
+  const handleTypeCardPress = (nextType) => {
+    const remaining = getTypeCooldownRemainingMs();
+    if (remaining > 0 && workType !== nextType) {
+      const days = Math.ceil(remaining / (24 * 60 * 60 * 1000));
+      const hours = Math.ceil(remaining / (60 * 60 * 1000));
+      showToast(
+        "info",
+        "Type Change Unavailable",
+        days > 1
+          ? `You can change your freelancer type again in ${days} days.`
+          : `You can change your freelancer type again in about ${hours} hour(s).`
+      );
+      return;
+    }
+    workTypeHydratedRef.current = true;
+    setWorkType(nextType);
+  };
   const [languageInput, setLanguageInput] = useState("");
   const [selectedProficiency, setSelectedProficiency] = useState("");
   const [languageList, setLanguageList] = useState(
@@ -865,6 +894,11 @@ const FreelancerSignup = ({ navigation, route }) => {
     }
   }, [searchQuery, availableServices, workType]);
 
+  const getServiceType = (serviceId) => {
+    const svc = availableServices.find((s) => s.id === serviceId);
+    return svc && svc.category === "HOUSEHOLD" ? "onsite" : "remote";
+  };
+
   const toggleServiceSelection = (service) => {
     const serviceId = service.id;
     const currentlySelected = selectedServices.includes(serviceId);
@@ -874,15 +908,37 @@ const FreelancerSignup = ({ navigation, route }) => {
       setSelectedServices(newSelected);
       setForm({ ...form, selectedServices: newSelected });
     } else {
-      const totalCount = selectedServices.length + (suggestedService ? 1 : 0);
-      if (totalCount < 5) {
+      // Per-type limit (Part 3): only services of this type count toward the 1-5 range
+      const serviceType = service.category === "HOUSEHOLD" ? "onsite" : "remote";
+      const currentType = workType === "onsite" ? "onsite" : "remote";
+      const suggestedCount = form.suggestedService || suggestedService ? 1 : 0;
+      const countOfType = selectedServices.filter((id) => getServiceType(id) === serviceType).length;
+      const suggestedCountForType = serviceType === currentType ? suggestedCount : 0;
+      if (countOfType + suggestedCountForType < 5) {
         const newSelected = [...selectedServices, serviceId];
         setSelectedServices(newSelected);
         setForm({ ...form, selectedServices: newSelected });
       } else {
-        showToast("info", "Limit Reached", "You can select maximum 5 services total");
+        showToast("info", "Limit Reached", `You can select maximum 5 ${serviceType === "remote" ? "remote" : "on-site"} services`);
       }
     }
+  };
+
+  // Per-type submit validation (Part 3): current type 1-5, each type max 5
+  const validatePerTypeLimits = () => {
+    const currentType = workType === "onsite" ? "onsite" : "remote";
+    const remoteCount = selectedServices.filter((id) => getServiceType(id) === "remote").length;
+    const onsiteCount = selectedServices.filter((id) => getServiceType(id) === "onsite").length;
+    const suggestedCount = form.suggestedService || suggestedService ? 1 : 0;
+
+    if (remoteCount > 5) return "You can select a maximum of 5 remote services.";
+    if (onsiteCount > 5) return "You can select a maximum of 5 on-site services.";
+
+    const current = currentType === "remote" ? remoteCount : onsiteCount;
+    const label = currentType === "remote" ? "remote" : "on-site";
+    if (current + suggestedCount < 1) return `Please select at least 1 ${label} service or suggest a service.`;
+    if (current + suggestedCount > 5) return `You can select a maximum of 5 ${label} services.`;
+    return null;
   };
 
   const getServiceNameById = (serviceId) => {
@@ -1015,6 +1071,13 @@ const FreelancerSignup = ({ navigation, route }) => {
         showToast("error", "Validation Error", result.error.errors[0].message);
         return;
       }
+    }
+
+    const limitError = validatePerTypeLimits();
+    if (limitError) {
+      setIsLoading(false);
+      showToast("error", "Service Limit", limitError);
+      return;
     }
 
     console.log("[Signup] client validation passed");
@@ -1492,7 +1555,7 @@ const FreelancerSignup = ({ navigation, route }) => {
                       styles.freelancerTypeCard,
                       workType === "remote" && styles.freelancerTypeCardSelected,
                     ]}
-                    onPress={() => { workTypeHydratedRef.current = true; setWorkType("remote"); }}
+                    onPress={() => handleTypeCardPress("remote")}
                     activeOpacity={0.8}
                   >
                     <View style={styles.typeIconBox}>
@@ -1517,7 +1580,7 @@ const FreelancerSignup = ({ navigation, route }) => {
                       styles.freelancerTypeCard,
                       workType === "onsite" && styles.freelancerTypeCardSelected,
                     ]}
-                    onPress={() => { workTypeHydratedRef.current = true; setWorkType("onsite"); }}
+                    onPress={() => handleTypeCardPress("onsite")}
                     activeOpacity={0.8}
                   >
                     <View style={styles.typeIconBox}>
@@ -1537,6 +1600,23 @@ const FreelancerSignup = ({ navigation, route }) => {
                     </View>
                   </TouchableOpacity>
                 </View>
+
+                {getTypeCooldownRemainingMs() > 0 && (
+                  <View
+                    style={{
+                      backgroundColor: isDark ? "rgba(234,179,8,0.15)" : "rgba(234,179,8,0.12)",
+                      borderRadius: 10,
+                      padding: 10,
+                      marginTop: 8,
+                      marginBottom: 4,
+                    }}
+                  >
+                    <Text style={{ fontSize: 12, color: isDark ? "#FCD34D" : "#92400E", textAlign: "center" }}>
+                      Type switching is locked for {Math.ceil(getTypeCooldownRemainingMs() / (24 * 60 * 60 * 1000))} more day(s)
+                      {" "}(14-day cooldown after each type change)
+                    </Text>
+                  </View>
+                )}
 
                 {/* 3. Select Your Organization Type */}
                 <Text style={styles.sectionNumberTitle}>
