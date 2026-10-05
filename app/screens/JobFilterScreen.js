@@ -17,6 +17,8 @@ import { CommonActions } from "@react-navigation/native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useTheme } from "../context/ThemeContext";
+import { useUserServices } from "../hooks/marketplace";
+import { buildFilterServiceOptions } from "../utils/marketplaceUtils";
 
 const SORT_OPTIONS = [
   { key: "none", label: "Default" },
@@ -36,11 +38,17 @@ const JobFilterScreen = ({ navigation, route }) => {
   const styles = getStyles(currentTheme, insets);
 
   const {
-    availableServices = [],
+    availableServices: routeAvailableServices = [],
     serviceJobCounts = {},
     currentSelectedServices = [],
     currentSortBy = "none",
   } = route.params || {};
+
+  // Part 6B: options show only services of the freelancer's CURRENT type
+  const { userServices } = useUserServices();
+  const typedOptions = buildFilterServiceOptions(userServices);
+  const availableServices =
+    typedOptions.length > 0 ? typedOptions : routeAvailableServices;
 
   const [activeCategory, setActiveCategory] = useState("sort");
   const [tempSelectedServices, setTempSelectedServices] = useState([

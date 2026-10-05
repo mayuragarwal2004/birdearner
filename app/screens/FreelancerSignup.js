@@ -812,9 +812,11 @@ const FreelancerSignup = ({ navigation, route }) => {
       showToast("error", "Service Name Required", "Please enter a service name");
       return;
     }
-    const currentCount = selectedServices.length;
+    const currentCount = selectedServices.filter(
+      (id) => getServiceType(id) === (workType === "onsite" ? "onsite" : "remote")
+    ).length;
     if (currentCount >= 5) {
-      showToast("info", "Limit Reached", "You can select/suggest maximum 5 services total");
+      showToast("info", "Limit Reached", "You can select/suggest maximum 5 services for this type");
       return;
     }
 
@@ -924,6 +926,13 @@ const FreelancerSignup = ({ navigation, route }) => {
     }
   };
 
+  // Part 5 UX: the Selected Services section reflects the CURRENT type only.
+  // Inactive-type ids remain inside `selectedServices` (stored, never removed here).
+  const currentServiceType = workType === "onsite" ? "onsite" : "remote";
+  const currentTypeSelectedIds = selectedServices.filter(
+    (id) => getServiceType(id) === currentServiceType
+  );
+
   // Per-type submit validation (Part 3): current type 1-5, each type max 5
   const validatePerTypeLimits = () => {
     const currentType = workType === "onsite" ? "onsite" : "remote";
@@ -1028,12 +1037,12 @@ const FreelancerSignup = ({ navigation, route }) => {
       }
       setStep(3);
     } else if (step === 3) {
-      const totalCount = selectedServices.length + (suggestedService ? 1 : 0);
+      const totalCount = currentTypeSelectedIds.length + (suggestedService ? 1 : 0);
       if (totalCount === 0) {
         showToast(
           "error",
           "Services Required",
-          "Please select at least one service or suggest a service you want to offer"
+          `Please select at least one ${currentServiceType === "remote" ? "remote" : "on-site"} service or suggest a service you want to offer`
         );
         return;
       }
@@ -2035,13 +2044,13 @@ const FreelancerSignup = ({ navigation, route }) => {
                   />
                 </View>
 
-                {selectedServices.length > 0 && (
+                {currentTypeSelectedIds.length > 0 && (
                   <View style={styles.selectedServicesContainer}>
                     <Text style={styles.selectedServicesTitle}>
-                      Selected Services ({selectedServices.length}/5)
+                      Selected Services ({currentTypeSelectedIds.length}/5)
                     </Text>
                     <View style={styles.tagsWrapper}>
-                      {selectedServices.map((serviceId) => (
+                      {currentTypeSelectedIds.map((serviceId) => (
                         <View key={serviceId} style={styles.purpleTagBadge}>
                           <Text style={styles.purpleTagText}>
                             {getServiceNameById(serviceId)}
@@ -2186,10 +2195,10 @@ const FreelancerSignup = ({ navigation, route }) => {
                   <TouchableOpacity
                     style={[
                       styles.primaryHalfButton,
-                      (selectedServices.length === 0 && !suggestedService) && styles.disabledButton,
+                      (currentTypeSelectedIds.length === 0 && !suggestedService) && styles.disabledButton,
                     ]}
                     onPress={nextStep}
-                    disabled={selectedServices.length === 0 && !suggestedService}
+                    disabled={currentTypeSelectedIds.length === 0 && !suggestedService}
                   >
                     <Text style={styles.primaryHalfButtonText}>Next</Text>
                     <ArrowRight size={18} color="#FFFFFF" style={{ marginLeft: 6 }} />

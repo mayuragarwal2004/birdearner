@@ -26,6 +26,10 @@ import {
 import { useTheme } from "../context/ThemeContext";
 import { useMarketplaceJobs, useUserServices } from "../hooks/marketplace";
 import { useAuth } from "../context/NewAuthContext";
+import {
+  resolveAllJobsServices,
+  buildFilterServiceOptions,
+} from "../utils/marketplaceUtils";
 
 const MarketplaceJobs = ({ navigation, route }) => {
   const { theme, themeStyles } = useTheme();
@@ -71,37 +75,20 @@ const MarketplaceJobs = ({ navigation, route }) => {
     );
   }, []);
 
-  // Freelancer's own selected services
+  // Freelancer's own selected services (Part 6B: current work type only;
+  // legacy profiles without workType keep the original fallbacks)
   const userFreelancerServices = useMemo(() => {
-    let list = Array.isArray(userServices) && userServices.length > 0 ? userServices : [];
-    if (!list.length && Array.isArray(routeUserServices) && routeUserServices.length > 0) {
-      list = routeUserServices;
-    }
-    // Raw-id fallback only when no work type is set (legacy profiles); a typed
-    // freelancer with no resolved services of the current type sees no jobs.
-    if (!list.length && !workType && userData?.freelancer?.selectedServices) {
-      const raw = userData.freelancer.selectedServices;
-      list = Array.isArray(raw) ? raw : [];
-    }
-    return list.filter((s) => s && (s.id || s.name || typeof s === "string"));
+    return resolveAllJobsServices({
+      userServices,
+      routeUserServices,
+      rawSelectedServices: userData?.freelancer?.selectedServices,
+      workType,
+    });
   }, [userServices, routeUserServices, userData, workType]);
 
-  // Dynamically load ONLY the freelancer's own services for filter section
+  // Dynamically load ONLY the freelancer's own services (of the current type) for filter section
   const availableServices = useMemo(() => {
-    const map = new Map();
-
-    userFreelancerServices.forEach((s) => {
-      const id = typeof s === "object" ? (s.id || s.name) : String(s);
-      const name = typeof s === "object" ? (s.name || s.id) : String(s);
-      if (id && name) {
-        const key = String(id);
-        if (!map.has(key)) {
-          map.set(key, { id: key, name: String(name) });
-        }
-      }
-    });
-
-    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+    return buildFilterServiceOptions(userFreelancerServices);
   }, [userFreelancerServices]);
 
   // Freelancer service IDs and Names for strict pre-filtering

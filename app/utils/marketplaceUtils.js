@@ -154,3 +154,39 @@ export const filterCategorizedJobsByWorkType = (categorized, workType) => {
   });
   return result;
 };
+
+// ---------------- Part 6B: All Jobs + Filter service scoping ----------------
+
+// Services used by All Jobs matching and its Filter options.
+// Typed freelancer: only current-type services — the route fallback is type-filtered
+// and the raw fallback is legacy-only, so inactive-type services can never affect
+// matching. Legacy (workType null): original behavior untouched.
+export const resolveAllJobsServices = ({
+  userServices,
+  routeUserServices,
+  rawSelectedServices,
+  workType,
+}) => {
+  const type = normalizeWorkType(workType);
+  let list = Array.isArray(userServices) && userServices.length > 0 ? userServices : [];
+  if (!list.length && Array.isArray(routeUserServices) && routeUserServices.length > 0) {
+    list = filterServicesByWorkType(routeUserServices, type);
+  }
+  if (!list.length && !type && rawSelectedServices) {
+    list = Array.isArray(rawSelectedServices) ? rawSelectedServices : [];
+  }
+  return list.filter((s) => s && (s.id || s.name || typeof s === "string"));
+};
+
+// Filter option list for the All Jobs filter: unique {id,name} sorted by name
+export const buildFilterServiceOptions = (services) => {
+  const map = new Map();
+  (Array.isArray(services) ? services : []).forEach((s) => {
+    const id = typeof s === "object" ? s.id || s.name : String(s);
+    const name = typeof s === "object" ? s.name || s.id : String(s);
+    if (id && name && !map.has(String(id))) {
+      map.set(String(id), { id: String(id), name: String(name) });
+    }
+  });
+  return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+};
