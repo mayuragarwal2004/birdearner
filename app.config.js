@@ -57,7 +57,31 @@ export default {
             favicon: "./assets/logo.png",
         },
         plugins: [
-            "@react-native-firebase/app",
+            // Must stay before other plugins so forceStaticLinking is written correctly.
+            [
+                "expo-build-properties",
+                {
+                    ios: {
+                        useFrameworks: "static",
+                        deploymentTarget: "16.4",
+                        // RNFirebase pods need static linking under use_frameworks.
+                        forceStaticLinking: ["RNFBApp", "RNFBMessaging"],
+                    },
+                    android: {
+                        compileSdkVersion: 36,
+                        targetSdkVersion: 36,
+                    },
+                },
+            ],
+            // Firebase iOS SDK SPM products are dynamic-only; disable SPM when using static frameworks.
+            [
+                "@react-native-firebase/app",
+                {
+                    ios: {
+                        disableSPM: true,
+                    },
+                },
+            ],
             "@react-native-firebase/messaging",
             "@react-native-community/datetimepicker",
             "expo-asset",
@@ -82,19 +106,6 @@ export default {
                     image: "./assets/logo.png",
                     resizeMode: "contain",
                     backgroundColor: "#4B0082",
-                },
-            ],
-            [
-                "expo-build-properties",
-                {
-                    ios: {
-                        useFrameworks: "static",
-                        deploymentTarget: "16.4",
-                    },
-                    android: {
-                        compileSdkVersion: 36,
-                        targetSdkVersion: 36,
-                    },
                 },
             ],
         ],

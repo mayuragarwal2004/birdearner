@@ -1,43 +1,44 @@
 {
-    "cli": {
-        "version": ">= 15.0.10",
-        "appVersionSource": "remote"
+  "cli": {
+    "version": ">= 15.0.10",
+    "appVersionSource": "remote",
+    "promptToConfigurePushNotifications": false
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "node": "22.14.0",
+      "ios": {
+        "image": "latest"
+      }
     },
-    "build": {
-        "development": {
-            "developmentClient": true,
-            "distribution": "internal",
-            "node": "22.14.0",
-            "ios": {
-                "image": "latest"
-            }
-        },
-        "preview": {
-            "distribution": "internal",
-            "node": "22.14.0",
-            "env": {
-                "NPM_CONFIG_LEGACY_PEER_DEPS": "true"
-            },
-            "android": {
-                "buildType": "apk"
-            },
-            "ios": {
-                "image": "latest"
-            }
-        },
-        "production": {
-            "autoIncrement": true,
-            "node": "22.14.0",
-            "ios": {
-                "image": "latest"
-            }
-        }
+    "preview": {
+      "distribution": "internal",
+      "node": "22.14.0",
+      "env": {
+        "NPM_CONFIG_LEGACY_PEER_DEPS": "true"
+      },
+      "android": {
+        "buildType": "apk"
+      },
+      "ios": {
+        "image": "latest"
+      }
     },
-    "submit": {
-        "production": {
-            "ios": {
-                "ascAppId": "6741027618"
-            }
-        }
+    "production": {
+      "autoIncrement": true,
+      "node": "22.14.0",
+      "ios": {
+        "image": "latest"
+      }
     }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "ascAppId": "6741027618"
+      }
+    }
+  }
 }
