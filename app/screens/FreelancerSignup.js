@@ -316,19 +316,70 @@ const FreelancerSignup = ({ navigation, route }) => {
     const remaining = TYPE_CHANGE_COOLDOWN_MS - (Date.now() - last);
     return remaining > 0 ? remaining : 0;
   };
-  const handleTypeCardPress = (nextType) => {
-    const remaining = getTypeCooldownRemainingMs();
-    if (remaining > 0 && workType !== nextType) {
-      const days = Math.ceil(remaining / (24 * 60 * 60 * 1000));
-      const hours = Math.ceil(remaining / (60 * 60 * 1000));
-      showToast(
-        "info",
-        "Type Change Unavailable",
-        days > 1
-          ? `You can change your freelancer type again in ${days} days.`
-          : `You can change your freelancer type again in about ${hours} hour(s).`
-      );
-      return;
+  // Ongoing assigned job blocks type switching (mirrors the API guard in
+  // api/app/api/freelancers/[id]/_put.ts). Checked live on every card tap so
+  // the toast appears at the moment of switching.
+  const [ongoingJobTitle, setOngoingJobTitle] = useState(null);
+  const fetchOngoingJobTitle = async () => {
+    const freelancerId =
+      profileData?.id || userProfile?.id || userData?.freelancer?.id;
+    if (!freelancerId) return null;
+    try {
+      await apiService.init();
+      const data = await apiService.getJobsByFreelancerId(freelancerId, 1, 50);
+      const NON_ONGOING = [
+        "COMPLETED",
+        "CANCELLED",
+        "CANCELLED_BY_CLIENT",
+        "CANCELLED_BY_FREELANCER",
+        "CANCELLED_SCOPE_MISMATCH",
+        "CLOSED",
+        "REFUNDED",
+        "EXPIRED",
+        "FAILED",
+        "DEADLINE_EXPIRED",
+        "DISPUTE_RESOLVED",
+      ];
+      // Endpoint already filters assignedFreelancerId = freelancerId
+      const jobs = data?.jobs || data?.data?.jobs || [];
+      const ongoing = jobs.find((j) => !NON_ONGOING.includes(j.jobStatus));
+      const title = ongoing?.jobTitle || null;
+      setOngoingJobTitle(title);
+      return title;
+    } catch (e) {
+      // Non-blocking: fall back to last known value; API guard rejects the save.
+      return ongoingJobTitle;
+    }
+  };
+  useEffect(() => {
+    fetchOngoingJobTitle();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profileData?.id, userProfile?.id, userData?.freelancer?.id]);
+
+  const handleTypeCardPress = async (nextType) => {
+    if (workType !== nextType) {
+      const activeJobTitle = await fetchOngoingJobTitle();
+      if (activeJobTitle) {
+        showToast(
+          "info",
+          "Type Change Unavailable",
+          "Complete your ongoing job first to switch type."
+        );
+        return;
+      }
+      const remaining = getTypeCooldownRemainingMs();
+      if (remaining > 0) {
+        const days = Math.ceil(remaining / (24 * 60 * 60 * 1000));
+        const hours = Math.ceil(remaining / (60 * 60 * 1000));
+        showToast(
+          "info",
+          "Type Change Unavailable",
+          days > 1
+            ? `You can change your type again in ${days} days.`
+            : `You can change your type again in ${hours} hour(s).`
+        );
+        return;
+      }
     }
     workTypeHydratedRef.current = true;
     setWorkType(nextType);
@@ -1264,6 +1315,24 @@ const FreelancerSignup = ({ navigation, route }) => {
         showToast("success", "Profile Created", "Freelancer profile created successfully!");
         navigation.goBack();
       } else if (mode === "update") {
+        // Backstop: block save-time type switch if an ongoing job exists
+        // (press-time gate above normally catches this first).
+        const currentSavedType = rawFreelancer?.workType;
+        if (
+          cleanedForm.workType &&
+          currentSavedType &&
+          cleanedForm.workType !== currentSavedType
+        ) {
+          const activeJobTitle = await fetchOngoingJobTitle();
+          if (activeJobTitle) {
+            showToast(
+              "info",
+              "Type Change Unavailable",
+              `Complete your ongoing job "${activeJobTitle}" first to switch type.`
+            );
+            return;
+          }
+        }
         const freelancerUpdateData = {
           selectedServices: cleanedForm.selectedServices,
           suggestedService: suggestedServicePayload,

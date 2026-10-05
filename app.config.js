@@ -3,6 +3,7 @@ export default {
         owner: "birdearner",
         name: "BirdEarner",
         slug: "birdearner",
+        newArchEnabled: false,
         scheme: "birdearner",
         version: "1.1.0",
         orientation: "portrait",

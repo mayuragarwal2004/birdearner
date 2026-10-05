@@ -799,7 +799,7 @@ const styles = StyleSheet.create({
   },
   // Toast Styles
   toastContainer: {
-    height: 80,
+    minHeight: 80,
     width: "90%",
     backgroundColor: "#fff",
     width: "90%",
