@@ -524,6 +524,12 @@ const FreelancerChat = ({ route, navigation }) => {
   const sortedChatMessages = React.useMemo(() => {
     if (!messages || messages.length === 0) return [];
     return [...messages].sort((a, b) => {
+      // Review request prompt must always render at the very last (bottom):
+      // completion inserts it with the same ms timestamp as system
+      // notifications, so time alone can leave it mid-list.
+      const aReview = a.messageType === "review_request" ? 1 : 0;
+      const bReview = b.messageType === "review_request" ? 1 : 0;
+      if (aReview !== bReview) return bReview - aReview;
       const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
       const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
       return timeB - timeA;
