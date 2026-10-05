@@ -506,6 +506,7 @@ const ClientHomeScreen = () => {
         <View style={{ marginBottom: 16 }}>
           <ScrollView
             horizontal
+            style={{ height: 150 }}
             pagingEnabled
             showsHorizontalScrollIndicator={false}
             onScroll={onPromoScroll}
@@ -832,16 +833,15 @@ const getStyles = (currentTheme, isDark) => {
       borderRadius: 16,
       overflow: "hidden",
       backgroundColor: soft,
-      minHeight: 130,
+      height: 150,
+      alignSelf: "flex-start",
     },
     promoImage: {
       ...StyleSheet.absoluteFillObject,
-      width: "100%",
-      height: "100%",
     },
     promoCopy: {
+      ...StyleSheet.absoluteFillObject,
       padding: 14,
-      minHeight: 130,
       justifyContent: "center",
     },
     promoTitle: {
