@@ -5,7 +5,7 @@ export default {
         slug: "birdearner",
         newArchEnabled: false,
         scheme: "birdearner",
-        version: "1.1.0",
+        version: "1.1.1",
         orientation: "portrait",
         icon: "./assets/logo.png",
         userInterfaceStyle: "light",
