@@ -143,13 +143,14 @@ const getStyles = (currentTheme, isKeyboardVisible) =>
     },
     floatingSideToggle: {
       position: 'absolute',
-      top: 16,
+      top: '50%',
+      transform: [{ translateY: -24 }],
       left: 0,
-      width: 32,
-      height: 40,
-      backgroundColor: currentTheme.isDark ? '#3A2A55' : '#4C0183',
-      borderTopRightRadius: 20,
-      borderBottomRightRadius: 20,
+      width: 30,
+      height: 48,
+      backgroundColor: currentTheme.isDark ? '#3A2A55' : '#6D28D9',
+      borderTopRightRadius: 24,
+      borderBottomRightRadius: 24,
       borderTopLeftRadius: 0,
       borderBottomLeftRadius: 0,
       alignItems: 'center',
@@ -987,16 +988,6 @@ const FreelancerChat = ({ route, navigation }) => {
         )}
 
         <View style={{ flex: 1, position: "relative" }}>
-          {!threadRestricted && (clientOffer || freelancerOffer || isNegotiable) && !isNegotiationOpen && (
-            <TouchableOpacity
-              style={styles.floatingSideToggle}
-              onPress={() => setIsNegotiationOpen(true)}
-              activeOpacity={0.85}
-            >
-              <Ionicons name="menu" size={20} color="#FFFFFF" />
-            </TouchableOpacity>
-          )}
-
           {/* PENDING PRICE CHANGE REQUEST BANNER FOR FREELANCER */}
           {Boolean(job?.priceChangeRequested) && (
             <TouchableOpacity
@@ -1348,6 +1339,16 @@ const FreelancerChat = ({ route, navigation }) => {
             mutateMessages?.();
           }}
         />
+
+        {!threadRestricted && (clientOffer || freelancerOffer || isNegotiable) && !isNegotiationOpen && (
+          <TouchableOpacity
+            style={styles.floatingSideToggle}
+            onPress={() => setIsNegotiationOpen(true)}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="chevron-forward" size={22} color="#FFFFFF" />
+          </TouchableOpacity>
+        )}
 
         <Toast />
       </View>
