@@ -38,7 +38,7 @@ const getStatusMeta = (status, isDark = false) => {
       bg: isDark ? "rgba(37,99,235,0.22)" : "#EAF1FF",
     };
   }
-  if (value === "CANCELLED" || value === "REJECTED") {
+  if (value === "CANCELLED" || value.startsWith("CANCELLED_") || value === "REJECTED") {
     return {
       label: "Cancelled",
       color: isDark ? "#F87171" : "#EF4444",
@@ -87,9 +87,10 @@ const FreelancerJobHistory = ({ navigation }) => {
 
   const summary = useMemo(() => {
     const total = jobs.length;
-    const open = jobs.filter(
-      (job) => !["COMPLETED", "AUTO_ACCEPTED", "CANCELLED", "REJECTED"].includes((job.jobStatus || "").toUpperCase())
-    ).length;
+    const open = jobs.filter((job) => {
+      const s = (job.jobStatus || "").toUpperCase();
+      return !["COMPLETED", "AUTO_ACCEPTED", "REJECTED"].includes(s) && !s.startsWith("CANCELLED");
+    }).length;
     return { total, open };
   }, [jobs]);
 

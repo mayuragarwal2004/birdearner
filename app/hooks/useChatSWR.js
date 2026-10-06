@@ -1,5 +1,5 @@
 import useSWR from 'swr';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { Alert } from 'react-native';
 import ApiService from '../lib/apiService';
 import { useAuth } from '../context/NewAuthContext';
@@ -20,6 +20,10 @@ const fetcher = async (url, options = {}) => {
 
 // Custom hook for chat thread data
 export const useChatThread = (jobId, freelancerId, clientId) => {
+  // Released freelancer on a reopened job: server rejects the thread load with a specific message.
+  // We surface that as a calm state instead of a toast/polling loop.
+  const [restricted, setRestricted] = useState(false);
+
   const key = jobId && freelancerId && clientId
     ? ['chat-thread', jobId, freelancerId, clientId]
     : null;
@@ -32,10 +36,15 @@ export const useChatThread = (jobId, freelancerId, clientId) => {
           method: 'POST',
           body: JSON.stringify({ jobId, freelancerId, clientId })
         });
+        setRestricted(false);
         return response.data;
       } catch (err) {
         console.error('Failed to fetch thread:', err);
         const errorText = err?.message || err?.data?.message || err?.response?.data?.message || "Cannot apply for booking at this time";
+        if (errorText.includes('previously selected')) {
+          setRestricted(true);
+          throw err;
+        }
         Toast.show({
           type: "error",
           text1: "Booking Access Restricted",
@@ -46,9 +55,10 @@ export const useChatThread = (jobId, freelancerId, clientId) => {
       }
     },
     {
-      refreshInterval: 30000, // Refresh every 30 seconds
-      revalidateOnFocus: true,
-      revalidateOnReconnect: true,
+      // Stop polling/revalidating once the server has restricted access - no 400 spam.
+      refreshInterval: restricted ? 0 : 30000, // Refresh every 30 seconds
+      revalidateOnFocus: !restricted,
+      revalidateOnReconnect: !restricted,
       dedupingInterval: 5000, // Dedupe requests within 5 seconds
     }
   );
@@ -58,6 +68,7 @@ export const useChatThread = (jobId, freelancerId, clientId) => {
     isThreadLoading: isLoading,
     threadError: error,
     mutateThread: mutate,
+    threadRestricted: restricted,
   };
 };
 
@@ -146,7 +157,7 @@ export const useChatData = (role, params) => {
   }
 
   // Use individual SWR hooks
-  const { thread, isThreadLoading, threadError, mutateThread } = useChatThread(
+  const { thread, isThreadLoading, threadError, mutateThread, threadRestricted } = useChatThread(
     params?.jobId || params?.projectId,
     freelancerId,
     clientId
@@ -471,6 +482,7 @@ export const useChatData = (role, params) => {
     threadError,
     messagesError,
     jobError,
+    threadRestricted,
 
     // Mutations
     mutateThread,

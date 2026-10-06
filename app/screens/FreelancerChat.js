@@ -345,10 +345,26 @@ const getStyles = (currentTheme, isKeyboardVisible) =>
       borderColor: "#FCA5A5",
     },
     blockedBannerText: {
-      fontSize: 13,
-      fontWeight: "600",
-      color: "#DC2626",
-      textAlign: "center",
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#DC2626",
+    textAlign: "center",
+    },
+    releasedBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFF7ED",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderTopWidth: 1,
+    borderColor: "#FDBA74",
+    },
+    releasedBannerText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#C2410C",
+    textAlign: "center",
     },
     modalOverlay: {
       flex: 1,
@@ -511,14 +527,16 @@ const FreelancerChat = ({ route, navigation }) => {
     mutateMessages,
     mutateJob,
     mutateThread,
+    threadRestricted,
   } = useChatData("freelancer", route.params);
 
   useFocusEffect(
     useCallback(() => {
+      if (threadRestricted) return;
       mutateJob?.();
       mutateMessages?.();
       mutateThread?.();
-    }, [mutateJob, mutateMessages, mutateThread])
+    }, [mutateJob, mutateMessages, mutateThread, threadRestricted])
   );
 
   const sortedChatMessages = React.useMemo(() => {
@@ -959,7 +977,7 @@ const FreelancerChat = ({ route, navigation }) => {
           currentFreelancerId={userData?.freelancer?.id}
         />
 
-        {!job?.assignedFreelancerId && chatStatus !== "ACCEPTED" && !["CANCELLED", "CANCELLED_BY_CLIENT", "CANCELLED_BY_FREELANCER", "CANCELLED_SCOPE_MISMATCH"].includes(job?.jobStatus) && (
+        {!threadRestricted && !job?.assignedFreelancerId && chatStatus !== "ACCEPTED" && !["CANCELLED", "CANCELLED_BY_CLIENT", "CANCELLED_BY_FREELANCER", "CANCELLED_SCOPE_MISMATCH"].includes(job?.jobStatus) && (
           <View style={styles.reviewBanner}>
             <Ionicons name="information-circle-outline" size={20} color="#6D28D9" style={{ marginRight: 8 }} />
             <Text style={styles.reviewBannerText}>
@@ -969,7 +987,7 @@ const FreelancerChat = ({ route, navigation }) => {
         )}
 
         <View style={{ flex: 1, position: "relative" }}>
-          {(clientOffer || freelancerOffer || isNegotiable) && !isNegotiationOpen && (
+          {!threadRestricted && (clientOffer || freelancerOffer || isNegotiable) && !isNegotiationOpen && (
             <TouchableOpacity
               style={styles.floatingSideToggle}
               onPress={() => setIsNegotiationOpen(true)}
@@ -1173,7 +1191,14 @@ const FreelancerChat = ({ route, navigation }) => {
             </View>
           )}
 
-          {chatStatus === "BLOCKED" ? (
+          {threadRestricted ? (
+            <View style={styles.releasedBanner}>
+              <Ionicons name="open-outline" size={18} color="#C2410C" style={{ marginRight: 8 }} />
+              <Text style={styles.releasedBannerText}>
+                This job was reopened and you were not selected for the project. You can no longer send messages in this chat.
+              </Text>
+            </View>
+          ) : chatStatus === "BLOCKED" ? (
             <View style={styles.blockedBanner}>
               <Ionicons name="lock-closed-outline" size={18} color="#EF4444" style={{ marginRight: 8 }} />
               <Text style={styles.blockedBannerText}>

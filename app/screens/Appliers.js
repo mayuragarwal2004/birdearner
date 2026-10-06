@@ -47,13 +47,39 @@ const AppliersScreen = ({ navigation, route }) => {
   const [error, setError] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Status derived from the thread's actual status, not the isAccepted marker alone:
+  // after "Find Another Freelancer" the released freelancer keeps isAccepted=true (re-apply marker)
+  // while their thread status is REJECTED and the job is OPEN again - shown as "Released".
+  // After a client cancellation the thread is also REJECTED (isAccepted kept) but the job is
+  // CANCELLED_* - shown as "Cancelled" instead of the misleading "Accepted".
+  const getApplierState = (item) => {
+    const status = (item?.status || "").toUpperCase();
+    const jobStatus = (job?.jobStatus || "").toUpperCase();
+    if (status === "REJECTED" && jobStatus === "OPEN") return "released";
+    if (status === "REJECTED" && item?.isAccepted && jobStatus.startsWith("CANCELLED")) return "cancelled";
+    if (item?.isAccepted || job?.assignedFreelancerId === item?.id || status === "ACCEPTED") return "accepted";
+    return "pending";
+  };
+
   const summary = useMemo(() => {
     const total = freelancers.length;
-    const accepted = freelancers.filter(
-      (item) => item.isAccepted || job?.assignedFreelancerId === item.id
-    ).length;
-    return { total, accepted };
-  }, [freelancers, job?.assignedFreelancerId]);
+    let accepted = 0;
+    let released = 0;
+    let cancelled = 0;
+    freelancers.forEach((item) => {
+      const state = getApplierState(item);
+      if (state === "accepted") accepted += 1;
+      else if (state === "released") released += 1;
+      else if (state === "cancelled") cancelled += 1;
+    });
+    return {
+      total,
+      accepted,
+      released,
+      cancelled,
+      pending: Math.max(total - accepted - released - cancelled, 0),
+    };
+  }, [freelancers, job?.assignedFreelancerId, job?.jobStatus]);
 
   const fetchApplicants = async () => {
     setError(false);
@@ -94,11 +120,11 @@ const AppliersScreen = ({ navigation, route }) => {
     });
   };
 
-  const isAccepted = (item) =>
-    !!item.isAccepted || job?.assignedFreelancerId === item?.id;
-
   const renderItem = ({ item }) => {
-    const accepted = isAccepted(item);
+    const state = getApplierState(item);
+    const accepted = state === "accepted";
+    const released = state === "released";
+    const cancelled = state === "cancelled";
     const accent = isDark ? "#B794FF" : PURPLE;
 
     return (
@@ -132,6 +158,16 @@ const AppliersScreen = ({ navigation, route }) => {
               {accepted && (
                 <View style={styles.acceptedPill}>
                   <Text style={styles.acceptedPillText}>Accepted</Text>
+                </View>
+              )}
+              {released && (
+                <View style={styles.releasedPill}>
+                  <Text style={styles.releasedPillText}>Released</Text>
+                </View>
+              )}
+              {cancelled && (
+                <View style={styles.cancelledPill}>
+                  <Text style={styles.cancelledPillText}>Cancelled</Text>
                 </View>
               )}
             </View>
@@ -228,10 +264,16 @@ const AppliersScreen = ({ navigation, route }) => {
                 value={summary.total || proposalCount || 0}
               />
               <SummaryItem styles={styles} label="Accepted" value={summary.accepted} />
+              {summary.released > 0 && (
+                <SummaryItem styles={styles} label="Released" value={summary.released} />
+              )}
+              {summary.cancelled > 0 && (
+                <SummaryItem styles={styles} label="Cancelled" value={summary.cancelled} />
+              )}
               <SummaryItem
                 styles={styles}
                 label="Pending"
-                value={Math.max(summary.total - summary.accepted, 0)}
+                value={summary.pending}
               />
             </View>
           ) : null
@@ -453,6 +495,28 @@ const getStyles = (currentTheme, isDark) => {
     },
     acceptedPillText: {
       color: acceptedColor,
+      fontSize: 11,
+      fontWeight: "900",
+    },
+    releasedPill: {
+      backgroundColor: isDark ? "rgba(249,115,18,0.18)" : "#FFF4E8",
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 999,
+    },
+    releasedPillText: {
+      color: "#F97316",
+      fontSize: 11,
+      fontWeight: "900",
+    },
+    cancelledPill: {
+      backgroundColor: isDark ? "rgba(239,68,68,0.2)" : "#FDECEC",
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 999,
+    },
+    cancelledPillText: {
+      color: "#EF4444",
       fontSize: 11,
       fontWeight: "900",
     },
