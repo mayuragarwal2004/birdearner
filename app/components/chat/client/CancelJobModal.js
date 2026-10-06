@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Modal, TouchableOpacity, StyleSheet, TextInput, ScrollView } from 'react-native';
+import { View, Text, Modal, TouchableOpacity, StyleSheet, TextInput, ScrollView, Alert } from 'react-native';
 
 const CANCELLATION_REASONS = [
   'Budget constraints',
@@ -12,25 +12,46 @@ const CANCELLATION_REASONS = [
   'Timeline no longer works',
 ];
 
-const CancelJobModal = ({ visible, onConfirm, onCancel, jobBudget }) => {
+const CancelJobModal = ({ visible, onConfirm, onCancel, jobBudget, withinGraceWindow, onFindAnother }) => {
   const [selectedReason, setSelectedReason] = useState(null);
   const [customReason, setCustomReason] = useState('');
   const penaltyAmount = jobBudget ? (parseFloat(jobBudget) * 0.02).toFixed(2) : '0.00';
 
   const finalReason = selectedReason === 'Other' ? customReason.trim() : selectedReason;
   const canConfirm = finalReason && finalReason.length > 0;
+  const showTwoOptions = Boolean(withinGraceWindow);
 
-  const handleConfirm = () => {
-    if (!canConfirm) return;
-    onConfirm(finalReason);
+  const resetForm = () => {
     setSelectedReason(null);
     setCustomReason('');
   };
 
+  const handleConfirm = () => {
+    if (!canConfirm) return;
+    onConfirm(finalReason);
+    resetForm();
+  };
+
   const handleCancel = () => {
-    setSelectedReason(null);
-    setCustomReason('');
+    resetForm();
     onCancel();
+  };
+
+  const handleFindAnother = () => {
+    Alert.alert(
+      'Find Another Freelancer',
+      'This will release the current freelancer and reopen the job so other freelancers can apply. The previously selected freelancer cannot apply again. No penalty applies within the 5-minute window.',
+      [
+        { text: 'Go Back', style: 'cancel' },
+        {
+          text: 'Confirm',
+          onPress: () => {
+            resetForm();
+            onFindAnother();
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -45,12 +66,21 @@ const CancelJobModal = ({ visible, onConfirm, onCancel, jobBudget }) => {
           <ScrollView showsVerticalScrollIndicator={false}>
             <Text style={styles.modalTitle}>Cancel Job</Text>
 
-            <View style={styles.warningBox}>
-              <Text style={styles.warningIcon}>⚠️</Text>
-              <Text style={styles.warningText}>
-                Warning: A 2% penalty of ₹{penaltyAmount} will be added to your next job. You will need to pay this penalty amount directly to the freelancer you assign to your next job as a token of cancellation penalty.
-              </Text>
-            </View>
+            {showTwoOptions ? (
+              <View style={styles.graceBox}>
+                <Text style={styles.graceIcon}>⏱️</Text>
+                <Text style={styles.graceText}>
+                  You are within 5 minutes of booking confirmation. Cancelling now has no cancellation penalty. Choose an option below.
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.warningBox}>
+                <Text style={styles.warningIcon}>⚠️</Text>
+                <Text style={styles.warningText}>
+                  Warning: A 2% penalty of ₹{penaltyAmount} will be added to your next job. You will need to pay this penalty amount directly to the freelancer you assign to your next job as a token of cancellation penalty.
+                </Text>
+              </View>
+            )}
 
             <Text style={styles.label}>Reason for cancellation *</Text>
 
@@ -115,13 +145,23 @@ const CancelJobModal = ({ visible, onConfirm, onCancel, jobBudget }) => {
               />
             )}
 
+            {showTwoOptions && (
+              <TouchableOpacity
+                style={styles.findAnotherButton}
+                onPress={handleFindAnother}
+              >
+                <Text style={styles.findAnotherButtonText}>Find Another Freelancer</Text>
+                <Text style={styles.findAnotherButtonSubtext}>Release this freelancer and reopen the job to other applicants</Text>
+              </TouchableOpacity>
+            )}
+
             <View style={styles.modalActions}>
               <TouchableOpacity
                 style={[styles.confirmButton, !canConfirm && styles.disabledButton]}
                 onPress={handleConfirm}
                 disabled={!canConfirm}
               >
-                <Text style={styles.buttonText}>Yes, Cancel Job</Text>
+                <Text style={styles.buttonText}>{showTwoOptions ? 'Cancel the Job' : 'Yes, Cancel Job'}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.cancelButton}
@@ -166,6 +206,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     width: '100%',
+  },
+  graceBox: {
+    backgroundColor: '#D1FAE5',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 15,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    width: '100%',
+  },
+  graceIcon: {
+    fontSize: 18,
+    marginRight: 8,
+  },
+  graceText: {
+    fontSize: 14,
+    color: '#065F46',
+    flex: 1,
+    lineHeight: 20,
   },
   warningIcon: {
     fontSize: 18,
@@ -245,6 +304,27 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     width: '100%',
     marginTop: 10,
+  },
+  findAnotherButton: {
+    backgroundColor: '#6366F1',
+    padding: 12,
+    borderRadius: 8,
+    width: '100%',
+    alignItems: 'center',
+    marginTop: 4,
+    marginBottom: 6,
+  },
+  findAnotherButtonText: {
+    color: '#fff',
+    textAlign: 'center',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  findAnotherButtonSubtext: {
+    color: '#E0E7FF',
+    textAlign: 'center',
+    fontSize: 11,
+    marginTop: 3,
   },
   confirmButton: {
     backgroundColor: '#dc3545',

@@ -535,6 +535,7 @@ const ClientChat = ({ route, navigation }) => {
   // Local state for UI interactions
   const [modalVisible, setModalVisible] = useState(false);
   const [cancelModalVisible, setCancelModalVisible] = useState(false);
+  const [withinGraceWindow, setWithinGraceWindow] = useState(false);
   const [disputeModalVisible, setDisputeModalVisible] = useState(false);
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -645,9 +646,12 @@ const ClientChat = ({ route, navigation }) => {
       case "Report":
         setReportModalVisible(true);
         break;
-      case "Cancel Job":
+      case "Cancel Job": {
+        const confirmedTs = job?.confirmedAt ? new Date(job.confirmedAt).getTime() : 0;
+        setWithinGraceWindow(confirmedTs > 0 && Date.now() - confirmedTs <= 5 * 60 * 1000);
         setCancelModalVisible(true);
         break;
+      }
       case "Report No Submission":
         Alert.alert(
           "Report Freelancer — Work Not Submitted",
@@ -1021,6 +1025,35 @@ const ClientChat = ({ route, navigation }) => {
         type: "error",
         text1: "Error",
         text2: "Failed to cancel job",
+      });
+    }
+  };
+
+  const handleFindAnother = async () => {
+    try {
+      await api.init();
+      const res = await api.makeRequest(`/jobs/${route.params.jobId || route.params.projectId}/find-another`, {
+        method: "PATCH",
+      });
+
+      if (res.success) {
+        await Promise.all([
+          mutateJob?.(),
+          mutateThread?.(),
+          mutateMessages?.(),
+        ]);
+        Toast.show({
+          type: "success",
+          text1: "Success",
+          text2: "Job reopened for other freelancers",
+        });
+        setCancelModalVisible(false);
+      }
+    } catch (err) {
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: err?.message || "Failed to reopen job",
       });
     }
   };
@@ -1686,6 +1719,8 @@ const ClientChat = ({ route, navigation }) => {
           onConfirm={handleCancelJob}
           onCancel={() => setCancelModalVisible(false)}
           jobBudget={job?.budgetAmount}
+          withinGraceWindow={withinGraceWindow}
+          onFindAnother={handleFindAnother}
         />
 
         <ReportModal
