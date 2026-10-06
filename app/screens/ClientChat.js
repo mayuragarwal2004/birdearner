@@ -25,6 +25,12 @@ import { useAuth } from "../context/NewAuthContext";
 import ApiService from "../lib/apiService";
 import { getWhatsAppDateHeader, isDifferentCalendarDay } from "../utils/dateUtils";
 
+// Existing Remote/On-site detection expression (same as handleRequestCompletion/cancel checks)
+const isOnSiteJobType = (job) => {
+  const pType = (job?.projectType || job?.jobType || '').toLowerCase();
+  return pType === 'on-site' || (pType !== 'remote' && job?.location?.toLowerCase() !== 'remote');
+};
+
 const getStyles = (currentTheme, isKeyboardVisible) =>
   StyleSheet.create({
     container: {
@@ -361,10 +367,44 @@ const getStyles = (currentTheme, isKeyboardVisible) =>
       borderColor: "#FCA5A5",
     },
     blockedBannerText: {
-      fontSize: 13,
-      fontWeight: "600",
-      color: "#DC2626",
-      textAlign: "center",
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#DC2626",
+    textAlign: "center",
+    },
+    watermarkBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginHorizontal: 12,
+    marginBottom: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: currentTheme.isDark ? "#3A2A55" : "#E4D8FF",
+    backgroundColor: currentTheme.isDark ? "#241A38" : "#F5F0FF",
+    },
+    watermarkBannerIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: currentTheme.isDark ? "#31244E" : "#E9DEFF",
+    },
+    watermarkBannerBody: {
+    flex: 1,
+    },
+    watermarkBannerTitle: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: currentTheme.isDark ? "#CBB6FF" : "#4C0183",
+    },
+    watermarkBannerSub: {
+    fontSize: 12.5,
+    color: currentTheme.isDark ? "#9C8FB8" : "#6B6480",
+    marginTop: 2,
     },
     limit: {
       backgroundColor: currentTheme.surface || "#FFFFFF",
@@ -689,7 +729,7 @@ const ClientChat = ({ route, navigation }) => {
   };
 
   // File picking functionality - Upload to Cloudinary (supports multiple files)
-  const handleFilePick = async () => {
+  const handleFilePick = async (withWatermark) => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
         type: ['image/*', 'video/*', 'application/*'],
@@ -714,6 +754,7 @@ const ClientChat = ({ route, navigation }) => {
             name: file.name,
             type: file.mimeType || 'application/octet-stream',
           });
+          formData.append('watermark', withWatermark === true ? 'true' : 'false');
 
           const response = await api.makeRequest(
             '/chats/upload-chat-document',
@@ -1628,6 +1669,23 @@ const ClientChat = ({ route, navigation }) => {
                 </Text>
               )}
             </View>
+          )}
+
+          {job && !isOnSiteJobType(job) && chatStatus !== 'BLOCKED' && (
+            <TouchableOpacity
+              style={styles.watermarkBanner}
+              onPress={() => handleFilePick(true)}
+              activeOpacity={0.85}
+            >
+              <View style={styles.watermarkBannerIcon}>
+                <Ionicons name="attach" size={20} color="#6D28D9" />
+              </View>
+              <View style={styles.watermarkBannerBody}>
+                <Text style={styles.watermarkBannerTitle}>Attach files with watermark</Text>
+                <Text style={styles.watermarkBannerSub}>Share files securely with BirdEarner watermark</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="#6D28D9" />
+            </TouchableOpacity>
           )}
 
           {chatStatus === "BLOCKED" ? (
