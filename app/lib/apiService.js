@@ -51,7 +51,9 @@ const CATEGORIES = [
 // this fetch-compatible XHR shim instead.
 const xhrFetch = (url, options = {}, timeoutMs = 12000) =>
   new Promise((resolve, reject) => {
+    const startedAt = Date.now();
     const xhr = new XMLHttpRequest();
+    console.log(`[XHR] -> ${options.method || "GET"} ${url} (timeout ${timeoutMs}ms)`);
     xhr.open(options.method || "GET", url, true);
     const isFormData = options.body instanceof FormData;
     const headers = options.headers || {};
@@ -63,16 +65,40 @@ const xhrFetch = (url, options = {}, timeoutMs = 12000) =>
       xhr.setRequestHeader(key, value);
     });
     xhr.timeout = timeoutMs;
-    xhr.onload = () =>
+    // Log transfer progress so a slow transfer is distinguishable from a slow
+    // server response (transfer vs Cloudinary processing time).
+    let lastLoggedPct = 0;
+    if (xhr.upload) {
+      xhr.upload.onprogress = (e) => {
+        if (!e.lengthComputable || !e.total) return;
+        const pct = Math.floor((e.loaded / e.total) * 100);
+        if (pct >= lastLoggedPct + 25) {
+          lastLoggedPct = pct - (pct % 25);
+          console.log(`[XHR] uploading ${pct}% (${e.loaded}/${e.total} bytes)`);
+        }
+      };
+    }
+    xhr.onload = () => {
+      console.log(`[XHR] <- ${url} status=${xhr.status} in ${Date.now() - startedAt}ms`);
       resolve({
         ok: xhr.status >= 200 && xhr.status < 300,
         status: xhr.status,
         text: async () => xhr.responseText,
         json: async () => JSON.parse(xhr.responseText || "null"),
       });
-    xhr.onerror = () => reject(new Error(`Network request failed for ${url}`));
-    xhr.ontimeout = () => reject(new Error(`Timed out after ${timeoutMs}ms for ${url}`));
-    xhr.onabort = () => reject(new Error(`Aborted request for ${url}`));
+    };
+    xhr.onerror = () => {
+      console.warn(`[XHR] !! network error after ${Date.now() - startedAt}ms: ${url}`);
+      reject(new Error(`Network request failed for ${url}`));
+    };
+    xhr.ontimeout = () => {
+      console.warn(`[XHR] !! timeout after ${timeoutMs}ms: ${url}`);
+      reject(new Error(`Timed out after ${timeoutMs}ms for ${url}`));
+    };
+    xhr.onabort = () => {
+      console.warn(`[XHR] !! aborted after ${Date.now() - startedAt}ms: ${url}`);
+      reject(new Error(`Aborted request for ${url}`));
+    };
     xhr.send(options.body != null ? options.body : null);
   });
 
@@ -228,7 +254,11 @@ class ApiService {
       for (let attempt = 1; attempt <= maxAttempts; attempt++) {
         try {
           console.log(`[API] -> ${requestUrl}${attempt > 1 ? ` (retry ${attempt - 1})` : ""}`);
-          const timeoutMs = isUpload ? 90000 : 12000;
+          // Uploads get a generous budget: tunnel transfer + Cloudinary round-trip
+          // can exceed the 12s JSON budget, and the abort was falsely flagged as
+          // "tunnel dead", poisoning every subsequent poll. Must stay ABOVE the
+          // server's 240s Cloudinary idle timeout + buffering time.
+          const timeoutMs = isUpload ? 420000 : 12000;
           response = await fetchWithTimeout(requestUrl, config, timeoutMs);
           responseText = await response.text();
           console.log(`[API] <- ${requestUrl} status=${response.status}`);

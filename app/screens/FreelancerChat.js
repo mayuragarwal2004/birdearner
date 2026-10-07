@@ -646,6 +646,7 @@ const FreelancerChat = ({ route, navigation }) => {
       if (!result.canceled && result.assets && result.assets.length > 0) {
         setIsUploading(true);
         setUploadProgress(0);
+        console.log(`[Upload] picked ${result.assets.length} file(s), watermark=${withWatermark === true}`);
 
         try {
           const api = ApiService;
@@ -656,6 +657,8 @@ const FreelancerChat = ({ route, navigation }) => {
 
           for (let i = 0; i < totalFiles; i++) {
             const file = result.assets[i];
+            const fileUploadStart = Date.now();
+            console.log(`[Upload] ${i + 1}/${totalFiles} ${file.name} size=${file.size} type=${file.mimeType} uri=${String(file.uri).slice(0, 80)}`);
 
             // Create FormData for multipart upload
             const formData = new FormData();
@@ -684,6 +687,7 @@ const FreelancerChat = ({ route, navigation }) => {
               throw new Error(uploadRes.message || `Upload failed for ${file.name}`);
             }
             setUploadProgress(Math.round(((i + 1) / totalFiles) * 100));
+            console.log(`[Upload] ${i + 1}/${totalFiles} uploaded in ${Date.now() - fileUploadStart}ms`);
           }
 
           setFilesInfo(prev => [...(prev || []), ...newUploadedFiles]);
