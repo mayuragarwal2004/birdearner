@@ -48,16 +48,41 @@ const MessageItem = ({ messageItem, message, isCurrentUser, media = [], onMessag
   };
   
 
-  const handleDownload = async (url, index) => {
+  const handleDownload = async (url, index, mime = "") => {
     try {
       setDownloadingIndex(index);
       let openUrl = apiService.loadImageURI(url);
-      // Cloudinary free accounts block PDF/ZIP delivery (401 "deny or ACL failure").
-      // Route those through our API, which redirects to a fresh signed download link.
-      if (
+      const urlPath = typeof url === "string" ? url.split(/[?#]/)[0] : "";
+      // Office docs (.doc/.docx/...) can't render natively in browsers and are
+      // delivered as octet-stream downloads — open Microsoft's online viewer instead.
+      const officeMimes = [
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/vnd.ms-excel",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "application/vnd.ms-powerpoint",
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      ];
+      const isOfficeDoc = officeMimes.includes(mime) || /\.(docx?|xlsx?|pptx?)$/i.test(urlPath);
+      if (isOfficeDoc && typeof url === "string" && url.includes("res.cloudinary.com")) {
+        // Word files: browsers can't render them (unlike PDFs, which Chrome shows
+        // natively after our attachment-url redirect), and the MS online viewer
+        // white-screens on these URLs — render an HTML preview through our API.
+        const isWord =
+          mime.includes("word") ||
+          mime === "application/msword" ||
+          (!officeMimes.includes(mime) && /\.(docx?)$/i.test(urlPath));
+        openUrl = isWord
+          ? apiService.loadImageURI(
+              `/api/chats/doc-preview?url=${encodeURIComponent(url)}`
+            )
+          : `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(url)}`;
+      } else if (
+        // Cloudinary free accounts block PDF/ZIP delivery (401 "deny or ACL failure").
+        // Route those through our API, which redirects to a fresh signed download link.
         typeof url === "string" &&
         url.includes("res.cloudinary.com") &&
-        /\.(pdf|zip|rar|7z|gz|tgz|bz2|bzip)(\?.*)?$/i.test(url.split(/[?#]/)[0])
+        /\.(pdf|zip|rar|7z|gz|tgz|bz2|bzip)(\?.*)?$/i.test(urlPath)
       ) {
         openUrl = apiService.loadImageURI(
           `/api/chats/attachment-url?url=${encodeURIComponent(url)}`
@@ -229,7 +254,7 @@ const MessageItem = ({ messageItem, message, isCurrentUser, media = [], onMessag
                   // File attachment
                   <TouchableOpacity
                     style={styles.fileAttachment}
-                    onPress={() => handleDownload(rawUrl, index)}
+                    onPress={() => handleDownload(rawUrl, index, mime)}
                   >
                     <MaterialIcons 
                       name={getFileIcon(mime)} 
