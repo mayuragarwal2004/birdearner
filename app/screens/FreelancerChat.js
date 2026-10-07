@@ -638,7 +638,9 @@ const FreelancerChat = ({ route, navigation }) => {
       const result = await DocumentPicker.getDocumentAsync({
         type: '*/*',
         multiple: true,
-        copyToCacheDirectory: false,
+        // Copy to cache so RN gets a plain file:// URI — content:// URIs make
+        // Android fetch fail the multipart upload with "Network request failed".
+        copyToCacheDirectory: true,
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {

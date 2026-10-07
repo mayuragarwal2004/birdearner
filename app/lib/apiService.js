@@ -44,8 +44,43 @@ const CATEGORIES = [
   "job_portfolios",
 ];
 
+// Expo's global fetch (winter fetch) converts FormData to bytes in JS and rejects
+// React Native's `{uri, type, name}` file parts with "Unsupported FormDataPart
+// implementation" — the request never leaves the device. XMLHttpRequest still
+// streams local files natively (file:// and content://), so uploads go through
+// this fetch-compatible XHR shim instead.
+const xhrFetch = (url, options = {}, timeoutMs = 12000) =>
+  new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open(options.method || "GET", url, true);
+    const isFormData = options.body instanceof FormData;
+    const headers = options.headers || {};
+    Object.keys(headers).forEach((key) => {
+      const value = headers[key];
+      if (value == null) return;
+      // The multipart boundary must be set by the native layer for FormData
+      if (isFormData && key.toLowerCase() === "content-type") return;
+      xhr.setRequestHeader(key, value);
+    });
+    xhr.timeout = timeoutMs;
+    xhr.onload = () =>
+      resolve({
+        ok: xhr.status >= 200 && xhr.status < 300,
+        status: xhr.status,
+        text: async () => xhr.responseText,
+        json: async () => JSON.parse(xhr.responseText || "null"),
+      });
+    xhr.onerror = () => reject(new Error(`Network request failed for ${url}`));
+    xhr.ontimeout = () => reject(new Error(`Timed out after ${timeoutMs}ms for ${url}`));
+    xhr.onabort = () => reject(new Error(`Aborted request for ${url}`));
+    xhr.send(options.body != null ? options.body : null);
+  });
+
 // Timeout wrapper: a dead tunnel / unreachable fallback host must never hang requests
 const fetchWithTimeout = async (url, options = {}, timeoutMs = 12000) => {
+  if (options && options.body instanceof FormData) {
+    return xhrFetch(url, options, timeoutMs);
+  }
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -183,15 +218,37 @@ class ApiService {
         usedFastPath = true;
       }
 
-      try {
-        console.log(`[API] -> ${requestUrl}`);
-        response = await fetchWithTimeout(requestUrl, config, 12000);
-        responseText = await response.text();
-        console.log(`[API] <- ${requestUrl} status=${response.status}`);
-        isHtmlOrBadGateway = responseText.trim().startsWith("<") || responseText.includes("502 Bad Gateway") || responseText.includes("Cloudflare Tunnel error") || response.status === 502 || response.status === 503 || response.status === 530;
-      } catch (netErr) {
-        console.warn(`[API] !! ${requestUrl} failed/timed out:`, netErr?.message || netErr);
-        isHtmlOrBadGateway = true;
+      // Uploads (FormData) must not share the 12s JSON budget: tunnel transfer +
+      // Cloudinary round-trip routinely exceeds it, and the abort was falsely flagged
+      // as "tunnel dead", which then poisoned every subsequent poll. They also get one
+      // automatic retry — a connection dropped mid-transfer must not surface as
+      // "Network request failed" when the tunnel itself is healthy.
+      const isUpload = config.body instanceof FormData;
+      const maxAttempts = isUpload ? 2 : 1;
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+          console.log(`[API] -> ${requestUrl}${attempt > 1 ? ` (retry ${attempt - 1})` : ""}`);
+          const timeoutMs = isUpload ? 90000 : 12000;
+          response = await fetchWithTimeout(requestUrl, config, timeoutMs);
+          responseText = await response.text();
+          console.log(`[API] <- ${requestUrl} status=${response.status}`);
+          isHtmlOrBadGateway = responseText.trim().startsWith("<") || responseText.includes("502 Bad Gateway") || responseText.includes("Cloudflare Tunnel error") || response.status === 502 || response.status === 503 || response.status === 530;
+          break;
+        } catch (netErr) {
+          console.warn(`[API] !! ${requestUrl} failed/timed out:`, netErr?.message || netErr);
+          isHtmlOrBadGateway = true;
+          response = null;
+          if (attempt >= maxAttempts) break;
+          // If attempt 1 used the dev fast path (10.0.2.2 — unreachable on a real
+          // device), don't repeat that dead URL: drop the latch and re-test the
+          // real tunnel for the retry.
+          if (usedFastPath) {
+            this._tunnelFailing = false;
+            requestUrl = url;
+            usedFastPath = false;
+          }
+          console.warn(`[API] retrying upload ${endpoint} once...`);
+        }
       }
 
       if (!usedFastPath && typeof __DEV__ !== "undefined" && __DEV__) {
@@ -211,7 +268,7 @@ class ApiService {
         for (const fallbackHost of fallbackHosts) {
           try {
             const fallbackUrl = `${fallbackHost}${endpoint}`;
-            const fallbackRes = await fetchWithTimeout(fallbackUrl, config, 6000);
+            const fallbackRes = await fetchWithTimeout(fallbackUrl, config, config.body instanceof FormData ? 30000 : 6000);
             const fallbackText = await fallbackRes.text();
             if (fallbackRes.ok && !fallbackText.trim().startsWith("<")) {
               console.log(`[API] fallback OK via ${fallbackHost}`);
@@ -225,6 +282,11 @@ class ApiService {
       }
 
       if (!response) {
+        // Tunnel + every fallback failed. Clear the dead-tunnel latch so the next
+        // request re-tests the real tunnel instead of staying pinned to the dev
+        // fast path (10.0.2.2) forever — a single timed-out upload used to wedge
+        // all later polls (job details/messages) into permanent network errors.
+        this._tunnelFailing = false;
         throw new Error(`Network request failed for ${endpoint}`);
       }
 
@@ -1514,14 +1576,19 @@ class ApiService {
         type: `image/${fileType}`,
       });
 
-      const response = await fetch(`${this.baseURL}/uploads`, {
-        method: "POST",
-        body: formData,
-        headers: {
-          "Content-Type": "multipart/form-data",
-          ...(this.token && { Authorization: `Bearer ${this.token}` }),
+      // FormData must not go through the global fetch (Expo winter fetch rejects
+      // {uri} parts) and must not set Content-Type manually — native sets the boundary.
+      const response = await fetchWithTimeout(
+        `${this.baseURL}/uploads`,
+        {
+          method: "POST",
+          body: formData,
+          headers: {
+            ...(this.token && { Authorization: `Bearer ${this.token}` }),
+          },
         },
-      });
+        60000
+      );
 
       if (!response.ok) {
         throw new Error(`Upload failed: ${response.status}`);
