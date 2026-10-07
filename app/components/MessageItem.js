@@ -51,7 +51,19 @@ const MessageItem = ({ messageItem, message, isCurrentUser, media = [], onMessag
   const handleDownload = async (url, index) => {
     try {
       setDownloadingIndex(index);
-      await Linking.openURL(apiService.loadImageURI(url));
+      let openUrl = apiService.loadImageURI(url);
+      // Cloudinary free accounts block PDF/ZIP delivery (401 "deny or ACL failure").
+      // Route those through our API, which redirects to a fresh signed download link.
+      if (
+        typeof url === "string" &&
+        url.includes("res.cloudinary.com") &&
+        /\.(pdf|zip|rar|7z|gz|tgz|bz2|bzip)(\?.*)?$/i.test(url.split(/[?#]/)[0])
+      ) {
+        openUrl = apiService.loadImageURI(
+          `/api/chats/attachment-url?url=${encodeURIComponent(url)}`
+        );
+      }
+      await Linking.openURL(openUrl);
     } catch (error) {
       console.error("Download error:", error);
     } finally {
@@ -183,7 +195,11 @@ const MessageItem = ({ messageItem, message, isCurrentUser, media = [], onMessag
             const mime = attachment.mimeType || attachment.attachmentMime || attachment.type || attachment.mimetype || '';
             const name = attachment.name || attachment.attachmentName || attachment.originalName || 'attachment';
             const size = attachment.size || attachment.attachmentSize || 0;
-            const isImage = mime.startsWith('image/') || (typeof rawUrl === 'string' && (/\.(jpeg|jpg|gif|png|webp|heic|heif)$/i.test(rawUrl) || rawUrl.includes('image')));
+            // Cloudinary serves ALL auto-detected assets (incl. PDFs) under /image/upload/,
+            // so never trust the URL path — explicit doc extensions/mime win, then image mime/extension.
+            const urlPath = typeof rawUrl === 'string' ? rawUrl.split(/[?#]/)[0] : '';
+            const isDefinitelyDoc = mime.includes('pdf') || /\.(pdf|zip|docx?|xlsx?|pptx?|csv|rar|7z|txt)$/i.test(urlPath);
+            const isImage = !isDefinitelyDoc && (mime.startsWith('image/') || /\.(jpeg|jpg|gif|png|webp|heic|heif|bmp|svg)$/i.test(urlPath));
             const imgKey = `att-${messageItem.id || index}-${index}`;
 
             return (
