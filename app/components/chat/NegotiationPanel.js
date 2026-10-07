@@ -166,17 +166,35 @@ const NegotiationPanel = ({
             <Ionicons name="arrow-back" size={20} color={currentTheme.text || "#000"} />
           </TouchableOpacity>
         )}
-        <View style={{ flex: 1, marginLeft: onClose ? 4 : 0 }}>
+        <View style={styles.headerCenter}>
           <Text style={styles.title}>Negotiation</Text>
           <Text style={styles.subtitle}>Discuss budget & timeline</Text>
         </View>
+        {onClose && (
+          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <Ionicons name="close" size={20} color={currentTheme.text || "#000"} />
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Top Offer Section */}
-      <View style={styles.offerBlock}>
+      <View
+        style={[
+          styles.offerCard,
+          {
+            backgroundColor:
+              topColor === "#6D28D9"
+                ? isDark ? "#2A2144" : "#F5F3FF"
+                : isDark ? "#3A2229" : "#FEF2F2",
+          },
+        ]}
+      >
         <View style={styles.offerTitleRow}>
           <View style={[styles.dot, { backgroundColor: topColor }]} />
           <Text style={styles.offerTitleText}>{topTitle}</Text>
+          <View style={styles.latestPill}>
+            <Text style={styles.latestPillText}>Latest</Text>
+          </View>
         </View>
         <Text style={[styles.amountDisplay, { color: topColor }]}>
           ₹{topAmount || "0"}
@@ -220,7 +238,17 @@ const NegotiationPanel = ({
       </View>
 
       {/* Bottom Offer Section */}
-      <View style={styles.offerBlock}>
+      <View
+        style={[
+          styles.offerCard,
+          {
+            backgroundColor:
+              bottomColor === "#6D28D9"
+                ? isDark ? "#2A2144" : "#F5F3FF"
+                : isDark ? "#3A2229" : "#FEF2F2",
+          },
+        ]}
+      >
         <View style={styles.offerTitleRow}>
           <View style={[styles.dot, { backgroundColor: bottomColor }]} />
           <Text style={styles.offerTitleText}>{bottomTitle}</Text>
@@ -394,13 +422,19 @@ const getStyles = (currentTheme, isDark) => StyleSheet.create({
     alignItems: "flex-start",
     marginBottom: 8,
   },
+  headerCenter: {
+    flex: 1,
+    alignItems: "center",
+  },
   title: {
     fontSize: 13,
     fontWeight: "700",
+    textAlign: "center",
     color: currentTheme.text || "#1E293B",
   },
   subtitle: {
     fontSize: 9,
+    textAlign: "center",
     color: currentTheme.subText || "#64748B",
     marginTop: 1,
   },
@@ -416,8 +450,10 @@ const getStyles = (currentTheme, isDark) => StyleSheet.create({
     padding: 2,
     marginLeft: 6,
   },
-  offerBlock: {
-    marginVertical: 2,
+  offerCard: {
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 4,
   },
   offerTitleRow: {
     flexDirection: "row",
@@ -431,9 +467,22 @@ const getStyles = (currentTheme, isDark) => StyleSheet.create({
     marginRight: 4,
   },
   offerTitleText: {
+    flex: 1,
     fontSize: 11,
     fontWeight: "600",
     color: currentTheme.text || "#334155",
+  },
+  latestPill: {
+    backgroundColor: isDark ? "#3B2D63" : "#EDE9FE",
+    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    marginLeft: 6,
+  },
+  latestPillText: {
+    fontSize: 9,
+    fontWeight: "700",
+    color: isDark ? "#C4B5FD" : "#6D28D9",
   },
   amountDisplay: {
     fontSize: 16,
