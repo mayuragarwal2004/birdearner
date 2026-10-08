@@ -2023,6 +2023,29 @@ class ApiService {
     }
   }
 
+  async getOfferCards() {
+    try {
+      const response = await this.makeRequest("/offer-cards");
+      return response?.data?.cards || [];
+    } catch (error) {
+      if (error?.isAuthError) throw error;
+      console.warn("Offer cards unavailable:", error?.message);
+      return [];
+    }
+  }
+
+  async claimOfferCard(offerId) {
+    try {
+      const response = await this.makeRequest("/offer-cards/claim", {
+        method: "POST",
+        body: JSON.stringify({ offerId }),
+      });
+      return response;
+    } catch (error) {
+      throw new Error(`Failed to claim offer: ${error.message}`);
+    }
+  }
+
   loadImageURI = (uri) => {
     if (!Boolean(uri)) {
       return null;

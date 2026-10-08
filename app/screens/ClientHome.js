@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
+  Alert,
   Dimensions,
   Image,
   Platform,
@@ -13,6 +14,7 @@ import {
   View,
 } from "react-native";
 import SafeSpinner from "../components/SafeSpinner";
+import ScratchOfferModal from "../components/ScratchOfferModal";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import {
@@ -136,6 +138,8 @@ const ClientHomeScreen = () => {
   const [addressPickerOpen, setAddressPickerOpen] = useState(false);
   const [banners, setBanners] = useState([]);
   const [offerCards, setOfferCards] = useState([]);
+  const [scratchCards, setScratchCards] = useState([]);
+  const [scratchModalId, setScratchModalId] = useState(null);
   const [loadingPromos, setLoadingPromos] = useState(true);
 
   const servicesRef = useRef(null);
@@ -212,6 +216,34 @@ const ClientHomeScreen = () => {
     ];
   }, [offerCards, isDark]);
 
+  // Scratch offers rendered in the SAME card row as promos; tapping one opens
+  // the scratch popup instead of navigating to Job Requirements.
+  const homeOffers = useMemo(() => {
+    const scratch = scratchCards.map((c) => ({
+      id: c.id,
+      isScratchOffer: true,
+      title: c.serviceName || "Exclusive offer",
+      badge: c.revealed
+        ? c.amountType === "PERCENT"
+          ? `${c.amount}% OFF`
+          : `₹${c.amount} OFF`
+        : "Scratch me",
+      subtitle: c.revealed
+        ? `Code: ${c.code}`
+        : "Tap to scratch & reveal a surprise coupon",
+      ctaLabel: c.revealed ? "View coupon" : "Reveal",
+      backgroundColor: "#6D28D9",
+      textColor: "#FFFFFF",
+      accentColor: "#F59E0B",
+    }));
+    return [...scratch, ...displayOfferCards];
+  }, [scratchCards, displayOfferCards]);
+
+  const scratchModalCard = useMemo(
+    () => scratchCards.find((c) => c.id === scratchModalId) || null,
+    [scratchCards, scratchModalId]
+  );
+
   useEffect(() => {
     let percentage = 20;
     if (client?.fullName || userData?.fullName) percentage = 20;
@@ -271,10 +303,40 @@ const ClientHomeScreen = () => {
     }
   };
 
+  const fetchScratchCards = async () => {
+    try {
+      const cards = await apiService.getOfferCards();
+      setScratchCards(Array.isArray(cards) ? cards : []);
+    } catch (error) {
+      if (!error?.isAuthError) {
+        console.warn("Scratch cards unavailable:", error?.message);
+      }
+      setScratchCards([]);
+    }
+  };
+
+  const handleScratchReveal = async (card) => {
+    try {
+      const response = await apiService.claimOfferCard(card.id);
+      if (!response?.success || !response?.data) {
+        throw new Error(response?.message || "Failed to claim offer");
+      }
+      const revealedCard = { ...card, ...response.data, masked: false, revealed: true };
+      setScratchCards((prev) =>
+        prev.map((c) => (c.id === card.id ? { ...c, ...revealedCard, id: card.id } : c))
+      );
+      return revealedCard;
+    } catch (error) {
+      Alert.alert("Couldn't claim", error?.message || "Please try again.");
+      throw error;
+    }
+  };
+
   useEffect(() => {
     fetchOngoingJobs();
     fetchNotifications();
     fetchHomePromos();
+    fetchScratchCards();
   }, [userData?.client?.id, refreshing]);
 
   const onRefresh = async () => {
@@ -285,6 +347,7 @@ const ClientHomeScreen = () => {
       fetchNotifications(),
       refreshAddresses(),
       fetchHomePromos(),
+      fetchScratchCards(),
     ]);
     setRefreshing(false);
   };
@@ -622,7 +685,7 @@ const ClientHomeScreen = () => {
             <Text style={styles.sectionTitle}>Offers & Discounts</Text>
           </View>
           <View style={styles.offersRow}>
-            {displayOfferCards.map((offer, index) => (
+            {homeOffers.map((offer, index) => (
               <TouchableOpacity
                 key={offer.id || index}
                 style={[
@@ -640,7 +703,11 @@ const ClientHomeScreen = () => {
                           : "#EAF7F0"),
                   },
                 ]}
-                onPress={() => openJobRequirementsFromPromo(offer)}
+                onPress={() =>
+                  offer.isScratchOffer
+                    ? setScratchModalId(offer.id)
+                    : openJobRequirementsFromPromo(offer)
+                }
                 activeOpacity={0.88}
               >
                 {offer.imageUrl ? (
@@ -696,6 +763,13 @@ const ClientHomeScreen = () => {
       <TouchableOpacity style={styles.fab} onPress={openInbox} activeOpacity={0.9}>
         <ChatCircleText size={26} color="#FFFFFF" weight="fill" />
       </TouchableOpacity>
+
+      <ScratchOfferModal
+        card={scratchModalCard}
+        visible={!!scratchModalId}
+        onClose={() => setScratchModalId(null)}
+        onReveal={handleScratchReveal}
+      />
 
       <AddressPickerModal
         visible={addressPickerOpen}

@@ -259,6 +259,23 @@ const JobRequirementsScreen = ({ navigation }) => {
     }
   };
 
+  // Egg coupons (serviceId null) apply everywhere; admin scratch coupons are
+  // bound to their service and only show once that service is selected.
+  const filteredCoupons = useMemo(
+    () =>
+      availableCoupons.filter(
+        (coupon) => !coupon.serviceId || (!!serviceId && coupon.serviceId === serviceId)
+      ),
+    [availableCoupons, serviceId]
+  );
+
+  // Drop a selected coupon if the user switches to a different service
+  useEffect(() => {
+    if (selectedCoupon?.serviceId && selectedCoupon.serviceId !== serviceId) {
+      setSelectedCoupon(null);
+    }
+  }, [serviceId, selectedCoupon]);
+
   const loadDraft = async () => {
     try {
       const raw = await AsyncStorage.getItem(DRAFT_KEY);
@@ -1581,10 +1598,10 @@ const JobRequirementsScreen = ({ navigation }) => {
             <Text style={styles.validatingText}>Validating budget...</Text>
           ) : null}
 
-          {budget && parseFloat(budget) > 0 && availableCoupons.length > 0 && (
+          {budget && parseFloat(budget) > 0 && filteredCoupons.length > 0 && (
             <View style={styles.couponSection}>
               <Text style={styles.couponTitle}>Available Coupons</Text>
-              {availableCoupons.map((coupon) => {
+              {filteredCoupons.map((coupon) => {
                 const budgetNum = parseFloat(budget);
                 const isEligible = budgetNum >= coupon.minBooking;
                 const discountText = coupon.amountType === "LUMPSUM"
@@ -1609,6 +1626,11 @@ const JobRequirementsScreen = ({ navigation }) => {
                       <Text style={[styles.couponDiscount, !isEligible && styles.couponTextDisabled]}>
                         {discountText}
                       </Text>
+                      {coupon.code ? (
+                        <Text style={[styles.couponCode, !isEligible && styles.couponTextDisabled]}>
+                          Code: {coupon.code}
+                        </Text>
+                      ) : null}
                       <Text style={[styles.couponMinBooking, !isEligible && styles.couponTextDisabled]}>
                         Min booking ₹{coupon.minBooking}+
                       </Text>
@@ -1807,7 +1829,7 @@ const JobRequirementsScreen = ({ navigation }) => {
               style={styles.applyCouponBtn}
               onPress={() => {
                 if (!couponInput.trim()) return;
-                const found = availableCoupons.find(
+                const found = filteredCoupons.find(
                   (c) =>
                     c.code?.toLowerCase() === couponInput.trim().toLowerCase() ||
                     c.id === couponInput.trim()
@@ -2806,6 +2828,13 @@ const getStyles = (currentTheme, isDark) => {
       color: PURPLE,
       fontSize: 14,
       fontWeight: "700",
+    },
+    couponCode: {
+      color: text,
+      fontSize: 12,
+      fontWeight: "700",
+      marginTop: 2,
+      letterSpacing: 0.5,
     },
     couponMinBooking: {
       color: muted,
