@@ -11,7 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
 import { useAuth } from "../context/NewAuthContext";
@@ -66,7 +66,8 @@ const SettingsScreen = ({ navigation }) => {
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
   const isDark = theme === "dark";
-  const styles = useMemo(() => getStyles(currentTheme, isDark), [currentTheme, isDark]);
+  const insets = useSafeAreaInsets();
+  const styles = useMemo(() => getStyles(currentTheme, isDark, insets.bottom), [currentTheme, isDark, insets.bottom]);
 
   const [switchingRole, setSwitchingRole] = useState(false);
 
@@ -413,7 +414,7 @@ function SettingsRow({ item, isLast, styles, onPress }) {
   );
 }
 
-const getStyles = (currentTheme, isDark) => {
+const getStyles = (currentTheme, isDark, bottomInset = 0) => {
   const surface = currentTheme.background || "#FFFFFF";
   const card = currentTheme.cardBackground || (isDark ? "#1A1A1A" : "#FFFFFF");
   const text = currentTheme.text || "#101114";
@@ -455,7 +456,7 @@ const getStyles = (currentTheme, isDark) => {
     },
     scrollContent: {
       paddingHorizontal: 16,
-      paddingBottom: Platform.OS === "ios" ? 80 : 64,
+      paddingBottom: (Platform.OS === "ios" ? 80 : 64) + bottomInset,
     },
     profileCard: {
       borderRadius: 12,

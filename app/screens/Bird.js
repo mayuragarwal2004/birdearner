@@ -183,7 +183,7 @@ const Bird = () => {
           />
 
           {/* Input Area */}
-          <View style={[styles.inputOuterContainer, { paddingBottom: isKeyboardVisible ? Math.max(insets.bottom + 10, 20) : (Platform.OS === "ios" ? 100 : 85) }]}>
+          <View style={[styles.inputOuterContainer, { paddingBottom: isKeyboardVisible ? Math.max(insets.bottom + 10, 20) : (Platform.OS === "ios" ? 100 : 85) + insets.bottom }]}>
             <View style={[styles.inputInnerContainer, { backgroundColor: inputBg, borderColor: inputBorder }]}>
               <TextInput
                 style={[styles.inputField, { color: textColor }]}

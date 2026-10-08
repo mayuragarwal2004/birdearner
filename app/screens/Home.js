@@ -8,7 +8,7 @@ import {
   RefreshControl,
   Platform,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { FontAwesome, Ionicons } from "@expo/vector-icons";
 import {
   Bell,
@@ -122,7 +122,8 @@ const HomeScreen = () => {
   const currentTheme = themeStyles[theme];
   const isDark = theme === "dark";
 
-  const styles = getStyles(currentTheme, isDark);
+  const insets = useSafeAreaInsets();
+  const styles = getStyles(currentTheme, isDark, insets.bottom);
 
   const fetchOrderRecords = async () => {
     try {
@@ -570,7 +571,7 @@ const StatItem = ({ icon, iconBg, value, label, styles }) => {
   );
 };
 
-const getStyles = (currentTheme, isDark) => {
+const getStyles = (currentTheme, isDark, bottomInset = 0) => {
   const bg = currentTheme.background || "#F8FAFC";
   const cardBg = currentTheme.cardBackground || (isDark ? "#1E1E1E" : "#FFFFFF");
   const text = currentTheme.text || "#0F172A";
@@ -589,7 +590,7 @@ const getStyles = (currentTheme, isDark) => {
       paddingTop: 10,
     },
     scrollContent: {
-      paddingBottom: Platform.OS === "ios" ? 140 : 120,
+      paddingBottom: (Platform.OS === "ios" ? 140 : 120) + bottomInset,
     },
     header: {
       flexDirection: "row",

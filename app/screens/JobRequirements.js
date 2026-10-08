@@ -47,7 +47,7 @@ import {
   Wallet,
   X,
 } from "phosphor-react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Location from "expo-location";
 import MapView, { PROVIDER_GOOGLE, Marker } from "react-native-maps";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -115,7 +115,8 @@ const JobRequirementsScreen = ({ navigation }) => {
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
   const isDark = theme === "dark";
-  const styles = useMemo(() => getStyles(currentTheme, isDark), [currentTheme, isDark]);
+  const insets = useSafeAreaInsets();
+  const styles = useMemo(() => getStyles(currentTheme, isDark, insets.bottom), [currentTheme, isDark, insets.bottom]);
   const accent = isDark ? "#B794FF" : PURPLE;
 
   const {
@@ -1941,7 +1942,7 @@ const JobRequirementsScreen = ({ navigation }) => {
   );
 };
 
-const getStyles = (currentTheme, isDark) => {
+const getStyles = (currentTheme, isDark, bottomInset = 0) => {
   const surface = currentTheme.background || "#FFFFFF";
   const card = currentTheme.cardBackground || (isDark ? "#1A1A1A" : "#FFFFFF");
   const text = currentTheme.text || "#101114";
@@ -2017,7 +2018,7 @@ const getStyles = (currentTheme, isDark) => {
     },
     scrollContent: {
       paddingHorizontal: 16,
-      paddingBottom: Platform.OS === "ios" ? 120 : 100,
+      paddingBottom: (Platform.OS === "ios" ? 120 : 100) + bottomInset,
     },
     segment: {
       flexDirection: "row",

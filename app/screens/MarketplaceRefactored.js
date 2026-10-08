@@ -7,6 +7,7 @@ import {
   Platform,
   TouchableOpacity,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
 import { ArrowLeft, SlidersHorizontal } from "phosphor-react-native";
 
@@ -38,7 +39,8 @@ const MarketplaceScreen = ({ navigation }) => {
   // Theme
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
-  const styles = getStyles(currentTheme);
+  const insets = useSafeAreaInsets();
+  const styles = getStyles(currentTheme, insets.bottom);
 
   // Custom Hooks
   const { location, getLocation } = useLocation();
@@ -203,7 +205,7 @@ const MarketplaceScreen = ({ navigation }) => {
   );
 };
 
-const getStyles = (currentTheme) =>
+const getStyles = (currentTheme, bottomInset = 0) =>
   StyleSheet.create({
     container: {
       flex: 1,
@@ -237,6 +239,7 @@ const getStyles = (currentTheme) =>
     viewJobsContainer: {
       marginTop: 16,
       paddingHorizontal: 20,
+      paddingBottom: (Platform.OS === "ios" ? 85 : 70) + bottomInset,
     },
     viewJobsButton: {
       backgroundColor: "#762BAD",

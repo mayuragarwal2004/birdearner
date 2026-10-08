@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createStackNavigator } from "@react-navigation/stack";
 import { LinearGradient } from "expo-linear-gradient";
-import { View, StyleSheet, Platform, Text } from "react-native";
+import { View, StyleSheet, Platform, Text, Dimensions } from "react-native";
 import {
   getMessaging,
   getToken,
@@ -38,6 +38,11 @@ import { ThemeProvider } from "./context/ThemeContext";
 import { KeyboardProvider, useKeyboard } from "./context/KeyboardContext";
 import { NavigationContainer } from "@react-navigation/native";
 import { navigationRef } from "./lib/navigationRef";
+import {
+  SafeAreaProvider,
+  useSafeAreaInsets,
+  initialWindowMetrics,
+} from "react-native-safe-area-context";
 import * as Linking from "expo-linking";
 import apiService from "./lib/apiService";
 
@@ -142,6 +147,18 @@ const linking = {
   },
 };
 
+// Seed insets immediately so the tree never renders before the native
+// safe-area event (mirrors @react-navigation/elements SafeAreaProviderCompat).
+const safeAreaInitialMetrics = initialWindowMetrics ?? {
+  frame: {
+    x: 0,
+    y: 0,
+    width: Dimensions.get("window").width,
+    height: Dimensions.get("window").height,
+  },
+  insets: { top: 0, left: 0, right: 0, bottom: 0 },
+};
+
 export default function MainApp() {
   React.useEffect(() => {
     const handleDeepLink = (url) => {
@@ -162,19 +179,21 @@ export default function MainApp() {
   }, []);
 
   return (
-    <NavigationContainer linking={linking} ref={navigationRef}>
-      <ThemeProvider>
-        <AuthProvider>
-          <KeyboardProvider>
-            <SWRProvider>
-              <App />
-            </SWRProvider>
-          </KeyboardProvider>
-          <StatusBar style="auto" />
-        </AuthProvider>
-      </ThemeProvider>
-      <Toast config={toastConfig} />
-    </NavigationContainer>
+    <SafeAreaProvider initialMetrics={safeAreaInitialMetrics}>
+      <NavigationContainer linking={linking} ref={navigationRef}>
+        <ThemeProvider>
+          <AuthProvider>
+            <KeyboardProvider>
+              <SWRProvider>
+                <App />
+              </SWRProvider>
+            </KeyboardProvider>
+            <StatusBar style="auto" />
+          </AuthProvider>
+        </ThemeProvider>
+        <Toast config={toastConfig} />
+      </NavigationContainer>
+    </SafeAreaProvider>
   );
 }
 
@@ -184,6 +203,7 @@ const Stack = createStackNavigator();
 function MainTabs() {
   const { userData } = useAuth();
   const { isKeyboardVisible } = useKeyboard();
+  const insets = useSafeAreaInsets();
   const roleStr = (userData?.role || "").toLowerCase();
   const isClient = roleStr === "client";
   const navigation = useNavigation();
@@ -295,6 +315,14 @@ function MainTabs() {
         tabBarLabelStyle: styles.tabBarLabel,
         tabBarStyle: [
           styles.tabBarStyle,
+          // Instagram-style inset handling: the bar keeps its background down
+          // to the physical bottom, but its icons/labels sit above the system
+          // navigation bar (3-button or gesture). Without this the system nav
+          // overlaps the tab labels on edge-to-edge Android.
+          {
+            height: (Platform.OS === "ios" ? 85 : 70) + insets.bottom,
+            paddingBottom: (Platform.OS === "ios" ? 20 : 8) + insets.bottom,
+          },
           isKeyboardVisible && { display: 'none' },
           hideTabBar && { display: 'none' }
         ],

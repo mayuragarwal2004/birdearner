@@ -15,7 +15,7 @@ import {
 } from "react-native";
 import SafeSpinner from "../components/SafeSpinner";
 import ScratchOfferModal from "../components/ScratchOfferModal";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import {
   Bell,
@@ -153,9 +153,10 @@ const ClientHomeScreen = () => {
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
   const isDark = theme === "dark";
+  const insets = useSafeAreaInsets();
   const styles = useMemo(
-    () => getStyles(currentTheme, isDark),
-    [currentTheme, isDark]
+    () => getStyles(currentTheme, isDark, insets.bottom),
+    [currentTheme, isDark, insets.bottom]
   );
 
   const client = userData?.client;
@@ -813,7 +814,7 @@ const ClientHomeScreen = () => {
   );
 };
 
-const getStyles = (currentTheme, isDark) => {
+const getStyles = (currentTheme, isDark, bottomInset = 0) => {
   const surface = currentTheme.background || "#FFFFFF";
   const card = currentTheme.cardBackground || (isDark ? "#1A1A1A" : "#FFFFFF");
   const text = currentTheme.text || "#101114";
@@ -918,7 +919,7 @@ const getStyles = (currentTheme, isDark) => {
       transform: [{ rotate: "90deg" }],
     },
     scrollContent: {
-      paddingBottom: Platform.OS === "ios" ? 110 : 90,
+      paddingBottom: (Platform.OS === "ios" ? 110 : 90) + bottomInset,
       paddingTop: 12,
     },
     mainScroll: {

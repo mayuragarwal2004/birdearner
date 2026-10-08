@@ -11,7 +11,7 @@ import {
     StatusBar,
     RefreshControl
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { useAuth } from "../context/NewAuthContext";
 import { useTheme } from "../context/ThemeContext";
@@ -30,7 +30,8 @@ const LeaderboardScreen = () => {
 
     const { theme, themeStyles } = useTheme();
     const currentTheme = themeStyles[theme];
-    const styles = getStyles(currentTheme);
+    const insets = useSafeAreaInsets();
+    const styles = getStyles(currentTheme, insets.bottom);
 
     useEffect(() => {
         if (userData?.id) {
@@ -246,7 +247,7 @@ const LeaderboardScreen = () => {
     );
 };
 
-const getStyles = (currentTheme) =>
+const getStyles = (currentTheme, bottomInset = 0) =>
     StyleSheet.create({
         mainContainer: {
             flex: 1,
@@ -310,7 +311,7 @@ const getStyles = (currentTheme) =>
             color: '#4C0183', // Primary Purple
         },
         scrollContent: {
-            paddingBottom: 20,
+            paddingBottom: 20 + bottomInset,
         },
         podiumContainer: {
             flexDirection: 'row',

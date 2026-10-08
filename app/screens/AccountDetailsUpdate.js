@@ -10,7 +10,7 @@ import {
   Platform,
   Alert,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
 import { useAuth } from "../context/NewAuthContext";
@@ -65,7 +65,8 @@ const AccountDetailsUpdateScreen = ({ navigation, route }) => {
   const [showMobileAuthPassword, setShowMobileAuthPassword] = useState(false);
   const [mobileLoading, setMobileLoading] = useState(false);
 
-  const styles = useMemo(() => getStyles(currentTheme, isDark), [currentTheme, isDark]);
+  const insets = useSafeAreaInsets();
+  const styles = useMemo(() => getStyles(currentTheme, isDark, insets.bottom), [currentTheme, isDark, insets.bottom]);
 
   // Email Validation
   const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -556,7 +557,7 @@ const AccountDetailsUpdateScreen = ({ navigation, route }) => {
   );
 };
 
-const getStyles = (currentTheme, isDark) =>
+const getStyles = (currentTheme, isDark, bottomInset = 0) =>
   StyleSheet.create({
     container: {
       flex: 1,
@@ -587,6 +588,7 @@ const getStyles = (currentTheme, isDark) =>
     scrollView: {
       paddingHorizontal: 16,
       paddingTop: 16,
+      paddingBottom: (Platform.OS === "ios" ? 85 : 70) + bottomInset,
     },
     profileCard: {
       backgroundColor: currentTheme.surface || "#FFFFFF",

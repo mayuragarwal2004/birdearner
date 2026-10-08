@@ -11,7 +11,7 @@ import {
   View,
 } from "react-native";
 import SafeSpinner from "../components/SafeSpinner";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { Briefcase, CalendarBlank, ChatCircleText, CurrencyInr } from "phosphor-react-native";
 import { format, isValid } from "date-fns";
@@ -92,7 +92,8 @@ const JobsPostedScreen = ({ navigation }) => {
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
   const isDark = theme === "dark";
-  const styles = useMemo(() => getStyles(currentTheme, isDark), [currentTheme, isDark]);
+  const insets = useSafeAreaInsets();
+  const styles = useMemo(() => getStyles(currentTheme, isDark, insets.bottom), [currentTheme, isDark, insets.bottom]);
 
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -421,7 +422,7 @@ function ActionRow({ styles, icon, label, danger, onPress }) {
   );
 }
 
-const getStyles = (currentTheme, isDark) => {
+const getStyles = (currentTheme, isDark, bottomInset = 0) => {
   const surface = currentTheme.background || "#FFFFFF";
   const card = currentTheme.cardBackground || surface;
   const text = currentTheme.text || "#101114";
@@ -471,7 +472,7 @@ const getStyles = (currentTheme, isDark) => {
     },
     listContainer: {
       paddingHorizontal: 16,
-      paddingBottom: 110,
+      paddingBottom: 110 + bottomInset,
     },
     summaryRow: {
       flexDirection: "row",
