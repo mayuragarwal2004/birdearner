@@ -1,40 +1,13 @@
-import React, { useEffect, useState } from "react";
-import {
-  View,
-  TouchableOpacity,
-  Text,
-  StyleSheet,
-} from "react-native";
+import React from "react";
+import { View, TouchableOpacity, Text, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import SafeSpinner from "../components/SafeSpinner";
-import { WebView } from "react-native-webview";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../context/ThemeContext";
-import apiService from "../lib/apiService";
+import PrivacyPolicyContent from "../components/PrivacyPolicyContent";
 
 const TermsAndConditionsScreen = ({ navigation }) => {
-  const [termsUrl, setTermsUrl] = useState(null);
-  const [loading, setLoading] = useState(true);
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
-
-  useEffect(() => {
-    const fetchTermsLink = async () => {
-      try {
-        const response = await fetch(`${apiService.baseURL}/terms`);
-        const data = await response.json();
-        console.log({ data });
-
-        setTermsUrl(data?.terms);
-      } catch (err) {
-        console.error("Failed to fetch terms link:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTermsLink();
-  }, []);
 
   return (
     <SafeAreaView
@@ -49,7 +22,7 @@ const TermsAndConditionsScreen = ({ navigation }) => {
             if (navigation.canGoBack()) {
               navigation.goBack();
             } else {
-              navigation.navigate("Login"); // or whatever your home route is named
+              navigation.navigate("Login");
             }
           }}
         >
@@ -64,29 +37,7 @@ const TermsAndConditionsScreen = ({ navigation }) => {
         </Text>
       </View>
 
-      {loading ? (
-        <SafeSpinner
-          size={42}
-          color="#6A0DAD"
-          style={{ marginTop: 40 }}
-        />
-      ) : termsUrl ? (
-        <WebView
-          source={{ uri: termsUrl }}
-          startInLoadingState
-          renderLoading={() => (
-            <SafeSpinner
-              size={42}
-              color="#6A0DAD"
-              style={{ marginTop: 20 }}
-            />
-          )}
-        />
-      ) : (
-        <Text style={{ padding: 20, color: "red" }}>
-          Unable to load Terms and Conditions.
-        </Text>
-      )}
+      <PrivacyPolicyContent />
     </SafeAreaView>
   );
 };
