@@ -706,7 +706,11 @@ const ClientHomeScreen = () => {
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Offers & Discounts</Text>
           </View>
-          <View style={styles.offersRow}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.offersRow}
+          >
             {homeOffers.map((offer, index) => (
               <TouchableOpacity
                 key={offer.id || index}
@@ -778,7 +782,7 @@ const ClientHomeScreen = () => {
                 )}
               </TouchableOpacity>
             ))}
-          </View>
+          </ScrollView>
         </View>
       </ScrollView>
 
@@ -1122,6 +1126,7 @@ const getStyles = (currentTheme, isDark) => {
     offersRow: {
       flexDirection: "row",
       gap: 10,
+      paddingRight: 8,
     },
     offerCard: {
       borderRadius: 14,
@@ -1139,10 +1144,10 @@ const getStyles = (currentTheme, isDark) => {
       borderBottomLeftRadius: 14,
     },
     offerWide: {
-      flex: 1.25,
+      width: 210,
     },
     offerNarrow: {
-      flex: 1,
+      width: 165,
       justifyContent: "center",
     },
     offerTitle: {
