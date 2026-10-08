@@ -179,7 +179,22 @@ const ClientHomeScreen = () => {
   );
 
   const displayBanners = useMemo(() => {
-    if (banners && banners.length > 0) return banners;
+    const scratchBanners = scratchCards
+      .filter((c) => c.placement === "BANNER")
+      .map((c) => ({
+        id: c.id,
+        isScratchOffer: true,
+        title: c.serviceName || "Exclusive offer",
+        subtitle: c.revealed
+          ? `Code: ${c.code}`
+          : "Scratch to reveal a surprise coupon",
+        ctaLabel: c.revealed ? "View coupon" : "Scratch me",
+        backgroundColor: "#6D28D9",
+        textColor: "#FFFFFF",
+        accentColor: "#F59E0B",
+      }));
+    const merged = [...scratchBanners, ...(banners || [])];
+    if (merged.length > 0) return merged;
     return [
       {
         id: "banner_ac_summer",
@@ -189,7 +204,7 @@ const ClientHomeScreen = () => {
         backgroundColor: isDark ? "#2A2034" : "#F3EAFF",
       },
     ];
-  }, [banners, isDark]);
+  }, [banners, scratchCards, isDark]);
 
   const displayOfferCards = useMemo(() => {
     if (offerCards && offerCards.length > 0) return offerCards;
@@ -217,25 +232,28 @@ const ClientHomeScreen = () => {
   }, [offerCards, isDark]);
 
   // Scratch offers rendered in the SAME card row as promos; tapping one opens
-  // the scratch popup instead of navigating to Job Requirements.
+  // the scratch popup instead of navigating to Job Requirements. BANNER-placed
+  // scratch cards go to the banner carousel instead (see displayBanners).
   const homeOffers = useMemo(() => {
-    const scratch = scratchCards.map((c) => ({
-      id: c.id,
-      isScratchOffer: true,
-      title: c.serviceName || "Exclusive offer",
-      badge: c.revealed
-        ? c.amountType === "PERCENT"
-          ? `${c.amount}% OFF`
-          : `₹${c.amount} OFF`
-        : "Scratch me",
-      subtitle: c.revealed
-        ? `Code: ${c.code}`
-        : "Tap to scratch & reveal a surprise coupon",
-      ctaLabel: c.revealed ? "View coupon" : "Reveal",
-      backgroundColor: "#6D28D9",
-      textColor: "#FFFFFF",
-      accentColor: "#F59E0B",
-    }));
+    const scratch = scratchCards
+      .filter((c) => c.placement !== "BANNER")
+      .map((c) => ({
+        id: c.id,
+        isScratchOffer: true,
+        title: c.serviceName || "Exclusive offer",
+        badge: c.revealed
+          ? c.amountType === "PERCENT"
+            ? `${c.amount}% OFF`
+            : `₹${c.amount} OFF`
+          : "Scratch me",
+        subtitle: c.revealed
+          ? `Code: ${c.code}`
+          : "Tap to scratch & reveal a surprise coupon",
+        ctaLabel: c.revealed ? "View coupon" : "Reveal",
+        backgroundColor: "#6D28D9",
+        textColor: "#FFFFFF",
+        accentColor: "#F59E0B",
+      }));
     return [...scratch, ...displayOfferCards];
   }, [scratchCards, displayOfferCards]);
 
@@ -583,7 +601,11 @@ const ClientHomeScreen = () => {
               <TouchableOpacity
                 key={promo.id}
                 activeOpacity={0.92}
-                onPress={() => openJobRequirementsFromPromo(promo)}
+                onPress={() =>
+                  promo.isScratchOffer
+                    ? setScratchModalId(promo.id)
+                    : openJobRequirementsFromPromo(promo)
+                }
                 style={[
                   styles.promoCard,
                   {
