@@ -43,7 +43,8 @@ const MessageItem = ({ messageItem, message, isCurrentUser, media = [], onMessag
     return messageDate.toLocaleTimeString('en-US', {
       hour: 'numeric',
       minute: '2-digit',
-      hour12: true
+      hour12: true,
+      timeZone: 'Asia/Kolkata'
     });
   };
   
