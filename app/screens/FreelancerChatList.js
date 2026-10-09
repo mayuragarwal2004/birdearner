@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { useTheme } from "../context/ThemeContext";
 import ApiService from "../lib/apiService";
+import { filterJobsByWorkType, normalizeWorkType } from "../utils/marketplaceUtils";
 
 const FreelancerChatList = () => {
   const [chatThreads, setChatThreads] = useState([]);
@@ -49,9 +50,20 @@ const FreelancerChatList = () => {
       console.log("Raw API response:", JSON.stringify(response));
 
       if (response && Array.isArray(response)) {
+        const uniqueJobIds = [...new Set(response.map(conv => conv.jobId).filter(Boolean))];
+        const projectTypes = {};
+        await Promise.all(uniqueJobIds.map(async (jobId) => {
+          try {
+            const job = await api.getJobById(jobId);
+            if (job?.projectType) projectTypes[jobId] = job.projectType;
+          } catch {
+            // lookup failure tolerated - chat stays visible (unknown type is never filtered out)
+          }
+        }));
         const formattedThreads = response.map(conv => ({
           ...conv,
-          isStarred: conv.isStarred || false
+          isStarred: conv.isStarred || false,
+          projectType: projectTypes[conv.jobId] || conv.projectType
         }));
         console.log("Formatted threads count:", formattedThreads.length);
         setChatThreads(formattedThreads);
@@ -77,6 +89,12 @@ const FreelancerChatList = () => {
   }, []);
 
   console.log({ chatThreads });
+
+  const workType = normalizeWorkType(userData?.freelancer?.workType);
+  const visibleThreads = useMemo(
+    () => filterJobsByWorkType(chatThreads, workType),
+    [chatThreads, workType]
+  );
 
   const renderChatThread = ({ item }) => {
     const jobTitle = item.jobTitle || "Job";
@@ -153,7 +171,7 @@ const FreelancerChatList = () => {
     );
   }
 
-  if (chatThreads.length === 0) {
+  if (visibleThreads.length === 0) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: currentTheme.background || "#fff" }}>
         <View style={styles.emptyContainer}>
@@ -176,7 +194,7 @@ const FreelancerChatList = () => {
           <Text style={styles.header}>Freelancer Inbox</Text>
         </View>
       <FlatList
-        data={chatThreads}
+        data={visibleThreads}
         keyExtractor={(item) => item.id}
         renderItem={renderChatThread}
         contentContainerStyle={styles.chatListContainer}
