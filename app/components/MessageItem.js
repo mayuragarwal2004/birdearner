@@ -23,7 +23,7 @@ import CashPaymentMessage from "./chat/CashPaymentMessage";
 import CompletionRequestMessage from "./chat/CompletionRequestMessage";
 import ReviewRequestMessage from "./chat/ReviewRequestMessage";
 
-const MessageItem = ({ messageItem, message, isCurrentUser, media = [], onMessageUpdate, currentUserId, userRole, jobStatus }) => {
+const MessageItem = ({ messageItem, message, isCurrentUser, media = [], onMessageUpdate, currentUserId, userRole, jobStatus, agreedAmount }) => {
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme] || themeStyles.light;
   const isDark = theme === "dark";
@@ -131,6 +131,7 @@ const MessageItem = ({ messageItem, message, isCurrentUser, media = [], onMessag
             onUpdate={onMessageUpdate}
             currentUserId={currentUserId}
             userRole={userRole}
+            agreedAmount={agreedAmount}
           />
         ) : (
           <ReviewRequestMessage

@@ -4,7 +4,7 @@ import { useTheme } from '../../context/ThemeContext';
 import ApiService from '../../lib/apiService';
 import Toast from 'react-native-toast-message';
 
-const CompletionRequestMessage = ({ message, onUpdate, currentUserId, userRole }) => {
+const CompletionRequestMessage = ({ message, onUpdate, currentUserId, userRole, agreedAmount }) => {
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
   const styles = getStyles(currentTheme);
@@ -28,6 +28,12 @@ const CompletionRequestMessage = ({ message, onUpdate, currentUserId, userRole }
 
   // Ensure amount is always a string
   const safeAmount = typeof budgetAmount === 'string' ? budgetAmount : String(budgetAmount || '0');
+
+  // Platform payment requests store the ORIGINAL budget in messageData — display the
+  // final negotiated amount instead when one exists (e.g. ₹5 negotiated to ₹8).
+  const displayAmount = paymentMethod === 'PLATFORM' && agreedAmount != null && `${agreedAmount}` !== ''
+    ? String(agreedAmount)
+    : safeAmount;
 
   const handleConfirmCompletion = async () => {
     if (isProcessing) return;
@@ -69,7 +75,7 @@ const CompletionRequestMessage = ({ message, onUpdate, currentUserId, userRole }
       return (
         <View style={styles.confirmedContainer}>
           <Text style={styles.confirmedText}>✅ Project Completion Confirmed</Text>
-          <Text style={styles.amountText}>Project Value: ₹{safeAmount}</Text>
+          <Text style={styles.amountText}>Project Value: ₹{displayAmount}</Text>
           <Text style={styles.statusText}>
             {paymentMethod === 'CASH' 
               ? 'Cash payment process initiated' 
@@ -104,7 +110,7 @@ const CompletionRequestMessage = ({ message, onUpdate, currentUserId, userRole }
             ? `You sent a project completion request. Waiting for ${otherPartyRole} confirmation...`
             : `${senderRoleName} has requested confirmation that the project is completed.`}
         </Text>
-        <Text style={styles.amountText}>Project Value: ₹{safeAmount}</Text>
+        <Text style={styles.amountText}>Project Value: ₹{displayAmount}</Text>
         <Text style={styles.paymentInfo}>
           Payment Method: {paymentMethod === 'CASH' ? 'Cash Payment' : 'Platform Payment'}
         </Text>

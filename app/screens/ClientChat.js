@@ -1631,6 +1631,7 @@ const ClientChat = ({ route, navigation }) => {
                     currentUserId={userData?.id}
                     userRole="client"
                     jobStatus={jobStatus}
+                    agreedAmount={agreedAmount}
                     onMessageUpdate={(type, data) => {
                       if (type === 'review_press') {
                         handleReviewPress(data);
