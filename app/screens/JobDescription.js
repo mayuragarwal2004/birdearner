@@ -9,10 +9,10 @@ import {
   Modal,
   Alert,
   Linking,
-  SafeAreaView,
   StatusBar,
   Platform,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import SafeSpinner from "../components/SafeSpinner";
 import { FontAwesome, Ionicons } from "@expo/vector-icons";
 import ImageViewer from "react-native-image-zoom-viewer";
