@@ -118,7 +118,7 @@ const getStyles = (currentTheme, isKeyboardVisible) =>
       backgroundColor: 'rgba(0,0,0,0.5)',
     },
     drawerContainer: {
-      width: '50%',
+      width: '65%',
       height: '100%',
       backgroundColor: currentTheme.surface || '#FFFFFF',
       zIndex: 1001,
