@@ -163,7 +163,7 @@ const Login = ({ navigation }) => {
             {/* Logo */}
             <View style={styles.logoContainer}>
               <View style={styles.logoCircle}>
-                <Image source={require("../assets/logo11.png")} style={styles.logo} resizeMode="contain" />
+                <Image source={require("../../assets/Logo2-03.png")} style={styles.logo} resizeMode="contain" />
               </View>
             </View>
 
@@ -340,7 +340,7 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: "bold",
     color: "#ffffff",
-    marginBottom: 6,
+    marginBottom: 2,
   },
   subtitle: {
     fontSize: 14,
@@ -382,7 +382,7 @@ const styles = StyleSheet.create({
   loginButtonWrapper: {
     width: "100%",
     marginTop: 8,
-    marginBottom: 24,
+    marginBottom: 12,
     borderRadius: 12,
     overflow: "hidden",
   },
@@ -423,7 +423,7 @@ const styles = StyleSheet.create({
   signupContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: 28,
   },
   signupText: {
     color: "#e5e7eb",
