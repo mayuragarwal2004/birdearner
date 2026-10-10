@@ -1322,7 +1322,7 @@ const getStyles = (currentTheme, isDark, bottomInset = 0) => {
     fab: {
       position: "absolute",
       right: 16,
-      bottom: Platform.OS === "ios" ? 90 : 70,
+      bottom: (Platform.OS === "ios" ? 85 : 70) + bottomInset + 12,
       width: 48,
       height: 48,
       borderRadius: 24,

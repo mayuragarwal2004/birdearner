@@ -1110,7 +1110,7 @@ const getStyles = (currentTheme, isDark, bottomInset = 0) => {
       borderRadius: 28,
       backgroundColor: "#3B0764",
       position: "absolute",
-      bottom: Platform.OS === "ios" ? 100 : 85,
+      bottom: (Platform.OS === "ios" ? 85 : 70) + bottomInset + 12,
       right: 20,
       shadowColor: "#000",
       shadowOffset: { width: 0, height: 4 },
