@@ -287,16 +287,16 @@ const Login = ({ navigation }) => {
             {/* Social Icons */}
             <View style={styles.socialContainer}>
               <TouchableOpacity style={styles.socialIconBtn} onPress={() => handleSocialMediaPress("youtube")}>
-                <YoutubeLogo size={22} color="#fff" weight="fill" />
+                <YoutubeLogo size={18} color="#fff" weight="fill" />
               </TouchableOpacity>
               <TouchableOpacity style={styles.socialIconBtn} onPress={() => handleSocialMediaPress("instagram")}>
-                <InstagramLogo size={22} color="#fff" />
+                <InstagramLogo size={18} color="#fff" />
               </TouchableOpacity>
               <TouchableOpacity style={styles.socialIconBtn} onPress={() => handleSocialMediaPress("x")}>
-                <XLogo size={22} color="#fff" />
+                <XLogo size={18} color="#fff" />
               </TouchableOpacity>
               <TouchableOpacity style={styles.socialIconBtn} onPress={() => handleSocialMediaPress("web")}>
-                <Globe size={22} color="#fff" />
+                <Globe size={18} color="#fff" />
               </TouchableOpacity>
             </View>
           </ScrollView>
@@ -402,13 +402,13 @@ const styles = StyleSheet.create({
   forgotPasswordText: {
     color: "#e5e7eb",
     fontSize: 14,
-    marginBottom: 32,
+    marginBottom: 16,
   },
   dividerContainer: {
     flexDirection: "row",
     alignItems: "center",
     width: "100%",
-    marginBottom: 24,
+    marginBottom: 16,
   },
   dividerLine: {
     flex: 1,
@@ -423,7 +423,7 @@ const styles = StyleSheet.create({
   signupContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 32,
+    marginBottom: 16,
   },
   signupText: {
     color: "#e5e7eb",
@@ -438,12 +438,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     width: "100%",
-    gap: 16,
+    gap: 12,
   },
   socialIconBtn: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     borderWidth: 1,
     borderColor: "#5b21b6",
     justifyContent: "center",
@@ -457,7 +457,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 24,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: "#e5e7eb",
   },
