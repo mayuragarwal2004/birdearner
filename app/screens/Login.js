@@ -159,7 +159,7 @@ const Login = ({ navigation }) => {
             {/* Logo */}
             <View style={styles.logoContainer}>
               <View style={styles.logoCircle}>
-                <Image source={require("../../assets/Logob2-03.png")} style={styles.logo} resizeMode="contain" />
+                <Image source={require("../../assets/login-logo.png")} style={styles.logo} resizeMode="contain" />
               </View>
             </View>
 
@@ -171,7 +171,7 @@ const Login = ({ navigation }) => {
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Email or Phone Number</Text>
               <View style={styles.inputContainer}>
-                <Envelope size={20} color="#C4B5FD" style={styles.inputIcon} />
+                <Envelope size={20} color="#FFFFFF" style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
                   placeholder="Enter your email or phone number"
@@ -192,7 +192,7 @@ const Login = ({ navigation }) => {
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Password</Text>
               <View style={styles.inputContainer}>
-                <LockKey size={20} color="#C4B5FD" style={styles.inputIcon} />
+                <LockKey size={20} color="#FFFFFF" style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
                   placeholder="Enter your password"
@@ -209,9 +209,9 @@ const Login = ({ navigation }) => {
                   onPress={() => setShowPassword(!showPassword)}
                 >
                   {showPassword ? (
-                    <Eye size={20} color="#C4B5FD" />
+                    <Eye size={20} color="#FFFFFF" />
                   ) : (
-                    <EyeSlash size={20} color="#C4B5FD" />
+                    <EyeSlash size={20} color="#FFFFFF" />
                   )}
                 </TouchableOpacity>
               </View>
@@ -224,13 +224,18 @@ const Login = ({ navigation }) => {
               disabled={isLoading}
               activeOpacity={0.8}
             >
-              <View style={[styles.loginButton, isLoading && styles.disabledButton]}>
+              <LinearGradient
+                colors={["#A155FD", "#892DFC", "#A459FE"]}
+                start={{ x: 0, y: 0.5 }}
+                end={{ x: 1, y: 0.5 }}
+                style={[styles.loginButton, isLoading && styles.disabledButton]}
+              >
                 {isLoading ? (
                   <SafeSpinner color="white" size={18} />
                 ) : (
                   <Text style={styles.loginButtonText}>Login</Text>
                 )}
-              </View>
+              </LinearGradient>
             </TouchableOpacity>
 
             {/* Forgot Password */}
@@ -258,7 +263,7 @@ const Login = ({ navigation }) => {
                 ) : (
                   <>
                     <Image
-                      source={{ uri: "https://developers.google.com/identity/images/glogo.png" }}
+                      source={require("../../assets/google-g.png")}
                       style={styles.googleIcon}
                     />
                     <Text style={styles.googleButtonText}>Continue with Google</Text>
@@ -350,11 +355,11 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "transparent",
-    borderWidth: 1,
-    borderColor: "#5b21b6",
+    backgroundColor: "#3F1A83",
+    borderWidth: 1.5,
+    borderColor: "#A476F3",
     borderRadius: 12,
-    height: 54,
+    height: 56,
     paddingHorizontal: 16,
   },
   inputIcon: {
@@ -374,15 +379,17 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 12,
     borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: "#762BAD",
-    overflow: "hidden",
+    shadowColor: "#8935FC",
+    shadowOpacity: 0.45,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 6,
   },
   loginButton: {
     height: 54,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#762BAD",
   },
   disabledButton: {
     opacity: 0.7,
@@ -393,7 +400,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   forgotPasswordText: {
-    color: "#e5e7eb",
+    color: "#ffffff",
     fontSize: 14,
     marginBottom: 16,
   },
@@ -445,29 +452,32 @@ const styles = StyleSheet.create({
   },
   googleButton: {
     width: "100%",
-    height: 54,
+    height: 48,
     backgroundColor: "#ffffff",
     borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: "#e5e7eb",
+    borderColor: "#E9D5FF",
   },
   googleButtonContent: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
   },
   googleIcon: {
-    position: "absolute",
-    left: 16,
-    top: 16,
-    width: 22,
-    height: 22,
+    width: 28,
+    height: 28,
+    marginRight: 10,
   },
   googleButtonText: {
-    color: "#374151",
+    color: "#362261",
     fontSize: 15,
     fontWeight: "600",
   },
