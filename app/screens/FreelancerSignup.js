@@ -689,9 +689,10 @@ const FreelancerSignup = ({ navigation, route }) => {
                 showToast("error", "Permission Denied", "Grant access to photos.");
                 return;
               }
+              // Compress at pick time: full-quality phone photos (8MB+) time out during upload
               const pickerResult = await ImagePicker.launchImageLibraryAsync({
                 mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                quality: 1,
+                quality: 0.6,
                 allowsMultipleSelection: true,
               });
               if (!pickerResult.canceled && pickerResult.assets?.length > 0) {

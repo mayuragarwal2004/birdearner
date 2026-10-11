@@ -3,7 +3,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 
-const DEV_API_BASE_URL = "https://lawyer-clusters-transformation-wild.trycloudflare.com/api";
+const DEV_API_BASE_URL = "https://wit-examined-sector-brussels.trycloudflare.com/api";
 // const DEV_API_BASE_URL = "https://api.birdearner.com/api";
 
 const PROD_API_BASE_URL = "https://api.birdearner.com/api";
@@ -2109,7 +2109,8 @@ class ApiService {
 
       formData.append("category", category);
 
-      const postUpload = async (url, timeoutMs = 30000) => {
+      // Uploads wait for the server's Cloudinary round trip (originals + watermarked copy), so allow longer than 30s
+      const postUpload = async (url, timeoutMs = 120000) => {
         try {
           console.log(`[Upload] -> ${url}`);
           const res = await fetchWithTimeout(

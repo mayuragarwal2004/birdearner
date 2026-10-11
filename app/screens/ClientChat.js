@@ -729,7 +729,8 @@ const ClientChat = ({ route, navigation }) => {
   };
 
   // File picking functionality - Upload to Cloudinary (supports multiple files)
-  const handleFilePick = async (withWatermark) => {
+  // Every chat attachment is watermarked, whichever button opened the picker (attach icon or banner)
+  const handleFilePick = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
         type: ['image/*', 'video/*', 'application/*'],
@@ -743,7 +744,7 @@ const ClientChat = ({ route, navigation }) => {
 
       setIsUploading(true);
       setUploadProgress(0);
-      console.log(`[Upload] picked ${result.assets.length} file(s), watermark=${withWatermark === true}`);
+      console.log(`[Upload] picked ${result.assets.length} file(s), watermark=true`);
 
       try {
         const newUploadedFiles = [];
@@ -759,7 +760,7 @@ const ClientChat = ({ route, navigation }) => {
             name: file.name,
             type: file.mimeType || 'application/octet-stream',
           });
-          formData.append('watermark', withWatermark === true ? 'true' : 'false');
+          formData.append('watermark', 'true');
 
           const response = await api.makeRequest(
             '/chats/upload-chat-document',
@@ -774,6 +775,8 @@ const ClientChat = ({ route, navigation }) => {
               name: file.name,
               url: response.secure_url,
               cloudinaryPublicId: response.cloudinaryPublicId,
+              originalUrl: response.original_secure_url,
+              originalCloudinaryPublicId: response.originalCloudinaryPublicId,
               mimeType: file.mimeType,
               size: file.size,
             });
@@ -831,6 +834,9 @@ const ClientChat = ({ route, navigation }) => {
           attachmentName: f.originalName || f.name || 'attachment',
           attachmentSize: f.size || 0,
           attachmentMime: f.mimeType || f.mimetype || 'application/octet-stream',
+          attachmentPublicId: f.cloudinaryPublicId || null,
+          attachmentOriginalUrl: f.originalUrl || null,
+          attachmentOriginalPublicId: f.originalCloudinaryPublicId || null,
         }));
 
         await sendMessage(messageToSend, {

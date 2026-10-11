@@ -633,7 +633,8 @@ const FreelancerChat = ({ route, navigation }) => {
 
   // File picking and Cloudinary upload functionality
   // File picking and Cloudinary upload functionality (supports multiple files)
-  const handleFilePick = async (withWatermark) => {
+  // Every chat attachment is watermarked, whichever button opened the picker (attach icon or banner)
+  const handleFilePick = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
         type: '*/*',
@@ -646,7 +647,7 @@ const FreelancerChat = ({ route, navigation }) => {
       if (!result.canceled && result.assets && result.assets.length > 0) {
         setIsUploading(true);
         setUploadProgress(0);
-        console.log(`[Upload] picked ${result.assets.length} file(s), watermark=${withWatermark === true}`);
+        console.log(`[Upload] picked ${result.assets.length} file(s), watermark=true`);
 
         try {
           const api = ApiService;
@@ -667,7 +668,7 @@ const FreelancerChat = ({ route, navigation }) => {
               type: file.mimeType || 'application/octet-stream',
               name: file.name,
             });
-            formData.append('watermark', withWatermark === true ? 'true' : 'false');
+            formData.append('watermark', 'true');
 
             // Upload to Cloudinary via chat document route
             const uploadRes = await api.makeRequest('/chats/upload-chat-document', {
@@ -680,6 +681,8 @@ const FreelancerChat = ({ route, navigation }) => {
                 name: file.name,
                 url: uploadRes.secure_url,
                 cloudinaryPublicId: uploadRes.cloudinaryPublicId,
+                originalUrl: uploadRes.original_secure_url,
+                originalCloudinaryPublicId: uploadRes.originalCloudinaryPublicId,
                 mimeType: file.mimeType,
                 size: file.size,
               });
@@ -737,6 +740,9 @@ const FreelancerChat = ({ route, navigation }) => {
           attachmentName: f.originalName || f.name || 'attachment',
           attachmentSize: f.size || 0,
           attachmentMime: f.mimeType || f.mimetype || 'application/octet-stream',
+          attachmentPublicId: f.cloudinaryPublicId || null,
+          attachmentOriginalUrl: f.originalUrl || null,
+          attachmentOriginalPublicId: f.originalCloudinaryPublicId || null,
         }));
 
         const currentJobStatus = (job?.jobStatus || '').toUpperCase();
