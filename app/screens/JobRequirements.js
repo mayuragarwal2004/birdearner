@@ -969,11 +969,12 @@ const JobRequirementsScreen = ({ navigation }) => {
           webMediaRecorderRef.current.stop();
         } catch (e) {}
       }
-      if (audioRecorderRef.current) {
-        try {
-          audioRecorderRef.current.stop();
-        } catch (e) {}
-      }
+      // The recorder is released by useAudioRecorder on unmount; only stop it if it is still recording.
+      try {
+        if (audioRecorderRef.current?.isRecording) {
+          audioRecorderRef.current.stop()?.catch?.(() => {});
+        }
+      } catch (e) {}
     };
   }, []);
 

@@ -141,10 +141,6 @@ const Login = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <LinearGradient
-        colors={["#350F6A", "#1D0343"]}
-        style={StyleSheet.absoluteFill}
-      />
       <SafeAreaView style={styles.safeArea}>
         <KeyboardAvoidingView 
           style={{ flex: 1 }} 
@@ -163,7 +159,7 @@ const Login = ({ navigation }) => {
             {/* Logo */}
             <View style={styles.logoContainer}>
               <View style={styles.logoCircle}>
-                <Image source={require("../../assets/Logo2-03.png")} style={styles.logo} resizeMode="contain" />
+                <Image source={require("../../assets/Logob2-03.png")} style={styles.logo} resizeMode="contain" />
               </View>
             </View>
 
@@ -228,18 +224,13 @@ const Login = ({ navigation }) => {
               disabled={isLoading}
               activeOpacity={0.8}
             >
-              <LinearGradient
-                colors={["#762BAD", "#4B0082"]}
-                style={[styles.loginButton, isLoading && styles.disabledButton]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-              >
+              <View style={[styles.loginButton, isLoading && styles.disabledButton]}>
                 {isLoading ? (
                   <SafeSpinner color="white" size={18} />
                 ) : (
                   <Text style={styles.loginButtonText}>Login</Text>
                 )}
-              </LinearGradient>
+              </View>
             </TouchableOpacity>
 
             {/* Forgot Password */}
@@ -310,6 +301,7 @@ const Login = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: "#500192",
   },
   safeArea: {
     flex: 1,
@@ -321,13 +313,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   logoContainer: {
-    marginBottom: 20,
+    marginBottom: 8,
   },
   logoCircle: {
     width: 100,
     height: 100,
-    borderRadius: 50,
-    overflow: "hidden",
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "transparent",
@@ -384,12 +374,15 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 12,
     borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: "#762BAD",
     overflow: "hidden",
   },
   loginButton: {
     height: 54,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: "#762BAD",
   },
   disabledButton: {
     opacity: 0.7,
@@ -467,9 +460,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   googleIcon: {
+    position: "absolute",
+    left: 16,
+    top: 16,
     width: 22,
     height: 22,
-    marginRight: 10,
   },
   googleButtonText: {
     color: "#374151",
