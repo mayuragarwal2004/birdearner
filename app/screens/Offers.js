@@ -13,6 +13,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import React, { useState, useEffect, useRef } from "react";
 import eggImage from "../assets/offers/egg.png";
 import hatchlingImage from "../assets/offers/hatchling.jpg";
+import hatchedEggImage from "../assets/offers/hatched-egg.png";
 import bird1 from "../assets/offers/bird-1.png";
 import bird2 from "../assets/offers/bird-2.png";
 import bird3 from "../assets/offers/bird-3.png";
@@ -161,6 +162,7 @@ const OffersScreen = ({ navigation }) => {
   const [revealCode, setRevealCode] = useState(null);
   const [crackingIndex, setCrackingIndex] = useState(null);
   const [isOpening, setIsOpening] = useState(false);
+  const [showNoCouponPopup, setShowNoCouponPopup] = useState(false);
   const [stageBox, setStageBox] = useState(null);
   const { userData } = useAuth();
   const userId = userData?.id;
@@ -189,7 +191,6 @@ const OffersScreen = ({ navigation }) => {
     }))
   ).current;
   const crackProgress = useRef(new Animated.Value(0)).current;
-  const settledCrack = useRef(new Animated.Value(1)).current;
   const burstProgress = useRef(new Animated.Value(0)).current;
   const revealAnimation = useRef(new Animated.Value(0)).current;
   const hatchAnimation = useRef(new Animated.Value(0)).current;
@@ -280,7 +281,6 @@ const OffersScreen = ({ navigation }) => {
 
       claimedOfferIds.current.clear();
       setAvailableOffers(response.availableOffers || []);
-
       // discoveredOffers also holds admin scratch coupons (they carry a serviceId).
       // Only egg coupons should mark eggs as cracked.
       const eggCoupons = (response.discoveredOffers || []).filter((offer) => !offer.serviceId);
@@ -391,24 +391,36 @@ const OffersScreen = ({ navigation }) => {
   const handleEggClick = async (index) => {
     console.log({ index });
 
-    if (openingRef.current || brokenEggs[index]) return;
+    // Blocks a second tap while an egg is being opened
+    if (openingRef.current) return;
+
+    const firstAvailableEggIndex = brokenEggs.indexOf(false);
+
+    if (firstAvailableEggIndex === -1) {
+      console.log({ firstAvailableEggIndex });
+      // should never happen
+      return;
+    }
 
     openingRef.current = true;
     setIsOpening(true);
 
     try {
+      if (firstAvailableEggIndex !== index || availableOffers.length == 0) {
+        startShakeAnimation(index);
+        await wait(2000);
+        stopShakeAnimation(index);
+        setShowNoCouponPopup(true);
+        return;
+      }
+
       startShakeAnimation(index);
-      const waitingPromise = wait(2000);
 
       const unclaimedOffers = availableOffers.filter(o => !claimedOfferIds.current.has(o.id));
       if (unclaimedOffers.length === 0) {
-        await waitingPromise;
+        await wait(2000);
         stopShakeAnimation(index);
-        Toast.show({
-          type: "info",
-          text1: "No eggs to crack",
-          text2: "Stay tuned for more offers!",
-        });
+        setShowNoCouponPopup(true);
         return;
       }
 
@@ -422,7 +434,6 @@ const OffersScreen = ({ navigation }) => {
 
       console.log({ updatedresponse: response });
 
-      await waitingPromise;
       stopShakeAnimation(index);
 
       if (response.success && offer) {
@@ -531,20 +542,18 @@ const OffersScreen = ({ navigation }) => {
           },
         ]}
       >
-        <TouchableOpacity
-          onPress={() => handleEggClick(index)}
-          disabled={broken || isOpening}
-          activeOpacity={0.85}
-          style={styles.eggTouch}
-        >
-          <Image
-            source={eggImage}
-            style={[styles.fill, broken && styles.crackedEgg]}
-            resizeMode="contain"
-          />
-        </TouchableOpacity>
-
-        {broken && renderCrackLines(rect, settledCrack)}
+        {broken ? (
+          <Image source={hatchedEggImage} style={styles.fill} resizeMode="contain" />
+        ) : (
+          <TouchableOpacity
+            onPress={() => handleEggClick(index)}
+            disabled={isOpening}
+            activeOpacity={0.85}
+            style={styles.eggTouch}
+          >
+            <Image source={eggImage} style={styles.fill} resizeMode="contain" />
+          </TouchableOpacity>
+        )}
 
         {isCracking && (
           <>
@@ -843,6 +852,22 @@ const OffersScreen = ({ navigation }) => {
         </View>
       </Modal>
 
+      {/* No coupon yet Popup */}
+      <Modal visible={showNoCouponPopup} transparent={true} animationType="fade">
+        <View style={styles.popupOverlay}>
+          <View style={styles.popupContent}>
+            <Text style={styles.popupTitle}>No Coupon Code Available!</Text>
+            <Text style={styles.popupText}>Complete more jobs to get coupons</Text>
+            <TouchableOpacity
+              style={styles.popupButton}
+              onPress={() => setShowNoCouponPopup(false)}
+            >
+              <Text style={styles.popupButtonText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       {/* Rules Popup (First-time Visit) */}
       <Modal visible={showRulesPopup} transparent={true} animationType="slide">
         <View style={styles.popupOverlay1}>
@@ -907,9 +932,6 @@ const getStyles = (currentTheme) =>
     eggTouch: {
       width: "100%",
       height: "100%",
-    },
-    crackedEgg: {
-      opacity: 0.7,
     },
 
     crackLayer: {
