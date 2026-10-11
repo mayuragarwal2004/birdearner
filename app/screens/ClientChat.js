@@ -729,8 +729,9 @@ const ClientChat = ({ route, navigation }) => {
   };
 
   // File picking functionality - Upload to Cloudinary (supports multiple files)
-  // Every chat attachment is watermarked, whichever button opened the picker (attach icon or banner)
-  const handleFilePick = async () => {
+  // withWatermark === true only from the "Attach files with watermark" banner; the attach icon sends originals
+  const handleFilePick = async (withWatermark) => {
+    const useWatermark = withWatermark === true;
     try {
       const result = await DocumentPicker.getDocumentAsync({
         type: ['image/*', 'video/*', 'application/*'],
@@ -744,7 +745,7 @@ const ClientChat = ({ route, navigation }) => {
 
       setIsUploading(true);
       setUploadProgress(0);
-      console.log(`[Upload] picked ${result.assets.length} file(s), watermark=true`);
+      console.log(`[Upload] picked ${result.assets.length} file(s), watermark=${useWatermark}`);
 
       try {
         const newUploadedFiles = [];
@@ -760,7 +761,7 @@ const ClientChat = ({ route, navigation }) => {
             name: file.name,
             type: file.mimeType || 'application/octet-stream',
           });
-          formData.append('watermark', 'true');
+          formData.append('watermark', useWatermark ? 'true' : 'false');
 
           const response = await api.makeRequest(
             '/chats/upload-chat-document',

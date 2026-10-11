@@ -64,7 +64,7 @@ const ChatInput = ({
         
         <TouchableOpacity
           style={styles.attachButton}
-          onPress={onFilePick}
+          onPress={() => onFilePick(false)}
           disabled={isUploading}
         >
           <MaterialIcons name="attach-file" size={20} color={currentTheme.text || "#64748B"} />

@@ -633,8 +633,9 @@ const FreelancerChat = ({ route, navigation }) => {
 
   // File picking and Cloudinary upload functionality
   // File picking and Cloudinary upload functionality (supports multiple files)
-  // Every chat attachment is watermarked, whichever button opened the picker (attach icon or banner)
-  const handleFilePick = async () => {
+  // withWatermark === true only from the "Attach files with watermark" banner; the attach icon sends originals
+  const handleFilePick = async (withWatermark) => {
+    const useWatermark = withWatermark === true;
     try {
       const result = await DocumentPicker.getDocumentAsync({
         type: '*/*',
@@ -647,7 +648,7 @@ const FreelancerChat = ({ route, navigation }) => {
       if (!result.canceled && result.assets && result.assets.length > 0) {
         setIsUploading(true);
         setUploadProgress(0);
-        console.log(`[Upload] picked ${result.assets.length} file(s), watermark=true`);
+        console.log(`[Upload] picked ${result.assets.length} file(s), watermark=${useWatermark}`);
 
         try {
           const api = ApiService;
@@ -668,7 +669,7 @@ const FreelancerChat = ({ route, navigation }) => {
               type: file.mimeType || 'application/octet-stream',
               name: file.name,
             });
-            formData.append('watermark', 'true');
+            formData.append('watermark', useWatermark ? 'true' : 'false');
 
             // Upload to Cloudinary via chat document route
             const uploadRes = await api.makeRequest('/chats/upload-chat-document', {
