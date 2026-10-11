@@ -335,7 +335,8 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: "bold",
     color: "#ffffff",
-    marginBottom: 2,
+    lineHeight: 32,
+    marginBottom: 0,
   },
   subtitle: {
     fontSize: 14,
