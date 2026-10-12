@@ -3,6 +3,7 @@ import {
   Alert,
   Dimensions,
   Image,
+  ImageBackground,
   Platform,
   RefreshControl,
   ScrollView,
@@ -39,6 +40,12 @@ const DEEP_PURPLE = "#4B0082";
 const placeholderImageURL = "https://picsum.photos/seed/";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const PROMO_WIDTH = SCREEN_WIDTH - 40;
+
+// Offer card images are cropped and resized by Cloudinary to cover the card (instead of a full-size upload)
+const offerCardImageUrl = (url) =>
+  typeof url === "string" && url.includes("res.cloudinary.com/") && url.includes("/image/upload/")
+    ? url.replace("/image/upload/", "/image/upload/c_fill,w_600,h_400,q_auto,f_auto/")
+    : url;
 
 const formatSchedule = (deadline) => {
   if (!deadline) return "Schedule not set";
@@ -194,43 +201,10 @@ const ClientHomeScreen = () => {
         textColor: "#FFFFFF",
         accentColor: "#F59E0B",
       }));
-    const merged = [...scratchBanners, ...(banners || [])];
-    if (merged.length > 0) return merged;
-    return [
-      {
-        id: "banner_ac_summer",
-        title: "Get your AC ready for summer",
-        subtitle: "Up to 25% off on AC servicing",
-        ctaLabel: "Book now",
-        backgroundColor: isDark ? "#2A2034" : "#F3EAFF",
-      },
-    ];
+    return [...scratchBanners, ...(banners || [])];
   }, [banners, scratchCards, isDark]);
 
-  const displayOfferCards = useMemo(() => {
-    if (offerCards && offerCards.length > 0) return offerCards;
-    return [
-      {
-        id: "offer_insta_help",
-        title: "Insta Help",
-        badge: "Flat ₹50 OFF",
-        subtitle: "Instant assistance for quick tasks",
-        ctaLabel: "Book now",
-        backgroundColor: isDark ? "#2A2034" : "#F3EAFF",
-        serviceCategory: "HOUSEHOLD",
-        prefillJobTitle: "Insta Help Task",
-      },
-      {
-        id: "offer_cleaning_40",
-        title: "Up to 40% off on Cleaning",
-        subtitle: "Deep cleaning services for home & office",
-        ctaLabel: "Claim Now",
-        backgroundColor: isDark ? "#1F2A24" : "#EAF7F0",
-        serviceCategory: "HOUSEHOLD",
-        prefillJobTitle: "Deep Cleaning Service",
-      },
-    ];
-  }, [offerCards, isDark]);
+  const displayOfferCards = useMemo(() => offerCards || [], [offerCards]);
 
   // Scratch offers rendered in the SAME card row as promos; tapping one opens
   // the scratch popup instead of navigating to Job Requirements. BANNER-placed
@@ -598,35 +572,25 @@ const ClientHomeScreen = () => {
             snapToInterval={PROMO_WIDTH + 12}
             snapToAlignment="start"
           >
-            {displayBanners.map((promo) => (
-              <TouchableOpacity
-                key={promo.id}
-                activeOpacity={0.92}
-                onPress={() =>
-                  promo.isScratchOffer
-                    ? setScratchModalId(promo.id)
-                    : openJobRequirementsFromPromo(promo)
-                }
-                style={[
-                  styles.promoCard,
-                  {
-                    width: PROMO_WIDTH,
-                    backgroundColor: promo.backgroundColor || (isDark ? "#2A2034" : "#F3EAFF"),
-                  },
-                ]}
-              >
-                {promo.imageUrl ? (
-                  <Image
-                    source={{ uri: apiService.loadImageURI(promo.imageUrl) }}
-                    style={styles.promoImage}
-                    resizeMode="cover"
-                  />
-                ) : null}
+            {displayBanners.map((promo) => {
+              const onBannerPress = () =>
+                promo.isScratchOffer
+                  ? setScratchModalId(promo.id)
+                  : openJobRequirementsFromPromo(promo);
+              const bannerStyle = [
+                styles.promoCard,
+                {
+                  width: PROMO_WIDTH,
+                  backgroundColor: promo.backgroundColor || (isDark ? "#2A2034" : "#F3EAFF"),
+                },
+              ];
+              const bannerCopy = (
                 <View style={styles.promoCopy}>
                   <Text
                     style={[
                       styles.promoTitle,
-                      promo.textColor ? { color: promo.textColor } : null,
+                      promo.imageUrl ? { color: "#FFFFFF" } : null,
+                      promo.textColor && !promo.imageUrl ? { color: promo.textColor } : null,
                     ]}
                   >
                     {promo.title}
@@ -635,7 +599,8 @@ const ClientHomeScreen = () => {
                     <Text
                       style={[
                         styles.promoSubtitle,
-                        promo.textColor ? { color: promo.textColor, opacity: 0.85 } : null,
+                        promo.imageUrl ? { color: "#FFFFFF", opacity: 0.9 } : null,
+                        promo.textColor && !promo.imageUrl ? { color: promo.textColor, opacity: 0.85 } : null,
                       ]}
                     >
                       {promo.subtitle}
@@ -644,9 +609,7 @@ const ClientHomeScreen = () => {
                   <View
                     style={[
                       styles.promoCta,
-                      promo.accentColor
-                        ? { backgroundColor: promo.accentColor }
-                        : null,
+                      promo.accentColor ? { backgroundColor: promo.accentColor } : null,
                     ]}
                   >
                     <Text style={styles.promoCtaText}>
@@ -654,8 +617,36 @@ const ClientHomeScreen = () => {
                     </Text>
                   </View>
                 </View>
-              </TouchableOpacity>
-            ))}
+              );
+
+              // Banners with an admin image: the image is the card background, with a shade behind the text
+              if (promo.imageUrl) {
+                return (
+                  <TouchableOpacity key={promo.id} activeOpacity={0.92} onPress={onBannerPress}>
+                    <ImageBackground
+                      source={{ uri: apiService.loadImageURI(offerCardImageUrl(promo.imageUrl)) }}
+                      style={bannerStyle}
+                      imageStyle={styles.promoImageRadius}
+                      resizeMode="cover"
+                    >
+                      <View style={styles.promoImageShade} />
+                      {bannerCopy}
+                    </ImageBackground>
+                  </TouchableOpacity>
+                );
+              }
+
+              return (
+                <TouchableOpacity
+                  key={promo.id}
+                  activeOpacity={0.92}
+                  onPress={onBannerPress}
+                  style={bannerStyle}
+                >
+                  {bannerCopy}
+                </TouchableOpacity>
+              );
+            })}
           </ScrollView>
           <View style={styles.dotsRow}>
             {displayBanners.map((promo, index) => (
@@ -712,77 +703,102 @@ const ClientHomeScreen = () => {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.offersRow}
           >
-            {homeOffers.map((offer, index) => (
-              <TouchableOpacity
-                key={offer.id || index}
-                style={[
-                  styles.offerCard,
-                  index === 0 ? styles.offerWide : styles.offerNarrow,
-                  {
-                    backgroundColor:
-                      offer.backgroundColor ||
-                      (index === 0
-                        ? isDark
-                          ? "#2A2034"
-                          : "#F3EAFF"
-                        : isDark
-                          ? "#1F2A24"
-                          : "#EAF7F0"),
-                  },
-                ]}
-                onPress={() =>
-                  offer.isScratchOffer
-                    ? setScratchModalId(offer.id)
-                    : openJobRequirementsFromPromo(offer)
-                }
-                activeOpacity={0.88}
-              >
-                {offer.imageUrl ? (
-                  <Image
-                    source={{ uri: apiService.loadImageURI(offer.imageUrl) }}
-                    style={styles.offerImage}
-                    resizeMode="cover"
-                  />
-                ) : null}
-                <Text
-                  style={[
-                    styles.offerTitle,
-                    offer.textColor ? { color: offer.textColor } : null,
-                  ]}
-                >
-                  {offer.title}
-                </Text>
-                {!!offer.badge && (
-                  <View
-                    style={[
-                      styles.offerBadge,
-                      offer.accentColor
-                        ? { backgroundColor: offer.accentColor }
-                        : null,
-                    ]}
-                  >
-                    <Text style={styles.offerBadgeText}>{offer.badge}</Text>
-                  </View>
-                )}
-                {!!offer.subtitle && (
+            {homeOffers.map((offer, index) => {
+              const cardStyle = [
+                styles.offerCard,
+                index === 0 ? styles.offerWide : styles.offerNarrow,
+                {
+                  backgroundColor:
+                    offer.backgroundColor ||
+                    (index === 0
+                      ? isDark
+                        ? "#2A2034"
+                        : "#F3EAFF"
+                      : isDark
+                        ? "#1F2A24"
+                        : "#EAF7F0"),
+                },
+              ];
+              const onCardPress = () =>
+                offer.isScratchOffer
+                  ? setScratchModalId(offer.id)
+                  : openJobRequirementsFromPromo(offer);
+              const cardContent = (
+                <>
                   <Text
                     style={[
-                      styles.offerDesc,
-                      offer.textColor
-                        ? { color: offer.textColor, opacity: 0.85 }
-                        : null,
+                      styles.offerTitle,
+                      offer.imageUrl ? { color: "#FFFFFF" } : null,
+                      offer.textColor && !offer.imageUrl ? { color: offer.textColor } : null,
                     ]}
                   >
-                    {offer.subtitle}
+                    {offer.title}
                   </Text>
-                )}
-                {!!offer.ctaLabel && (
-                  <View style={styles.offerCta}>
-                    <Text style={styles.offerCtaText}>{offer.ctaLabel}</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            ))}
+                  {!!offer.badge && (
+                    <View
+                      style={[
+                        styles.offerBadge,
+                        offer.accentColor
+                          ? { backgroundColor: offer.accentColor }
+                          : null,
+                      ]}
+                    >
+                      <Text style={styles.offerBadgeText}>{offer.badge}</Text>
+                    </View>
+                  )}
+                  {!!offer.subtitle && (
+                    <Text
+                      style={[
+                        styles.offerDesc,
+                        offer.textColor
+                          ? { color: offer.textColor, opacity: 0.85 }
+                          : null,
+                      ]}
+                    >
+                      {offer.subtitle}
+                    </Text>
+                  )}
+                  {!!offer.ctaLabel && (
+                    <View style={styles.offerCta}>
+                      <Text style={styles.offerCtaText}>{offer.ctaLabel}</Text>
+                    </View>
+                  )}
+                </>
+              );
+
+              // Cards with an admin image: the image is the card background, with a shade behind the text
+              if (offer.imageUrl) {
+                return (
+                  <TouchableOpacity
+                    key={offer.id || index}
+                    onPress={onCardPress}
+                    activeOpacity={0.88}
+                    style={{ alignSelf: "stretch" }}
+                  >
+                    <ImageBackground
+                      source={{ uri: apiService.loadImageURI(offerCardImageUrl(offer.imageUrl)) }}
+                      style={[...cardStyle, { flex: 1 }]}
+                      imageStyle={styles.offerImageRadius}
+                      resizeMode="cover"
+                    >
+                      <View style={styles.offerImageShade} />
+                      {cardContent}
+                    </ImageBackground>
+                  </TouchableOpacity>
+                );
+              }
+
+              return (
+                <TouchableOpacity
+                  key={offer.id || index}
+                  style={cardStyle}
+                  onPress={onCardPress}
+                  activeOpacity={0.88}
+                >
+                  {cardContent}
+                </TouchableOpacity>
+              );
+            })}
           </ScrollView>
         </View>
       </ScrollView>
@@ -939,6 +955,13 @@ const getStyles = (currentTheme, isDark, bottomInset = 0) => {
     },
     promoImage: {
       ...StyleSheet.absoluteFillObject,
+    },
+    promoImageRadius: {
+      borderRadius: 16,
+    },
+    promoImageShade: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: "rgba(0,0,0,0.45)",
     },
     promoCopy: {
       ...StyleSheet.absoluteFillObject,
@@ -1136,13 +1159,14 @@ const getStyles = (currentTheme, isDark, bottomInset = 0) => {
       overflow: "hidden",
     },
     offerImage: {
-      position: "absolute",
-      top: 0,
-      right: 0,
-      width: 60,
-      height: 60,
-      opacity: 0.35,
-      borderBottomLeftRadius: 14,
+      ...StyleSheet.absoluteFillObject,
+    },
+    offerImageRadius: {
+      borderRadius: 14,
+    },
+    offerImageShade: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: "rgba(0,0,0,0.45)",
     },
     offerWide: {
       width: 210,
