@@ -1,13 +1,12 @@
 import React, { useState, useEffect, useMemo } from "react";
 import {
-  SafeAreaView,
   View,
   Text,
   StyleSheet,
   Platform,
   TouchableOpacity,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
 import { ArrowLeft, SlidersHorizontal } from "phosphor-react-native";
 
@@ -216,8 +215,7 @@ const getStyles = (currentTheme, bottomInset = 0) =>
       alignItems: "center",
       justifyContent: "space-between",
       paddingHorizontal: 20,
-      paddingVertical: 15,
-      marginTop: Platform.OS === "android" ? 20 : 0,
+      paddingVertical: 10,
     },
     headerButton: {
       width: 44,

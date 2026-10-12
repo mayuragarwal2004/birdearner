@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -6,8 +6,8 @@ import {
   TouchableOpacity,
   RefreshControl,
   ScrollView,
-  SafeAreaView,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useTheme } from "../context/ThemeContext";
 import { useAuth } from "../context/NewAuthContext";
@@ -23,8 +23,11 @@ const AvailabilityScreen = ({ navigation }) => {
   
   const [selectedStatus, setSelectedStatus] = useState(availability);
   const [refreshing, setRefreshing] = useState(false);
+  // Status the user just chose and is saving; profile sync must not overwrite it meanwhile
+  const pendingStatusRef = useRef(null);
 
   useEffect(() => {
+    if (pendingStatusRef.current !== null) return;
     setSelectedStatus(availability);
   }, [availability]);
 
@@ -34,6 +37,7 @@ const AvailabilityScreen = ({ navigation }) => {
 
   const handleStatusChange = async (status) => {
     const previousStatus = selectedStatus;
+    pendingStatusRef.current = status;
     setSelectedStatus(status);
     try {
       await apiService.updateUserAvailability(
@@ -52,6 +56,8 @@ const AvailabilityScreen = ({ navigation }) => {
         text2: "Please try again later",
       });
       setSelectedStatus(previousStatus);
+    } finally {
+      pendingStatusRef.current = null;
     }
   };
 
@@ -73,7 +79,6 @@ const AvailabilityScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
-        <View style={styles.handle} />
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           style={styles.closeButton}
@@ -115,7 +120,7 @@ const AvailabilityScreen = ({ navigation }) => {
           </View>
           <View style={styles.optionContent}>
             <View style={styles.optionHeader}>
-              <Text style={[styles.optionTitle, { color: selectedStatus === true ? '#000' : '#FFF' }]}>Online</Text>
+              <Text style={styles.optionTitle}>Online</Text>
               <View style={styles.badge}>
                 <View style={styles.badgeDot} />
                 <Text style={styles.badgeText}>Available Now</Text>
@@ -137,7 +142,7 @@ const AvailabilityScreen = ({ navigation }) => {
           </View>
           <View style={styles.optionContent}>
             <View style={styles.optionHeader}>
-              <Text style={[styles.optionTitle, { color: selectedStatus === false ? '#000' : '#FFF' }]}>Offline</Text>
+              <Text style={styles.optionTitle}>Offline</Text>
               <View style={[styles.badge, styles.offlineBadge]}>
                 <Text style={styles.badgeText}>Not Available</Text>
               </View>
@@ -173,13 +178,6 @@ const getStyles = (currentTheme) =>
       paddingHorizontal: 20,
       paddingBottom: 20,
       alignItems: "center",
-    },
-    handle: {
-      width: 40,
-      height: 4,
-      backgroundColor: "#E0E0E0",
-      borderRadius: 2,
-      marginBottom: 10,
     },
     closeButton: {
       position: "absolute",
@@ -294,7 +292,7 @@ const getStyles = (currentTheme) =>
     optionTitle: {
       fontSize: 16,
       fontWeight: "600",
-      color: currentTheme.text,
+      color: "#000",
     },
     badge: {
       flexDirection: "row",
