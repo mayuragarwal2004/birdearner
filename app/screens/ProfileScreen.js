@@ -183,24 +183,14 @@ export default function ProfileScreen({ route, navigation }) {
       return;
     }
 
-    const isClient = profile?.role === "CLIENT";
-
+    // Reviews received by this user (freelancer or client)
     try {
-      if (isClient) {
-        const [reviewList, statsObj] = await Promise.all([
-          apiService.getReviewsGivenByUserId(reviewUserId),
-          apiService.getReviewStatsGiven(reviewUserId),
-        ]);
-        setReviews(Array.isArray(reviewList) ? reviewList : []);
-        setReviewStats(statsObj);
-      } else {
-        const [reviewList, statsObj] = await Promise.all([
-          apiService.getReviewsByUserId(reviewUserId),
-          apiService.getReviewStats(reviewUserId),
-        ]);
-        setReviews(Array.isArray(reviewList) ? reviewList : []);
-        setReviewStats(statsObj);
-      }
+      const [reviewList, statsObj] = await Promise.all([
+        apiService.getReviewsByUserId(reviewUserId),
+        apiService.getReviewStats(reviewUserId),
+      ]);
+      setReviews(Array.isArray(reviewList) ? reviewList : []);
+      setReviewStats(statsObj);
     } catch (error) {
       console.warn("Failed to load reviews:", error.message);
       setReviews([]);
@@ -499,11 +489,6 @@ function ProfileHero({
       <Text style={[uiStyles.name, onPortfolio && uiStyles.onPurpleText]}>{displayName}</Text>
 
       <View style={uiStyles.ratingRow}>
-        {onPortfolio && (
-          <Text style={uiStyles.onPurpleText}>
-            {"\u2605 " + formatRating(rating)} ({totalReviews ?? 0})
-          </Text>
-        )}
         {isClientProfile ? (
           <View style={uiStyles.badge}>
             <MaterialIcons name="business-center" size={16} color={PURPLE} />
@@ -608,11 +593,10 @@ function AboutTab({ uiStyles, profileData, services, certifications, selectedSer
         : "On-site"
       : profileData?.category || "Remote";
 
-  const skills = (
-    services.length
-      ? services.map((service) => service.name)
-      : parseArray(profileData?.skills)
-  ).filter((s) => s && typeof s === "string" && !isUUIDString(s));
+  // Skills section shows the freelancer's own skills, not their services
+  const skills = parseArray(profileData?.skills)
+    .map((skill) => (typeof skill === "string" ? skill : skill?.name))
+    .filter((s) => s && typeof s === "string" && !isUUIDString(s));
 
   const languages = parseArray(profileData?.languages);
 
@@ -773,7 +757,7 @@ function ReviewsTab({ uiStyles, reviews = [], isClientProfile }) {
       {/* Section Header */}
       <View style={uiStyles.recentReviewsHeader}>
         <Text style={uiStyles.recentReviewsTitle}>
-          {isClientProfile ? "Reviews Given" : "Recent Reviews"}
+          {isClientProfile ? "Reviews Received" : "Recent Reviews"}
         </Text>
         <Text style={uiStyles.recentReviewsMeta}>{reviews.length} total</Text>
       </View>
@@ -786,7 +770,7 @@ function ReviewsTab({ uiStyles, reviews = [], isClientProfile }) {
             : review.reviewer;
           const displayNameReview = isClientProfile
             ? (displayProfile?.user?.fullName || displayProfile?.fullName || "Bird Earner user")
-            : (review.reviewer?.user?.fullName || "Bird Earner user");
+            : (review.reviewer?.fullName || review.reviewer?.user?.fullName || "Bird Earner user");
           const displayPhoto = isClientProfile
             ? (displayProfile?.profilePhoto || displayProfile?.user?.profilePhoto)
             : review.reviewer?.profilePhoto;

@@ -381,11 +381,6 @@ export default function ProfileScreen({ navigation }) {
           <Text style={[styles.nameText, onPortfolio && styles.onPurpleText]}>{displayName}</Text>
 
           <View style={styles.ratingRow}>
-            {onPortfolio && (
-              <Text style={styles.onPurpleText}>
-                {"\u2605 " + formatRating(reviewStats?.averageRating || data?.rating || 0)} ({reviewStats?.totalReviews ?? reviews.length})
-              </Text>
-            )}
             {role === "FREELANCER" ? (
               <View style={styles.badge}>
                 <MaterialIcons name="badge" size={20} color={PURPLE} />
@@ -515,13 +510,7 @@ export default function ProfileScreen({ navigation }) {
 
                   <Text style={styles.sectionTitleLeft}>Skills</Text>
                   <View style={styles.chips}>
-                    {userServices.length ? (
-                      userServices.map((service) => (
-                        <View key={service.id || service.name} style={styles.skillChip}>
-                          <Text style={styles.skillText}>{service.name}</Text>
-                        </View>
-                      ))
-                    ) : parseArray(data?.skills).length ? (
+                    {parseArray(data?.skills).length ? (
                       parseArray(data?.skills).map((skill, idx) => (
                         <View key={idx} style={styles.skillChip}>
                           <Text style={styles.skillText}>{typeof skill === 'string' ? skill : skill.name}</Text>
@@ -615,7 +604,7 @@ export default function ProfileScreen({ navigation }) {
                           />
                           <View style={styles.reviewMeta}>
                             <Text style={styles.reviewerName}>
-                              {review.reviewer?.user?.fullName || "Bird Earner user"}
+                              {review.reviewer?.fullName || review.reviewer?.user?.fullName || "Bird Earner user"}
                             </Text>
                             <View style={styles.reviewStars}>
                               {[1, 2, 3, 4, 5].map((item) => (

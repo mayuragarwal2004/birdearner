@@ -42,6 +42,7 @@ const BankAccountDetailsScreen = ({ navigation }) => {
           setBankName(bankName || "");
           setAccountHolderName(accountHolderName || "");
           setAccountNumber(accountNumber || "");
+          setConfirmAccountNumber(accountNumber || "");
           setIfscCode(ifscCode || "");
         }
       } catch (err) {
