@@ -12,6 +12,7 @@ import {
   StatusBar,
   Alert,
   Modal,
+  Linking,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -64,6 +65,31 @@ import apiService from "../lib/apiService";
 import { useAuth } from "../context/NewAuthContext";
 import { useTheme } from "../context/ThemeContext";
 import PickerModal from "../components/CustomPicker";
+
+// Portfolio has 10 fixed boxes. Each box keeps its own item (or null), so a file lands in the box that was tapped.
+const PORTFOLIO_SLOTS = 10;
+
+const isPortfolioPdf = (item) =>
+  item?.fileType === "pdf" ||
+  item?.mimeType === "application/pdf" ||
+  /\.pdf(\?|#|$)/i.test(item?.uri || "");
+
+// Puts newly picked files into the tapped box and the empty boxes after it
+const placeInPortfolioSlots = (current, assets, startIndex) => {
+  const slots = Array.from({ length: Math.max(PORTFOLIO_SLOTS, current.length) }, (_, i) => current[i] ?? null);
+  let cursor = startIndex;
+  for (const asset of assets) {
+    while (cursor < slots.length && slots[cursor]) cursor++;
+    if (cursor >= slots.length) slots.push(null);
+    slots[cursor] = asset;
+    cursor++;
+  }
+  while (slots.length > 0 && !slots[slots.length - 1]) slots.pop();
+  return slots;
+};
+
+// Drops empty boxes before validation and upload
+const compactPortfolio = (items) => (items || []).filter(Boolean);
 
 const GENDER_OPTIONS = [
   { label: "Select Gender", value: "" },
@@ -439,6 +465,7 @@ const FreelancerSignup = ({ navigation, route }) => {
     portfolioImages: initialFreelancer?.portfolioImages?.length
       ? initialFreelancer.portfolioImages.map((item) => {
           const uri = typeof item === "string" ? item : item?.uri || item?.url || "";
+          if (!uri) return null;
           const isPdf = uri.toLowerCase().endsWith(".pdf") ||
             (typeof item === "object" && item?.mimeType === "application/pdf");
           return {
@@ -459,6 +486,7 @@ const FreelancerSignup = ({ navigation, route }) => {
   });
 
   const [deletedImages, setDeletedImages] = useState([]);
+  const [portfolioPreview, setPortfolioPreview] = useState(null);
 
   useEffect(() => {
     if (initialMobile || initialEmail) {
@@ -509,6 +537,7 @@ const FreelancerSignup = ({ navigation, route }) => {
         portfolioImages: dataSource.portfolioImages?.length
           ? dataSource.portfolioImages.map((item) => {
               const uri = typeof item === "string" ? item : item?.uri || item?.url || "";
+              if (!uri) return null;
               const isPdf = uri.toLowerCase().endsWith(".pdf") ||
                 (typeof item === "object" && item?.mimeType === "application/pdf");
               return {
@@ -674,7 +703,7 @@ const FreelancerSignup = ({ navigation, route }) => {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
-  const uploadPortfolioImages = async () => {
+  const uploadPortfolioImages = async (slotIndex = 0) => {
     try {
       Alert.alert(
         "Add Portfolio",
@@ -711,7 +740,7 @@ const FreelancerSignup = ({ navigation, route }) => {
                 if (validAssets.length > 0) {
                   setForm({
                     ...form,
-                    portfolioImages: [...form.portfolioImages, ...validAssets],
+                    portfolioImages: placeInPortfolioSlots(form.portfolioImages, validAssets, slotIndex),
                   });
                 }
               }
@@ -748,7 +777,7 @@ const FreelancerSignup = ({ navigation, route }) => {
                 if (validAssets.length > 0) {
                   setForm({
                     ...form,
-                    portfolioImages: [...form.portfolioImages, ...validAssets],
+                    portfolioImages: placeInPortfolioSlots(form.portfolioImages, validAssets, slotIndex),
                   });
                 }
               }
@@ -768,9 +797,12 @@ const FreelancerSignup = ({ navigation, route }) => {
       setDeletedImages([...deletedImages, imageToRemove.uri]);
     }
 
+    const updated = [...form.portfolioImages];
+    updated[index] = null;
+    while (updated.length > 0 && !updated[updated.length - 1]) updated.pop();
     setForm({
       ...form,
-      portfolioImages: form.portfolioImages.filter((_, i) => i !== index),
+      portfolioImages: updated,
     });
   };
 
@@ -1123,6 +1155,7 @@ const FreelancerSignup = ({ navigation, route }) => {
     if (mode !== "update") {
       const formToValidate = {
         ...form,
+        portfolioImages: compactPortfolio(form.portfolioImages),
         freelancerCategory,
         skills: skillsList,
       };
@@ -1151,6 +1184,7 @@ const FreelancerSignup = ({ navigation, route }) => {
       languages: languageList,
       certifications: form.certifications.filter((cert) => cert.name?.trim() !== "" || cert.university?.trim() !== ""),
       socialLinks: form.socialLinks.filter((link) => link.trim() !== ""),
+      portfolioImages: form.portfolioImages || [],
     };
 
     if (cleanedForm.profileImage && cleanedForm.profileImage.uri) {
@@ -1200,7 +1234,9 @@ const FreelancerSignup = ({ navigation, route }) => {
       for (let i = 0; i < cleanedForm.portfolioImages.length; i++) {
         const portfolioItem = cleanedForm.portfolioImages[i];
 
-        if (portfolioItem.isExisting) {
+        if (!portfolioItem) {
+          uploadedFiles.push("");
+        } else if (portfolioItem.isExisting) {
           uploadedFiles.push(portfolioItem.uri);
         } else if (
           portfolioItem.uri &&
@@ -2280,21 +2316,66 @@ const FreelancerSignup = ({ navigation, route }) => {
             {/* Step 5: Add Your Portfolio */}
             {step === 5 && (
               <View style={styles.card}>
+                <Modal
+                  visible={!!portfolioPreview}
+                  transparent
+                  animationType="fade"
+                  onRequestClose={() => setPortfolioPreview(null)}
+                >
+                  <TouchableOpacity
+                    style={styles.portfolioPreviewOverlay}
+                    activeOpacity={1}
+                    onPress={() => setPortfolioPreview(null)}
+                  >
+                    {portfolioPreview && (
+                      <Image
+                        source={{ uri: portfolioPreview }}
+                        style={styles.portfolioPreviewImage}
+                        resizeMode="contain"
+                      />
+                    )}
+                  </TouchableOpacity>
+                </Modal>
                 <View style={styles.portfolioGridContainer}>
                   {/* Helper: render a box that shows preview or empty state */}
                   {(() => {
                     const files = form.portfolioImages || [];
-                    const renderBox = (file, style, titleStyle) => {
+
+                    const openPortfolioFile = (file) => {
+                      if (file.isExisting || /^https?:/i.test(file.uri || "")) {
+                        const url = apiService.loadImageURI(
+                          `/api/chats/attachment-url?url=${encodeURIComponent(file.uri)}`
+                        );
+                        Linking.openURL(url).catch(() =>
+                          showToast("error", "Could not open PDF", "Please try again later")
+                        );
+                      } else {
+                        showToast("info", "PDF not saved yet", "It can be opened after you save your profile");
+                      }
+                    };
+
+                    // slot = position in form.portfolioImages (the box that was tapped)
+                    const renderBox = (slot, style, titleStyle) => {
+                      const file = files[slot] || null;
                       if (file) {
-                        const isPdf = file.fileType === "pdf";
+                        const isPdf = isPortfolioPdf(file);
                         return (
-                          <View style={[style, { borderWidth: 0, backgroundColor: "#F5F0FF", overflow: "hidden" }]}>
+                          <TouchableOpacity
+                            style={[style, { borderWidth: 0, backgroundColor: "#F5F0FF", overflow: "hidden" }]}
+                            activeOpacity={0.85}
+                            onPress={() =>
+                              isPdf
+                                ? openPortfolioFile(file)
+                                : setPortfolioPreview(apiService.loadImageURI(file.uri))
+                            }
+                          >
                             {isPdf ? (
                               <View style={{ alignItems: "center", justifyContent: "center", flex: 1, width: "100%", paddingHorizontal: 4 }}>
                                 <MaterialIcons name="picture-as-pdf" size={28} color="#EF4444" />
                                 <Text style={[styles.portfolioSmallBoxTitle, { marginTop: 4, textAlign: "center" }]} numberOfLines={2}>
                                   {file.fileName || "PDF"}
                                 </Text>
+                                <Text style={styles.portfolioUploadBoxSubtext}>Tap to open</Text>
                               </View>
                             ) : (
                               <Image
@@ -2310,18 +2391,15 @@ const FreelancerSignup = ({ navigation, route }) => {
                             )}
                             <TouchableOpacity
                               style={styles.removeImageBadge}
-                              onPress={() => {
-                                const idx = files.indexOf(file);
-                                if (idx !== -1) removePortfolioImage(idx);
-                              }}
+                              onPress={() => removePortfolioImage(slot)}
                             >
                               <Trash2 size={14} color="#FFFFFF" />
                             </TouchableOpacity>
-                          </View>
+                          </TouchableOpacity>
                         );
                       }
                       return (
-                        <TouchableOpacity style={style} onPress={uploadPortfolioImages} activeOpacity={0.8}>
+                        <TouchableOpacity style={style} onPress={() => uploadPortfolioImages(slot)} activeOpacity={0.8}>
                           <Plus size={titleStyle === styles.portfolioUploadBoxTitle ? 26 : 18} color="#7C3AED" />
                           <Text style={titleStyle}>Upload File</Text>
                           <Text style={styles.portfolioUploadBoxSubtext}>Image or PDF</Text>
@@ -2329,51 +2407,49 @@ const FreelancerSignup = ({ navigation, route }) => {
                       );
                     };
 
-                    const bigBoxFile = files[0] || null;
-                    const smallBox1File = files[1] || null;
-                    const smallBox2File = files[2] || null;
-                    const row2Files = [files[3] || null, files[4] || null, files[5] || null];
-                    const row3Files = [files[6] || null, files[7] || null, files[8] || null];
-                    const fullWidthFile = files[9] || null;
+                    const extraSlots = Array.from(
+                      { length: Math.max(0, files.length - PORTFOLIO_SLOTS) },
+                      (_, i) => PORTFOLIO_SLOTS + i
+                    );
 
                     return (
                       <>
                         {/* Top Row: Left big box + Right 2 stacked small boxes */}
                         <View style={styles.portfolioGridWrapper}>
-                          {renderBox(bigBoxFile, styles.portfolioBigUploadBox, styles.portfolioUploadBoxTitle)}
+                          {renderBox(0, styles.portfolioBigUploadBox, styles.portfolioUploadBoxTitle)}
                           <View style={styles.portfolioRightCol}>
-                            {renderBox(smallBox1File, styles.portfolioSmallUploadBox, styles.portfolioSmallBoxTitle)}
-                            {renderBox(smallBox2File, styles.portfolioSmallUploadBox, styles.portfolioSmallBoxTitle)}
+                            {renderBox(1, styles.portfolioSmallUploadBox, styles.portfolioSmallBoxTitle)}
+                            {renderBox(2, styles.portfolioSmallUploadBox, styles.portfolioSmallBoxTitle)}
                           </View>
                         </View>
 
                         {/* Row 2: 3 Equal Boxes */}
                         <View style={styles.portfolioRowThree}>
-                          {row2Files.map((f, i) => (
-                            <React.Fragment key={`row2-${i}`}>
-                              {renderBox(f, styles.portfolioRowBox, styles.portfolioSmallBoxTitle)}
+                          {[3, 4, 5].map((slot) => (
+                            <React.Fragment key={`row2-${slot}`}>
+                              {renderBox(slot, styles.portfolioRowBox, styles.portfolioSmallBoxTitle)}
                             </React.Fragment>
                           ))}
                         </View>
 
                         {/* Row 3: 3 Equal Boxes */}
                         <View style={styles.portfolioRowThree}>
-                          {row3Files.map((f, i) => (
-                            <React.Fragment key={`row3-${i}`}>
-                              {renderBox(f, styles.portfolioRowBox, styles.portfolioSmallBoxTitle)}
+                          {[6, 7, 8].map((slot) => (
+                            <React.Fragment key={`row3-${slot}`}>
+                              {renderBox(slot, styles.portfolioRowBox, styles.portfolioSmallBoxTitle)}
                             </React.Fragment>
                           ))}
                         </View>
 
                         {/* Row 4: 1 Full Width Box */}
-                        {renderBox(fullWidthFile, styles.portfolioFullWidthBox, styles.portfolioUploadBoxTitle)}
+                        {renderBox(9, styles.portfolioFullWidthBox, styles.portfolioUploadBoxTitle)}
 
-                        {/* Additional upload buttons if more than 10 files */}
-                        {files.length > 10 && (
+                        {/* Additional boxes if more than 10 files */}
+                        {extraSlots.length > 0 && (
                           <View style={styles.portfolioRowThree}>
-                            {files.slice(10).map((f, i) => (
-                              <React.Fragment key={`extra-${i}`}>
-                                {renderBox(f, styles.portfolioRowBox, styles.portfolioSmallBoxTitle)}
+                            {extraSlots.map((slot) => (
+                              <React.Fragment key={`extra-${slot}`}>
+                                {renderBox(slot, styles.portfolioRowBox, styles.portfolioSmallBoxTitle)}
                               </React.Fragment>
                             ))}
                           </View>
@@ -3066,6 +3142,16 @@ const getStyles = (currentTheme, isDark) => StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
     color: "#6D28D9",
+  },
+  portfolioPreviewOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.9)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  portfolioPreviewImage: {
+    width: "100%",
+    height: "85%",
   },
   portfolioGridContainer: {
     gap: 10,

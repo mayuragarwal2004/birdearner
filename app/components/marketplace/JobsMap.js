@@ -68,7 +68,6 @@ const JobsMap = ({
       <MapView
         style={styles.map}
         provider={Platform.OS === "android" ? PROVIDER_GOOGLE : undefined}
-        showsUserLocation
         showsMyLocationButton
         ref={mapRef}
         onMapReady={() => console.log("Map is ready")}

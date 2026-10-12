@@ -1892,7 +1892,6 @@ const JobRequirementsScreen = ({ navigation }) => {
             initialRegion={mapRegion}
             provider={Platform.OS === "android" ? PROVIDER_GOOGLE : undefined}
             onPress={handleMapPress}
-            showsUserLocation
             showsMyLocationButton
             cacheEnabled
           >

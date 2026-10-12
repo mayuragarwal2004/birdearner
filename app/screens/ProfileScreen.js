@@ -1,7 +1,9 @@
+import { LinearGradient } from "expo-linear-gradient";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Image,
+  Linking,
   Modal,
   RefreshControl,
   ScrollView,
@@ -42,6 +44,19 @@ const showToast = (type, title, message = "") => {
 const isUUIDString = (str) =>
   typeof str === "string" &&
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+
+// Keeps empty boxes so every portfolio item stays in its own box
+const parsePortfolio = (value) => {
+  let list = value;
+  if (typeof value === "string") {
+    try {
+      list = JSON.parse(value);
+    } catch {
+      list = value ? [value] : [];
+    }
+  }
+  return Array.isArray(list) ? list.map((item) => item || "") : [];
+};
 
 const parseArray = (value) => {
   if (!value) return [];
@@ -130,7 +145,7 @@ export default function ProfileScreen({ route, navigation }) {
   const [viewerImages, setViewerImages] = useState([]);
 
   const portfolioImages = useMemo(
-    () => parseArray(profileData?.portfolioImages || profileData?.portfolio_images),
+    () => parsePortfolio(profileData?.portfolioImages || profileData?.portfolio_images),
     [profileData]
   );
   const certifications = useMemo(
@@ -374,6 +389,7 @@ export default function ProfileScreen({ route, navigation }) {
       >
         <ProfileHero
           uiStyles={uiStyles}
+          onPortfolio={activeTab === "Portfolio"}
           profileData={profileData}
           displayName={displayName}
           profileTitle={profileTitle}
@@ -442,7 +458,9 @@ function ProfileHero({
   onBack,
   onShare,
   onPhotoPress,
+  onPortfolio,
 }) {
+  const HeroWrapper = onPortfolio ? LinearGradient : View;
   const rawPhoto =
     profileData?.profilePhoto ||
     profileData?.user?.profilePhoto ||
@@ -452,14 +470,14 @@ function ProfileHero({
   const isClientProfile = profileData?.role === "CLIENT";
 
   return (
-    <View style={uiStyles.hero}>
+    <HeroWrapper style={[uiStyles.hero, onPortfolio && { marginBottom: -60, paddingBottom: 76 }]} {...(onPortfolio ? { colors: ["#4B0082", "#4B0082", "#C4B5E8", "#F5F2FB"], locations: [0, 0.6, 0.85, 1], start: { x: 0.5, y: 0 }, end: { x: 0.5, y: 1 } } : {})}>
       <View style={uiStyles.topBar}>
         <TouchableOpacity style={uiStyles.iconButton} onPress={onBack}>
-          <MaterialIcons name="arrow-back" size={24} color="#101114" />
+          <MaterialIcons name="arrow-back" size={24} color={onPortfolio ? "#FFFFFF" : "#101114"} />
         </TouchableOpacity>
         <TouchableOpacity style={uiStyles.shareButton} onPress={onShare}>
-          <MaterialIcons name="share" size={20} color={PURPLE} />
-          <Text style={uiStyles.shareText}>Share profile</Text>
+          <MaterialIcons name="share" size={20} color={onPortfolio ? "#FFFFFF" : PURPLE} />
+          <Text style={[uiStyles.shareText, onPortfolio && uiStyles.onPurpleText]}>Share profile</Text>
         </TouchableOpacity>
       </View>
 
@@ -478,9 +496,14 @@ function ProfileHero({
         <View style={[uiStyles.statusDot, !available && uiStyles.statusDotMuted]} />
       </TouchableOpacity>
 
-      <Text style={uiStyles.name}>{displayName}</Text>
+      <Text style={[uiStyles.name, onPortfolio && uiStyles.onPurpleText]}>{displayName}</Text>
 
       <View style={uiStyles.ratingRow}>
+        {onPortfolio && (
+          <Text style={uiStyles.onPurpleText}>
+            {"\u2605 " + formatRating(rating)} ({totalReviews ?? 0})
+          </Text>
+        )}
         {isClientProfile ? (
           <View style={uiStyles.badge}>
             <MaterialIcons name="business-center" size={16} color={PURPLE} />
@@ -493,7 +516,7 @@ function ProfileHero({
           </View>
         )}
       </View>
-    </View>
+    </HeroWrapper>
   );
 }
 
@@ -821,99 +844,92 @@ function ReviewsTab({ uiStyles, reviews = [], isClientProfile }) {
   );
 }
 
+const isPortfolioPdfItem = (item) => {
+  const raw = typeof item === "string" ? item : item?.uri || item?.url || item?.secure_url || "";
+  return (
+    item?.fileType === "pdf" ||
+    item?.mimeType === "application/pdf" ||
+    /\.pdf(\?|#|$)/i.test(String(raw))
+  );
+};
+
 function PortfolioTab({ uiStyles, images, onImagePress, isFreelancerProfile }) {
+  const imageItems = images.filter((item) => !isPortfolioPdfItem(item));
+
+  const openPdf = (item) => {
+    const raw = typeof item === "string" ? item : item?.uri || item?.url || item?.secure_url || "";
+    if (!raw) return;
+    const url = apiService.loadImageURI(`/api/chats/attachment-url?url=${encodeURIComponent(raw)}`);
+    Linking.openURL(url).catch(() =>
+      Toast.show({ type: "error", text1: "Could not open PDF", text2: "Please try again later" })
+    );
+  };
+
+  const pdfName = (item) => {
+    const raw = typeof item === "string" ? item : item?.uri || item?.url || item?.secure_url || "";
+    const last = decodeURIComponent(String(raw).split("?")[0].split("/").pop() || "PDF");
+    return item?.fileName || last;
+  };
+
+  // Each box shows its own portfolio slot: image cover-fitted, or a PDF tile that opens the file
+  const renderTile = (idx, boxStyle) => {
+    const item = images[idx];
+    if (!item) {
+      return (
+        <View style={boxStyle}>
+          <Text style={uiStyles.plusIcon}>+</Text>
+        </View>
+      );
+    }
+    if (isPortfolioPdfItem(item)) {
+      return (
+        <TouchableOpacity style={boxStyle} onPress={() => openPdf(item)} activeOpacity={0.85}>
+          <MaterialIcons name="picture-as-pdf" size={30} color="#EF4444" />
+          <Text style={uiStyles.portfolioPdfName} numberOfLines={2}>
+            {pdfName(item)}
+          </Text>
+        </TouchableOpacity>
+      );
+    }
+    return (
+      <TouchableOpacity style={boxStyle} onPress={() => onImagePress(item, imageItems)} activeOpacity={0.85}>
+        <Image
+          source={{ uri: getImageUri(item) }}
+          style={uiStyles.portfolioImage}
+          resizeMode="cover"
+        />
+      </TouchableOpacity>
+    );
+  };
+
   return (
     <View style={uiStyles.portfolioPanel}>
       <View style={uiStyles.portfolioContainer}>
         {/* Top Section: Tall box on left, 2 stacked boxes on right */}
         <View style={uiStyles.portfolioTopRow}>
-          <TouchableOpacity
-            style={uiStyles.portfolioTallBox}
-            onPress={() => images[0] && onImagePress(images[0], images)}
-            activeOpacity={images[0] ? 0.85 : 1}
-          >
-            {images[0] ? (
-              <Image source={{ uri: getImageUri(images[0]) }} style={uiStyles.portfolioImage} />
-            ) : (
-              <Text style={uiStyles.plusIcon}>+</Text>
-            )}
-          </TouchableOpacity>
-
+          {renderTile(0, uiStyles.portfolioTallBox)}
           <View style={uiStyles.portfolioRightCol}>
-            <TouchableOpacity
-              style={uiStyles.portfolioSmallBox}
-              onPress={() => images[1] && onImagePress(images[1], images)}
-              activeOpacity={images[1] ? 0.85 : 1}
-            >
-              {images[1] ? (
-                <Image source={{ uri: getImageUri(images[1]) }} style={uiStyles.portfolioImage} />
-              ) : (
-                <Text style={uiStyles.plusIcon}>+</Text>
-              )}
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={uiStyles.portfolioSmallBox}
-              onPress={() => images[2] && onImagePress(images[2], images)}
-              activeOpacity={images[2] ? 0.85 : 1}
-            >
-              {images[2] ? (
-                <Image source={{ uri: getImageUri(images[2]) }} style={uiStyles.portfolioImage} />
-              ) : (
-                <Text style={uiStyles.plusIcon}>+</Text>
-              )}
-            </TouchableOpacity>
+            {renderTile(1, uiStyles.portfolioSmallBox)}
+            {renderTile(2, uiStyles.portfolioSmallBox)}
           </View>
         </View>
 
         {/* Row 3: 3 equal square boxes */}
         <View style={uiStyles.portfolioThreeRow}>
           {[3, 4, 5].map((idx) => (
-            <TouchableOpacity
-              key={idx}
-              style={uiStyles.portfolioSquareBox}
-              onPress={() => images[idx] && onImagePress(images[idx], images)}
-              activeOpacity={images[idx] ? 0.85 : 1}
-            >
-              {images[idx] ? (
-                <Image source={{ uri: getImageUri(images[idx]) }} style={uiStyles.portfolioImage} />
-              ) : (
-                <Text style={uiStyles.plusIcon}>+</Text>
-              )}
-            </TouchableOpacity>
+            <React.Fragment key={idx}>{renderTile(idx, uiStyles.portfolioSquareBox)}</React.Fragment>
           ))}
         </View>
 
         {/* Row 4: 3 equal square boxes */}
         <View style={uiStyles.portfolioThreeRow}>
           {[6, 7, 8].map((idx) => (
-            <TouchableOpacity
-              key={idx}
-              style={uiStyles.portfolioSquareBox}
-              onPress={() => images[idx] && onImagePress(images[idx], images)}
-              activeOpacity={images[idx] ? 0.85 : 1}
-            >
-              {images[idx] ? (
-                <Image source={{ uri: getImageUri(images[idx]) }} style={uiStyles.portfolioImage} />
-              ) : (
-                <Text style={uiStyles.plusIcon}>+</Text>
-              )}
-            </TouchableOpacity>
+            <React.Fragment key={idx}>{renderTile(idx, uiStyles.portfolioSquareBox)}</React.Fragment>
           ))}
         </View>
 
         {/* Row 5: 1 full-width horizontal bar box */}
-        <TouchableOpacity
-          style={uiStyles.portfolioFullBar}
-          onPress={() => images[9] && onImagePress(images[9], images)}
-          activeOpacity={images[9] ? 0.85 : 1}
-        >
-          {images[9] ? (
-            <Image source={{ uri: getImageUri(images[9]) }} style={uiStyles.portfolioImage} />
-          ) : (
-            <Text style={uiStyles.plusIcon}>+</Text>
-          )}
-        </TouchableOpacity>
+        {renderTile(9, uiStyles.portfolioFullBar)}
       </View>
     </View>
   );
@@ -974,6 +990,9 @@ const getProfileStyles = (currentTheme) => {
       paddingBottom: 16,
       alignItems: "center",
       backgroundColor: surface,
+    },
+    onPurpleText: {
+      color: "#FFFFFF",
     },
     topBar: {
       width: "100%",
@@ -1426,9 +1445,14 @@ const getProfileStyles = (currentTheme) => {
       paddingTop: 12,
     },
     portfolioContainer: {
-      backgroundColor: card,
+      backgroundColor: "#FFFFFF",
       borderRadius: 16,
       padding: 14,
+      shadowColor: "#000",
+      shadowOpacity: 0.08,
+      shadowRadius: 12,
+      shadowOffset: { width: 0, height: 4 },
+      elevation: 3,
     },
     portfolioTopRow: {
       flexDirection: "row",
@@ -1482,13 +1506,21 @@ const getProfileStyles = (currentTheme) => {
       overflow: "hidden",
     },
     plusIcon: {
-      color: "#A855F7",
-      fontSize: 28,
+      color: "#A78BFA",
+      fontSize: 26,
       fontWeight: "300",
     },
     portfolioImage: {
       width: "100%",
       height: "100%",
+    },
+    portfolioPdfName: {
+      marginTop: 4,
+      paddingHorizontal: 6,
+      fontSize: 11,
+      fontWeight: "600",
+      color: "#6D28D9",
+      textAlign: "center",
     },
     emptyState: {
       minHeight: 180,
