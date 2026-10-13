@@ -1166,6 +1166,7 @@ const FreelancerChat = ({ route, navigation }) => {
           <FlatList
             inverted={Boolean(sortedChatMessages && sortedChatMessages.length > 0)}
             data={sortedChatMessages}
+            extraData={job}
             keyExtractor={(item) => item.id}
             renderItem={({ item, index }) => {
               const previousItemInTime = sortedChatMessages[index + 1];
@@ -1193,6 +1194,7 @@ const FreelancerChat = ({ route, navigation }) => {
                     userRole="freelancer"
                     jobStatus={jobStatus}
                     agreedAmount={agreedAmount}
+                    job={job}
                     onMessageUpdate={(type, data) => {
                       if (type === 'review_press') {
                         handleReviewPress(data);

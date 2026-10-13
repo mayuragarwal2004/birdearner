@@ -177,6 +177,11 @@ const JobRequirementsScreen = ({ navigation }) => {
     return () => setBudgetError("");
   }, [paymentMethod]);
 
+  // Remote jobs are always platform-paid: drop any cash selection left from an on-site choice or a draft
+  useEffect(() => {
+    if (!isOnSite && paymentMethod !== "PLATFORM") setPaymentMethod("PLATFORM");
+  }, [isOnSite, paymentMethod]);
+
   useFocusEffect(
     useCallback(() => {
       const loadPrefills = async () => {
@@ -904,7 +909,7 @@ const JobRequirementsScreen = ({ navigation }) => {
     } else {
       const updatedFormData = {
         ...formData,
-        paymentMethod,
+        paymentMethod: "PLATFORM", // remote jobs are always platform-paid
         jobLocation: "Remote Work",
         latitude: 0,
         longitude: 0,

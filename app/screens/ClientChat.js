@@ -1363,7 +1363,7 @@ const ClientChat = ({ route, navigation }) => {
         )}
 
         {/* On-Site Job / Price Change: Show OTP / Price Change Review Button for Client below deadline timer */}
-        {isOnSite && !isCancelled && (
+        {(isOnSite || job?.priceChangeRequested) && !isCancelled && (
           <TouchableOpacity
             style={{
               backgroundColor: job?.priceChangeRequested ? "#F59E0B" : "#111827",
@@ -1612,6 +1612,7 @@ const ClientChat = ({ route, navigation }) => {
           <FlatList
             inverted={Boolean(sortedChatMessages && sortedChatMessages.length > 0)}
             data={sortedChatMessages}
+            extraData={job}
             keyExtractor={(item) => item.id}
             renderItem={({ item, index }) => {
               const previousItemInTime = sortedChatMessages[index + 1];
@@ -1639,6 +1640,7 @@ const ClientChat = ({ route, navigation }) => {
                     userRole="client"
                     jobStatus={jobStatus}
                     agreedAmount={agreedAmount}
+                    job={job}
                     onMessageUpdate={(type, data) => {
                       if (type === 'review_press') {
                         handleReviewPress(data);

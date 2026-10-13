@@ -23,7 +23,7 @@ import CashPaymentMessage from "./chat/CashPaymentMessage";
 import CompletionRequestMessage from "./chat/CompletionRequestMessage";
 import ReviewRequestMessage from "./chat/ReviewRequestMessage";
 
-const MessageItem = ({ messageItem, message, isCurrentUser, media = [], onMessageUpdate, currentUserId, userRole, jobStatus, agreedAmount }) => {
+const MessageItem = ({ messageItem, message, isCurrentUser, media = [], onMessageUpdate, currentUserId, userRole, jobStatus, agreedAmount, job }) => {
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme] || themeStyles.light;
   const isDark = theme === "dark";
@@ -33,6 +33,10 @@ const MessageItem = ({ messageItem, message, isCurrentUser, media = [], onMessag
   const [revisionModalVisible, setRevisionModalVisible] = useState(false);
   const [revisionNotes, setRevisionNotes] = useState("");
   const [submittingDecision, setSubmittingDecision] = useState(false);
+  const [priceModalVisible, setPriceModalVisible] = useState(false);
+  const [requestedTotal, setRequestedTotal] = useState("");
+  const [priceReason, setPriceReason] = useState("");
+  const [priceSubmitting, setPriceSubmitting] = useState(false);
 
   console.log({messageItem, message, isCurrentUser});
 
@@ -388,6 +392,71 @@ const MessageItem = ({ messageItem, message, isCurrentUser, media = [], onMessag
 
         const isClientUser = userRole?.toLowerCase() === 'client' || (!isCurrentUser && userRole?.toLowerCase() !== 'freelancer');
 
+        // Remote (digital) job: revisions beyond the included ones are paid for through a price change
+        const pricingType = (job?.projectType || '').toLowerCase();
+        const isRemoteSubmissionJob =
+          pricingType.includes('remote') || (!pricingType.includes('site') && (job?.location || '').toLowerCase().includes('remote'));
+
+        const handleRespondToPriceRequest = (accept) => {
+          const run = async () => {
+            try {
+              setPriceSubmitting(true);
+              await apiService.respondToPriceChange(job.id, accept);
+              Toast.show({
+                type: 'info',
+                text1: accept ? 'Price accepted' : 'Submission accepted',
+                text2: accept ? 'The freelancer can now submit the next revision.' : 'The job is completed.',
+              });
+              onMessageUpdate?.();
+            } catch (err) {
+              Alert.alert('Error', err.message || 'Failed to respond to price change');
+            } finally {
+              setPriceSubmitting(false);
+            }
+          };
+          if (accept) {
+            run();
+            return;
+          }
+          Alert.alert(
+            'Reject price change?',
+            'Rejecting this will auto-accept the submission and the job will be completed. No further versions will be provided.',
+            [
+              { text: 'Back', style: 'cancel' },
+              { text: 'Reject', style: 'destructive', onPress: run },
+            ]
+          );
+        };
+
+        const handleSubmitPriceRequest = async () => {
+          const amount = Number(requestedTotal);
+          const reason = priceReason.trim();
+          const current = Number(job?.negotiatedAmount || job?.budgetAmount || 0);
+          if (!amount || amount <= current) {
+            Alert.alert('Invalid amount', `Enter a total above the current ₹${current}.`);
+            return;
+          }
+          if (!reason) {
+            Alert.alert('Reason required', 'Describe the additional work needed.');
+            return;
+          }
+          try {
+            setPriceSubmitting(true);
+            await apiService.requestPriceChange(job.id, amount, reason);
+            setPriceModalVisible(false);
+            setRequestedTotal('');
+            setPriceReason('');
+            Toast.show({ type: 'info', text1: 'Price change requested', text2: 'The client has been asked to approve it.' });
+            onMessageUpdate?.();
+          } catch (err) {
+            Alert.alert('Error', err.message || 'Failed to request price change');
+          } finally {
+            setPriceSubmitting(false);
+          }
+        };
+
+        const revisionLimitReached = (job?.revisionCount ?? 0) >= (job?.includedRevisions ?? 2);
+
         return (
           <View style={styles.submissionBox}>
             <View style={styles.submissionHeaderRow}>
@@ -396,6 +465,51 @@ const MessageItem = ({ messageItem, message, isCurrentUser, media = [], onMessag
                 Work Submission {msgData.version ? `(v${msgData.version})` : ''}
               </Text>
             </View>
+
+            {/* Client: the freelancer's price request for additional revisions, accept or reject on this card */}
+            {!isJobDisputed && isRemoteSubmissionJob && isClientUser && submissionStatus === 'PENDING' && job?.priceChangeRequested && (
+              <View style={{ backgroundColor: '#EFF6FF', padding: 12, borderRadius: 12, marginBottom: 10 }}>
+                <Text style={{ fontWeight: '700', color: '#1D4ED8', marginBottom: 4 }}>
+                  Price change requested: ₹{job.priceChangeRequested}
+                </Text>
+                <Text style={{ fontSize: 12, color: '#374151', marginBottom: 8 }}>{job.priceChangeReason}</Text>
+                <View style={styles.decisionButtonRow}>
+                  <TouchableOpacity
+                    style={[styles.decisionBtn, styles.acceptBtn, priceSubmitting && { opacity: 0.6 }]}
+                    disabled={priceSubmitting}
+                    onPress={() => handleRespondToPriceRequest(true)}
+                  >
+                    <Text style={styles.decisionBtnText}>Accept</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.decisionBtn, styles.disputeBtn, priceSubmitting && { opacity: 0.6 }]}
+                    disabled={priceSubmitting}
+                    onPress={() => handleRespondToPriceRequest(false)}
+                  >
+                    <Text style={styles.decisionBtnText}>Reject</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+
+            {/* Freelancer: once the included revisions are used, the next revision needs a price change */}
+            {!isJobDisputed && isRemoteSubmissionJob && !isClientUser && submissionStatus === 'PENDING' && revisionLimitReached && (
+              job?.priceChangeRequested ? (
+                <View style={styles.statusBadgePending}>
+                  <MaterialIcons name="hourglass-empty" size={14} color="#D97706" />
+                  <Text style={styles.statusBadgePendingText}>Price change sent. Waiting for client approval.</Text>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={[styles.decisionBtn, styles.reviseBtn, { marginBottom: 8 }, priceSubmitting && { opacity: 0.6 }]}
+                  disabled={priceSubmitting}
+                  onPress={() => setPriceModalVisible(true)}
+                >
+                  <MaterialIcons name="attach-money" size={16} color="#FFFFFF" />
+                  <Text style={styles.decisionBtnText}>Request price change</Text>
+                </TouchableOpacity>
+              )
+            )}
 
             {isJobDisputed ? (
               <View style={styles.statusBadgeDisputed}>
@@ -455,6 +569,49 @@ const MessageItem = ({ messageItem, message, isCurrentUser, media = [], onMessag
                 </Text>
               </View>
             ) : null}
+
+            {/* Freelancer: price change request form (new total for the booking and the extra work) */}
+            <Modal visible={priceModalVisible} transparent animationType="fade" onRequestClose={() => setPriceModalVisible(false)}>
+              <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 }}>
+                <View style={{ backgroundColor: '#FFF', borderRadius: 16, padding: 20 }}>
+                  <Text style={{ fontSize: 17, fontWeight: '800', marginBottom: 6 }}>Request price change</Text>
+                  <Text style={{ fontSize: 12, color: '#64748B', marginBottom: 12 }}>
+                    Current total: ₹{job?.negotiatedAmount || job?.budgetAmount}. Enter the new total for the whole booking and describe the extra work.
+                  </Text>
+                  <TextInput
+                    style={{ borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 10, padding: 10, marginBottom: 10, color: '#0F172A' }}
+                    placeholder="New total for the booking (₹)"
+                    placeholderTextColor="#94A3B8"
+                    keyboardType="numeric"
+                    value={requestedTotal}
+                    onChangeText={setRequestedTotal}
+                  />
+                  <TextInput
+                    style={{ borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 10, padding: 10, minHeight: 80, textAlignVertical: 'top', marginBottom: 14, color: '#0F172A' }}
+                    placeholder="Describe the additional work and why it's needed"
+                    placeholderTextColor="#94A3B8"
+                    multiline
+                    value={priceReason}
+                    onChangeText={setPriceReason}
+                  />
+                  <View style={{ flexDirection: 'row', gap: 10 }}>
+                    <TouchableOpacity
+                      style={{ flex: 1, backgroundColor: '#F1F5F9', padding: 12, borderRadius: 10, alignItems: 'center' }}
+                      onPress={() => setPriceModalVisible(false)}
+                    >
+                      <Text style={{ fontWeight: '700', color: '#334155' }}>Back</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={{ flex: 1, backgroundColor: '#6B21A8', padding: 12, borderRadius: 10, alignItems: 'center' }}
+                      disabled={priceSubmitting}
+                      onPress={handleSubmitPriceRequest}
+                    >
+                      <Text style={{ fontWeight: '700', color: '#FFF' }}>{priceSubmitting ? 'Sending...' : 'Send request'}</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            </Modal>
 
             {/* Revision Modal */}
             <Modal

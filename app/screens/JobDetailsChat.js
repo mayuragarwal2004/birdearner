@@ -36,6 +36,9 @@ const JobDetailsChatScreen = ({ route, navigation }) => {
   const [disputeModalVisible, setDisputeModalVisible] = useState(false);
   const [disputeReasonText, setDisputeReasonText] = useState("");
   const [selectedDisputeChip, setSelectedDisputeChip] = useState("Work not completed as agreed");
+  const [priceModalVisible, setPriceModalVisible] = useState(false);
+  const [requestedAmount, setRequestedAmount] = useState("");
+  const [priceReason, setPriceReason] = useState("");
 
   const disputeReasonChips = [
     "Work not completed as agreed",
@@ -52,6 +55,72 @@ const JobDetailsChatScreen = ({ route, navigation }) => {
   useEffect(() => {
     fetchJobDetails();
   }, [jobId]);
+
+  // Remote additional work: the freelancer asks for a new total, the client accepts or refuses
+  const handleRequestPriceChange = async () => {
+    const amount = Number(requestedAmount);
+    const reason = priceReason.trim();
+    const current = Number(job?.negotiatedAmount || job?.budgetAmount || 0);
+    if (!amount || amount <= current) {
+      Alert.alert("Invalid amount", `Enter a total above the current ₹${current}.`);
+      return;
+    }
+    if (!reason) {
+      Alert.alert("Reason required", "Describe the additional work needed.");
+      return;
+    }
+    try {
+      setActionLoading(true);
+      await apiService.requestPriceChange(job.id, amount, reason);
+      setPriceModalVisible(false);
+      setRequestedAmount("");
+      setPriceReason("");
+      Alert.alert("Request sent", "The client has been asked to approve the additional work.");
+      await fetchJobDetails();
+    } catch (err) {
+      Alert.alert("Error", err.message || "Failed to request price change");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const submitPriceResponse = async (accept) => {
+    try {
+      setActionLoading(true);
+      const res = await apiService.respondToPriceChange(job.id, accept);
+      const updated = res?.data ?? res;
+      if (accept) {
+        Alert.alert("Price accepted", "The job total is updated. The freelancer can now submit the next revision.");
+      } else if (updated?.jobStatus === "COMPLETED") {
+        Alert.alert(
+          "Job completed",
+          "No further versions will be provided. This is the final version, so the job has been completed and the freelancer is paid."
+        );
+      } else {
+        Alert.alert("Booking cancelled", "The booking was cancelled with no penalty.");
+      }
+      await fetchJobDetails();
+    } catch (err) {
+      Alert.alert("Error", err.message || "Failed to respond to price change");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRespondPriceChange = (accept) => {
+    if (accept) {
+      submitPriceResponse(true);
+      return;
+    }
+    Alert.alert(
+      "Reject price change?",
+      "Rejecting this will auto-accept the submission and the job will be completed. No further versions will be provided.",
+      [
+        { text: "Back", style: "cancel" },
+        { text: "Reject", style: "destructive", onPress: () => submitPriceResponse(false) },
+      ]
+    );
+  };
 
   const fetchJobDetails = async () => {
     try {
@@ -459,6 +528,86 @@ const JobDetailsChatScreen = ({ route, navigation }) => {
             <Text style={styles.secondaryBackButtonText}>Back to Jobs</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Remote: freelancer asks for a price change for additional work */}
+        {isRemote && !isClient && ["CONFIRMED", "REVISION_REQUESTED", "WORK_SUBMITTED"].includes(job?.jobStatus) && !job?.priceChangeRequested && (
+          <TouchableOpacity
+            style={{ backgroundColor: "#F3E8FF", padding: 12, borderRadius: 12, alignItems: "center", marginBottom: 12 }}
+            onPress={() => setPriceModalVisible(true)}
+            disabled={actionLoading}
+          >
+            <Text style={{ color: "#6B21A8", fontWeight: "700" }}>Request Price Change (Additional Work)</Text>
+          </TouchableOpacity>
+        )}
+
+        {/* Remote: client accepts or refuses a pending price change */}
+        {isRemote && isClient && job?.priceChangeRequested && (
+          <View style={{ backgroundColor: "#EFF6FF", padding: 12, borderRadius: 12, marginBottom: 12 }}>
+            <Text style={{ fontWeight: "700", color: "#1D4ED8", marginBottom: 4 }}>
+              Price change requested: ₹{job.priceChangeRequested}
+            </Text>
+            <Text style={{ fontSize: 12, color: "#374151", marginBottom: 8 }}>Reason: {job.priceChangeReason}</Text>
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <TouchableOpacity
+                style={{ flex: 1, backgroundColor: "#22C55E", paddingVertical: 10, borderRadius: 8, alignItems: "center" }}
+                onPress={() => handleRespondPriceChange(true)}
+                disabled={actionLoading}
+              >
+                <Text style={{ color: "#FFF", fontWeight: "700" }}>Accept New Price</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={{ flex: 1, backgroundColor: "#EF4444", paddingVertical: 10, borderRadius: 8, alignItems: "center" }}
+                onPress={() => handleRespondPriceChange(false)}
+                disabled={actionLoading}
+              >
+                <Text style={{ color: "#FFF", fontWeight: "700" }}>Refuse</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* Modal for requesting a price change */}
+        <Modal visible={priceModalVisible} transparent animationType="slide" onRequestClose={() => setPriceModalVisible(false)}>
+          <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", padding: 20 }}>
+            <View style={{ backgroundColor: "#FFF", borderRadius: 16, padding: 20 }}>
+              <Text style={{ fontSize: 17, fontWeight: "800", marginBottom: 6 }}>Request price change</Text>
+              <Text style={{ fontSize: 12, color: "#64748B", marginBottom: 12 }}>
+                Current total: ₹{job?.negotiatedAmount || job?.budgetAmount}. Enter the new total for the whole booking (including the extra work), and describe that extra work below.
+              </Text>
+              <TextInput
+                style={{ borderWidth: 1, borderColor: "#E2E8F0", borderRadius: 10, padding: 10, marginBottom: 10 }}
+                placeholder="New total for the booking (₹)"
+                placeholderTextColor="#94A3B8"
+                keyboardType="numeric"
+                value={requestedAmount}
+                onChangeText={setRequestedAmount}
+              />
+              <TextInput
+                style={{ borderWidth: 1, borderColor: "#E2E8F0", borderRadius: 10, padding: 10, minHeight: 80, textAlignVertical: "top", marginBottom: 14 }}
+                placeholder="Describe the additional work and why it's needed"
+                placeholderTextColor="#94A3B8"
+                multiline
+                value={priceReason}
+                onChangeText={setPriceReason}
+              />
+              <View style={{ flexDirection: "row", gap: 10 }}>
+                <TouchableOpacity
+                  style={{ flex: 1, backgroundColor: "#F1F5F9", padding: 12, borderRadius: 10, alignItems: "center" }}
+                  onPress={() => setPriceModalVisible(false)}
+                >
+                  <Text style={{ fontWeight: "700", color: "#334155" }}>Back</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={{ flex: 1, backgroundColor: "#6B21A8", padding: 12, borderRadius: 10, alignItems: "center" }}
+                  onPress={handleRequestPriceChange}
+                  disabled={actionLoading}
+                >
+                  <Text style={{ fontWeight: "700", color: "#FFF" }}>{actionLoading ? "Sending..." : "Send request"}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
 
         {/* Modal for Raise Dispute */}
         <Modal visible={disputeModalVisible} transparent animationType="slide">

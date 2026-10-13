@@ -21,12 +21,14 @@ import ImageViewer from "react-native-image-zoom-viewer";
 import { useTheme } from "../context/ThemeContext";
 import { useAuth } from "../context/NewAuthContext";
 import apiService from "../lib/apiService";
+import EmergencyCancelReasonModal from "../components/chat/EmergencyCancelReasonModal";
 
 const JobDetailsScreen = ({ route, navigation }) => {
   const { formData } = route.params;
   const [modalVisible, setModalVisible] = useState(false);
   const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [emergencyModalVisible, setEmergencyModalVisible] = useState(false);
   const [currentJob, setCurrentJob] = useState(formData);
   const [walletData, setWalletData] = useState(null);
   const [walletLoading, setWalletLoading] = useState(false);
@@ -285,12 +287,34 @@ const JobDetailsScreen = ({ route, navigation }) => {
     }
   };
 
-  const handleRespondPriceChange = async (accept) => {
+  const handleRespondPriceChange = (accept) => {
+    if (accept) {
+      submitPriceResponse(true);
+      return;
+    }
+    Alert.alert(
+      "Reject price change?",
+      "Rejecting this will auto-accept the submission and the job will be completed. No further versions will be provided.",
+      [
+        { text: "Back", style: "cancel" },
+        { text: "Reject", style: "destructive", onPress: () => submitPriceResponse(false) },
+      ]
+    );
+  };
+
+  const submitPriceResponse = async (accept) => {
     try {
       setLoading(true);
       const res = await apiService.respondToScopePriceChange(currentJob.id, accept);
-      Alert.alert("Notice", accept ? "Price change accepted." : "Booking cancelled due to scope mismatch.");
-      if (res?.data) setCurrentJob({ ...currentJob, ...res.data });
+      const updated = res?.data ?? res;
+      if (accept) {
+        Alert.alert("Notice", "Price change accepted.");
+      } else if (updated?.jobStatus === "COMPLETED") {
+        Alert.alert("Job completed", "The submission was auto-accepted and the job is completed. No further versions will be provided.");
+      } else {
+        Alert.alert("Notice", "Booking cancelled due to scope mismatch.");
+      }
+      if (updated) setCurrentJob({ ...currentJob, ...updated });
     } catch (err) {
       Alert.alert("Error", err.message || "Failed to respond to price change");
     } finally {
@@ -824,12 +848,7 @@ const JobDetailsScreen = ({ route, navigation }) => {
                     </Text>
                     <TouchableOpacity
                       style={{ backgroundColor: "#EF4444", paddingVertical: 8, borderRadius: 8, alignItems: "center" }}
-                      onPress={() => {
-                        Alert.alert("Emergency Cancel", "Cancel this job without penalty?", [
-                          { text: "No", style: "cancel" },
-                          { text: "Yes, Cancel", style: "destructive", onPress: () => handlePhysicalProgress("EMERGENCY_CANCEL") },
-                        ]);
-                      }}
+                      onPress={() => setEmergencyModalVisible(true)}
                     >
                       <Text style={{ color: "#FFF", fontWeight: "700", fontSize: 13 }}>Cancel Job (No Penalty)</Text>
                     </TouchableOpacity>
@@ -857,7 +876,7 @@ const JobDetailsScreen = ({ route, navigation }) => {
           )}
 
           {/* Client: Confirm Work Completed (on-site, after OTP verified) */}
-          {!isRemote && isClient && currentJob.jobStatus === "JOB_STARTED" && (
+          {!isRemote && isPlatformPayment && isClient && currentJob.jobStatus === "JOB_STARTED" && (
             <TouchableOpacity
               style={styles.primaryConfirmButton}
               onPress={() => {
@@ -874,7 +893,8 @@ const JobDetailsScreen = ({ route, navigation }) => {
           )}
 
           {/* Scope Mismatch Price Change Request */}
-          {!isClient && (currentJob.jobStatus === "CONFIRMED" || currentJob.jobStatus === "ARRIVED" || currentJob.jobStatus === "JOB_STARTED") && (
+          {/* Remote: additional work is requested after a submission or while a revision is pending (server enforces the rules) */}
+          {!isClient && ["CONFIRMED", "ARRIVED", "JOB_STARTED", "REVISION_REQUESTED", "WORK_SUBMITTED"].includes(currentJob.jobStatus) && (
             <TouchableOpacity
               style={[styles.secondaryCancelButton, { marginBottom: 10 }]}
               onPress={() => setPriceModalVisible(true)}
@@ -964,6 +984,17 @@ const JobDetailsScreen = ({ route, navigation }) => {
         </View>
 
         {/* Modal for Scope Mismatch Price Change */}
+        <EmergencyCancelReasonModal
+          visible={emergencyModalVisible}
+          role={isClient ? "CLIENT" : "FREELANCER"}
+          submitting={loading}
+          onClose={() => setEmergencyModalVisible(false)}
+          onSubmit={(reason) => {
+            setEmergencyModalVisible(false);
+            handlePhysicalProgress("EMERGENCY_CANCEL", { reason });
+          }}
+        />
+
         <Modal visible={priceModalVisible} transparent animationType="slide">
           <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", padding: 20 }}>
             <View style={{ backgroundColor: "#FFF", borderRadius: 16, padding: 20 }}>
@@ -972,14 +1003,16 @@ const JobDetailsScreen = ({ route, navigation }) => {
               </Text>
               <TextInput
                 style={{ borderWidth: 1, borderColor: "#DDD", borderRadius: 10, padding: 12, fontSize: 14, marginBottom: 12 }}
-                placeholder="New requested price (₹)"
+                placeholder="New total for the whole booking (₹)"
+                placeholderTextColor="#94A3B8"
                 keyboardType="numeric"
                 value={requestedPrice}
                 onChangeText={setRequestedPrice}
               />
               <TextInput
                 style={{ borderWidth: 1, borderColor: "#DDD", borderRadius: 10, padding: 12, fontSize: 14, marginBottom: 16 }}
-                placeholder="Reason for additional work discovered"
+                placeholder="Describe the additional work and why it's needed"
+                placeholderTextColor="#94A3B8"
                 multiline
                 numberOfLines={3}
                 value={priceReason}

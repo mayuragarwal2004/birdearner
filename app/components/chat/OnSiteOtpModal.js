@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import apiService from "../../lib/apiService";
+import EmergencyCancelReasonModal from "./EmergencyCancelReasonModal";
 
 const DISPUTE_REASON_CHIPS = [
   "Work not completed as agreed",
@@ -39,6 +40,7 @@ const OnSiteOtpModal = ({
   const [fetchedJob, setFetchedJob] = useState(null);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [emergencyModalVisible, setEmergencyModalVisible] = useState(false);
   const [otpInput, setOtpInput] = useState("");
 
   // Raise Dispute Reason Modal state
@@ -57,6 +59,10 @@ const OnSiteOtpModal = ({
   const [scopeMismatchReasonText, setScopeMismatchReasonText] = useState("");
 
   const isClient = userRole === "client";
+  const jobTypeText = (jobData?.projectType || "").toLowerCase();
+  const isRemoteJob =
+    jobTypeText.includes("remote") ||
+    (!jobTypeText.includes("site") && (jobData?.location || "").toLowerCase().includes("remote"));
 
   // Merge parentJob and fetchedJob so we always have up-to-date data
   const jobData = fetchedJob || parentJob || {};
@@ -224,7 +230,7 @@ const OnSiteOtpModal = ({
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
               <Ionicons name="key-outline" size={22} color="#A855F7" />
               <Text style={styles.modalTitle}>
-                {isClient ? "On-Site Verification OTP" : "Work Progress & OTP"}
+                {isRemoteJob ? "Price Change Request" : isClient ? "On-Site Verification OTP" : "Work Progress & OTP"}
               </Text>
             </View>
             <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
@@ -299,12 +305,14 @@ const OnSiteOtpModal = ({
                           style={styles.refusePriceButton}
                           onPress={() => {
                             Alert.alert(
-                              "Cancel Due to Price Change",
-                              "Are you sure you want to cancel this booking due to scope/price mismatch? No penalties will be applied.",
+                              isRemoteJob ? "Reject price change?" : "Cancel Due to Price Change",
+                              isRemoteJob
+                                ? "Rejecting this will auto-accept the submission and the job will be completed. No further versions will be provided."
+                                : "Are you sure you want to cancel this booking due to scope/price mismatch? No penalties will be applied.",
                               [
                                 { text: "No, Keep Booking", style: "cancel" },
                                 {
-                                  text: "Yes, Cancel",
+                                  text: isRemoteJob ? "Reject" : "Yes, Cancel",
                                   style: "destructive",
                                   onPress: () => handleRespondToPriceChange(false),
                                 },
@@ -320,7 +328,7 @@ const OnSiteOtpModal = ({
                     </View>
                   )}
 
-                  {hasOtpCode || isArrived ? (
+                  {isRemoteJob ? null : hasOtpCode || isArrived ? (
                     // Freelancer has requested OTP / Arrived -> Show OTP to Client
                     <View style={styles.otpDisplayContainer}>
                       <Text style={styles.otpHeaderLabel}>🔑 YOUR 4-DIGIT VERIFICATION OTP</Text>
@@ -350,18 +358,24 @@ const OnSiteOtpModal = ({
                     </View>
                   )}
 
+                  <EmergencyCancelReasonModal
+                    visible={emergencyModalVisible}
+                    role={isClient ? "CLIENT" : "FREELANCER"}
+                    submitting={actionLoading}
+                    onClose={() => setEmergencyModalVisible(false)}
+                    onSubmit={(reason) => {
+                      setEmergencyModalVisible(false);
+                      handlePhysicalProgress("EMERGENCY_CANCEL", { reason });
+                    }}
+                  />
+
                   {/* Client Action Buttons */}
                   {isStarted && (
                     <View style={styles.actionGroup}>
                       {isEmergencyCancelActive && (
                         <TouchableOpacity
                           style={styles.dangerButton}
-                          onPress={() => {
-                            Alert.alert("Emergency Cancel", "Cancel this job without penalty?", [
-                              { text: "No", style: "cancel" },
-                              { text: "Yes, Cancel", style: "destructive", onPress: () => handlePhysicalProgress("EMERGENCY_CANCEL") },
-                            ]);
-                          }}
+                          onPress={() => setEmergencyModalVisible(true)}
                           disabled={actionLoading}
                         >
                           <Ionicons name="close-circle-outline" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
