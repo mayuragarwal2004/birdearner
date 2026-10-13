@@ -59,13 +59,15 @@ const OnSiteOtpModal = ({
   const [scopeMismatchReasonText, setScopeMismatchReasonText] = useState("");
 
   const isClient = userRole === "client";
+
+  // Merge parentJob and fetchedJob so we always have up-to-date data
+  const jobData = fetchedJob || parentJob || {};
+
+  // Remote (digital) jobs use the price-change review only; no on-site OTP steps
   const jobTypeText = (jobData?.projectType || "").toLowerCase();
   const isRemoteJob =
     jobTypeText.includes("remote") ||
     (!jobTypeText.includes("site") && (jobData?.location || "").toLowerCase().includes("remote"));
-
-  // Merge parentJob and fetchedJob so we always have up-to-date data
-  const jobData = fetchedJob || parentJob || {};
 
   useEffect(() => {
     if (visible && jobId) {
@@ -307,7 +309,7 @@ const OnSiteOtpModal = ({
                             Alert.alert(
                               isRemoteJob ? "Reject price change?" : "Cancel Due to Price Change",
                               isRemoteJob
-                                ? "Rejecting this will auto-accept the submission and the job will be completed. No further versions will be provided."
+                                ? "Rejecting this will accept the submission and the job will be completed. No further versions will be provided."
                                 : "Are you sure you want to cancel this booking due to scope/price mismatch? No penalties will be applied.",
                               [
                                 { text: "No, Keep Booking", style: "cancel" },
@@ -322,7 +324,7 @@ const OnSiteOtpModal = ({
                           disabled={actionLoading}
                         >
                           <Ionicons name="close-circle-outline" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
-                          <Text style={styles.buttonText}>Cancel Due to Price Change</Text>
+                          <Text style={styles.buttonText}>{isRemoteJob ? "Reject" : "Cancel Due to Price Change"}</Text>
                         </TouchableOpacity>
                       </View>
                     </View>
