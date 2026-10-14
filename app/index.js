@@ -274,6 +274,9 @@ function MainTabs() {
     "Payment",
     "DeleteAccount",
     "Security",
+    "TwoFactorAuth",
+    "TwoFactorCode",
+    "ManageTrustedDevices",
     "TermsAndConditions",
     "TermsAndConditionsScreen",
     "Feedback",
@@ -701,6 +704,11 @@ export function App() {
         // Non-Authenticated Stack - Login/Signup flow
         <>
           <Stack.Screen name="Login" getComponent={getLoginScreen} />
+          <Stack.Screen
+            name="TwoFactorCode"
+            getComponent={() => require("./screens/TwoFactorCodeScreen").default}
+            options={{ headerShown: false }}
+          />
           <Stack.Screen name="Signup" getComponent={getSignupScreen} />
           <Stack.Screen
             name="ForgotPassword"

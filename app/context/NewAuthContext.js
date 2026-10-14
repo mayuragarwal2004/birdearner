@@ -16,6 +16,7 @@ import {
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import apiService from "../lib/apiService";
+import { getDeviceInfo } from "../lib/deviceInfo";
 import Toast from "react-native-toast-message";
 import { resetToLogin } from "../lib/navigationRef";
 
@@ -308,8 +309,34 @@ export const AuthProvider = ({ children }) => {
   // Login function with dual-role detection
   const login = async (email, password) => {
     try {
-      const loginResponse = await apiService.login(email, password);
+      const device = await getDeviceInfo();
+      const loginResponse = await apiService.login(email, password, device);
 
+      // Two-factor account on a new device: no session yet, the login screen asks for the code
+      if (loginResponse?.requiresTwoFactor) {
+        return loginResponse;
+      }
+
+      return await applyLoginResponse(loginResponse);
+    } catch (error) {
+      console.error("Login error:", error);
+      throw new Error(error.message || "Login failed. Please try again.");
+    }
+  };
+
+  // Completes sign-in after a two-factor code has been verified
+  const verifyTwoFactorLogin = async (challengeId, code) => {
+    try {
+      const loginResponse = await apiService.verifyLoginTwoFactor(challengeId, code);
+      return await applyLoginResponse(loginResponse);
+    } catch (error) {
+      console.error("Two-factor login error:", error);
+      throw new Error(error.message || "Verification failed. Please try again.");
+    }
+  };
+
+  // Sets up auth state and cached profiles from a successful login response
+  const applyLoginResponse = async (loginResponse) => {
       if (loginResponse) {
         setUser(loginResponse);
         if (loginResponse.token) {
@@ -397,10 +424,6 @@ export const AuthProvider = ({ children }) => {
 
         return loginResponse;
       }
-    } catch (error) {
-      console.error("Login error:", error);
-      throw new Error(error.message || "Login failed. Please try again.");
-    }
   };
 
   // Google Login function
@@ -1066,6 +1089,7 @@ export const AuthProvider = ({ children }) => {
     authToken,
     loading,
     login,
+    verifyTwoFactorLogin,
     googleLogin,
     register,
     logout,
@@ -1089,6 +1113,7 @@ export const AuthProvider = ({ children }) => {
     authToken,
     loading,
     login,
+    verifyTwoFactorLogin,
     googleLogin,
     register,
     logout,

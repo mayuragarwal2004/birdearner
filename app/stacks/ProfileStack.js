@@ -91,6 +91,21 @@ const ProfileStack = ({ initialRouteName = "MyProfile" }) => (
       options={{ headerShown: false }}
     />
     <Stack.Screen
+      name="TwoFactorAuth"
+      getComponent={() => require("../screens/TwoFactorAuthScreen").default}
+      options={{ headerShown: false }}
+    />
+    <Stack.Screen
+      name="TwoFactorCode"
+      getComponent={() => require("../screens/TwoFactorCodeScreen").default}
+      options={{ headerShown: false }}
+    />
+    <Stack.Screen
+      name="ManageTrustedDevices"
+      getComponent={() => require("../screens/ManageTrustedDevicesScreen").default}
+      options={{ headerShown: false }}
+    />
+    <Stack.Screen
       name="TermsAndConditions"
       getComponent={() => require("../screens/TermsAndConditionsScreen").default}
       options={{ headerShown: false }}

@@ -100,7 +100,18 @@ const Login = ({ navigation }) => {
     if (!validateInputs()) return;
     setIsLoading(true);
     try {
-      await login(credentials.email, credentials.password);
+      const result = await login(credentials.email, credentials.password);
+
+      // New device on a two-factor account: ask for the code before signing in
+      if (result?.requiresTwoFactor) {
+        navigation.navigate("TwoFactorCode", {
+          purpose: "login",
+          challengeId: result.challengeId,
+          maskedMobile: result.maskedMobile,
+        });
+        return;
+      }
+
       showToast("success", "Login Successful!", "Welcome back!");
     } catch (error) {
       console.log("Login Error:", error.message);

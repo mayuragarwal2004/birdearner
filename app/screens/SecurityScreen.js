@@ -6,9 +6,9 @@ import { useTheme } from '../context/ThemeContext';
 
 const SecurityScreen = ({ navigation }) => {
     const dummyData = [
-        { title: 'Two-Factor Authentication', description: 'Add an extra layer of security to your account.' },
+        { title: 'Two-Factor Authentication', description: 'Add an extra layer of security to your account.', route: 'TwoFactorAuth' },
         { title: 'Change Security Questions', description: 'Update your security questions for account recovery.' },
-        { title: 'Manage Trusted Devices', description: 'View and remove devices you trust.' },
+        { title: 'Manage Trusted Devices', description: 'View and remove devices you trust.', route: 'ManageTrustedDevices' },
         { title: 'Account Activity', description: 'Review recent account activity for unusual behavior.' },
     ];
 
@@ -33,7 +33,11 @@ const SecurityScreen = ({ navigation }) => {
             {/* Security Options */}
             <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
                 {dummyData.map((item, index) => (
-                    <TouchableOpacity key={index} style={styles.optionContainer}>
+                    <TouchableOpacity
+                        key={index}
+                        style={styles.optionContainer}
+                        onPress={() => item.route && navigation.navigate(item.route)}
+                    >
                         <View style={{ flex: 1, marginRight: 12 }}>
                             <Text style={styles.optionTitle}>{item.title}</Text>
                             <Text style={styles.optionDescription}>{item.description}</Text>

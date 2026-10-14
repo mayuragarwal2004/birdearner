@@ -3,7 +3,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 
-const DEV_API_BASE_URL = "https://blend-finds-make-americas.trycloudflare.com/api";
+const DEV_API_BASE_URL = "https://rendering-generation-laboratory-alias.trycloudflare.com/api";
 // const DEV_API_BASE_URL = "https://api.birdearner.com/api";
 
 const PROD_API_BASE_URL = "https://api.birdearner.com/api";
@@ -567,27 +567,84 @@ class ApiService {
   }
 
   // Auth endpoints
-  async login(email, password) {
+  async login(email, password, device = {}) {
     const response = await this.makeRequest("/auth/login", {
       method: "POST",
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password, ...device }),
     });
 
+    // Two-factor account on a new device: no session yet, the caller must ask for the code
+    if (response.success && response.requiresTwoFactor) {
+      return { requiresTwoFactor: true, ...response.data };
+    }
+
     if (response.success && response.data) {
-      // Store user data
-      console.log("Login successful, storing user data and token");
-
-      // Set token in the API service instance
-      await this.setAuthToken(response.data.token);
-
-      // Store user data without token to avoid duplication
-      const { token, ...userData } = response.data;
-      await AsyncStorage.setItem("userData", JSON.stringify(userData));
-
-      return response.data;
+      return this.storeLoginSession(response.data);
     }
 
     throw new Error("Login failed");
+  }
+
+  async verifyLoginTwoFactor(challengeId, code) {
+    const response = await this.makeRequest("/auth/login/verify-2fa", {
+      method: "POST",
+      body: JSON.stringify({ challengeId, code }),
+    });
+
+    if (response.success && response.data) {
+      return this.storeLoginSession(response.data);
+    }
+
+    throw new Error("Verification failed");
+  }
+
+  // Persists the session returned by any successful login (password or two-factor)
+  async storeLoginSession(loginData) {
+    console.log("Login successful, storing user data and token");
+
+    // Set token in the API service instance
+    await this.setAuthToken(loginData.token);
+
+    // Store user data without token to avoid duplication
+    const { token, ...userData } = loginData;
+    await AsyncStorage.setItem("userData", JSON.stringify(userData));
+
+    return loginData;
+  }
+
+  // Two-factor authentication settings
+  async getTwoFactorStatus() {
+    const response = await this.makeRequest("/auth/two-factor");
+    return response?.data || null;
+  }
+
+  async sendTwoFactorCode(purpose, device = {}) {
+    const response = await this.makeRequest("/auth/two-factor/send-code", {
+      method: "POST",
+      body: JSON.stringify({ purpose, ...device }),
+    });
+    return response.data;
+  }
+
+  async confirmTwoFactor(challengeId, code) {
+    const response = await this.makeRequest("/auth/two-factor/confirm", {
+      method: "POST",
+      body: JSON.stringify({ challengeId, code }),
+    });
+    return response.data;
+  }
+
+  // Login devices ("Manage Trusted Devices")
+  async getUserDevices(currentDeviceId) {
+    const query = currentDeviceId ? `?deviceId=${encodeURIComponent(currentDeviceId)}` : "";
+    const response = await this.makeRequest(`/user/devices${query}`);
+    return response?.data || [];
+  }
+
+  async removeUserDevice(deviceRecordId) {
+    return this.makeRequest(`/user/devices/${deviceRecordId}`, {
+      method: "DELETE",
+    });
   }
 
   async googleLogin(idToken) {
