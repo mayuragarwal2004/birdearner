@@ -3,7 +3,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 
-const DEV_API_BASE_URL = "https://normally-chosen-cabinets-luke.trycloudflare.com/api";
+const DEV_API_BASE_URL = "https://determining-fibre-preparation-terrorists.trycloudflare.com/api";
 // const DEV_API_BASE_URL = "https://api.birdearner.com/api";
 
 const PROD_API_BASE_URL = "https://api.birdearner.com/api";
@@ -2441,14 +2441,22 @@ class ApiService {
   // Submit contact/feedback form
   async submitContactForm(contactData) {
     try {
-      const response = await this.makeRequest("/contact", {
+      // The support route reads the phone number as `mobileNumber`
+      const { phone, ...rest } = contactData;
+      const response = await this.makeRequest("/support/contact/submit", {
         method: "POST",
-        body: JSON.stringify(contactData),
+        body: JSON.stringify({ ...rest, mobileNumber: phone }),
       });
       return response;
     } catch (error) {
       this.handleApiError(error);
     }
+  }
+
+  // Public FAQ list for the Support page
+  async getFaqs() {
+    const response = await this.makeRequest("/faqs", { skipAuth: true });
+    return Array.isArray(response) ? response : [];
   }
 
   // Get contact status by ticket ID

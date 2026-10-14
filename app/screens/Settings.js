@@ -265,13 +265,14 @@ const SettingsScreen = ({ navigation }) => {
                 label: "Your Feedbacks",
                 icon: "chatbox-ellipses-outline",
                 route: "Feedback",
+                params: { mode: "feedback" },
               },
             ]
           : []),
         {
           label: "Support",
           icon: "headset-outline",
-          route: "Feedback",
+          route: "Support",
         },
       ],
     },

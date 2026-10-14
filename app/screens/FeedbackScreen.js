@@ -18,7 +18,39 @@ import { useTheme } from "../context/ThemeContext";
 import apiService from "../lib/apiService";
 import Toast from "react-native-toast-message";
 
-const FeedbackScreen = ({ navigation }) => {
+// Same contact form, worded for "Your Feedbacks" or for "Support" tickets
+const MODE_COPY = {
+  feedback: {
+    title: "Your Feedbacks",
+    infoTitle: "We'd Love to Hear From You!",
+    infoText:
+      "Your feedback helps us improve BirdEarner. Share your thoughts, suggestions, or report any issues you've encountered.",
+    subjectPrefix: "Feedback: ",
+    submitLabel: "Send Feedback",
+    toastTitle: "Feedback Sent!",
+    toastMessage: "Thank you for your feedback. We'll get back to you soon.",
+    successTitle: "Feedback Sent Successfully!",
+    successMessage:
+      "Thank you for taking the time to share your feedback with us. We've received your message and will get back to you as soon as possible.",
+  },
+  support: {
+    title: "Contact Support",
+    infoTitle: "How can we help?",
+    infoText:
+      "Describe the problem you're facing and we'll open a support ticket. Keep your reference ID to follow up.",
+    subjectPrefix: "Support: ",
+    submitLabel: "Submit Ticket",
+    toastTitle: "Ticket Created!",
+    toastMessage: "Our support team will reply to you soon.",
+    successTitle: "Support Ticket Created",
+    successMessage:
+      "We've received your request. Our support team will reply as soon as possible.",
+  },
+};
+
+const FeedbackScreen = ({ navigation, route }) => {
+  const mode = route?.params?.mode === "support" ? "support" : "feedback";
+  const copy = MODE_COPY[mode];
   const { userData } = useAuth();
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
@@ -143,7 +175,7 @@ const FeedbackScreen = ({ navigation }) => {
         name: formData.name.trim(),
         email: formData.email.trim().toLowerCase(),
         phone: formData.phone.trim() || null,
-        subject: formData.subject.trim(),
+        subject: `${copy.subjectPrefix}${formData.subject.trim()}`,
         message: formData.message.trim(),
       };
 
@@ -151,12 +183,12 @@ const FeedbackScreen = ({ navigation }) => {
       console.log({ response });
 
       if (response && response.success) {
-        setTicketId(response.data.ticket_id);
+        setTicketId(response.data.ticketId);
         setSubmissionSuccess(true);
         showToast(
           "success",
-          "Feedback Sent!",
-          "Thank you for your feedback. We'll get back to you soon."
+          copy.toastTitle,
+          copy.toastMessage
         );
       } else {
         throw new Error(response?.message || "Failed to submit feedback");
@@ -211,7 +243,7 @@ const FeedbackScreen = ({ navigation }) => {
                 color={currentTheme.text || "#000"}
               />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Feedback & Support</Text>
+            <Text style={styles.headerTitle}>{copy.title}</Text>
           </View>
 
           {!submissionSuccess ? (
@@ -226,12 +258,10 @@ const FeedbackScreen = ({ navigation }) => {
                   />
                 </View>
                 <Text style={styles.infoTitle}>
-                  We'd Love to Hear From You!
+                  {copy.infoTitle}
                 </Text>
                 <Text style={styles.infoText}>
-                  Your feedback helps us improve BirdEarner. Share your
-                  thoughts, suggestions, or report any issues you've
-                  encountered.
+                  {copy.infoText}
                 </Text>
               </View>
 
@@ -405,7 +435,7 @@ const FeedbackScreen = ({ navigation }) => {
                   ) : (
                     <View style={styles.submitContent}>
                       <Ionicons name="send" size={18} color="#fff" />
-                      <Text style={styles.submitText}>Send Feedback</Text>
+                      <Text style={styles.submitText}>{copy.submitLabel}</Text>
                     </View>
                   )}
                 </TouchableOpacity>
@@ -419,12 +449,10 @@ const FeedbackScreen = ({ navigation }) => {
               </View>
 
               <Text style={styles.successTitle}>
-                Feedback Sent Successfully!
+                {copy.successTitle}
               </Text>
               <Text style={styles.successMessage}>
-                Thank you for taking the time to share your feedback with us.
-                We've received your message and will get back to you as soon as
-                possible.
+                {copy.successMessage}
               </Text>
 
               <View style={styles.ticketContainer}>

@@ -116,6 +116,11 @@ const ProfileStack = ({ initialRouteName = "MyProfile" }) => (
       options={{ headerShown: false }}
     />
     <Stack.Screen
+      name="Support"
+      getComponent={() => require("../screens/SupportScreen").default}
+      options={{ headerShown: false }}
+    />
+    <Stack.Screen
       name="PrivacyPolicy"
       getComponent={() => require("../screens/PrivacyPolicyScreen").default}
       options={{ headerShown: false }}

@@ -280,6 +280,7 @@ function MainTabs() {
     "TermsAndConditions",
     "TermsAndConditionsScreen",
     "Feedback",
+    "Support",
     "PrivacyPolicy",
     "PrivacyPolicyScreen",
     "BlogsAndForum",
