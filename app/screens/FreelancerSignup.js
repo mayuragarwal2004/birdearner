@@ -1298,7 +1298,7 @@ const FreelancerSignup = ({ navigation, route }) => {
         console.log("[Signup] register returned:", result ? "OK" : "null/false");
 
         if (result) {
-          showToast("success", "Signup Complete", "Welcome to BirdEarner!");
+          showToast("success", "Signup Complete", "Welcome to BirdEarner! Check your email to verify your address.");
           navigation.replace("MainTabs");
         } else {
           showToast("error", "Signup Failed", "Registration failed. Please try again.");

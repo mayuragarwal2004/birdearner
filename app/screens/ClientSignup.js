@@ -520,7 +520,7 @@ const ClientSignup = ({ navigation, route }) => {
         });
 
         if (result) {
-          showToast("success", "Signup Complete", "Welcome to BirdEarner!");
+          showToast("success", "Signup Complete", "Welcome to BirdEarner! Check your email to verify your address.");
           navigation.replace("MainTabs");
         } else {
           showToast(
