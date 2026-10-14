@@ -6,6 +6,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { format } from "date-fns";
 import Toast from "react-native-toast-message";
 import { useTheme } from "../context/ThemeContext";
+import { useAuth } from "../context/NewAuthContext";
 import apiService from "../lib/apiService";
 import { getDeviceInfo } from "../lib/deviceInfo";
 
@@ -24,6 +25,8 @@ const ManageTrustedDevicesScreen = ({ navigation }) => {
     const { theme, themeStyles } = useTheme();
     const currentTheme = themeStyles[theme];
     const styles = getStyles(currentTheme);
+
+    const { logout } = useAuth();
 
     const [devices, setDevices] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -65,7 +68,14 @@ const ManageTrustedDevicesScreen = ({ navigation }) => {
         try {
             await apiService.removeUserDevice(device.id);
             setDevices((prev) => prev.filter((item) => item.id !== device.id));
-            Toast.show({ type: "success", text1: "Device removed" });
+
+            // Removing this device ends this session, so sign out here instead of waiting for the next call to fail
+            if (device.isCurrent) {
+                await logout();
+                return;
+            }
+
+            Toast.show({ type: "success", text1: "Device removed and signed out" });
         } catch (error) {
             Toast.show({ type: "error", text1: "Couldn't remove device", text2: error.message });
         } finally {
