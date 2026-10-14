@@ -445,7 +445,7 @@ const FeedbackScreen = ({ navigation, route }) => {
             /* Success Screen */
             <View style={styles.successContainer}>
               <View style={styles.successIconContainer}>
-                <Ionicons name="checkmark-circle" size={80} color="#4CAF50" />
+                <Ionicons name="checkmark-circle" size={56} color="#4CAF50" />
               </View>
 
               <Text style={styles.successTitle}>
@@ -541,14 +541,14 @@ const getStyles = (currentTheme) =>
     },
     scrollContainer: {
       flexGrow: 1,
-      padding: 20,
-      paddingBottom: 100,
+      padding: 16,
+      paddingBottom: 32,
     },
     header: {
       flexDirection: "row",
       alignItems: "center",
-      marginTop: 45,
-      marginBottom: 30,
+      marginTop: 8,
+      marginBottom: 12,
     },
     backButton: {
       padding: 8,
@@ -557,46 +557,46 @@ const getStyles = (currentTheme) =>
       marginRight: 15,
     },
     headerTitle: {
-      fontSize: 24,
+      fontSize: 18,
       fontWeight: "bold",
       color: currentTheme.text,
       flex: 1,
     },
     infoCard: {
       backgroundColor: currentTheme.background2 || "#f8f9fa",
-      borderRadius: 16,
-      padding: 20,
-      marginBottom: 24,
+      borderRadius: 12,
+      padding: 16,
+      marginBottom: 16,
       alignItems: "center",
       borderWidth: 1,
       borderColor: "#E8E3F3",
     },
     infoIconContainer: {
-      width: 60,
-      height: 60,
-      borderRadius: 30,
+      width: 44,
+      height: 44,
+      borderRadius: 22,
       backgroundColor: "#F3F0FF",
       justifyContent: "center",
       alignItems: "center",
-      marginBottom: 16,
+      marginBottom: 12,
     },
     infoTitle: {
-      fontSize: 20,
+      fontSize: 16,
       fontWeight: "bold",
       color: currentTheme.text,
       marginBottom: 8,
       textAlign: "center",
     },
     infoText: {
-      fontSize: 16,
+      fontSize: 14,
       color: currentTheme.subText,
       textAlign: "center",
-      lineHeight: 22,
+      lineHeight: 20,
     },
     formContainer: {
       backgroundColor: currentTheme.background3 || "#fff",
-      borderRadius: 16,
-      padding: 20,
+      borderRadius: 12,
+      padding: 16,
       shadowColor: currentTheme.shadow || "#000",
       shadowOpacity: 0.1,
       shadowOffset: { width: 0, height: 4 },
@@ -604,10 +604,10 @@ const getStyles = (currentTheme) =>
       elevation: 5,
     },
     inputGroup: {
-      marginBottom: 20,
+      marginBottom: 16,
     },
     label: {
-      fontSize: 16,
+      fontSize: 14,
       color: currentTheme.text || "#333",
       marginBottom: 8,
       fontWeight: "600",
@@ -619,9 +619,9 @@ const getStyles = (currentTheme) =>
       backgroundColor: currentTheme.background || "#f8f9fa",
       borderWidth: 1,
       borderColor: currentTheme.border || "#E8E3F3",
-      borderRadius: 12,
-      padding: 16,
-      fontSize: 16,
+      borderRadius: 10,
+      padding: 12,
+      fontSize: 15,
       color: currentTheme.text || "#000",
       shadowColor: currentTheme.shadow || "#000",
       shadowOpacity: 0.05,
@@ -635,7 +635,7 @@ const getStyles = (currentTheme) =>
     inputIcon: {
       position: "absolute",
       left: 16,
-      top: 17,
+      top: 13,
       zIndex: 1,
     },
     inputError: {
@@ -661,16 +661,16 @@ const getStyles = (currentTheme) =>
       marginTop: 4,
     },
     textArea: {
-      height: 120,
+      height: 100,
       textAlignVertical: "top",
-      paddingTop: 16,
+      paddingTop: 12,
     },
     submitButton: {
       backgroundColor: "#6A0DAD",
-      paddingVertical: 16,
-      borderRadius: 12,
+      paddingVertical: 14,
+      borderRadius: 10,
       alignItems: "center",
-      marginTop: 24,
+      marginTop: 16,
       shadowColor: "#6A0DAD",
       shadowOpacity: 0.3,
       shadowOffset: { width: 0, height: 4 },
@@ -692,7 +692,7 @@ const getStyles = (currentTheme) =>
       gap: 8,
     },
     submitText: {
-      fontSize: 18,
+      fontSize: 16,
       color: "#fff",
       fontWeight: "bold",
     },
@@ -705,29 +705,29 @@ const getStyles = (currentTheme) =>
       padding: 20,
     },
     successIconContainer: {
-      marginBottom: 24,
+      marginBottom: 16,
     },
     successTitle: {
-      fontSize: 28,
+      fontSize: 20,
       fontWeight: "bold",
       color: currentTheme.text,
-      marginBottom: 16,
+      marginBottom: 12,
       textAlign: "center",
     },
     successMessage: {
-      fontSize: 18,
+      fontSize: 15,
       color: currentTheme.subText,
       textAlign: "center",
-      lineHeight: 26,
-      marginBottom: 32,
+      lineHeight: 22,
+      marginBottom: 24,
       maxWidth: "90%",
     },
     ticketContainer: {
       backgroundColor: currentTheme.background2 || "#f8f9fa",
-      borderRadius: 16,
-      padding: 20,
+      borderRadius: 12,
+      padding: 16,
       width: "100%",
-      marginBottom: 24,
+      marginBottom: 16,
       borderWidth: 1,
       borderColor: "#E8E3F3",
     },
@@ -739,7 +739,7 @@ const getStyles = (currentTheme) =>
       gap: 8,
     },
     ticketTitle: {
-      fontSize: 18,
+      fontSize: 15,
       fontWeight: "600",
       color: currentTheme.text,
     },
@@ -752,7 +752,7 @@ const getStyles = (currentTheme) =>
       borderColor: "#E8E3F3",
     },
     ticketId: {
-      fontSize: 20,
+      fontSize: 16,
       fontWeight: "bold",
       color: "#6A0DAD",
       textAlign: "center",
@@ -767,7 +767,7 @@ const getStyles = (currentTheme) =>
     },
     responseInfo: {
       width: "100%",
-      marginBottom: 32,
+      marginBottom: 20,
     },
     responseItem: {
       flexDirection: "row",
@@ -777,7 +777,7 @@ const getStyles = (currentTheme) =>
       gap: 8,
     },
     responseText: {
-      fontSize: 16,
+      fontSize: 14,
       color: currentTheme.subText,
     },
     successActions: {
@@ -797,7 +797,7 @@ const getStyles = (currentTheme) =>
       gap: 8,
     },
     anotherFeedbackText: {
-      fontSize: 16,
+      fontSize: 15,
       color: "#6A0DAD",
       fontWeight: "600",
     },
