@@ -8,7 +8,6 @@ import {
   Animated,
   Easing,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import React, { useState, useEffect, useRef } from "react";
 import eggImage from "../assets/offers/egg.png";
@@ -45,9 +44,9 @@ import Toast from "react-native-toast-message";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // All positions are in the artwork's own pixel space (the tree is 941 x 1672).
-// The stage is scaled to fit the screen, so the layout stays correct on any device.
+// The stage fills the screen: the tree stretches vertically to the screen height, so the layout
+// stays correct on any device.
 const ART = { width: 941, height: 1672 };
-const STAGE_RATIO = ART.width / ART.height;
 
 // Egg size in artwork pixels
 const EGG = { w: 118, h: 162 };
@@ -110,16 +109,12 @@ const CRACK_LINES = [
 
 const SPARKLES = [0, 1, 2, 3, 4, 5, 6, 7];
 
-const fitStage = (box) => {
-  const width = Math.min(box.width, box.height * STAGE_RATIO);
-  return { width, height: width / STAGE_RATIO };
-};
-
+// Positions follow the stretched tree, but sprite sizes use the width scale so eggs and birds keep their shape
 const toStage = (rect, stage) => ({
   left: (rect.x / ART.width) * stage.width,
   top: (rect.y / ART.height) * stage.height,
   width: (rect.w / ART.width) * stage.width,
-  height: (rect.h / ART.height) * stage.height,
+  height: (rect.h / ART.width) * stage.width,
 });
 
 // Egg sits inside its nest, slightly above the nest centre
@@ -482,7 +477,8 @@ const OffersScreen = ({ navigation }) => {
     setShowRulesPopup(false);
   };
 
-  const stage = stageBox ? fitStage(stageBox) : null;
+  // The stage is exactly the screen: the tree fills the full width and height
+  const stage = stageBox ? { width: stageBox.width, height: stageBox.height } : null;
 
   const swayFor = (yFraction) =>
     swayAnimation.interpolate({
@@ -596,7 +592,7 @@ const OffersScreen = ({ navigation }) => {
       : null;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <LinearGradient
         colors={["#EEF8F1", "#F4EEFF"]}
         style={styles.screen}
@@ -898,7 +894,7 @@ const OffersScreen = ({ navigation }) => {
           </Animated.View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -913,6 +909,7 @@ const getStyles = (currentTheme) =>
       flex: 1,
       alignItems: "center",
       justifyContent: "center",
+      overflow: "hidden",
     },
     stage: {
       overflow: "hidden",
