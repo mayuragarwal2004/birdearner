@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Image,
   ScrollView,
+  ImageBackground,
   RefreshControl,
   SafeAreaView,
   Linking,
@@ -151,7 +152,11 @@ const Login = ({ navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
+    <ImageBackground
+      source={require("../assets/login-background.png")}
+      style={styles.container}
+      resizeMode="stretch"
+    >
       <SafeAreaView style={styles.safeArea}>
         <KeyboardAvoidingView 
           style={{ flex: 1 }} 
@@ -310,7 +315,7 @@ const Login = ({ navigation }) => {
         </KeyboardAvoidingView>
       </SafeAreaView>
       <Toast />
-    </View>
+    </ImageBackground>
   );
 };
 
