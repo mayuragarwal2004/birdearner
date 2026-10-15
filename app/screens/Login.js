@@ -155,7 +155,7 @@ const Login = ({ navigation }) => {
     <ImageBackground
       source={require("../assets/login-background.png")}
       style={styles.container}
-      resizeMode="stretch"
+      resizeMode="cover"
     >
       <SafeAreaView style={styles.safeArea}>
         <KeyboardAvoidingView 
