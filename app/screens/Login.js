@@ -17,18 +17,40 @@ import {
 } from "react-native";
 import SafeSpinner from "../components/SafeSpinner";
 import { LinearGradient } from "expo-linear-gradient";
+import Svg, {
+  Defs,
+  LinearGradient as SvgLinearGradient,
+  Stop,
+  Rect,
+  Circle,
+} from "react-native-svg";
 import { 
   Envelope, 
   LockKey, 
   Eye, 
   EyeSlash, 
-  InstagramLogo, 
-  XLogo, 
-  YoutubeLogo, 
-  Globe 
+  XLogo,
+  Globe
 } from "phosphor-react-native";
 import { useAuth } from "../context/NewAuthContext";
 import Toast from "react-native-toast-message";
+
+const InstagramIcon = ({ size = 18 }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24">
+    <Defs>
+      <SvgLinearGradient id="igGradient" x1="0" y1="1" x2="1" y2="0">
+        <Stop offset="0" stopColor="#FEDA75" />
+        <Stop offset="0.25" stopColor="#FA7E1E" />
+        <Stop offset="0.5" stopColor="#D62976" />
+        <Stop offset="0.75" stopColor="#962FBF" />
+        <Stop offset="1" stopColor="#4F5BD5" />
+      </SvgLinearGradient>
+    </Defs>
+    <Rect x="2.5" y="2.5" width="19" height="19" rx="5.5" fill="none" stroke="url(#igGradient)" strokeWidth="2" />
+    <Circle cx="12" cy="12" r="4.2" fill="none" stroke="url(#igGradient)" strokeWidth="2" />
+    <Circle cx="17.5" cy="6.5" r="1.2" fill="url(#igGradient)" />
+  </Svg>
+);
 
 const Login = ({ navigation }) => {
   const [credentials, setCredentials] = useState({ email: "", password: "" });
@@ -191,7 +213,7 @@ const Login = ({ navigation }) => {
                 <TextInput
                   style={styles.input}
                   placeholder="Enter your email or phone number"
-                  placeholderTextColor="#9ca3af"
+                  placeholderTextColor="#C4B5FD"
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
@@ -212,7 +234,7 @@ const Login = ({ navigation }) => {
                 <TextInput
                   style={styles.input}
                   placeholder="Enter your password"
-                  placeholderTextColor="#9ca3af"
+                  placeholderTextColor="#C4B5FD"
                   secureTextEntry={!showPassword}
                   autoComplete="password"
                   textContentType="password"
@@ -241,7 +263,7 @@ const Login = ({ navigation }) => {
               activeOpacity={0.8}
             >
               <LinearGradient
-                colors={["#A155FD", "#892DFC", "#A459FE"]}
+                colors={["#8B2BF5", "#A24DFF", "#8B2BF5"]}
                 start={{ x: 0, y: 0.5 }}
                 end={{ x: 1, y: 0.5 }}
                 style={[styles.loginButton, isLoading && styles.disabledButton]}
@@ -299,16 +321,18 @@ const Login = ({ navigation }) => {
             {/* Social Icons */}
             <View style={styles.socialContainer}>
               <TouchableOpacity style={styles.socialIconBtn} onPress={() => handleSocialMediaPress("youtube")}>
-                <YoutubeLogo size={18} color="#fff" weight="fill" />
+                <View style={styles.youtubeLogo}>
+                  <View style={styles.youtubePlay} />
+                </View>
               </TouchableOpacity>
               <TouchableOpacity style={styles.socialIconBtn} onPress={() => handleSocialMediaPress("instagram")}>
-                <InstagramLogo size={18} color="#fff" />
+                <InstagramIcon size={18} />
               </TouchableOpacity>
               <TouchableOpacity style={styles.socialIconBtn} onPress={() => handleSocialMediaPress("x")}>
                 <XLogo size={18} color="#fff" />
               </TouchableOpacity>
               <TouchableOpacity style={styles.socialIconBtn} onPress={() => handleSocialMediaPress("web")}>
-                <Globe size={18} color="#fff" />
+                <Globe size={18} color="#7DD3FC" />
               </TouchableOpacity>
             </View>
           </ScrollView>
@@ -322,7 +346,7 @@ const Login = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#500192",
+    backgroundColor: "#4B0082",
   },
   safeArea: {
     flex: 1,
@@ -356,7 +380,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 14,
-    color: "#e5e7eb",
+    color: "#E9D5FF",
     marginBottom: 32,
   },
   inputGroup: {
@@ -372,9 +396,9 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#3F1A83",
+    backgroundColor: "#5A189A",
     borderWidth: 1.5,
-    borderColor: "#A476F3",
+    borderColor: "#C084FC",
     borderRadius: 12,
     height: 56,
     paddingHorizontal: 16,
@@ -393,17 +417,18 @@ const styles = StyleSheet.create({
   },
   loginButtonWrapper: {
     width: "100%",
-    marginTop: 8,
-    marginBottom: 12,
+    marginTop: 16,
+    marginBottom: 24,
     borderRadius: 12,
-    shadowColor: "#8935FC",
-    shadowOpacity: 0.45,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 6,
+    backgroundColor: "#8B2BF5",
+    shadowColor: "#A855F7",
+    shadowOpacity: 0.55,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 10,
   },
   loginButton: {
-    height: 54,
+    height: 56,
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
@@ -430,10 +455,10 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: "#5b21b6",
+    backgroundColor: "#C084FC",
   },
   dividerText: {
-    color: "#e5e7eb",
+    color: "#E9D5FF",
     paddingHorizontal: 16,
     fontSize: 14,
   },
@@ -443,7 +468,7 @@ const styles = StyleSheet.create({
     marginBottom: 28,
   },
   signupText: {
-    color: "#e5e7eb",
+    color: "#E9D5FF",
     fontSize: 14,
   },
   signupLinkText: {
@@ -457,12 +482,31 @@ const styles = StyleSheet.create({
     width: "100%",
     gap: 12,
   },
+  youtubeLogo: {
+    width: 18,
+    height: 13,
+    borderRadius: 4,
+    backgroundColor: "#FF0000",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  youtubePlay: {
+    width: 0,
+    height: 0,
+    marginLeft: 1.5,
+    borderTopWidth: 4,
+    borderBottomWidth: 4,
+    borderLeftWidth: 6,
+    borderTopColor: "transparent",
+    borderBottomColor: "transparent",
+    borderLeftColor: "#FFFFFF",
+  },
   socialIconBtn: {
     width: 44,
     height: 44,
     borderRadius: 22,
     borderWidth: 1,
-    borderColor: "#5b21b6",
+    borderColor: "#C084FC",
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "transparent",
@@ -476,7 +520,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: "#E9D5FF",
+    borderColor: "#D8B4FE",
   },
   googleButtonContent: {
     position: "absolute",
@@ -494,7 +538,7 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   googleButtonText: {
-    color: "#362261",
+    color: "#4B0082",
     fontSize: 15,
     fontWeight: "600",
   },
