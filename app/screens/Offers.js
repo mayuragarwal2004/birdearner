@@ -49,7 +49,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 const ART = { width: 941, height: 1672 };
 
 // Egg size in artwork pixels
-const EGG = { w: 118, h: 162 };
+const EGG = { w: 80, h: 110 };
 
 // Horizontal padding (artwork px) on each tree band so the sway never shows an empty edge
 const BAND_PAD = 24;
@@ -61,14 +61,16 @@ const BAND_OVERLAP = 4;
 // The trunk base does not move; the amount grows toward the top.
 const SWAY_MAX = 0.012;
 
-// Each nest: centre point in the artwork and which perched bird sits on it.
+// Each nest: centre point in the artwork, which perched bird sits on it, and how far the egg base
+// sits below the nest centre (eggBase, artwork px). Each bowl is drawn at a slightly different spot,
+// so eggBase is tuned per nest to match the top nest.
 // Egg index order matches the previous layout.
 const NESTS = [
-  { x: 727, y: 1071, bird: 4 },
-  { x: 234, y: 1038, bird: 3 },
-  { x: 709, y: 700, bird: 2 },
-  { x: 234, y: 683, bird: 1 },
-  { x: 485, y: 368, bird: 0 },
+  { x: 739, y: 1071, bird: 4, eggBase: 16 },
+  { x: 234, y: 1038, bird: 3, eggBase: 44 },
+  { x: 709, y: 700, bird: 2, eggBase: 43 },
+  { x: 234, y: 683, bird: 1, eggBase: 36 },
+  { x: 482, y: 368, bird: 0, eggBase: 30 },
 ];
 
 // Perched birds cut from the artwork, placed at their original spots
@@ -117,10 +119,10 @@ const toStage = (rect, stage) => ({
   height: (rect.h / ART.width) * stage.width,
 });
 
-// Egg sits inside its nest, slightly above the nest centre
+// Egg base sits deep in the nest bowl (nest.eggBase artwork px below the nest centre)
 const getEggRect = (nest) => ({
   x: nest.x - EGG.w / 2,
-  y: nest.y - EGG.h * 0.62,
+  y: nest.y + nest.eggBase - EGG.h,
   w: EGG.w,
   h: EGG.h,
 });
