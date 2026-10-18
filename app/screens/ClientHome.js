@@ -3,7 +3,6 @@ import {
   Alert,
   Dimensions,
   Image,
-  ImageBackground,
   Platform,
   RefreshControl,
   ScrollView,
@@ -41,10 +40,13 @@ const placeholderImageURL = "https://picsum.photos/seed/";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const PROMO_WIDTH = SCREEN_WIDTH - 40;
 
-// Offer card images are cropped and resized by Cloudinary to cover the card (instead of a full-size upload)
-const offerCardImageUrl = (url) =>
+// Card images are cropped by Cloudinary to the exact box they are shown in (cover, no letterboxing).
+// Sizes are 3x the on-screen box so they stay sharp on high-density screens.
+const BANNER_IMAGE_BOX = { w: 1000, h: 360 };
+const OFFER_IMAGE_BOX = { w: 540, h: 258 };
+const cardImageUrl = (url, box) =>
   typeof url === "string" && url.includes("res.cloudinary.com/") && url.includes("/image/upload/")
-    ? url.replace("/image/upload/", "/image/upload/c_fill,w_600,h_400,q_auto,f_auto/")
+    ? url.replace("/image/upload/", `/image/upload/c_fill,w_${box.w},h_${box.h},q_auto,f_auto/`)
     : url;
 
 const formatSchedule = (deadline) => {
@@ -562,7 +564,7 @@ const ClientHomeScreen = () => {
         <View style={{ marginBottom: 16 }}>
           <ScrollView
             horizontal
-            style={{ height: 150 }}
+            style={{ height: 220 }}
             pagingEnabled
             showsHorizontalScrollIndicator={false}
             onScroll={onPromoScroll}
@@ -589,8 +591,7 @@ const ClientHomeScreen = () => {
                   <Text
                     style={[
                       styles.promoTitle,
-                      promo.imageUrl ? { color: "#FFFFFF" } : null,
-                      promo.textColor && !promo.imageUrl ? { color: promo.textColor } : null,
+                      promo.textColor ? { color: promo.textColor } : null,
                     ]}
                   >
                     {promo.title}
@@ -599,8 +600,7 @@ const ClientHomeScreen = () => {
                     <Text
                       style={[
                         styles.promoSubtitle,
-                        promo.imageUrl ? { color: "#FFFFFF", opacity: 0.9 } : null,
-                        promo.textColor && !promo.imageUrl ? { color: promo.textColor, opacity: 0.85 } : null,
+                        promo.textColor ? { color: promo.textColor, opacity: 0.85 } : null,
                       ]}
                     >
                       {promo.subtitle}
@@ -619,19 +619,16 @@ const ClientHomeScreen = () => {
                 </View>
               );
 
-              // Banners with an admin image: the image is the card background, with a shade behind the text
+              // Banners with an admin image: image on top, text sits below it on the card background
               if (promo.imageUrl) {
                 return (
-                  <TouchableOpacity key={promo.id} activeOpacity={0.92} onPress={onBannerPress}>
-                    <ImageBackground
-                      source={{ uri: apiService.loadImageURI(offerCardImageUrl(promo.imageUrl)) }}
-                      style={bannerStyle}
-                      imageStyle={styles.promoImageRadius}
+                  <TouchableOpacity key={promo.id} activeOpacity={0.92} onPress={onBannerPress} style={bannerStyle}>
+                    <Image
+                      source={{ uri: apiService.loadImageURI(cardImageUrl(promo.imageUrl, BANNER_IMAGE_BOX)) }}
+                      style={styles.promoImage}
                       resizeMode="cover"
-                    >
-                      <View style={styles.promoImageShade} />
-                      {bannerCopy}
-                    </ImageBackground>
+                    />
+                    {bannerCopy}
                   </TouchableOpacity>
                 );
               }
@@ -706,7 +703,6 @@ const ClientHomeScreen = () => {
             {homeOffers.map((offer, index) => {
               const cardStyle = [
                 styles.offerCard,
-                index === 0 ? styles.offerWide : styles.offerNarrow,
                 {
                   backgroundColor:
                     offer.backgroundColor ||
@@ -726,10 +722,10 @@ const ClientHomeScreen = () => {
               const cardContent = (
                 <>
                   <Text
+                    numberOfLines={2}
                     style={[
                       styles.offerTitle,
-                      offer.imageUrl ? { color: "#FFFFFF" } : null,
-                      offer.textColor && !offer.imageUrl ? { color: offer.textColor } : null,
+                      offer.textColor ? { color: offer.textColor } : null,
                     ]}
                   >
                     {offer.title}
@@ -748,6 +744,7 @@ const ClientHomeScreen = () => {
                   )}
                   {!!offer.subtitle && (
                     <Text
+                      numberOfLines={2}
                       style={[
                         styles.offerDesc,
                         offer.textColor
@@ -766,28 +763,7 @@ const ClientHomeScreen = () => {
                 </>
               );
 
-              // Cards with an admin image: the image is the card background, with a shade behind the text
-              if (offer.imageUrl) {
-                return (
-                  <TouchableOpacity
-                    key={offer.id || index}
-                    onPress={onCardPress}
-                    activeOpacity={0.88}
-                    style={{ alignSelf: "stretch" }}
-                  >
-                    <ImageBackground
-                      source={{ uri: apiService.loadImageURI(offerCardImageUrl(offer.imageUrl)) }}
-                      style={[...cardStyle, { flex: 1 }]}
-                      imageStyle={styles.offerImageRadius}
-                      resizeMode="cover"
-                    >
-                      <View style={styles.offerImageShade} />
-                      {cardContent}
-                    </ImageBackground>
-                  </TouchableOpacity>
-                );
-              }
-
+              // Every offer card has the same size; the image (if any) sits on top and the text below it
               return (
                 <TouchableOpacity
                   key={offer.id || index}
@@ -795,7 +771,14 @@ const ClientHomeScreen = () => {
                   onPress={onCardPress}
                   activeOpacity={0.88}
                 >
-                  {cardContent}
+                  {!!offer.imageUrl && (
+                    <Image
+                      source={{ uri: apiService.loadImageURI(cardImageUrl(offer.imageUrl, OFFER_IMAGE_BOX)) }}
+                      style={styles.offerImage}
+                      resizeMode="cover"
+                    />
+                  )}
+                  <View style={styles.offerBody}>{cardContent}</View>
                 </TouchableOpacity>
               );
             })}
@@ -950,22 +933,17 @@ const getStyles = (currentTheme, isDark, bottomInset = 0) => {
       borderRadius: 16,
       overflow: "hidden",
       backgroundColor: soft,
-      height: 150,
+      height: 220,
       alignSelf: "flex-start",
     },
     promoImage: {
-      ...StyleSheet.absoluteFillObject,
-    },
-    promoImageRadius: {
-      borderRadius: 16,
-    },
-    promoImageShade: {
-      ...StyleSheet.absoluteFillObject,
-      backgroundColor: "rgba(0,0,0,0.45)",
+      width: "100%",
+      height: 120,
     },
     promoCopy: {
-      ...StyleSheet.absoluteFillObject,
-      padding: 14,
+      flex: 1,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
       justifyContent: "center",
     },
     promoTitle: {
@@ -1153,27 +1131,20 @@ const getStyles = (currentTheme, isDark, bottomInset = 0) => {
       paddingRight: 8,
     },
     offerCard: {
+      width: 180,
+      height: 230,
       borderRadius: 14,
-      padding: 12,
-      minHeight: 115,
       overflow: "hidden",
     },
     offerImage: {
-      ...StyleSheet.absoluteFillObject,
+      width: "100%",
+      height: 86,
     },
-    offerImageRadius: {
-      borderRadius: 14,
-    },
-    offerImageShade: {
-      ...StyleSheet.absoluteFillObject,
-      backgroundColor: "rgba(0,0,0,0.45)",
-    },
-    offerWide: {
-      width: 210,
-    },
-    offerNarrow: {
-      width: 165,
-      justifyContent: "center",
+    offerBody: {
+      flex: 1,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      overflow: "hidden",
     },
     offerTitle: {
       color: text,
@@ -1182,7 +1153,7 @@ const getStyles = (currentTheme, isDark, bottomInset = 0) => {
     },
     offerBadge: {
       alignSelf: "flex-start",
-      marginTop: 6,
+      marginTop: 4,
       backgroundColor: PURPLE,
       borderRadius: 999,
       paddingHorizontal: 8,
@@ -1197,11 +1168,11 @@ const getStyles = (currentTheme, isDark, bottomInset = 0) => {
       color: muted,
       fontSize: 11,
       fontWeight: "600",
-      marginTop: 6,
+      marginTop: 4,
       lineHeight: 15,
     },
     offerCta: {
-      marginTop: 8,
+      marginTop: 6,
       alignSelf: "flex-start",
       backgroundColor: PURPLE,
       borderRadius: 6,
