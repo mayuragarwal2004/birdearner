@@ -26,6 +26,11 @@ const MarketPlaceStack = () => (
       options={{ headerShown: false }}
     />
     <Stack.Screen
+      name="BookmarkedJobs"
+      getComponent={() => require('../screens/BookmarkedJobs').default}
+      options={{ headerShown: false }}
+    />
+    <Stack.Screen
       name="JobDescription"
       getComponent={() => require('../screens/JobDescription').default}
       options={{ headerShown: false }}

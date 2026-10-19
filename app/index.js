@@ -252,6 +252,7 @@ function MainTabs() {
     "JobFilterScreen",
     "JobPriority",
     "JobDescription",
+    "BookmarkedJobs",
     "Offers",
     "EditServices",
     "ReviewGive",

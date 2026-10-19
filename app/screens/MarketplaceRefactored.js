@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
-import { ArrowLeft, SlidersHorizontal } from "phosphor-react-native";
+import { ArrowLeft, Bookmark, SlidersHorizontal } from "phosphor-react-native";
 
 // Theme and Context
 import { useTheme } from "../context/ThemeContext";
@@ -154,7 +154,13 @@ const MarketplaceScreen = ({ navigation }) => {
 
         <Text style={styles.headerTitle}>Marketplace</Text>
 
-        <View style={{ width: 44 }} />
+        <TouchableOpacity
+          onPress={() => navigation.navigate("BookmarkedJobs")}
+          style={styles.headerButton}
+          activeOpacity={0.7}
+        >
+          <Bookmark size={22} color={currentTheme.text || "#000"} />
+        </TouchableOpacity>
       </View>
 
       {/* Top section: Services + Distance + Map */}
