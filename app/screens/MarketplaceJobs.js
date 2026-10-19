@@ -11,7 +11,7 @@ import {
   Modal,
   Pressable,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import SafeSpinner from "../components/SafeSpinner";
 import Toast from "react-native-toast-message";
 import {
@@ -34,7 +34,8 @@ import {
 const MarketplaceJobs = ({ navigation, route }) => {
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
-  const styles = getStyles(currentTheme);
+  const insets = useSafeAreaInsets();
+  const styles = getStyles(currentTheme, insets.bottom);
   const { userData } = useAuth();
   const { userServices, workType } = useUserServices();
 
@@ -672,7 +673,7 @@ const MarketplaceJobs = ({ navigation, route }) => {
   );
 };
 
-const getStyles = (currentTheme) =>
+const getStyles = (currentTheme, bottomInset = 0) =>
   StyleSheet.create({
     container: {
       flex: 1,
@@ -997,7 +998,8 @@ const getStyles = (currentTheme) =>
       justifyContent: "space-between",
       paddingHorizontal: 16,
       paddingTop: 14,
-      paddingBottom: 20,
+      // Keep the Apply button above the system navigation bar
+      paddingBottom: bottomInset + 20,
       borderTopWidth: 1,
       borderTopColor: currentTheme.border || "#F3E8FF",
       backgroundColor: currentTheme.isDark ? "#121212" : "#fff",
