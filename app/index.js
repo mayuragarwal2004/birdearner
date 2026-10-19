@@ -268,6 +268,7 @@ function MainTabs() {
     "Password update",
     "Email update",
     "Bank Account details",
+    "Bank Account View",
     "Notifications Setting",
     "Appearance",
     "WalletFreelancer",

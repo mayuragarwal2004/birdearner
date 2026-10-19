@@ -46,6 +46,11 @@ const ProfileStack = ({ initialRouteName = "MyProfile" }) => (
       options={{ headerShown: false }}
     />
     <Stack.Screen
+      name="Bank Account View"
+      getComponent={() => require("../screens/BankAccountView").default}
+      options={{ headerShown: false }}
+    />
+    <Stack.Screen
       name="Notifications Setting"
       getComponent={() => require("../screens/NotificationsSetting").default}
       options={{ headerShown: false }}

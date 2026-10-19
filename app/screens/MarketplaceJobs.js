@@ -457,6 +457,8 @@ const MarketplaceJobs = ({ navigation, route }) => {
 
       {/* Jobs List */}
       <FlatList
+        // Ends above the navigation buttons so the job list can be scrolled to the last card
+        style={{ marginBottom: Math.max(insets.bottom, 56) }}
         data={filteredJobs}
         renderItem={renderJobItem}
         keyExtractor={(item, index) => {
@@ -770,7 +772,8 @@ const getStyles = (currentTheme, bottomInset = 0) =>
     },
     listContent: {
       paddingHorizontal: 20,
-      paddingBottom: Platform.OS === "ios" ? 40 : 30,
+      // Same bottom clearance as the profile page, so the last job card is not hidden by the system navigation buttons
+      paddingBottom: 32,
     },
     jobCard: {
       flexDirection: "row",

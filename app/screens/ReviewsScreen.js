@@ -176,7 +176,8 @@ export default function MyReview({ navigation, route }) {
       </View>
 
       <ScrollView
-        style={styles.container}
+        // Ends above the navigation buttons so all reviews can be scrolled
+        style={[styles.container, { marginBottom: 56 }]}
         contentContainerStyle={styles.scrollContent}
         refreshControl={
           <RefreshControl

@@ -14,7 +14,7 @@ import {
   View,
 } from "react-native";
 import SafeSpinner from "../components/SafeSpinner";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { FontAwesome, MaterialIcons } from "@expo/vector-icons";
 import ImageViewer from "react-native-image-zoom-viewer";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -130,6 +130,7 @@ export default function ProfileScreen({ route, navigation }) {
   const profileUserId = userId || receiverId;
   const { userData } = useAuth();
   const { theme, themeStyles } = useTheme();
+  const insets = useSafeAreaInsets();
   const currentTheme = themeStyles[theme];
   const styles = useMemo(() => getStyles(currentTheme), [currentTheme]);
   const uiStyles = useMemo(() => getProfileStyles(currentTheme), [currentTheme]);
@@ -365,7 +366,8 @@ export default function ProfileScreen({ route, navigation }) {
       </Modal>
 
       <ScrollView
-        style={styles.container}
+        // Ends 56px above the bottom of the screen, so the content stops above the navigation buttons and scrolls
+        style={[styles.container, { marginBottom: Math.max(insets.bottom, 56) }]}
         contentContainerStyle={styles.scrollContent}
         refreshControl={
           <RefreshControl

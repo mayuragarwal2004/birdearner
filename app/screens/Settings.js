@@ -112,6 +112,18 @@ const SettingsScreen = ({ navigation }) => {
     navigation.navigate(routeName, params);
   };
 
+  // Saved bank account -> show the details page; none saved -> open the bank form
+  const handlePaymentDetailsPress = async () => {
+    let hasBankAccount = false;
+    try {
+      const account = await apiService.getUserBankDetails();
+      hasBankAccount = Boolean(account);
+    } catch (error) {
+      console.warn("Could not check bank details:", error?.message);
+    }
+    navigateTo(hasBankAccount ? "Bank Account View" : "Bank Account details");
+  };
+
   const handleEditProfile = () => {
     navigateTo(editProfileOption.stack_name, editProfileOption.params);
   };
@@ -219,7 +231,7 @@ const SettingsScreen = ({ navigation }) => {
               {
                 label: "Payment Details",
                 icon: "card-outline",
-                route: "Bank Account details",
+                onPress: handlePaymentDetailsPress,
               },
             ]
           : []),

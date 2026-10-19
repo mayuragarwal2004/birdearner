@@ -160,7 +160,7 @@ const PortfolioScreen = ({ navigation, route }) => {
 
   return (
     <SafeAreaView style={{flex: 1}}>
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView style={{marginBottom: 56}} contentContainerStyle={styles.container}>
       <Text style={styles.title}>
         {role === "client" ? "Read it loud" : "Portfolio"}
       </Text>
