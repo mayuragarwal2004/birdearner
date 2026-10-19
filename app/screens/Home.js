@@ -114,7 +114,16 @@ const HomeScreen = () => {
   const [CompletedOrders, setCompletedOrders] = useState(0);
   const [activeOrders, setActiveOrders] = useState(0);
   const [cancelledOrders, setCancelledOrdersOrders] = useState(0);
-  const [successScore, setSuccessScore] = useState(0);
+  // Profile stats (level, success score, rating, flags, response rate) from the same API the overview page uses
+  const [profileStats, setProfileStats] = useState(null);
+  const successScore = profileStats?.stats?.successScore ?? 0;
+  const freelancerLevel = profileStats?.profile?.level ?? "-";
+  const averageRating = Number(profileStats?.stats?.averageRating || 0).toFixed(1);
+  const responseRate = profileStats?.stats?.responseRate ?? 0;
+  const flagsDisplay =
+    profileStats?.profile?.flagsCount !== undefined && profileStats?.profile?.flagsCount !== null
+      ? String(profileStats.profile.flagsCount)
+      : "NA";
   const [notifications, setNotifications] = useState([]);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
   const navigation = useNavigation();
@@ -131,9 +140,12 @@ const HomeScreen = () => {
       setCancelledOrdersOrders(0);
       setActiveOrders(0);
       setCompletedOrders(0);
-      setSuccessScore(0);
+      if (userData?.id) {
+        const stats = await apiService.getFreelancerStats(userData.id, "All Time");
+        setProfileStats(stats || null);
+      }
     } catch (error) {
-      throw error;
+      console.error("Error fetching profile stats in Home:", error);
     }
   };
 
@@ -260,8 +272,7 @@ const HomeScreen = () => {
             <View style={styles.levelSection}>
               <View style={styles.levelCircle}>
                 <Text style={styles.levelLabel}>Level</Text>
-                <Text style={styles.levelNumber}>1</Text>
-                <Text style={styles.levelStatus}>New</Text>
+                <Text style={styles.levelNumber}>{freelancerLevel}</Text>
               </View>
               <View style={styles.levelStarBadge}>
                 <Star size={12} color="#FFF" weight="fill" />
@@ -286,7 +297,7 @@ const HomeScreen = () => {
                 <View style={styles.profileStatItemSmall}>
                   <Star size={18} color="#5B21B6" weight="regular" />
                   <View style={styles.profileStatTextCol}>
-                    <Text style={styles.profileStatValue}>0</Text>
+                    <Text style={styles.profileStatValue}>{averageRating}</Text>
                     <Text style={styles.profileStatLabel}>Rating</Text>
                   </View>
                 </View>
@@ -308,7 +319,7 @@ const HomeScreen = () => {
                 <View style={styles.profileStatItemMicro}>
                   <Flag size={16} color="#5B21B6" />
                   <View style={styles.profileStatTextCol}>
-                    <Text style={styles.profileStatValue}>NA</Text>
+                    <Text style={styles.profileStatValue}>{flagsDisplay}</Text>
                     <Text style={styles.profileStatLabel}>Flags</Text>
                   </View>
                 </View>
@@ -316,7 +327,7 @@ const HomeScreen = () => {
                 <View style={styles.profileStatItemMicro}>
                   <ChatCircleText size={16} color="#5B21B6" />
                   <View style={styles.profileStatTextCol}>
-                    <Text style={styles.profileStatValue}>0%</Text>
+                    <Text style={styles.profileStatValue}>{responseRate}%</Text>
                     <Text style={styles.profileStatLabel}>Response Rate</Text>
                   </View>
                 </View>

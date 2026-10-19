@@ -490,6 +490,13 @@ function ProfileHero({
 
       <Text style={[uiStyles.name, onPortfolio && uiStyles.onPurpleText]}>{displayName}</Text>
 
+      {/* Freelancer level, shown between the name and the role badge */}
+      {!isClientProfile && (
+        <Text style={[uiStyles.levelText, onPortfolio && uiStyles.onPurpleText]}>
+          Level {profileData?.level ?? 1}
+        </Text>
+      )}
+
       <View style={uiStyles.ratingRow}>
         {isClientProfile ? (
           <View style={uiStyles.badge}>
@@ -1083,6 +1090,13 @@ const getProfileStyles = (currentTheme) => {
       color: PURPLE,
       fontSize: 13,
       fontWeight: "600",
+    },
+    levelText: {
+      color: MUTED,
+      fontSize: 14,
+      fontWeight: "600",
+      marginTop: 2,
+      marginBottom: 10,
     },
     tabShell: {
       marginHorizontal: 16,

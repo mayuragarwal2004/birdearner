@@ -33,7 +33,11 @@ const ProfileOverview = ({ navigation }) => {
     fetchStatsData();
   }, [user?.id, selectedFilter]);
 
-  const levelName = statsData?.profile?.rank || 'Level 1';
+  // Level comes from the freelancer's saved level (not from a rank label or fixed text)
+  const level = Math.max(Number(statsData?.profile?.level) || 1, 1);
+  // Steps 1-5 match the level scale; a level above 5 fills the whole track
+  const LEVEL_STEPS = [1, 2, 3, 4, 5];
+  const progressPercent = `${(Math.min(level, 5) - 1) / (LEVEL_STEPS.length - 1) * 100}%`;
   const successScore = statsData?.stats?.successScore || 0;
   const ratingVal = (statsData?.stats?.averageRating || 0).toFixed(1);
   const responseRate = statsData?.stats?.responseRate || 0;
@@ -65,50 +69,47 @@ const ProfileOverview = ({ navigation }) => {
                   <Star size={20} color="#FFF" weight="fill" />
                 </LinearGradient>
               </View>
-              <Text style={[styles.levelTitleText, { color: isDark ? '#FFF' : '#0F172A' }]}>{levelName}</Text>
-              <Text style={styles.levelSubTitleText}>Beginner</Text>
+              <Text style={[styles.levelTitleText, { color: isDark ? '#FFF' : '#0F172A' }]}>Level {level}</Text>
+              <Text style={styles.levelSubTitleText}>Current level</Text>
             </View>
           </View>
 
           {/* Stepper Line & Steps */}
           <View style={styles.stepperContainer}>
             <View style={[styles.stepperLineBg, isDark && { backgroundColor: '#333' }]} />
-            <View style={styles.stepperLineActive} />
-            
-            <View style={styles.stepItem}>
-              <View style={[styles.stepCircle, styles.stepCircleActive]}>
-                <Text style={styles.stepNumberActive}>1</Text>
-              </View>
-              <Text style={styles.stepLabelActive}>Beginner</Text>
-            </View>
+            <View style={[styles.stepperLineActive, { width: progressPercent }]} />
 
-            <View style={styles.stepItem}>
-              <View style={[styles.stepCircle, styles.stepCircleInactive, isDark && { backgroundColor: '#333' }]}>
-                <Text style={[styles.stepNumberInactive, isDark && { color: '#AAA' }]}>2</Text>
-              </View>
-              <Text style={[styles.stepLabelInactive, isDark && { color: '#AAA' }]}>Level 2</Text>
-            </View>
-
-            <View style={styles.stepItem}>
-              <View style={[styles.stepCircle, styles.stepCircleInactive, isDark && { backgroundColor: '#333' }]}>
-                <Text style={[styles.stepNumberInactive, isDark && { color: '#AAA' }]}>3</Text>
-              </View>
-              <Text style={[styles.stepLabelInactive, isDark && { color: '#AAA' }]}>Level 3</Text>
-            </View>
-
-            <View style={styles.stepItem}>
-              <View style={[styles.stepCircle, styles.stepCircleInactive, isDark && { backgroundColor: '#333' }]}>
-                <Text style={[styles.stepNumberInactive, isDark && { color: '#AAA' }]}>4</Text>
-              </View>
-              <Text style={[styles.stepLabelInactive, isDark && { color: '#AAA' }]}>Level 4</Text>
-            </View>
-
-            <View style={styles.stepItem}>
-              <View style={[styles.stepCircle, styles.stepCircleInactive, isDark && { backgroundColor: '#333' }]}>
-                <Text style={[styles.stepNumberInactive, isDark && { color: '#AAA' }]}>5</Text>
-              </View>
-              <Text style={[styles.stepLabelInactive, isDark && { color: '#AAA' }]}>Top Rated</Text>
-            </View>
+            {LEVEL_STEPS.map((step) => {
+              const reached = step <= level;
+              return (
+                <View key={step} style={styles.stepItem}>
+                  <View
+                    style={[
+                      styles.stepCircle,
+                      reached ? styles.stepCircleActive : styles.stepCircleInactive,
+                      !reached && isDark && { backgroundColor: '#333' },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        reached ? styles.stepNumberActive : styles.stepNumberInactive,
+                        !reached && isDark && { color: '#AAA' },
+                      ]}
+                    >
+                      {step}
+                    </Text>
+                  </View>
+                  <Text
+                    style={[
+                      reached ? styles.stepLabelActive : styles.stepLabelInactive,
+                      !reached && isDark && { color: '#AAA' },
+                    ]}
+                  >
+                    Level {step}
+                  </Text>
+                </View>
+              );
+            })}
           </View>
 
           {/* Info Box */}

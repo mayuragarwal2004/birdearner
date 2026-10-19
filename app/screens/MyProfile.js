@@ -380,6 +380,13 @@ export default function ProfileScreen({ navigation }) {
 
           <Text style={[styles.nameText, onPortfolio && styles.onPurpleText]}>{displayName}</Text>
 
+          {/* Freelancer level, shown between the name and the role badge */}
+          {role === "FREELANCER" && (
+            <Text style={[styles.profileLevelLine, onPortfolio && styles.onPurpleText]}>
+              Level {data?.level ?? 1}
+            </Text>
+          )}
+
           <View style={styles.ratingRow}>
             {role === "FREELANCER" ? (
               <View style={styles.badge}>
@@ -1648,6 +1655,14 @@ const getStyles = (currentTheme) => {
       fontWeight: "700",
       textAlign: "center",
       letterSpacing: -0.3,
+    },
+    profileLevelLine: {
+      color: "#656B7A",
+      fontSize: 14,
+      fontWeight: "600",
+      textAlign: "center",
+      marginTop: 4,
+      marginBottom: 8,
     },
     roleWrap: {
       display: "flex",
