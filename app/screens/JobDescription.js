@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import SafeSpinner from "../components/SafeSpinner";
+import ReportModal from "../components/chat/ReportModal";
 import { FontAwesome, Ionicons } from "@expo/vector-icons";
 import ImageViewer from "react-native-image-zoom-viewer";
 import { useAuth } from "../context/NewAuthContext";
@@ -128,6 +129,9 @@ const JobDescriptionScreen = ({ route, navigation }) => {
   const [flagged, setFlagged] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [images, setImages] = useState([]);
+  const [reportVisible, setReportVisible] = useState(false);
+  const [reportReason, setReportReason] = useState(null);
+  const [submittingReport, setSubmittingReport] = useState(false);
 
   useEffect(() => {
     if (
@@ -215,20 +219,39 @@ const JobDescriptionScreen = ({ route, navigation }) => {
   };
 
   const handleReportJob = () => {
-    Alert.alert(
-      "Report Job",
-      "Are you sure you want to report this job posting?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Report",
-          style: "destructive",
-          onPress: () => {
-            Alert.alert("Thank you", "Your report has been submitted for review.");
-          },
-        },
-      ]
-    );
+    setReportReason(null);
+    setReportVisible(true);
+  };
+
+  // Sends the job report (reason + details) to the same reports endpoint used by chat
+  const handleSubmitJobReport = async (details = "") => {
+    if (!reportReason || submittingReport) return;
+    setSubmittingReport(true);
+    try {
+      const res = await apiService.makeRequest("/chats/report", {
+        method: "POST",
+        body: JSON.stringify({
+          reason: reportReason,
+          details: [
+            `Job posting reported (Job ID: ${job?.id || job?.jobId || "N/A"}, Title: ${job?.title || "N/A"}).`,
+            details.trim(),
+          ]
+            .filter(Boolean)
+            .join(" "),
+          reportedUserId: job?.clientUserId || undefined,
+        }),
+      });
+      if (!res?.success) {
+        throw new Error(res?.message || "Failed to submit report");
+      }
+      setReportVisible(false);
+      setReportReason(null);
+      Alert.alert("Thank you", "Your report has been submitted for review.");
+    } catch (error) {
+      Alert.alert("Report failed", error?.message || "Please try again.");
+    } finally {
+      setSubmittingReport(false);
+    }
   };
 
   // Defensive fallback for missing job
@@ -295,6 +318,18 @@ const JobDescriptionScreen = ({ route, navigation }) => {
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+
+      {/* Report reason modal: a reason must be chosen before the report is sent */}
+      <ReportModal
+        visible={reportVisible}
+        onClose={() => setReportVisible(false)}
+        onSubmit={handleSubmitJobReport}
+        selectedReason={reportReason}
+        onSelectReason={setReportReason}
+        isSubmitting={submittingReport}
+        title="Report Job"
+        question="Why are you reporting this job posting?"
+      />
 
       {/* Image Modal */}
       {modalVisible && images.length > 0 && (

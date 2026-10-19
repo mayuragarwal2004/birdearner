@@ -22,6 +22,8 @@ const ReportModal = ({
   details,
   onChangeDetails,
   isSubmitting = false,
+  title = "Report User",
+  question = "Why are you reporting this user?",
 }) => {
   const [localDetails, setLocalDetails] = useState('');
 
@@ -57,7 +59,7 @@ const ReportModal = ({
           <View style={styles.modalContent}>
             {/* Header */}
             <View style={styles.header}>
-              <Text style={styles.modalTitle}>Report User</Text>
+              <Text style={styles.modalTitle}>{title}</Text>
               <TouchableOpacity onPress={onClose} style={styles.closeIconButton} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                 <Ionicons name="close" size={24} color="#94A3B8" />
               </TouchableOpacity>
@@ -65,7 +67,7 @@ const ReportModal = ({
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
               <Text style={styles.modalSubtitle}>
-                Why are you reporting this user?
+                {question}
               </Text>
 
               {/* Options */}
