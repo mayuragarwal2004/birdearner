@@ -80,6 +80,7 @@ const getReviewGiveScreen = () => require("./screens/ReviewGive").default;
 const getPortfolioComScreen = () => require("./screens/PortfolioCom").default;
 const getChatListScreen = () => require("./screens/ChatList").default;
 const getOffersScreen = () => require("./screens/Offers").default;
+const getEditServicesScreen = () => require("./screens/EditServices").default;
 const getProfileScreen = () => require("./screens/ProfileScreen").default;
 const getReviewsScreen = () => require("./screens/ReviewsScreen").default;
 const getSubmitSolutionScreen = () => require("./screens/SubmitSolutionScreen").default;
@@ -252,6 +253,7 @@ function MainTabs() {
     "JobPriority",
     "JobDescription",
     "Offers",
+    "EditServices",
     "ReviewGive",
     "ReviewsScreen",
     "SubmitSolution",
@@ -671,6 +673,7 @@ export function App() {
             getComponent={getOffersScreen}
             options={options}
           />
+          <Stack.Screen name="EditServices" getComponent={getEditServicesScreen} />
           <Stack.Screen name="ReviewGive" getComponent={getReviewGiveScreen} />
           <Stack.Screen
             name="ReviewsScreen"
