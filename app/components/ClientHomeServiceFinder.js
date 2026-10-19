@@ -21,11 +21,7 @@ import { useTheme } from "../context/ThemeContext";
 const PURPLE = "#7B2CFF";
 const placeholderImageURL = "https://picsum.photos/seed/";
 
-const getStartsAt = (service) => {
-  const min = service?.birdFee?.minimumBudget;
-  if (min == null || Number.isNaN(Number(min))) return null;
-  return `Starts at ₹${Number(min).toLocaleString("en-IN")}`;
-};
+
 
 const ClientHomeServiceFinder = forwardRef(({ search = "" }, ref) => {
   const { theme, themeStyles } = useTheme();
@@ -98,7 +94,6 @@ const ClientHomeServiceFinder = forwardRef(({ search = "" }, ref) => {
   };
 
   const renderServiceCard = ({ item, rounded }) => {
-    const priceLabel = getStartsAt(item);
     return (
       <TouchableOpacity
         onPress={() => handleCardPress(item.id, item.name, item.category)}
@@ -116,7 +111,6 @@ const ClientHomeServiceFinder = forwardRef(({ search = "" }, ref) => {
         <Text style={styles.serviceText} numberOfLines={2}>
           {item.name}
         </Text>
-        {!!priceLabel && <Text style={styles.servicePrice}>{priceLabel}</Text>}
       </TouchableOpacity>
     );
   };
