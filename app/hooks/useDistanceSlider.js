@@ -27,10 +27,14 @@ export const useDistanceSlider = (onDistanceChange) => {
       return;
     }
     
-    const snappedDistance = snapDistance(
-      newDistance, 
-      MARKETPLACE_CONSTANTS.DISTANCE_STEP, 
-      MARKETPLACE_CONSTANTS.MAX_DISTANCE
+    // Snap to the step, then keep the value between the minimum (1 km) and maximum (20 km)
+    const snappedDistance = Math.max(
+      MARKETPLACE_CONSTANTS.MIN_DISTANCE,
+      snapDistance(
+        newDistance,
+        MARKETPLACE_CONSTANTS.DISTANCE_STEP,
+        MARKETPLACE_CONSTANTS.MAX_DISTANCE
+      )
     );
     
     // Double-check snapped distance is valid
