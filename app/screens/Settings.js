@@ -214,11 +214,15 @@ const SettingsScreen = ({ navigation }) => {
     {
       title: "Payment Settings",
       items: [
-        {
-          label: isFreelancer ? "Payment Details" : "Payment Methods",
-          icon: "card-outline",
-          route: "Bank Account details",
-        },
+        ...(isFreelancer
+          ? [
+              {
+                label: "Payment Details",
+                icon: "card-outline",
+                route: "Bank Account details",
+              },
+            ]
+          : []),
         {
           label: "Wallet",
           icon: "wallet-outline",

@@ -6,6 +6,64 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useTheme } from "../context/ThemeContext";
 import apiService from "../lib/apiService";
 
+// Job-related questions, shown before the general FAQs from the server
+const JOB_FAQS = [
+    {
+        id: "job-post",
+        category: "Jobs",
+        question: "How do I post a job?",
+        answer: "Tap \"Create Job\" from the bottom menu, fill in the job details, pick your requirements, and submit. Your job will then appear to freelancers.",
+    },
+    {
+        id: "job-schedule",
+        category: "Jobs",
+        question: "Why does my job say \"Schedule not set\"?",
+        answer: "The schedule is set when the job is created or updated. Open the job from \"Your Ongoing Jobs\" and add a deadline so freelancers know when the work is needed.",
+    },
+    {
+        id: "job-unassigned",
+        category: "Jobs",
+        question: "What does \"Unassigned\" mean?",
+        answer: "It means no freelancer has been assigned to the job yet. Once a freelancer accepts it, their name will show on the job card.",
+    },
+    {
+        id: "job-status",
+        category: "Jobs",
+        question: "What do the job statuses mean?",
+        answer: "\"Open\" means the job is still accepting freelancers. \"Assigned\" or \"In progress\" means work has started. \"Completed\" means the work is finished and approved.",
+    },
+    {
+        id: "job-view",
+        category: "Jobs",
+        question: "Where can I see the details of my job?",
+        answer: "Tap \"View Details\" on any job card under \"Your Ongoing Jobs\" to see the description, schedule, assigned freelancer and chat.",
+    },
+    {
+        id: "job-price-change",
+        category: "Jobs",
+        question: "What if the freelancer wants to change the price?",
+        answer: "The freelancer can send a price change request from the job chat. You will see it as an alert, and you can accept or decline it before any extra amount is charged.",
+    },
+    {
+        id: "job-work-submitted",
+        category: "Jobs",
+        question: "How do I review submitted work?",
+        answer: "When the freelancer submits work, a review banner appears on the job. Open the job, check the files, and approve the work or ask for changes.",
+    },
+    {
+        id: "job-cancel",
+        category: "Jobs",
+        question: "Can I cancel a job after posting it?",
+        answer: "You can cancel a job that no freelancer has been assigned to. If a freelancer is already working on it, contact support through a ticket so the team can help you close it.",
+    },
+    {
+        id: "job-onsite",
+        category: "Jobs",
+        question: "How does on-site job verification work?",
+        answer: "For on-site jobs, an OTP is shared between you and the freelancer when they arrive. Enter the OTP in the app to confirm the visit has started.",
+    },
+];
+
 const SupportScreen = ({ navigation }) => {
     const { theme, themeStyles } = useTheme();
     const currentTheme = themeStyles[theme];
@@ -21,7 +79,7 @@ const SupportScreen = ({ navigation }) => {
         const loadFaqs = async () => {
             try {
                 const data = await apiService.getFaqs();
-                if (active) setFaqs(data);
+                if (active) setFaqs([...JOB_FAQS, ...(Array.isArray(data) ? data : [])]);
             } catch (error) {
                 if (active) setLoadFailed(true);
             } finally {
@@ -34,11 +92,15 @@ const SupportScreen = ({ navigation }) => {
         };
     }, []);
 
-    // Group FAQs by category, keeping the order the API returns them in
+    // Group FAQs by category, keeping the order the API returns them in.
+    // The server stores categories in lowercase ("jobs"), so map them to the same labels used above
+    // so that server job questions join the top "Jobs" section instead of repeating it below.
     const faqSections = useMemo(() => {
         const groups = {};
         faqs.forEach((faq) => {
-            const category = faq.category || "General";
+            const raw = (faq.category || "").trim();
+            const category =
+                raw.toLowerCase() === "jobs" ? "Jobs" : raw.toLowerCase() === "general" || !raw ? "General" : raw;
             if (!groups[category]) groups[category] = [];
             groups[category].push(faq);
         });
