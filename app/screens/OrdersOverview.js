@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 20,
-    paddingBottom: 140,
+    paddingBottom: 110,
   },
   topCard: {
     borderRadius: 20,

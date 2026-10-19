@@ -14,6 +14,7 @@ import {
   View,
 } from "react-native";
 import SafeSpinner from "../components/SafeSpinner";
+import DraggableFab from "../components/DraggableFab";
 import ScratchOfferModal from "../components/ScratchOfferModal";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -786,9 +787,16 @@ const ClientHomeScreen = () => {
         </View>
       </ScrollView>
 
-      <TouchableOpacity style={styles.fab} onPress={openInbox} activeOpacity={0.9}>
+      <DraggableFab
+        onPress={openInbox}
+        size={48}
+        backgroundColor={DEEP_PURPLE}
+        initialRight={16}
+        initialBottom={(Platform.OS === "ios" ? 85 : 70) + insets.bottom + 12}
+        topLimit={insets.top + 8}
+      >
         <ChatCircleText size={26} color="#FFFFFF" weight="fill" />
-      </TouchableOpacity>
+      </DraggableFab>
 
       <ScratchOfferModal
         card={scratchModalCard}
@@ -1313,23 +1321,6 @@ const getStyles = (currentTheme, isDark, bottomInset = 0) => {
       color: "#FFF",
       fontWeight: "bold",
       fontSize: 14,
-    },
-    fab: {
-      position: "absolute",
-      right: 16,
-      bottom: (Platform.OS === "ios" ? 85 : 70) + bottomInset + 12,
-      width: 48,
-      height: 48,
-      borderRadius: 24,
-      backgroundColor: DEEP_PURPLE,
-      alignItems: "center",
-      justifyContent: "center",
-      shadowColor: "#2C1B3F",
-      shadowOpacity: 0.25,
-      shadowRadius: 8,
-      shadowOffset: { width: 0, height: 4 },
-      elevation: 5,
-      zIndex: 20,
     },
   });
 };

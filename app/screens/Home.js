@@ -9,6 +9,7 @@ import {
   Platform,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import DraggableFab from "../components/DraggableFab";
 import { FontAwesome, Ionicons } from "@expo/vector-icons";
 import {
   Bell,
@@ -540,21 +541,23 @@ const HomeScreen = () => {
         )}
       </ScrollView>
 
-      {/* Floating Chat Icon */}
-      <View style={styles.stickyButton}>
-        <TouchableOpacity
-          style={styles.chatIcon}
-          onPress={() =>
-            navigation.navigate(
-              userData?.role === "FREELANCER"
-                ? "FreelancerChatList"
-                : "ClientChatList"
-            )
-          }
-        >
-          <FontAwesome name="comments" size={26} color="#fff" />
-        </TouchableOpacity>
-      </View>
+      {/* Floating Chat Icon: drag it anywhere on screen */}
+      <DraggableFab
+        size={56}
+        backgroundColor="#3B0764"
+        initialRight={20}
+        initialBottom={(Platform.OS === "ios" ? 85 : 70) + insets.bottom + 12}
+        topLimit={insets.top + 8}
+        onPress={() =>
+          navigation.navigate(
+            userData?.role === "FREELANCER"
+              ? "FreelancerChatList"
+              : "ClientChatList"
+          )
+        }
+      >
+        <FontAwesome name="comments" size={26} color="#fff" />
+      </DraggableFab>
     </SafeAreaView>
   );
 };
@@ -590,7 +593,8 @@ const getStyles = (currentTheme, isDark, bottomInset = 0) => {
       paddingTop: 10,
     },
     scrollContent: {
-      paddingBottom: (Platform.OS === "ios" ? 140 : 120) + bottomInset,
+      // Clears the bottom tab bar (same height as in index.js) plus a small gap
+      paddingBottom: (Platform.OS === "ios" ? 85 : 70) + bottomInset + 24,
     },
     header: {
       flexDirection: "row",
@@ -1103,25 +1107,6 @@ const getStyles = (currentTheme, isDark, bottomInset = 0) => {
       backgroundColor: "#EF4444",
       borderWidth: 1,
       borderColor: "#7C3AED",
-    },
-    stickyButton: {
-      width: 56,
-      height: 56,
-      borderRadius: 28,
-      backgroundColor: "#3B0764",
-      position: "absolute",
-      bottom: (Platform.OS === "ios" ? 85 : 70) + bottomInset + 12,
-      right: 20,
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.2,
-      shadowRadius: 6,
-      elevation: 5,
-    },
-    chatIcon: {
-      flex: 1,
-      justifyContent: "center",
-      alignItems: "center",
     },
     sectionContainer: {
       marginVertical: 10,
