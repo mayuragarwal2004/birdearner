@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Modal } from 'react-native';
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ArrowLeft, Question, Star, TrendUp, Target, Flag, ChatCircleText, Trophy, ChartBar, Sparkle, Clock, CaretDown } from 'phosphor-react-native';
+import { ArrowLeft, Question, Star, TrendUp, Target, Flag, ChatCircleText, Trophy, ChartBar, Clock, CaretDown } from 'phosphor-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/NewAuthContext';
@@ -59,12 +59,6 @@ const ProfileOverview = ({ navigation }) => {
           
           {/* Level Ring Container */}
           <View style={styles.levelBadgeContainer}>
-            {/* Decorative Sparkles */}
-            <Sparkle size={14} color="#A855F7" weight="fill" style={styles.sparkleTL} />
-            <Sparkle size={10} color="#A855F7" weight="fill" style={styles.sparkleBL} />
-            <Sparkle size={16} color="#F59E0B" weight="fill" style={styles.sparkleTR} />
-            <Sparkle size={12} color="#A855F7" weight="fill" style={styles.sparkleBR} />
-            
             <View style={[styles.levelRingOuter, { backgroundColor: isDark ? '#2A2A2A' : '#FFF' }]}>
               <View style={styles.levelBadgeIconBg}>
                 <LinearGradient colors={['#9333EA', '#6B21A8']} style={styles.hexagonIconContainer}>
@@ -384,10 +378,6 @@ const styles = StyleSheet.create({
     color: '#7C3AED',
     fontWeight: '600',
   },
-  sparkleTL: { position: 'absolute', top: 10, left: -14 },
-  sparkleBL: { position: 'absolute', bottom: 20, left: -18 },
-  sparkleTR: { position: 'absolute', top: 14, right: -16 },
-  sparkleBR: { position: 'absolute', bottom: 24, right: -12 },
   stepperContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
