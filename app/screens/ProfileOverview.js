@@ -35,9 +35,12 @@ const ProfileOverview = ({ navigation }) => {
 
   // Level comes from the freelancer's saved level (not from a rank label or fixed text)
   const level = Math.max(Number(statsData?.profile?.level) || 1, 1);
-  // Steps 1-5 match the level scale; a level above 5 fills the whole track
-  const LEVEL_STEPS = [1, 2, 3, 4, 5];
-  const progressPercent = `${(Math.min(level, 5) - 1) / (LEVEL_STEPS.length - 1) * 100}%`;
+  // The track always shows five levels: 1-5, then 6-10, then 11-15, and so on
+  const WINDOW_SIZE = 5;
+  const windowStart = Math.floor((level - 1) / WINDOW_SIZE) * WINDOW_SIZE + 1;
+  const LEVEL_STEPS = Array.from({ length: WINDOW_SIZE }, (_, i) => windowStart + i);
+  // Progress across the current five levels (0% at the first level of the window, 100% at the last)
+  const progressPercent = `${((level - windowStart) / (WINDOW_SIZE - 1)) * 100}%`;
   const successScore = statsData?.stats?.successScore || 0;
   const ratingVal = (statsData?.stats?.averageRating || 0).toFixed(1);
   const responseRate = statsData?.stats?.responseRate || 0;
