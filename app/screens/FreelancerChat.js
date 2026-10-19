@@ -1239,7 +1239,8 @@ const FreelancerChat = ({ route, navigation }) => {
             </View>
           )}
 
-          {job && !isOnSiteJobType(job) && chatStatus !== 'BLOCKED' && !threadRestricted && (
+          {/* Watermark attach is only for remote jobs, and only after the client has accepted this freelancer */}
+          {job && !isOnSiteJobType(job) && ['ACCEPTED', 'IN_PROGRESS'].includes(chatStatus) && chatStatus !== 'BLOCKED' && !threadRestricted && (
             <TouchableOpacity
               style={styles.watermarkBanner}
               onPress={() => handleFilePick(true)}
