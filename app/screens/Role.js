@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const PURPLE = "#2E0854";
 const CIRCLE_SIZE = Math.min(SCREEN_WIDTH * 0.38, 165);
 
@@ -79,23 +79,29 @@ export default Role;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
-    position: "relative",
+    // Left half is the screen's own purple background; the right half is covered by a white panel
+    backgroundColor: PURPLE,
   },
   backgroundSplit: {
     ...StyleSheet.absoluteFillObject,
-    flexDirection: "row",
   },
+  // Each half is positioned explicitly so the purple client side always shows
   leftBackground: {
-    flex: 1,
-    backgroundColor: PURPLE,
+    display: "none",
   },
+  // Fixed pixel size: the right half of the screen is white, the left half stays purple
   rightBackground: {
-    flex: 1,
-    backgroundColor: "#fff",
+    position: "absolute",
+    top: 0,
+    left: SCREEN_WIDTH / 2,
+    width: SCREEN_WIDTH / 2,
+    height: SCREEN_HEIGHT,
+    backgroundColor: "#FFFFFF",
   },
   contentContainer: {
     flex: 1,
+    // Transparent, so the purple/white split behind it stays visible
+    backgroundColor: "transparent",
     justifyContent: "center",
     alignItems: "center",
   },

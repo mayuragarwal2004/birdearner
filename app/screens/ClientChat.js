@@ -24,6 +24,7 @@ import SafeSpinner from "../components/SafeSpinner";
 import { useChatData } from "../hooks/useChatSWR";
 import { useAuth } from "../context/NewAuthContext";
 import ApiService from "../lib/apiService";
+import { payAmountToWallet } from "../lib/walletTopUp";
 import { getWhatsAppDateHeader, isDifferentCalendarDay } from "../utils/dateUtils";
 
 // Existing Remote/On-site detection expression (same as handleRequestCompletion/cancel checks)
@@ -1017,14 +1018,32 @@ const ClientChat = ({ route, navigation }) => {
       });
 
       if (res && res.requiresPayment) {
+        // Pay only the shortfall through Razorpay, then assign again with the reserved amount
+        const shortfall = Number(res.shortfall) || Number(res.additionalAmount) || 0;
         Alert.alert(
           "Additional Payment Required",
-          res.message || `Additional ₹${res.additionalAmount} required for the negotiated amount. Please add funds to your wallet before assigning the freelancer.`,
+          res.message || `Pay ₹${shortfall.toFixed(2)} to cover the negotiated amount and assign the freelancer.`,
           [
             { text: "Cancel", style: "cancel" },
             {
-              text: "Pay Birdearner",
-              onPress: () => navigation.navigate("WalletClient"),
+              text: "Pay and Assign",
+              onPress: async () => {
+                const paid = await payAmountToWallet({
+                  amount: shortfall,
+                  name: userData?.fullName || "Client",
+                  email: userData?.email || "",
+                  phone: userData?.mobile || "",
+                  pictureUrl: undefined,
+                  description: `Negotiated job amount ₹${shortfall.toFixed(2)}`,
+                });
+                if (!paid.success) {
+                  if (!paid.cancelled) {
+                    Toast.show({ type: "error", text1: "Payment Failed", text2: paid.message });
+                  }
+                  return;
+                }
+                await handleConfirm();
+              },
             },
           ]
         );

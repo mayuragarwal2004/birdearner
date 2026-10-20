@@ -22,6 +22,7 @@ import ImageViewer from "react-native-image-zoom-viewer";
 import { useTheme } from "../context/ThemeContext";
 import { useAuth } from "../context/NewAuthContext";
 import apiService from "../lib/apiService";
+import { payAmountToWallet } from "../lib/walletTopUp";
 import EmergencyCancelReasonModal from "../components/chat/EmergencyCancelReasonModal";
 
 const JobDetailsScreen = ({ route, navigation }) => {
@@ -102,15 +103,32 @@ const JobDetailsScreen = ({ route, navigation }) => {
     setModalVisible(true);
   };
 
-  const handleSubmit = () => {
+  // Pays only the shortfall through Razorpay (the wallet is credited with it), then posts the job.
+  // The job's full budget is then reserved from the wallet by the existing create-job step.
+  const payShortfallAndPost = async () => {
+    const paid = await payAmountToWallet({
+      amount: remainingAmount,
+      name: userData?.fullName || "Client",
+      email: userData?.email || "",
+      phone: userData?.mobile || "",
+      description: `Job amount top-up ${formatCurrency(remainingAmount)}`,
+    });
+    if (!paid.success) {
+      if (!paid.cancelled) Alert.alert("Payment Failed", paid.message);
+      return;
+    }
+    handleSubmit({ paidShortfall: true });
+  };
+
+  const handleSubmit = (options = {}) => {
     if (!currentJob.id) {
-      if (isPlatformPayment && isInsufficient) {
+      if (!options.paidShortfall && isPlatformPayment && isInsufficient) {
         Alert.alert(
           "Insufficient Wallet Balance",
-          `Your wallet balance is ${formatCurrency(availableBalance)}. You must add at least ${formatCurrency(remainingAmount)} to your wallet before confirming this job${pendingPenalty > 0 ? ` (Job: ${formatCurrency(budgetNum)} + Penalty: ${formatCurrency(pendingPenalty)})` : ""}.`,
+          `Your wallet balance is ${formatCurrency(availableBalance)}. Pay ${formatCurrency(remainingAmount)} to cover this job${pendingPenalty > 0 ? ` (Job: ${formatCurrency(budgetNum)} + Penalty: ${formatCurrency(pendingPenalty)})` : ""}.`,
           [
             { text: "Cancel", style: "cancel" },
-            { text: "Add to Wallet", onPress: () => navigation.navigate("WalletClient") },
+            { text: "Pay and Post Job", onPress: payShortfallAndPost },
           ]
         );
         return;
@@ -297,9 +315,43 @@ const JobDetailsScreen = ({ route, navigation }) => {
     }
   };
 
+  // Accepting a revised price reserves the extra amount from the wallet. If the wallet is short,
+  // only the shortfall is paid through Razorpay first, then the price is accepted.
+  const acceptRevisedPrice = async () => {
+    try {
+      const newAmount = Number(currentJob.priceChangeRequested) || 0;
+      const currentAmount = Number(currentJob.negotiatedAmount || currentJob.budgetAmount) || 0;
+      const extra = newAmount - currentAmount;
+
+      if (currentJob.paymentMethod === "PLATFORM" && extra > 0) {
+        const walletRes = await apiService.getClientWalletInfo();
+        const available = Number(walletRes?.data?.availableBalance) || 0;
+        const shortfall = Math.round((extra - available) * 100) / 100;
+
+        if (shortfall > 0) {
+          const paid = await payAmountToWallet({
+            amount: shortfall,
+            name: userData?.fullName || "Client",
+            email: userData?.email || "",
+            phone: userData?.mobile || "",
+            description: `Revised job amount top-up ${formatCurrency(shortfall)}`,
+          });
+          if (!paid.success) {
+            if (!paid.cancelled) Alert.alert("Payment Failed", paid.message);
+            return;
+          }
+        }
+      }
+
+      await submitPriceResponse(true);
+    } catch (err) {
+      Alert.alert("Error", err.message || "Could not accept the revised price");
+    }
+  };
+
   const handleRespondPriceChange = (accept) => {
     if (accept) {
-      submitPriceResponse(true);
+      acceptRevisedPrice();
       return;
     }
     Alert.alert(
@@ -732,12 +784,12 @@ const JobDetailsScreen = ({ route, navigation }) => {
                       flexDirection: "row",
                       justifyContent: "center",
                     }}
-                    onPress={() => navigation.navigate("WalletClient")}
+                    onPress={payShortfallAndPost}
                     activeOpacity={0.8}
                   >
-                    <Ionicons name="add-circle-outline" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
+                    <Ionicons name="card-outline" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
                     <Text style={{ color: "#FFFFFF", fontWeight: "700", fontSize: 14 }}>
-                      Add {formatCurrency(remainingAmount)} to Wallet
+                      Pay and Post Job
                     </Text>
                   </TouchableOpacity>
                 </View>
