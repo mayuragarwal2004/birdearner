@@ -1,3 +1,5 @@
+import { KeyboardAvoidingView as KeyboardControllerAvoidingView } from "react-native-keyboard-controller";
+import KeyboardAwareScrollView from "../components/KeyboardAwareScrollView";
 import React, { useEffect, useState } from "react";
 import { 
   View, 
@@ -208,11 +210,11 @@ const DeleteAccountScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={{flex: 1}}>
-    <KeyboardAvoidingView 
+    <KeyboardControllerAvoidingView 
       style={styles.container} 
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      behavior="padding"
     >
-      <ScrollView 
+      <KeyboardAwareScrollView 
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
@@ -512,9 +514,9 @@ const DeleteAccountScreen = ({ navigation }) => {
             </TouchableOpacity>
           </View>
         )}
-      </ScrollView>
+      </KeyboardAwareScrollView>
       <Toast />
-    </KeyboardAvoidingView>
+    </KeyboardControllerAvoidingView>
     </SafeAreaView>
   );
 };

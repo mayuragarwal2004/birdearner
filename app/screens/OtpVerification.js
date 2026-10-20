@@ -1,3 +1,5 @@
+import { KeyboardAvoidingView as KeyboardControllerAvoidingView } from "react-native-keyboard-controller";
+import KeyboardAwareScrollView from "../components/KeyboardAwareScrollView";
 import React, { useState, useRef } from "react";
 import {
   View,
@@ -175,12 +177,12 @@ const OtpVerification = ({ navigation, route }) => {
         colors={["#2E0854", "#3E0A70", "#1C0338"]}
         style={{ flex: 1 }}
       >
-        <KeyboardAvoidingView
+        <KeyboardControllerAvoidingView
           style={{ flex: 1 }}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          behavior="padding"
           keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}
         >
-          <ScrollView
+          <KeyboardAwareScrollView
             contentContainerStyle={styles.scrollContainer}
             keyboardShouldPersistTaps="handled"
           >
@@ -300,8 +302,8 @@ const OtpVerification = ({ navigation, route }) => {
             >
               <Text style={styles.goBackButtonText}>Go Back</Text>
             </TouchableOpacity>
-          </ScrollView>
-        </KeyboardAvoidingView>
+          </KeyboardAwareScrollView>
+        </KeyboardControllerAvoidingView>
       </LinearGradient>
       <Toast />
     </SafeAreaView>

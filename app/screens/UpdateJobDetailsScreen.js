@@ -1,3 +1,4 @@
+import KeyboardAwareScrollView from "../components/KeyboardAwareScrollView";
 import React, { useEffect, useState } from "react";
 import {
   View,
@@ -313,7 +314,7 @@ const UpdateJobDetailsScreen = ({ route, navigation }) => {
   };
 
   const renderEditForm = () => (
-    <ScrollView style={styles.editForm1}>
+    <KeyboardAwareScrollView style={styles.editForm1}>
       <Modal
         visible={modalVisible}
         transparent={true}
@@ -549,7 +550,7 @@ const UpdateJobDetailsScreen = ({ route, navigation }) => {
           <Text style={{ color: "#fff", fontSize: 16 }}>Save Changes</Text>
         </TouchableOpacity>
       </View>
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 
   return (
@@ -558,7 +559,7 @@ const UpdateJobDetailsScreen = ({ route, navigation }) => {
       {isEditing ? (
         renderEditForm()
       ) : (
-        <ScrollView
+        <KeyboardAwareScrollView
           style={styles.container}
           showsVerticalScrollIndicator={false}
         >
@@ -591,7 +592,7 @@ const UpdateJobDetailsScreen = ({ route, navigation }) => {
             />
           </Modal>
 
-          <ScrollView style={styles.scrollContent}>
+          <KeyboardAwareScrollView style={styles.scrollContent}>
             {/* Job Header */}
             <View style={styles.jobHeader}>
               <View style={styles.jobInfo}>
@@ -643,8 +644,8 @@ const UpdateJobDetailsScreen = ({ route, navigation }) => {
                 ))}
               </View>
             </View>
-          </ScrollView>
-        </ScrollView>
+          </KeyboardAwareScrollView>
+        </KeyboardAwareScrollView>
       )}
     </View>
     </SafeAreaView>

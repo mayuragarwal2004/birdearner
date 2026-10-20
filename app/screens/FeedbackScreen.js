@@ -1,3 +1,5 @@
+import { KeyboardAvoidingView as KeyboardControllerAvoidingView } from "react-native-keyboard-controller";
+import KeyboardAwareScrollView from "../components/KeyboardAwareScrollView";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
 import {
@@ -221,11 +223,11 @@ const FeedbackScreen = ({ navigation, route }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
+      <KeyboardControllerAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior="padding"
       >
-        <ScrollView
+        <KeyboardAwareScrollView
           contentContainerStyle={styles.scrollContainer}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
@@ -523,9 +525,9 @@ const FeedbackScreen = ({ navigation, route }) => {
               </View>
             </View>
           )}
-        </ScrollView>
+        </KeyboardAwareScrollView>
         <Toast />
-      </KeyboardAvoidingView>
+      </KeyboardControllerAvoidingView>
     </SafeAreaView>
   );
 };

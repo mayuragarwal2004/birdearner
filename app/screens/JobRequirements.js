@@ -1,3 +1,4 @@
+import KeyboardAwareScrollView from "../components/KeyboardAwareScrollView";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -1245,7 +1246,7 @@ const JobRequirementsScreen = ({ navigation }) => {
         />
       </View>
 
-      <ScrollView
+      <KeyboardAwareScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -1302,7 +1303,7 @@ const JobRequirementsScreen = ({ navigation }) => {
             </View>
 
             {addressChips.length > 0 && (
-              <ScrollView
+              <KeyboardAwareScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.savedAddressChips}
@@ -1354,7 +1355,7 @@ const JobRequirementsScreen = ({ navigation }) => {
                   <Ionicons name="add" size={18} color={PURPLE} />
                   <Text style={styles.addAddressChipText}>Add / manage</Text>
                 </TouchableOpacity>
-              </ScrollView>
+              </KeyboardAwareScrollView>
             )}
 
             <View style={styles.inputRow}>
@@ -1889,7 +1890,7 @@ const JobRequirementsScreen = ({ navigation }) => {
             <Text style={styles.submitBtnText}>Review & Submit</Text>
           </TouchableOpacity>
         </View>
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
       {/* Map Modal */}
       <Modal visible={showMapModal} animationType="slide" presentationStyle="pageSheet">

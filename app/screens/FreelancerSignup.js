@@ -1,3 +1,5 @@
+import { KeyboardAvoidingView as KeyboardControllerAvoidingView } from "react-native-keyboard-controller";
+import KeyboardAwareScrollView from "../components/KeyboardAwareScrollView";
 import React, { useState, useEffect, useRef } from "react";
 import {
   View,
@@ -1460,12 +1462,12 @@ const FreelancerSignup = ({ navigation, route }) => {
         colors={isDark ? ["#121212", "#1E1E1E", "#121212"] : ["#2B0855", "#3B0A75", "#160233"]}
         style={{ flex: 1 }}
       >
-        <KeyboardAvoidingView
+        <KeyboardControllerAvoidingView
           style={{ flex: 1 }}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          behavior="padding"
           keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}
         >
-          <ScrollView
+          <KeyboardAwareScrollView
             contentContainerStyle={styles.scrollContainer}
             keyboardShouldPersistTaps="handled"
           >
@@ -2185,7 +2187,7 @@ const FreelancerSignup = ({ navigation, route }) => {
                     style={{ marginVertical: 20 }}
                   />
                 ) : (
-                  <ScrollView
+                  <KeyboardAwareScrollView
                     style={{ maxHeight: 320, marginVertical: 10 }}
                     nestedScrollEnabled={true}
                     showsVerticalScrollIndicator={true}
@@ -2252,7 +2254,7 @@ const FreelancerSignup = ({ navigation, route }) => {
                         )}
                       </>
                     )}
-                  </ScrollView>
+                  </KeyboardAwareScrollView>
                 )}
 
                 {suggestedService && (
@@ -2593,8 +2595,8 @@ const FreelancerSignup = ({ navigation, route }) => {
                 </View>
               </View>
             )}
-          </ScrollView>
-        </KeyboardAvoidingView>
+          </KeyboardAwareScrollView>
+        </KeyboardControllerAvoidingView>
       </LinearGradient>
 
       {/* Suggest Service Modal */}
@@ -2604,8 +2606,8 @@ const FreelancerSignup = ({ navigation, route }) => {
         animationType="slide"
         onRequestClose={() => setShowSuggestModal(false)}
       >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        <KeyboardControllerAvoidingView
+          behavior="padding"
           style={styles.modalOverlay}
         >
           <View style={styles.modalContainer}>
@@ -2622,7 +2624,7 @@ const FreelancerSignup = ({ navigation, route }) => {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={{ maxHeight: 400 }} showsVerticalScrollIndicator={false}>
+            <KeyboardAwareScrollView style={{ maxHeight: 400 }} showsVerticalScrollIndicator={false}>
               <Text style={styles.modalInputLabel}>Service Name *</Text>
               <TextInput
                 style={styles.modalInput}
@@ -2670,7 +2672,7 @@ const FreelancerSignup = ({ navigation, route }) => {
                   </TouchableOpacity>
                 )}
               </View>
-            </ScrollView>
+            </KeyboardAwareScrollView>
 
             <View style={styles.modalFooter}>
               <TouchableOpacity
@@ -2687,7 +2689,7 @@ const FreelancerSignup = ({ navigation, route }) => {
               </TouchableOpacity>
             </View>
           </View>
-        </KeyboardAvoidingView>
+        </KeyboardControllerAvoidingView>
       </Modal>
 
       <Toast />

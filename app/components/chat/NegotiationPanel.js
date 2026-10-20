@@ -1,3 +1,4 @@
+import KeyboardAwareScrollView from "../KeyboardAwareScrollView";
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -158,7 +159,7 @@ const NegotiationPanel = ({
   };
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <KeyboardAwareScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       {/* Header */}
       <View style={styles.headerRow}>
         {onClose && (
@@ -402,7 +403,7 @@ const NegotiationPanel = ({
       >
         <Text style={styles.proposalButtonText}>View Proposal Details</Text>
       </TouchableOpacity>
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 };
 

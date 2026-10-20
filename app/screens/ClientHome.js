@@ -1,3 +1,4 @@
+import KeyboardAwareScrollView from "../components/KeyboardAwareScrollView";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
@@ -548,7 +549,7 @@ const ClientHomeScreen = () => {
         </View>
       </View>
 
-      <ScrollView
+      <KeyboardAwareScrollView
         style={styles.mainScroll}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
@@ -564,7 +565,7 @@ const ClientHomeScreen = () => {
       >
         {/* Promo banner carousel above Freelance Services */}
         <View style={{ marginBottom: 16 }}>
-          <ScrollView
+          <KeyboardAwareScrollView
             horizontal
             style={{ height: 220 }}
             pagingEnabled
@@ -646,7 +647,7 @@ const ClientHomeScreen = () => {
                 </TouchableOpacity>
               );
             })}
-          </ScrollView>
+          </KeyboardAwareScrollView>
           <View style={styles.dotsRow}>
             {displayBanners.map((promo, index) => (
               <View
@@ -697,7 +698,7 @@ const ClientHomeScreen = () => {
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Offers & Discounts</Text>
           </View>
-          <ScrollView
+          <KeyboardAwareScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.offersRow}
@@ -784,9 +785,9 @@ const ClientHomeScreen = () => {
                 </TouchableOpacity>
               );
             })}
-          </ScrollView>
+          </KeyboardAwareScrollView>
         </View>
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
       <DraggableFab
         onPress={openInbox}

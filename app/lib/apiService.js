@@ -3,13 +3,13 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 
-const DEV_API_BASE_URL = "https://dvd-depot-deer-investigated.trycloudflare.com/api";
+const DEV_API_BASE_URL = "https://convert-loads-sell-forge.trycloudflare.com/api";
 // const DEV_API_BASE_URL = "https://api.birdearner.com/api";
 
 const PROD_API_BASE_URL = "https://api.birdearner.com/api";
 
 const API_BASE_URL = __DEV__ ? DEV_API_BASE_URL : PROD_API_BASE_URL;
-
+// on upadate job details options of job posted 3 dots when click on edit there is job description field where there is nothing about showing and editing the audio recording work on this and show audio recording and editing that audio recording
 
 // Endpoints where 401 means bad credentials / public auth flow — not an expired session
 const PUBLIC_AUTH_ENDPOINTS = [

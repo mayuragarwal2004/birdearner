@@ -1,3 +1,4 @@
+import KeyboardAwareScrollView from "../components/KeyboardAwareScrollView";
 import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
@@ -421,7 +422,7 @@ const JobDetailsScreen = ({ route, navigation }) => {
         <View style={{ width: 34 }} />
       </View>
 
-      <ScrollView
+      <KeyboardAwareScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -1063,7 +1064,7 @@ const JobDetailsScreen = ({ route, navigation }) => {
                 Select Reason:
               </Text>
 
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
+              <KeyboardAwareScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
                 <View style={{ flexDirection: "row", gap: 8 }}>
                   {disputeReasonChips.map((chip, idx) => {
                     const isSelected = selectedDisputeChip === chip;
@@ -1094,7 +1095,7 @@ const JobDetailsScreen = ({ route, navigation }) => {
                     );
                   })}
                 </View>
-              </ScrollView>
+              </KeyboardAwareScrollView>
 
               <Text style={{ fontSize: 11, fontWeight: "700", color: "#4C1D95", marginBottom: 6, textTransform: "uppercase" }}>
                 Additional Details / Explanation:
@@ -1126,7 +1127,7 @@ const JobDetailsScreen = ({ route, navigation }) => {
             </View>
           </View>
         </Modal>
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 };

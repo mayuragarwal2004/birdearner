@@ -1,3 +1,4 @@
+import KeyboardAwareScrollView from "../KeyboardAwareScrollView";
 import React, { useState } from 'react';
 import {
   View,
@@ -65,7 +66,7 @@ const ReportModal = ({
               </TouchableOpacity>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+            <KeyboardAwareScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
               <Text style={styles.modalSubtitle}>
                 {question}
               </Text>
@@ -131,7 +132,7 @@ const ReportModal = ({
               >
                 <Text style={styles.cancelText}>Cancel</Text>
               </TouchableOpacity>
-            </ScrollView>
+            </KeyboardAwareScrollView>
           </View>
         </SafeAreaView>
       </View>

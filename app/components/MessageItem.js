@@ -1,3 +1,4 @@
+import { KeyboardAvoidingView as KeyboardControllerAvoidingView } from "react-native-keyboard-controller";
 import React, { useState } from "react";
 import {
   View,
@@ -628,8 +629,8 @@ const MessageItem = ({ messageItem, message, isCurrentUser, media = [], onMessag
             >
               <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
                 <View style={styles.modalOverlay}>
-                  <KeyboardAvoidingView
-                    behavior={Platform.OS === "ios" ? "padding" : "height"}
+                  <KeyboardControllerAvoidingView
+                    behavior="padding"
                     style={{ width: "100%", alignItems: "center" }}
                   >
                     <View style={styles.revisionModalCard}>
@@ -677,7 +678,7 @@ const MessageItem = ({ messageItem, message, isCurrentUser, media = [], onMessag
                         </TouchableOpacity>
                       </View>
                     </View>
-                  </KeyboardAvoidingView>
+                  </KeyboardControllerAvoidingView>
                 </View>
               </TouchableWithoutFeedback>
             </Modal>

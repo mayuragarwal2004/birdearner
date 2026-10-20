@@ -1,3 +1,4 @@
+import KeyboardAwareScrollView from "../components/KeyboardAwareScrollView";
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -383,7 +384,7 @@ const JobDetailsChatScreen = ({ route, navigation }) => {
         </View>
         <View style={{ width: 34 }} />
       </View>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <KeyboardAwareScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.modeBadgeContainer}>
           <View style={styles.modeBadge}>
             <Ionicons name={isRemote ? "laptop-outline" : "location"} size={15} color="#FFFFFF" style={{ marginRight: 6 }} />
@@ -638,7 +639,7 @@ const JobDetailsChatScreen = ({ route, navigation }) => {
                 Select Reason:
               </Text>
 
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
+              <KeyboardAwareScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
                 <View style={{ flexDirection: "row", gap: 8 }}>
                   {disputeReasonChips.map((chip, idx) => {
                     const isSelected = selectedDisputeChip === chip;
@@ -669,7 +670,7 @@ const JobDetailsChatScreen = ({ route, navigation }) => {
                     );
                   })}
                 </View>
-              </ScrollView>
+              </KeyboardAwareScrollView>
 
               <Text style={{ fontSize: 11, fontWeight: "700", color: "#4C1D95", marginBottom: 6, textTransform: "uppercase" }}>
                 Additional Details / Explanation:
@@ -701,7 +702,7 @@ const JobDetailsChatScreen = ({ route, navigation }) => {
             </View>
           </View>
         </Modal>
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 };

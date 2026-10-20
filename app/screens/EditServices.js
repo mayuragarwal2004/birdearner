@@ -1,3 +1,4 @@
+import KeyboardAwareScrollView from "../components/KeyboardAwareScrollView";
 import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
@@ -129,7 +130,7 @@ const EditServicesScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#2E0854" }}>
       <LinearGradient colors={["#2B0855", "#3B0A75", "#160233"]} style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
+        <KeyboardAwareScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
           <View style={styles.headerNavSection}>
             <TouchableOpacity style={styles.backIconButton} onPress={() => navigation.goBack()} activeOpacity={0.7}>
               <ArrowLeft size={24} color="#FFFFFF" />
@@ -180,7 +181,7 @@ const EditServicesScreen = ({ navigation }) => {
             {loading ? (
               <SafeSpinner size="large" color="#6D28D9" style={{ marginVertical: 20 }} />
             ) : (
-              <ScrollView style={{ maxHeight: 320, marginVertical: 10 }} nestedScrollEnabled showsVerticalScrollIndicator>
+              <KeyboardAwareScrollView style={{ maxHeight: 320, marginVertical: 10 }} nestedScrollEnabled showsVerticalScrollIndicator>
                 {searchQuery.trim() === "" ? (
                   <View style={styles.infoBannerBox}>
                     <Info size={18} color="#7C3AED" style={{ marginRight: 8 }} />
@@ -221,7 +222,7 @@ const EditServicesScreen = ({ navigation }) => {
                     );
                   })
                 )}
-              </ScrollView>
+              </KeyboardAwareScrollView>
             )}
 
             <View style={styles.buttonRow}>
@@ -246,7 +247,7 @@ const EditServicesScreen = ({ navigation }) => {
               </TouchableOpacity>
             </View>
           </View>
-        </ScrollView>
+        </KeyboardAwareScrollView>
       </LinearGradient>
     </SafeAreaView>
   );

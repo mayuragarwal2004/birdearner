@@ -1,3 +1,4 @@
+import KeyboardAwareScrollView from "./KeyboardAwareScrollView";
 import React, { useEffect, useMemo, useState } from "react";
 import {
   Alert,
@@ -301,7 +302,7 @@ const AddressPickerModal = ({
           </View>
 
           {showForm ? (
-            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+            <KeyboardAwareScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
               <Text style={styles.fieldLabel}>Save as</Text>
               <View style={styles.labelRow}>
                 {LABELS.map((item) => (
@@ -438,9 +439,9 @@ const AddressPickerModal = ({
               <TouchableOpacity style={styles.secondaryBtn} onPress={resetForm}>
                 <Text style={styles.secondaryBtnText}>Back to list</Text>
               </TouchableOpacity>
-            </ScrollView>
+            </KeyboardAwareScrollView>
           ) : (
-            <ScrollView showsVerticalScrollIndicator={false}>
+            <KeyboardAwareScrollView showsVerticalScrollIndicator={false}>
               <TouchableOpacity
                 style={styles.actionCard}
                 onPress={async () => {
@@ -550,7 +551,7 @@ const AddressPickerModal = ({
                   );
                 })
               )}
-            </ScrollView>
+            </KeyboardAwareScrollView>
           )}
         </TouchableOpacity>
       </TouchableOpacity>

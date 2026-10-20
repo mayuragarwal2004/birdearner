@@ -1,3 +1,4 @@
+import KeyboardAwareScrollView from "../KeyboardAwareScrollView";
 import React, { useEffect, useState } from "react";
 import { Modal, View, Text, TouchableOpacity, TextInput, StyleSheet, ScrollView, ActivityIndicator } from "react-native";
 
@@ -43,7 +44,7 @@ export default function EmergencyCancelReasonModal({ visible, role = "CLIENT", s
           </Text>
 
           {isClient ? (
-            <ScrollView style={styles.options}>
+            <KeyboardAwareScrollView style={styles.options}>
               {CLIENT_EMERGENCY_REASONS.map((option) => {
                 const active = selected === option;
                 return (
@@ -58,7 +59,7 @@ export default function EmergencyCancelReasonModal({ visible, role = "CLIENT", s
                   </TouchableOpacity>
                 );
               })}
-            </ScrollView>
+            </KeyboardAwareScrollView>
           ) : (
             <TextInput
               style={styles.input}

@@ -1,3 +1,4 @@
+import KeyboardAwareScrollView from "../components/KeyboardAwareScrollView";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator } from "react-native";
@@ -62,6 +63,7 @@ const TwoFactorCodeScreen = ({ navigation, route }) => {
 
     return (
         <SafeAreaView style={styles.container}>
+            <KeyboardAwareScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
             <View style={styles.main}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                     <Ionicons name="arrow-back" size={24} color={currentTheme.text || "black"} />
@@ -124,12 +126,16 @@ const TwoFactorCodeScreen = ({ navigation, route }) => {
                     Didn't get a code? Go back and try again.
                 </Text>
             </View>
+            </KeyboardAwareScrollView>
         </SafeAreaView>
     );
 };
 
 const getStyles = (currentTheme) =>
     StyleSheet.create({
+        scrollContent: {
+            flexGrow: 1,
+        },
         container: {
             flex: 1,
             backgroundColor: currentTheme.background2 || "#f9f9f9",

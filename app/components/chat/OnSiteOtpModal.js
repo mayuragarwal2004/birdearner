@@ -1,3 +1,4 @@
+import KeyboardAwareScrollView from "../KeyboardAwareScrollView";
 import React, { useState, useEffect } from "react";
 import {
   Modal,
@@ -246,7 +247,7 @@ const OnSiteOtpModal = ({
               <Text style={styles.loadingText}>Fetching latest status...</Text>
             </View>
           ) : (
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollBody}>
+            <KeyboardAwareScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollBody}>
               {/* Status Badge */}
               <View style={styles.statusRow}>
                 <Text style={styles.statusLabel}>CURRENT STATUS:</Text>
@@ -530,7 +531,7 @@ const OnSiteOtpModal = ({
                   <Text style={styles.disputeButtonText}>Raise Dispute</Text>
                 </TouchableOpacity>
               )}
-            </ScrollView>
+            </KeyboardAwareScrollView>
           )}
 
           {actionLoading && (
@@ -572,7 +573,7 @@ const OnSiteOtpModal = ({
               />
 
               <Text style={[styles.reasonPromptText, { marginTop: 10 }]}>Reason for Price Increase:</Text>
-              <ScrollView style={{ maxHeight: 120 }} showsVerticalScrollIndicator={false}>
+              <KeyboardAwareScrollView style={{ maxHeight: 120 }} showsVerticalScrollIndicator={false}>
                 {PRICE_CHANGE_REASON_CHIPS.map((chip) => {
                   const isSelected = selectedPriceReason === chip;
                   return (
@@ -593,7 +594,7 @@ const OnSiteOtpModal = ({
                     </TouchableOpacity>
                   );
                 })}
-              </ScrollView>
+              </KeyboardAwareScrollView>
 
               <Text style={[styles.reasonPromptText, { marginTop: 10, marginBottom: 4 }]}>Explanation:</Text>
               <TextInput
@@ -652,7 +653,7 @@ const OnSiteOtpModal = ({
               <Text style={styles.reasonPromptText}>Select or specify the reason for raising a dispute:</Text>
 
               {/* Reason Chips */}
-              <ScrollView style={{ maxHeight: 150 }} showsVerticalScrollIndicator={false}>
+              <KeyboardAwareScrollView style={{ maxHeight: 150 }} showsVerticalScrollIndicator={false}>
                 {DISPUTE_REASON_CHIPS.map((chip) => {
                   const isSelected = selectedReasonChip === chip;
                   return (
@@ -676,7 +677,7 @@ const OnSiteOtpModal = ({
                     </TouchableOpacity>
                   );
                 })}
-              </ScrollView>
+              </KeyboardAwareScrollView>
 
               {/* Custom Details Input */}
               <Text style={[styles.reasonPromptText, { marginTop: 12, marginBottom: 6 }]}>Additional Details:</Text>

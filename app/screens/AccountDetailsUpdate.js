@@ -1,3 +1,5 @@
+import { KeyboardAvoidingView as KeyboardControllerAvoidingView } from "react-native-keyboard-controller";
+import KeyboardAwareScrollView from "../components/KeyboardAwareScrollView";
 import React, { useState, useMemo, useCallback } from "react";
 import {
   View,
@@ -226,11 +228,11 @@ const AccountDetailsUpdateScreen = ({ navigation, route }) => {
         <View style={{ width: 40 }} />
       </View>
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      <KeyboardControllerAvoidingView
+        behavior="padding"
         style={{ flex: 1 }}
       >
-        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        <KeyboardAwareScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
           {/* User Profile Info Card */}
           <View style={styles.profileCard}>
             <View style={styles.roleBadge}>
@@ -550,8 +552,8 @@ const AccountDetailsUpdateScreen = ({ navigation, route }) => {
           )}
 
           <View style={{ height: 40 }} />
-        </ScrollView>
-      </KeyboardAvoidingView>
+        </KeyboardAwareScrollView>
+      </KeyboardControllerAvoidingView>
       <Toast />
     </SafeAreaView>
   );

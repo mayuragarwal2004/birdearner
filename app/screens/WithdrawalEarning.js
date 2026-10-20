@@ -1,3 +1,5 @@
+import { KeyboardAvoidingView as KeyboardControllerAvoidingView } from "react-native-keyboard-controller";
+import KeyboardAwareScrollView from "../components/KeyboardAwareScrollView";
 import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
@@ -216,11 +218,11 @@ const WithdrawalEarningScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView 
+      <KeyboardControllerAvoidingView 
         style={styles.keyboardView} 
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior="padding"
       >
-        <ScrollView
+        <KeyboardAwareScrollView
           style={styles.container}
           contentContainerStyle={styles.contentContainer}
           refreshControl={
@@ -392,8 +394,8 @@ const WithdrawalEarningScreen = ({ navigation }) => {
               </View>
             </>
           )}
-        </ScrollView>
-      </KeyboardAvoidingView>
+        </KeyboardAwareScrollView>
+      </KeyboardControllerAvoidingView>
       <Toast />
     </SafeAreaView>
   );

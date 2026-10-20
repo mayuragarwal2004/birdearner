@@ -1,3 +1,4 @@
+import { KeyboardAvoidingView as KeyboardControllerAvoidingView } from "react-native-keyboard-controller";
 import React, { useState, useRef } from "react";
 import {
   View,
@@ -154,9 +155,9 @@ const Bird = () => {
       />
       
       <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-        <KeyboardAvoidingView 
+        <KeyboardControllerAvoidingView 
           style={styles.keyboardView}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          behavior="padding"
           keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
         >
           {/* Header */}
@@ -204,7 +205,7 @@ const Bird = () => {
               </TouchableOpacity>
             </View>
           </View>
-        </KeyboardAvoidingView>
+        </KeyboardControllerAvoidingView>
       </SafeAreaView>
     </View>
   );

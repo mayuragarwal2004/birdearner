@@ -1,3 +1,4 @@
+import KeyboardAwareScrollView from "../components/KeyboardAwareScrollView";
 import React, { useState } from "react";
 import {
   View,
@@ -71,7 +72,7 @@ const Signup = ({ navigation, route }) => {
         colors={["#2B0855", "#3B0A75", "#160233"]}
         style={{ flex: 1 }}
       >
-        <ScrollView
+        <KeyboardAwareScrollView
           contentContainerStyle={styles.scrollContainer}
           keyboardShouldPersistTaps="handled"
         >
@@ -131,7 +132,7 @@ const Signup = ({ navigation, route }) => {
               </TouchableOpacity>
             </View>
           </View>
-        </ScrollView>
+        </KeyboardAwareScrollView>
       </LinearGradient>
       <Toast />
     </SafeAreaView>

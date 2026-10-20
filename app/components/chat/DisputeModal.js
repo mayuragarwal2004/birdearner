@@ -1,3 +1,4 @@
+import KeyboardAwareScrollView from "../KeyboardAwareScrollView";
 import React, { useState } from "react";
 import {
   Modal,
@@ -64,7 +65,7 @@ const DisputeModal = ({ visible, onClose, jobId, onDisputeRaised }) => {
 
           <Text style={styles.promptText}>Select or specify the reason for raising a dispute:</Text>
 
-          <ScrollView style={{ maxHeight: 150 }} showsVerticalScrollIndicator={false}>
+          <KeyboardAwareScrollView style={{ maxHeight: 150 }} showsVerticalScrollIndicator={false}>
             {DISPUTE_REASON_CHIPS.map((chip) => {
               const isSelected = selectedReason === chip;
               return (
@@ -88,7 +89,7 @@ const DisputeModal = ({ visible, onClose, jobId, onDisputeRaised }) => {
                 </TouchableOpacity>
               );
             })}
-          </ScrollView>
+          </KeyboardAwareScrollView>
 
           <Text style={[styles.promptText, { marginTop: 12, marginBottom: 6 }]}>Additional Details:</Text>
           <TextInput

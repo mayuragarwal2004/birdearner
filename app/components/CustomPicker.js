@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { Modal, View, Text, TouchableOpacity, FlatList, StyleSheet, TextInput } from 'react-native';
 import { AntDesign, Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
+import { useKeyboard } from '../context/KeyboardContext';
 
 export default function PickerModal({
   items,
@@ -20,6 +21,7 @@ export default function PickerModal({
   const isDark = Boolean(contextIsDark || theme === 'dark');
 
   const [modalVisible, setModalVisible] = useState(false);
+  const { keyboardHeight } = useKeyboard();
   const [searchQuery, setSearchQuery] = useState('');
   
   const filteredItems = (items || []).filter(item => 
@@ -70,7 +72,12 @@ export default function PickerModal({
         visible={modalVisible}
         onRequestClose={() => setModalVisible(false)}
       >
-        <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={() => setModalVisible(false)}>
+        {/* The sheet sits above the keyboard, so the search results stay visible while typing */}
+        <TouchableOpacity
+          style={[styles.backdrop, { paddingBottom: keyboardHeight }]}
+          activeOpacity={1}
+          onPress={() => setModalVisible(false)}
+        >
           <View style={[styles.modalContainer, isDark && { backgroundColor: "#1E1E1E" }]}>
             <View style={[styles.searchContainer, isDark && { backgroundColor: "#2A2A2A", borderBottomColor: "#333" }]}>
               <Ionicons name="search" size={20} color={isDark ? "#AAA" : "#666"} style={styles.searchIcon} />

@@ -1,3 +1,4 @@
+import KeyboardAwareScrollView from "../components/KeyboardAwareScrollView";
 import React, { useState } from "react";
 import {
   View,
@@ -69,6 +70,7 @@ const ForgetPasswordScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
+      <KeyboardAwareScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
       {!showInstructions ? (
         <>
           <Text style={styles.title}>Forgot Password</Text>
@@ -107,11 +109,16 @@ const ForgetPasswordScreen = ({ navigation }) => {
         </View>
       )}
       <Toast />
+      </KeyboardAwareScrollView>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: "center",
+  },
   container: {
     flex: 1,
     backgroundColor: "#4B0082",

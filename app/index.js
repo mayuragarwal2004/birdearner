@@ -1,3 +1,4 @@
+import { KeyboardProvider as KeyboardControllerProvider } from "react-native-keyboard-controller";
 import React, { useEffect } from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createStackNavigator } from "@react-navigation/stack";
@@ -181,6 +182,7 @@ export default function MainApp() {
 
   return (
     <SafeAreaProvider initialMetrics={safeAreaInitialMetrics}>
+      <KeyboardControllerProvider>
       <NavigationContainer linking={linking} ref={navigationRef}>
         <ThemeProvider>
           <AuthProvider>
@@ -194,6 +196,7 @@ export default function MainApp() {
         </ThemeProvider>
         <Toast config={toastConfig} />
       </NavigationContainer>
+      </KeyboardControllerProvider>
     </SafeAreaProvider>
   );
 }

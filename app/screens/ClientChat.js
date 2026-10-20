@@ -1,3 +1,4 @@
+import { KeyboardAvoidingView as KeyboardControllerAvoidingView } from "react-native-keyboard-controller";
 import React, { useState, useEffect, useCallback } from "react";
 import { View, StyleSheet, FlatList, Text, TouchableOpacity, Modal, Alert, Platform, Keyboard } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -1481,6 +1482,7 @@ const ClientChat = ({ route, navigation }) => {
         backgroundColor: currentTheme.background || "#fff",
       }}
     >
+      <KeyboardControllerAvoidingView style={{ flex: 1 }} behavior="padding">
       <View style={styles.container}>
         <ChatHeader
           user={route.params.freelancer}
@@ -1875,6 +1877,7 @@ const ClientChat = ({ route, navigation }) => {
 
         <Toast />
       </View>
+    </KeyboardControllerAvoidingView>
     </SafeAreaView>
   );
 };
