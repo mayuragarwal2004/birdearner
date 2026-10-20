@@ -1328,6 +1328,7 @@ const FreelancerChat = ({ route, navigation }) => {
                     navigation.navigate("JobDetailsChat", { jobId: job?.id || route.params.jobId });
                   }}
                   jobId={job?.id || route.params.jobId}
+                  jobDays={job?.workDurationDays}
                   onClose={() => setIsNegotiationOpen(false)}
                 />
               </View>

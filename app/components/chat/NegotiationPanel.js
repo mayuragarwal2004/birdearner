@@ -8,10 +8,60 @@ import {
   StyleSheet,
   ActivityIndicator,
   ScrollView,
+  Modal,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import apiService from "../../lib/apiService";
 import { useTheme } from "../../context/ThemeContext";
+
+// Input row styled like the offer fields: a light icon box on the left, the value on the right
+const FieldRow = ({ icon, isDark, children }) => (
+  <View
+    style={[
+      fieldStyles.row,
+      { backgroundColor: isDark ? "#2A2A3D" : "#FFFFFF", borderColor: isDark ? "#444458" : "#E5E7EB" },
+    ]}
+  >
+    <View style={[fieldStyles.iconBox, { backgroundColor: isDark ? "#343449" : "#EEF0F5" }]}>{icon}</View>
+    <View style={fieldStyles.body}>{children}</View>
+  </View>
+);
+
+const RupeeIcon = ({ color }) => <Text style={{ fontSize: 20, fontWeight: "600", color }}>₹</Text>;
+
+const fieldStyles = StyleSheet.create({
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: 32,
+    borderRadius: 8,
+    borderWidth: 1,
+    overflow: "hidden",
+    marginBottom: 10,
+  },
+  iconBox: {
+    width: 32,
+    height: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  body: {
+    flex: 1,
+    paddingHorizontal: 14,
+    justifyContent: "center",
+  },
+  input: {
+    fontSize: 16,
+    color: "#111827",
+    padding: 0,
+  },
+});
+
+// Shows the amount as a plain number (the server sends "10.00"), so the field is not reformatted while typing
+const formatAmountValue = (value) => {
+  const num = Number(value);
+  return value && !isNaN(num) ? String(Math.round(num)) : "0";
+};
 
 const NegotiationPanel = ({
   role = "client",
@@ -27,6 +77,7 @@ const NegotiationPanel = ({
   onRefresh,
   onViewProposalDetails,
   jobId = null,
+  jobDays = null,
   onClose = null,
 }) => {
   const { theme, themeStyles } = useTheme();
@@ -46,8 +97,11 @@ const NegotiationPanel = ({
   const bottomDays = isClient ? clientDays : freelancerDays;
   const bottomColor = isClient ? "#EF4444" : "#6D28D9";
 
-  const [bottomInput, setBottomInput] = useState(bottomAmount ? String(bottomAmount) : "0");
-  const [bottomDaysInput, setBottomDaysInput] = useState(bottomDays ? String(bottomDays) : "");
+  const [bottomInput, setBottomInput] = useState(formatAmountValue(bottomAmount));
+  // Amount editor dialog (opened by tapping the amount)
+  const [amountEditorVisible, setAmountEditorVisible] = useState(false);
+  const [amountDraft, setAmountDraft] = useState("");
+  const [bottomDaysInput, setBottomDaysInput] = useState(String(bottomDays || jobDays || ""));
   const [topInput, setTopInput] = useState(topAmount ? String(topAmount) : "0");
   const [topDaysInput, setTopDaysInput] = useState(topDays ? String(topDays) : "");
   const [isUpdating, setIsUpdating] = useState(false);
@@ -61,11 +115,11 @@ const NegotiationPanel = ({
   const agreedAmt = parseFloat(agreedAmount || bottomAmount || "0");
 
   useEffect(() => {
-    setBottomInput(bottomAmount ? String(bottomAmount) : "0");
+    setBottomInput(formatAmountValue(bottomAmount));
   }, [bottomAmount]);
 
   useEffect(() => {
-    setBottomDaysInput(bottomDays ? String(bottomDays) : "");
+    setBottomDaysInput(String(bottomDays || jobDays || ""));
   }, [bottomDays]);
 
   useEffect(() => {
@@ -205,19 +259,19 @@ const NegotiationPanel = ({
             {topDays} day{topDays > 1 ? 's' : ''}
           </Text>
         ) : null}
-        <View style={styles.inputContainer}>
+        <FieldRow icon={<RupeeIcon color={topColor} />} isDark={isDark}>
           <TextInput
-            style={styles.textInput}
+            style={fieldStyles.input}
             value={topInput}
             onChangeText={setTopInput}
             keyboardType="numeric"
             editable={false}
           />
-        </View>
+        </FieldRow>
         {topDays !== null && topDays !== undefined ? (
-          <View style={styles.inputContainer}>
+          <FieldRow icon={<Ionicons name="calendar-outline" size={20} color={topColor} />} isDark={isDark}>
             <TextInput
-              style={styles.textInput}
+              style={fieldStyles.input}
               value={topDaysInput}
               onChangeText={setTopDaysInput}
               keyboardType="numeric"
@@ -225,7 +279,7 @@ const NegotiationPanel = ({
               placeholder="Days"
               placeholderTextColor="#9CA3AF"
             />
-          </View>
+          </FieldRow>
         ) : null}
       </View>
 
@@ -262,18 +316,61 @@ const NegotiationPanel = ({
             {bottomDays} day{bottomDays > 1 ? 's' : ''}
           </Text>
         ) : null}
-        <View style={styles.inputContainer}>
+        {/* Amount: tap to edit in a dialog, where the cursor can be placed between digits */}
+        <TouchableOpacity
+          onPress={() => {
+            if (!isNegotiable) return;
+            setAmountDraft(bottomInput);
+            setAmountEditorVisible(true);
+          }}
+          activeOpacity={isNegotiable ? 0.7 : 1}
+          disabled={!isNegotiable}
+        >
+          <FieldRow icon={<RupeeIcon color={bottomColor} />} isDark={isDark}>
+            <Text style={fieldStyles.input}>{bottomInput}</Text>
+          </FieldRow>
+        </TouchableOpacity>
+
+        <Modal
+          visible={amountEditorVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setAmountEditorVisible(false)}
+        >
+          <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", padding: 24 }}>
+            <View style={{ backgroundColor: isDark ? "#1E1E1E" : "#FFFFFF", borderRadius: 16, padding: 20 }}>
+              <Text style={{ fontSize: 16, fontWeight: "700", color: currentTheme.text || "#111827", marginBottom: 12 }}>
+                Update your offer
+              </Text>
+              <FieldRow icon={<RupeeIcon color={bottomColor} />} isDark={isDark}>
+                <TextInput
+                  style={[fieldStyles.input, { textAlign: "center" }]}
+                  value={amountDraft}
+                  onChangeText={(text) => setAmountDraft(text.replace(/\D/g, ""))}
+                  keyboardType="number-pad"
+                  autoFocus
+                />
+              </FieldRow>
+              <View style={{ flexDirection: "row", justifyContent: "flex-end", gap: 12 }}>
+                <TouchableOpacity onPress={() => setAmountEditorVisible(false)} style={{ paddingVertical: 10, paddingHorizontal: 16 }}>
+                  <Text style={{ color: "#6B7280", fontWeight: "600" }}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => {
+                    setBottomInput(amountDraft || "0");
+                    setAmountEditorVisible(false);
+                  }}
+                  style={{ backgroundColor: "#6D28D9", paddingVertical: 10, paddingHorizontal: 18, borderRadius: 10 }}
+                >
+                  <Text style={{ color: "#FFFFFF", fontWeight: "700" }}>Save</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+        <FieldRow icon={<Ionicons name="calendar-outline" size={20} color={bottomColor} />} isDark={isDark}>
           <TextInput
-            style={styles.textInput}
-            value={bottomInput}
-            onChangeText={setBottomInput}
-            keyboardType="numeric"
-            editable={isNegotiable}
-          />
-        </View>
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={styles.textInput}
+            style={fieldStyles.input}
             value={bottomDaysInput}
             onChangeText={setBottomDaysInput}
             keyboardType="numeric"
@@ -281,7 +378,7 @@ const NegotiationPanel = ({
             placeholder="Days to complete"
             placeholderTextColor="#9CA3AF"
           />
-        </View>
+        </FieldRow>
         <TouchableOpacity
           style={[
             styles.updateButton,
