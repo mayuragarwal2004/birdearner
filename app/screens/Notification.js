@@ -119,15 +119,17 @@ const NotificationScreen = () => {
 
     if (type === 'JOB_UPDATE' && data?.jobId) {
       // navigation.navigate('JobDetails', { jobId: data.jobId });
-    } else if (type === 'CHAT' && data?.threadId) {
+    } else if (data?.threadId) {
+      // Chat notifications and job application notifications both carry the chat thread
       if (userData?.role === 'CLIENT') {
         navigation.navigate('ClientChat', {
           threadId: data.threadId,
-          projectId: data.projectId,
+          jobId: data.jobId,
+          projectId: data.projectId || data.jobId,
           freelancer: {
             user: { id: data.senderId, fullName: data.senderName || 'Freelancer' },
             profilePhoto: data.senderImage,
-            id: data.senderId
+            id: data.freelancerId || data.senderId
           }
         });
       } else {

@@ -7,7 +7,6 @@ const DEV_API_BASE_URL = "https://hawk-electoral-trainers-pieces.trycloudflare.c
 // const DEV_API_BASE_URL = "https://api.birdearner.com/api";
 
 const PROD_API_BASE_URL = "https://api.birdearner.com/api";
-// when someone apply for job client gets notification when click on that there gets button of open chat but when click on that button chat doesnt get open, resolve this issue chat must open when click on open chat button
 const API_BASE_URL = __DEV__ ? DEV_API_BASE_URL : PROD_API_BASE_URL;
 
 // Endpoints where 401 means bad credentials / public auth flow — not an expired session
