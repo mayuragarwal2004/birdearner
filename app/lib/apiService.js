@@ -3,11 +3,13 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 
-const DEV_API_BASE_URL = "https://hawk-electoral-trainers-pieces.trycloudflare.com/api";
+const DEV_API_BASE_URL = "https://keep-web-partner-entity.trycloudflare.com/api";
 // const DEV_API_BASE_URL = "https://api.birdearner.com/api";
 
 const PROD_API_BASE_URL = "https://api.birdearner.com/api";
 const API_BASE_URL = __DEV__ ? DEV_API_BASE_URL : PROD_API_BASE_URL;
+
+// when client click on accept in chat then it must check whether the amount and days of client and freelancer matches 
 
 // Endpoints where 401 means bad credentials / public auth flow — not an expired session
 const PUBLIC_AUTH_ENDPOINTS = [

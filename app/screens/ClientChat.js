@@ -1630,6 +1630,15 @@ const ClientChat = ({ route, navigation }) => {
 
           {renderDeadlineSection()}
 
+          {(clientOffer || freelancerOffer || isNegotiable) && !isNegotiationOpen && (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginHorizontal: 12, marginTop: 6, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10, backgroundColor: "#F5F3FF", borderWidth: 1, borderColor: "#DDD6FE" }}>
+              <Ionicons name="information-circle" size={18} color="#6D28D9" />
+              <Text style={{ flex: 1, fontSize: 12, color: "#4C1D95", fontWeight: "600" }}>
+                To negotiate the price and days, tap the arrow on the right to open Negotiation.
+              </Text>
+            </View>
+          )}
+
           <FlatList
             inverted={Boolean(sortedChatMessages && sortedChatMessages.length > 0)}
             data={sortedChatMessages}
