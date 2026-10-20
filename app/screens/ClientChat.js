@@ -1708,23 +1708,6 @@ const ClientChat = ({ route, navigation }) => {
             </View>
           )}
 
-          {job && !isOnSiteJobType(job) && chatStatus !== 'BLOCKED' && (
-            <TouchableOpacity
-              style={styles.watermarkBanner}
-              onPress={() => handleFilePick(true)}
-              activeOpacity={0.85}
-            >
-              <View style={styles.watermarkBannerIcon}>
-                <Ionicons name="attach" size={20} color="#6D28D9" />
-              </View>
-              <View style={styles.watermarkBannerBody}>
-                <Text style={styles.watermarkBannerTitle}>Attach files with watermark</Text>
-                <Text style={styles.watermarkBannerSub}>Share files securely with BirdEarner watermark</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color="#6D28D9" />
-            </TouchableOpacity>
-          )}
-
           {chatStatus === "BLOCKED" ? (
             <View style={styles.blockedBanner}>
               <Ionicons name="lock-closed-outline" size={18} color="#EF4444" style={{ marginRight: 8 }} />
