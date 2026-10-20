@@ -8,6 +8,7 @@ export const JOB_VALIDATION = {
 export function getJobFormValidationError({
   jobTitle,
   jobDes,
+  hasVoiceNote,
   freelancerType,
   serviceId,
   jobType,
@@ -55,10 +56,13 @@ export function getJobFormValidationError({
     return "Please enter all required skills (or remove empty skill fields).";
   }
 
+  // A voice note can replace the written description; otherwise the description needs enough characters
   const description = (jobDes || "").trim();
-  if (!description) return "Please enter a job description.";
-  if (description.length < JOB_VALIDATION.jobDescriptionMin) {
-    return `Job description must be at least ${JOB_VALIDATION.jobDescriptionMin} characters.`;
+  if (!hasVoiceNote) {
+    if (!description) return "Please enter a job description or record a voice note.";
+    if (description.length < JOB_VALIDATION.jobDescriptionMin) {
+      return `Job description must be at least ${JOB_VALIDATION.jobDescriptionMin} characters, or record a voice note.`;
+    }
   }
 
   if (jobType === "On-site") {

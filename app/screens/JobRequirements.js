@@ -79,6 +79,8 @@ const JobRequirementsScreen = ({ navigation }) => {
   const [skills, setSkills] = useState([""]);
   const [jobDes, setJobDes] = useState("");
   const [isRecording, setIsRecording] = useState(false);
+  // The recorded voice note (file uri), sent with the job so the freelancer can listen to it
+  const [voiceNote, setVoiceNote] = useState(null);
   const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const audioRecorderRef = useRef(audioRecorder);
   audioRecorderRef.current = audioRecorder;
@@ -405,6 +407,7 @@ const JobRequirementsScreen = ({ navigation }) => {
     skills: skills.map((s) => String(s || "").trim()).filter(Boolean),
     jobDes: jobDes.trim(),
     portfolioImages,
+    voiceNote,
     jobTitle: jobTitle.trim(),
     freelancerType,
     jobType,
@@ -854,6 +857,7 @@ const JobRequirementsScreen = ({ navigation }) => {
     const error = getJobFormValidationError({
       jobTitle,
       jobDes,
+      hasVoiceNote: !!voiceNote,
       freelancerType,
       serviceId,
       jobType,
@@ -983,11 +987,57 @@ const JobRequirementsScreen = ({ navigation }) => {
     };
   }, []);
 
+  // Starts recording the voice note. Returns true when recording started (or the user was told why it cannot),
+  // false when recording failed so the older live-speech option can be used instead.
+  const startVoiceNoteRecording = useCallback(async () => {
+    try {
+      const permission = await AudioModule.requestRecordingPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert(
+          "Microphone Permission Required",
+          "Microphone access is currently disabled for this app. Please open Android Settings -> Apps -> BirdEarner -> Permissions -> Microphone and select 'Allow'."
+        );
+        setIsRecording(false);
+        return true;
+      }
+
+      await setAudioModeAsync({
+        allowsRecording: true,
+        playsInSilentMode: true,
+      });
+
+      const recording = audioRecorderRef.current;
+      await recording.prepareToRecordAsync();
+      recording.record();
+      setIsRecording(true);
+      return true;
+    } catch (audioErr) {
+      console.warn("Audio recording initialization error:", audioErr);
+      return false;
+    }
+  }, []);
+
   const toggleVoiceInput = useCallback(async () => {
     // -------------------------------------------------------------
     // STEP 1: STOP RECORDING IF ALREADY ACTIVE
     // -------------------------------------------------------------
     if (isRecording) {
+      // Voice note recording: keep the audio file for the freelancer (no text conversion)
+      if (audioRecorderRef.current?.isRecording) {
+        const recording = audioRecorderRef.current;
+        setIsRecording(false);
+        try {
+          await recording.stop();
+          const uri = recording.uri;
+          if (uri) {
+            setVoiceNote({ uri, mimeType: "audio/mp4", fileName: `voice_note_${Date.now()}.m4a` });
+          }
+        } catch (recordingErr) {
+          console.warn("Failed to save audio recording:", recordingErr);
+          Alert.alert("Voice Note", "Failed to save the recording. Please try again.");
+        }
+        return;
+      }
       if (webRecognitionRef.current) {
         try {
           webRecognitionRef.current.stop();
@@ -1015,33 +1065,6 @@ const JobRequirementsScreen = ({ navigation }) => {
         setIsRecording(false);
         return;
       }
-      if (audioRecorderRef.current?.isRecording) {
-        const recording = audioRecorderRef.current;
-        setIsRecording(false);
-        setIsTranscribing(true);
-        try {
-          await recording.stop();
-          const uri = recording.uri;
-          if (uri) {
-            const response = await apiService.transcribeAudio(uri);
-            if (response && response.success && response.text) {
-              const prefix = initialTextRef.current ? initialTextRef.current.trim() + " " : "";
-              setJobDes(prefix + response.text.trim());
-            } else {
-              Alert.alert(
-                "Voice Input",
-                response?.error || "Could not transcribe audio. Please speak clearly and try again."
-              );
-            }
-          }
-        } catch (recordingErr) {
-          console.warn("Failed to transcribe audio recording:", recordingErr);
-          Alert.alert("Voice Input", "Failed to process audio recording. Please try again.");
-        } finally {
-          setIsTranscribing(false);
-        }
-        return;
-      }
       setIsRecording(false);
       return;
     }
@@ -1050,6 +1073,18 @@ const JobRequirementsScreen = ({ navigation }) => {
     // STEP 2: START RECORDING
     // -------------------------------------------------------------
     initialTextRef.current = jobDes || "";
+
+    // VOICE NOTE: record the audio on the phone; it is transcribed when the mic is tapped again
+    // On phones the mic only records the audio; no speech-to-text is used
+    if (Platform.OS !== "web") {
+      if (!(await startVoiceNoteRecording())) {
+        Alert.alert(
+          "Voice Note Error",
+          "Could not start microphone recording. Please check microphone permissions in your Android app settings."
+        );
+      }
+      return;
+    }
 
     // OPTION A: Web Speech API (Chrome / Edge / Safari / Opera)
     const SpeechRecognition =
@@ -1180,37 +1215,12 @@ const JobRequirementsScreen = ({ navigation }) => {
       }
     }
 
-    // OPTION D: Record audio and send it to the transcription API
-    try {
-      const permission = await AudioModule.requestRecordingPermissionsAsync();
-      if (!permission.granted) {
-        Alert.alert(
-          "Microphone Permission Required",
-          "Microphone access is currently disabled for this app. Please open Android Settings -> Apps -> BirdEarner -> Permissions -> Microphone and select 'Allow'."
-        );
-        setIsRecording(false);
-        return;
-      }
-
-      await setAudioModeAsync({
-        allowsRecording: true,
-        playsInSilentMode: true,
-      });
-
-      const recording = audioRecorderRef.current;
-      await recording.prepareToRecordAsync();
-      recording.record();
-      setIsRecording(true);
-      return;
-    } catch (audioErr) {
-      console.warn("Audio recording initialization error:", audioErr);
-      setIsRecording(false);
-      Alert.alert(
-        "Voice Input Error",
-        "Could not start microphone recording. Please check microphone permissions in your Android app settings."
-      );
-    }
-  }, [isRecording, jobDes]);
+    // No voice input option could start (each option returns early when it starts)
+    Alert.alert(
+      "Voice Input Error",
+      "Could not start microphone recording. Please check microphone permissions in your Android app settings."
+    );
+  }, [isRecording, jobDes, startVoiceNoteRecording]);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
@@ -1733,7 +1743,9 @@ const JobRequirementsScreen = ({ navigation }) => {
           <Text style={styles.label}>
             Job Description{" "}
             <Text style={styles.helperInline}>
-              (min {JOB_VALIDATION.jobDescriptionMin} characters)
+              {voiceNote
+                ? "(voice note added)"
+                : `(min ${JOB_VALIDATION.jobDescriptionMin} characters or record a voice note)`}
             </Text>
           </Text>
           <View style={styles.textAreaWrap}>
@@ -1750,7 +1762,7 @@ const JobRequirementsScreen = ({ navigation }) => {
             </View>
             <View style={styles.textAreaFooter}>
               <Text style={styles.charCountText}>
-                {jobDes.length} / {JOB_VALIDATION.jobDescriptionMin} min chars
+                {voiceNote ? `${jobDes.length} characters` : `${jobDes.length} / ${JOB_VALIDATION.jobDescriptionMin} min chars`}
               </Text>
               <TouchableOpacity
                 style={[styles.micBtn, isRecording && styles.micBtnActive]}
@@ -1769,6 +1781,18 @@ const JobRequirementsScreen = ({ navigation }) => {
                 )}
               </TouchableOpacity>
             </View>
+            {voiceNote && (
+              <View style={styles.voiceNoteChip}>
+                <Ionicons name="musical-notes-outline" size={16} color={PURPLE} />
+                <Text style={styles.voiceNoteText}>Voice note recorded</Text>
+                <TouchableOpacity
+                  onPress={() => setVoiceNote(null)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Ionicons name="close-circle" size={18} color="#9CA3AF" />
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
         </View>
 
@@ -2512,6 +2536,22 @@ const getStyles = (currentTheme, isDark, bottomInset = 0) => {
     micBtnActive: {
       borderColor: "#FF3B30",
       backgroundColor: isDark ? "#3A1515" : "#FFE5E5",
+    },
+    voiceNoteChip: {
+      flexDirection: "row",
+      alignItems: "center",
+      alignSelf: "flex-start",
+      gap: 6,
+      marginTop: 8,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 999,
+      backgroundColor: isDark ? "#2A1F3D" : "#F3E8FF",
+    },
+    voiceNoteText: {
+      fontSize: 12,
+      fontWeight: "600",
+      color: isDark ? "#E9D5FF" : "#5B21B6",
     },
     uploadCard: {
       borderRadius: 12,

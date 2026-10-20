@@ -3,7 +3,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 
-const DEV_API_BASE_URL = "https://dolls-currency-illustrated-mirror.trycloudflare.com/api";
+const DEV_API_BASE_URL = "https://dvd-depot-deer-investigated.trycloudflare.com/api";
 // const DEV_API_BASE_URL = "https://api.birdearner.com/api";
 
 const PROD_API_BASE_URL = "https://api.birdearner.com/api";
@@ -43,6 +43,7 @@ const CATEGORIES = [
   "freelancer_cover_photos",
   "freelancer_portfolios",
   "job_portfolios",
+  "job_voice_notes",
 ];
 
 // Expo's global fetch (winter fetch) converts FormData to bytes in JS and rejects

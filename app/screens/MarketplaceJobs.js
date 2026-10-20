@@ -326,7 +326,8 @@ const MarketplaceJobs = ({ navigation, route }) => {
               title: jobTitle,
               budget: jobBudget,
               deadline: jobDeadline,
-              description: jobDescription,
+              // Pass the real description (empty for voice-only jobs), not the card's placeholder text
+              description: job.jobDescription || job.description || job.details || "",
               clientId: client.companyName,
               client: client,
             },

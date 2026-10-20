@@ -74,7 +74,7 @@ const BookmarkedJobsScreen = ({ navigation }) => {
         title,
         budget: job.budgetAmount || job.budget || 0,
         deadline: job.deadlineDate || job.deadline,
-        description: job.jobDescription || job.description || "No description available",
+        description: job.jobDescription || job.description || "",
         clientId: client?.companyName,
         client,
       },

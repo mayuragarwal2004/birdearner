@@ -142,6 +142,15 @@ const JobDetailsScreen = ({ route, navigation }) => {
                   }
                 }
 
+                // Voice note goes last, so the picture attachments keep their order
+                if (currentJob.voiceNote?.uri) {
+                  const voiceRes = await apiService.uploadImage(currentJob.voiceNote, "job_voice_notes");
+                  if (!voiceRes?.success || !voiceRes.url) {
+                    throw new Error("Could not upload the voice note. Please try again.");
+                  }
+                  finalImages.push(voiceRes.url);
+                }
+
                 const jobDataToSubmit = {
                   jobTitle: String(currentJob.jobTitle || "").trim(),
                   jobDescription: String(currentJob.jobDes || currentJob.jobDescription || "").trim(),

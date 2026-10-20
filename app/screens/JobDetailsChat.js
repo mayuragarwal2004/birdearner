@@ -19,6 +19,8 @@ import ImageViewer from "react-native-image-zoom-viewer";
 import { useTheme } from "../context/ThemeContext";
 import { useAuth } from "../context/NewAuthContext";
 import apiService from "../lib/apiService";
+import { splitJobAttachments } from "../lib/jobAttachments";
+import VoiceNoteCard from "../components/VoiceNoteCard";
 
 const JobDetailsChatScreen = ({ route, navigation }) => {
   const { jobId } = route.params || {};
@@ -128,8 +130,10 @@ const JobDetailsChatScreen = ({ route, navigation }) => {
       setError(null);
       const apiJob = await apiService.getJobById(jobId);
       setJob(apiJob);
-      if (apiJob?.attachedFiles && apiJob.attachedFiles.length > 0) {
-        setImages(apiJob.attachedFiles.map((file) => ({ url: file, props: {} })));
+      // Only pictures go to the image viewer; voice notes are played in the description
+      const { images: pictureUrls } = splitJobAttachments(apiJob?.attachedFiles || apiJob?.attached_files);
+      if (pictureUrls.length > 0) {
+        setImages(pictureUrls.map((file) => ({ url: file, props: {} })));
       }
     } catch (err) {
       console.error("Error fetching job details:", err);
@@ -331,8 +335,8 @@ const JobDetailsChatScreen = ({ route, navigation }) => {
   const pType = (job.projectType || job.jobType || "").toLowerCase();
   const loc = (job.location || "").toLowerCase();
   const isRemote = pType.includes("remote") || (loc.includes("remote") && !pType.includes("on-site"));
-  const attachedFilesList = job.attachedFiles || job.attached_files || [];
-  const filesCount = attachedFilesList.length;
+  const { images: pictureList, voiceNotes } = splitJobAttachments(job.attachedFiles || job.attached_files);
+  const filesCount = pictureList.length;
   const skillsList = job.skillsRequired || job.skills || [];
   const rawStatus = (job.jobStatus || job.status || "OPEN").toUpperCase();
   const isCash = job.paymentMethod === "CASH" || !job.paymentMethod;
@@ -412,7 +416,14 @@ const JobDetailsChatScreen = ({ route, navigation }) => {
           </View>
           <View style={styles.cardContentPadding}>
             <Text style={styles.jobTitleText}>{job.jobTitle || "Job Title"}</Text>
-            <Text style={styles.jobDescriptionBodyText}>{job.jobDescription || job.description || "No description provided"}</Text>
+            <Text style={styles.jobDescriptionBodyText}>{job.jobDescription || job.description || (voiceNotes.length > 0 ? "" : "No description provided")}</Text>
+            {voiceNotes.map((url, index) => (
+              <VoiceNoteCard
+                key={url}
+                url={url}
+                label={voiceNotes.length > 1 ? `Voice note ${index + 1}` : "Voice note"}
+              />
+            ))}
             {skillsList.length > 0 && (
               <View style={styles.skillsContainer}>
                 <Text style={styles.skillsLabel}>Skills:</Text>

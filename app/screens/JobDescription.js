@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -20,11 +20,29 @@ import ImageViewer from "react-native-image-zoom-viewer";
 import { useAuth } from "../context/NewAuthContext";
 import { useTheme } from "../context/ThemeContext";
 import apiService from "../lib/apiService";
+import { splitJobAttachments } from "../lib/jobAttachments";
+import VoiceNoteCard from "../components/VoiceNoteCard";
 
 import Toast from "react-native-toast-message";
 
 const JobDescriptionScreen = ({ route, navigation }) => {
-  const { job } = route.params || {};
+  const { job: routeJob } = route.params || {};
+  // Job lists do not include attachments or the full description, so the full job is loaded when it is opened
+  const [fullJob, setFullJob] = useState(null);
+  useEffect(() => {
+    if (!routeJob?.id || routeJob.attachedFiles !== undefined) return;
+    let active = true;
+    apiService
+      .getJobById(routeJob.id)
+      .then((data) => {
+        if (active && data) setFullJob(data);
+      })
+      .catch((err) => console.warn("Could not load full job details:", err?.message));
+    return () => {
+      active = false;
+    };
+  }, [routeJob?.id]);
+  const job = useMemo(() => (fullJob ? { ...routeJob, ...fullJob } : routeJob), [routeJob, fullJob]);
   const { userData, refreshUserData, userProfile } = useAuth();
   const [isCheckingBalance, setIsCheckingBalance] = useState(false);
 
@@ -134,14 +152,10 @@ const JobDescriptionScreen = ({ route, navigation }) => {
   const [submittingReport, setSubmittingReport] = useState(false);
 
   useEffect(() => {
-    if (
-      job &&
-      (job.attachedFiles || job.attached_files) &&
-      (job.attachedFiles || job.attached_files).length > 0
-    ) {
-      const files = job.attachedFiles || job.attached_files;
-      const imageUrls = files.map((file) => ({ url: file, props: {} }));
-      setImages(imageUrls);
+    // Only pictures go to the image viewer; voice notes are played in their own card
+    const { images: pictureUrls } = splitJobAttachments(job?.attachedFiles || job?.attached_files);
+    if (pictureUrls.length > 0) {
+      setImages(pictureUrls.map((file) => ({ url: file, props: {} })));
     }
     if (job?.id) {
       checkBookmarkStatus();
@@ -287,8 +301,8 @@ const JobDescriptionScreen = ({ route, navigation }) => {
   const loc = (job.location || "").toLowerCase();
   const isRemote = pType.includes("remote") || (loc.includes("remote") && !pType.includes("on-site"));
 
-  const attachedFilesList = job.attachedFiles || job.attached_files || [];
-  const filesCount = attachedFilesList.length;
+  const { images: pictureList, voiceNotes } = splitJobAttachments(job.attachedFiles || job.attached_files);
+  const filesCount = pictureList.length;
 
   const isPlatformPayment = job.paymentMethod === "PLATFORM";
 
@@ -440,6 +454,15 @@ const JobDescriptionScreen = ({ route, navigation }) => {
               {jobDescriptionText}
             </Text>
 
+            {/* Voice note recorded by the client, playable from the description */}
+            {voiceNotes.map((url, index) => (
+              <VoiceNoteCard
+                key={url}
+                url={url}
+                label={voiceNotes.length > 1 ? `Voice note ${index + 1}` : "Voice note"}
+              />
+            ))}
+
             {(job.skillsRequired && job.skillsRequired.length > 0) ||
             (job.skills && job.skills.length > 0) ? (
               <View style={styles.skillsContainer}>
@@ -548,7 +571,7 @@ const JobDescriptionScreen = ({ route, navigation }) => {
             </Text>
           </View>
         </View>
-               {/* Card 5: View Attachments */}
+        {/* Card 5: View Attachments */}
         <TouchableOpacity
           activeOpacity={0.7}
           onPress={() => {

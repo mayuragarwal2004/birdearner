@@ -162,7 +162,7 @@ const JobPriority = ({ navigation, route }) => {
               title: jobTitle,
               budget: jobBudget,
               deadline: jobDeadline,
-              description: jobDescription,
+              description: job.jobDescription || job.description || job.details || "",
               clientId: client.companyName,
               client: client,
             },

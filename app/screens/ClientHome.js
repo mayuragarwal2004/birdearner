@@ -30,6 +30,7 @@ import { useNavigation } from "@react-navigation/native";
 import { useAuth } from "../context/NewAuthContext";
 import { useTheme } from "../context/ThemeContext";
 import apiService from "../lib/apiService";
+import { splitJobAttachments } from "../lib/jobAttachments";
 import ClientHomeServiceFinder from "../components/ClientHomeServiceFinder";
 import AddressPickerModal from "../components/AddressPickerModal";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -436,7 +437,7 @@ const ClientHomeScreen = () => {
     const status = getStatusMeta(details.jobStatus, isDark);
     const serviceImage =
       details.service?.imageUrl ||
-      details.attachedFiles?.[0] ||
+      splitJobAttachments(details.attachedFiles).images[0] ||
       null;
     const title = details.jobTitle || details.service?.name || "Ongoing job";
 
