@@ -1000,6 +1000,8 @@ const styles = StyleSheet.create({
   },
   submissionBox: {
     marginTop: 10,
+    // About 20% wider than the card was before (it sizes to its content, so a minimum width sets its size)
+    minWidth: 184,
     padding: 10,
     backgroundColor: "rgba(255, 255, 255, 0.95)",
     borderRadius: 8,

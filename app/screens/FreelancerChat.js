@@ -19,6 +19,8 @@ import NegotiationPanel from "../components/chat/NegotiationPanel";
 import { useChatData } from "../hooks/useChatSWR";
 import { useAuth } from "../context/NewAuthContext";
 import ApiService from "../lib/apiService";
+import { useOfferConfirmation } from "../hooks/offerConfirmation";
+import OfferUpdatedModal from "../components/chat/OfferUpdatedModal";
 import ReviewFormModal from "../components/chat/ReviewFormModal";
 import OnSiteOtpModal from "../components/chat/OnSiteOtpModal";
 import SafeSpinner from "../components/SafeSpinner";
@@ -571,6 +573,56 @@ const FreelancerChat = ({ route, navigation }) => {
     mutateThread,
     threadRestricted,
   } = useChatData("freelancer", route.params);
+
+  // Offer confirmation: latest offer and each party's confirmation of it
+  const negotiationThreadId = route.params.threadId || thread?.id;
+  const offerState = useOfferConfirmation(negotiationThreadId);
+  const [dismissedOfferId, setDismissedOfferId] = useState(null);
+  // Offer the user answered with Suggest Changes: no popup or button for it (a new offer from the other side resets this)
+  const [suggestedOfferId, setSuggestedOfferId] = useState(null);
+  const [offerPopupBusy, setOfferPopupBusy] = useState(false);
+  // The popup is for the party that did not make the latest offer, until they confirm or reopen negotiation
+  // No offer popup once a freelancer is assigned to the job
+  const showOfferPopup =
+    !job?.assignedFreelancerId &&
+    !threadRestricted &&
+    Boolean(offerState.latest) &&
+    offerState.latest.senderType !== "FREELANCER" &&
+    !offerState.freelancerConfirmed &&
+    dismissedOfferId !== offerState.latest.id;
+
+  // An offer from the client that the freelancer has not answered yet (accepting or suggesting changes answers it)
+  const hasUnansweredOffer =
+    !job?.assignedFreelancerId &&
+    !threadRestricted &&
+    Boolean(offerState.latest) &&
+    offerState.latest.senderType !== "FREELANCER" &&
+    !offerState.freelancerConfirmed &&
+    suggestedOfferId !== offerState.latest.id;
+
+  const confirmLatestOffer = async () => {
+    if (!offerState.latest || !negotiationThreadId) return;
+    setOfferPopupBusy(true);
+    try {
+      const res = await ApiService.confirmNegotiationOffer(
+        negotiationThreadId,
+        parseFloat(offerState.latest.amount),
+        offerState.latest.days ?? null
+      );
+      if (res && res.success === false) throw new Error(res.message || "Could not confirm the offer");
+      Toast.show({ type: "success", text1: "Offer confirmed" });
+    } catch (err) {
+      const message = err?.message || "";
+      if (message.toLowerCase().includes("offer mismatch")) {
+        Toast.show({ type: "error", text1: "Offer mismatch", text2: "Please review the latest offer and negotiate again." });
+      } else {
+        Alert.alert("Error", message || "Could not confirm the offer.");
+      }
+    } finally {
+      setOfferPopupBusy(false);
+      offerState.refresh();
+    }
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -1165,6 +1217,19 @@ const FreelancerChat = ({ route, navigation }) => {
             </View>
           )}
 
+          {hasUnansweredOffer && !showOfferPopup && (
+            <TouchableOpacity
+              onPress={() => setDismissedOfferId(null)}
+              activeOpacity={0.85}
+              style={{ flexDirection: "row", alignItems: "center", gap: 8, marginHorizontal: 12, marginTop: 6, paddingVertical: 10, paddingHorizontal: 12, borderRadius: 10, backgroundColor: "#6D28D9" }}
+            >
+              <Ionicons name="alert-circle" size={18} color="#FFFFFF" />
+              <Text style={{ flex: 1, color: "#FFFFFF", fontWeight: "700", fontSize: 13 }}>
+                {route.params.client?.user?.fullName || "The client"} sent an offer. Tap to respond.
+              </Text>
+            </TouchableOpacity>
+          )}
+
           {!threadRestricted && (clientOffer || freelancerOffer || isNegotiable) && !isNegotiationOpen && (
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginHorizontal: 12, marginTop: 6, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10, backgroundColor: "#F5F3FF", borderWidth: 1, borderColor: "#DDD6FE" }}>
               <Ionicons name="information-circle" size={18} color="#6D28D9" />
@@ -1338,6 +1403,9 @@ const FreelancerChat = ({ route, navigation }) => {
                   }}
                   jobId={job?.id || route.params.jobId}
                   jobDays={job?.workDurationDays}
+                  threadId={negotiationThreadId}
+                  confirmation={offerState}
+                  onOfferChanged={offerState.refresh}
                   onClose={() => setIsNegotiationOpen(false)}
                 />
               </View>
@@ -1436,6 +1504,21 @@ const FreelancerChat = ({ route, navigation }) => {
             <Ionicons name="chevron-forward" size={22} color="#FFFFFF" />
           </TouchableOpacity>
         )}
+
+        <OfferUpdatedModal
+          visible={showOfferPopup}
+          otherPartyName={route.params.client?.user?.fullName || route.params.client?.fullName || "Client"}
+          amount={offerState.latest?.amount}
+          days={offerState.latest?.days}
+          busy={offerPopupBusy}
+          onAccept={confirmLatestOffer}
+          onSuggest={() => {
+            setDismissedOfferId(offerState.latest?.id);
+            setSuggestedOfferId(offerState.latest?.id);
+            setIsNegotiationOpen(true);
+          }}
+          onClose={() => setDismissedOfferId(offerState.latest?.id)}
+        />
 
         <Toast />
       </View>

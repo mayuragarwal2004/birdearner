@@ -9,8 +9,10 @@ import {
   ActivityIndicator,
   ScrollView,
   Modal,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import Toast from "react-native-toast-message";
 import apiService from "../../lib/apiService";
 import { useTheme } from "../../context/ThemeContext";
 
@@ -78,6 +80,9 @@ const NegotiationPanel = ({
   onViewProposalDetails,
   jobId = null,
   jobDays = null,
+  threadId = null,
+  confirmation = null,
+  onOfferChanged = null,
   onClose = null,
 }) => {
   const { theme, themeStyles } = useTheme();
@@ -86,6 +91,14 @@ const NegotiationPanel = ({
   const styles = getStyles(currentTheme, isDark);
 
   const isClient = role === "client";
+
+  // Offer confirmation state (from the chat's negotiation history)
+  const myRoleKey = isClient ? "CLIENT" : "FREELANCER";
+  const offerLatest = confirmation?.latest || null;
+  const iConfirmed = isClient ? !!confirmation?.clientConfirmed : !!confirmation?.freelancerConfirmed;
+  // The offer is locked while it is pending from this side, or after it has been accepted
+  const offerLocked = Boolean(offerLatest) && (Boolean(confirmation?.ready) || iConfirmed || offerLatest.senderType === myRoleKey);
+  const canEdit = isNegotiable && !offerLocked;
 
   const topTitle = isClient ? `${otherPartyName}'s Offer` : "Client's Offer";
   const topAmount = isClient ? freelancerOffer : clientOffer;
@@ -319,12 +332,12 @@ const NegotiationPanel = ({
         {/* Amount: tap to edit in a dialog, where the cursor can be placed between digits */}
         <TouchableOpacity
           onPress={() => {
-            if (!isNegotiable) return;
+            if (!canEdit) return;
             setAmountDraft(bottomInput);
             setAmountEditorVisible(true);
           }}
-          activeOpacity={isNegotiable ? 0.7 : 1}
-          disabled={!isNegotiable}
+          activeOpacity={canEdit ? 0.7 : 1}
+          disabled={!canEdit}
         >
           <FieldRow icon={<RupeeIcon color={bottomColor} />} isDark={isDark}>
             <Text style={fieldStyles.input}>{bottomInput}</Text>
@@ -374,7 +387,7 @@ const NegotiationPanel = ({
             value={bottomDaysInput}
             onChangeText={setBottomDaysInput}
             keyboardType="numeric"
-            editable={isNegotiable}
+            editable={canEdit}
             placeholder="Days to complete"
             placeholderTextColor="#9CA3AF"
           />
@@ -383,19 +396,32 @@ const NegotiationPanel = ({
           style={[
             styles.updateButton,
             { borderColor: bottomColor },
-            (!isNegotiable || isUpdating) && styles.disabledButton,
+            (!canEdit || isUpdating) && styles.disabledButton,
           ]}
           onPress={handleUpdateOwnOffer}
-          disabled={!isNegotiable || isUpdating}
+          disabled={!canEdit || isUpdating}
         >
           {isUpdating ? (
             <ActivityIndicator size="small" color={bottomColor} />
           ) : (
             <Text style={[styles.updateButtonText, { color: bottomColor }]}>
-              {isNegotiable ? "Update Offer" : "Locked"}
+              {canEdit ? "Update Offer" : "Locked"}
             </Text>
           )}
         </TouchableOpacity>
+
+        {/* Offer confirmation: both parties must confirm the same latest offer */}
+        {offerLatest && isNegotiable ? (
+          confirmation?.ready ? (
+            <Text style={{ textAlign: "center", color: bottomColor, fontWeight: "600", marginTop: 8, fontSize: 12 }}>
+              Offer accepted. Both parties have the same amount and duration.
+            </Text>
+          ) : offerLatest.senderType === myRoleKey ? (
+            <Text style={{ textAlign: "center", color: bottomColor, fontWeight: "600", marginTop: 8, fontSize: 12 }}>
+              Waiting for {otherPartyName} to accept your offer
+            </Text>
+          ) : null
+        ) : null}
       </View>
 
       {/* Info Banner */}

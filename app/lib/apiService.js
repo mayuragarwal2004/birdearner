@@ -3,14 +3,13 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 
-const DEV_API_BASE_URL = "https://keep-web-partner-entity.trycloudflare.com/api";
+const DEV_API_BASE_URL = "https://genius-stones-denied-messenger.trycloudflare.com/api";
 // const DEV_API_BASE_URL = "https://api.birdearner.com/api";
 
 const PROD_API_BASE_URL = "https://api.birdearner.com/api";
 const API_BASE_URL = __DEV__ ? DEV_API_BASE_URL : PROD_API_BASE_URL;
 
-// when client click on accept in chat then it must check whether the amount and days of client and freelancer matches 
-
+// for remote jobs only -> when freelancer make submission with eash submission there are 
 // Endpoints where 401 means bad credentials / public auth flow — not an expired session
 const PUBLIC_AUTH_ENDPOINTS = [
   "/auth/login",
@@ -518,6 +517,22 @@ class ApiService {
 
   async updateOffer(threadId, amount, userRole, days = null) {
     return this.updateNegotiationOffer(threadId, amount, userRole, days);
+  }
+
+  // Confirm the latest negotiation offer (amount/days must match the latest offer on the server)
+  async confirmNegotiationOffer(threadId, amount, days = null) {
+    const body = { threadId, amount };
+    if (days !== null && days !== undefined) body.days = days;
+    return await this.makeRequest("/chats/negotiate/confirm", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  }
+
+  // Full offer history of a chat thread (offers and confirmations, oldest first)
+  async getNegotiationHistory(threadId) {
+    const response = await this.makeRequest(`/chats/negotiate/history?chatThreadId=${encodeURIComponent(threadId)}`);
+    return response?.success ? response.data || [] : [];
   }
 
   // Signup client
