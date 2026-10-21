@@ -211,7 +211,7 @@ const NotificationScreen = () => {
   );
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
         <View style={styles.handle} />
         <TouchableOpacity

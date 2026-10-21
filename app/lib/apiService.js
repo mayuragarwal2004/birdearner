@@ -3,13 +3,12 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 
-const DEV_API_BASE_URL = "https://battery-adventures-wichita-herbs.trycloudflare.com/api";
+const DEV_API_BASE_URL = "https://figure-absolute-nights-supplied.trycloudflare.com/api";
 // const DEV_API_BASE_URL = "https://api.birdearner.com/api";
 
 const PROD_API_BASE_URL = "https://api.birdearner.com/api";
 const API_BASE_URL = __DEV__ ? DEV_API_BASE_URL : PROD_API_BASE_URL;
 
-// on view profile pages all tab and notification page the content gets overlap under the system navigation button as we scroll this content must not overlap under the system navigation button. if you want you can refer the profile overview page for this 
 
 // Endpoints where 401 means bad credentials / public auth flow — not an expired session
 const PUBLIC_AUTH_ENDPOINTS = [

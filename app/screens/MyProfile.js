@@ -301,7 +301,7 @@ export default function ProfileScreen({ navigation }) {
   const isAvailable = data?.currentlyAvailable !== false;
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={styles.safeArea}>
       <Modal
         visible={modalVisible}
         transparent={true}
