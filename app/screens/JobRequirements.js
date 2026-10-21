@@ -812,6 +812,20 @@ const JobRequirementsScreen = ({ navigation, route }) => {
 
   const addSkills = () => setSkills([...skills, ""]);
 
+  // Enter on a skill keeps it and opens a new skill field below it, ready for the next one
+  const submitSkill = (index) => {
+    if (!String(skills[index] || "").trim()) return;
+    const updated = [...skills];
+    updated.splice(index + 1, 0, "");
+    const keepY = pageScrollY.current;
+    pendingSkillFocusRef.current = index + 1;
+    setSkills(updated);
+    const restore = () => pageScrollRef.current?.scrollTo?.({ y: keepY, animated: false });
+    // Focusing the new field can move the page, so put it back where it was
+    setTimeout(restore, 50);
+    setTimeout(restore, 150);
+  };
+
   const removeSkill = (index) => {
     if (skills.length > 1) {
       setSkills(skills.filter((_, i) => i !== index));
@@ -963,6 +977,19 @@ const JobRequirementsScreen = ({ navigation, route }) => {
 
   const mapPreviewRef = useRef(null);
   const webRecognitionRef = useRef(null);
+  const skillInputRefs = useRef([]);
+  // Page scroll position, kept so adding a skill does not jump the page to the top
+  const pageScrollRef = useRef(null);
+  const pageScrollY = useRef(0);
+  // Index of the skill field that should get focus once it has rendered
+  const pendingSkillFocusRef = useRef(null);
+  useEffect(() => {
+    const target = pendingSkillFocusRef.current;
+    if (target === null) return;
+    pendingSkillFocusRef.current = null;
+    // Wait one tick so the Enter key's own blur settles before we take focus back
+    setTimeout(() => skillInputRefs.current[target]?.focus(), 0);
+  }, [skills]);
   const webMediaRecorderRef = useRef(null);
   const initialTextRef = useRef("");
 
@@ -1281,6 +1308,11 @@ const JobRequirementsScreen = ({ navigation, route }) => {
       </View>
 
       <KeyboardAwareScrollView
+        ref={pageScrollRef}
+        onScroll={(event) => {
+          pageScrollY.current = event.nativeEvent.contentOffset.y;
+        }}
+        scrollEventThrottle={16}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -1765,6 +1797,9 @@ const JobRequirementsScreen = ({ navigation, route }) => {
               <View style={[styles.inputRow, { flex: 1, marginBottom: 0 }]}>
                 <Tag size={18} color={accent} />
                 <TextInput
+                  ref={(el) => {
+                    skillInputRefs.current[index] = el;
+                  }}
                   style={styles.inputFlex}
                   placeholder={`e.g., Skill ${index + 1}`}
                   placeholderTextColor={styles.placeholder.color}
@@ -1774,6 +1809,9 @@ const JobRequirementsScreen = ({ navigation, route }) => {
                     updated[index] = text;
                     setSkills(updated);
                   }}
+                  returnKeyType="next"
+                  blurOnSubmit={false}
+                  onSubmitEditing={() => submitSkill(index)}
                 />
               </View>
               {skills.length > 1 && (
