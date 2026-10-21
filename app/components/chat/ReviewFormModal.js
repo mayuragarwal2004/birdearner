@@ -10,6 +10,7 @@ import {
   Keyboard
 } from "react-native";
 import SafeSpinner from "../SafeSpinner";
+import { KeyboardAvoidingView as KeyboardControllerAvoidingView } from "react-native-keyboard-controller";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useTheme } from "../../context/ThemeContext";
 
@@ -66,7 +67,7 @@ const ReviewFormModal = ({ visible, onClose, onSubmit, isSubmitting }) => {
       onRequestClose={handleClose}
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View style={styles.modalOverlay}>
+        <KeyboardControllerAvoidingView style={styles.modalOverlay} behavior="padding">
             <View style={styles.modalContent}>
             <View style={styles.header}>
                 <Text style={styles.heading}>Rate Freelancer</Text>
@@ -178,7 +179,7 @@ const ReviewFormModal = ({ visible, onClose, onSubmit, isSubmitting }) => {
                 )}
             </TouchableOpacity>
             </View>
-        </View>
+        </KeyboardControllerAvoidingView>
       </TouchableWithoutFeedback>
     </Modal>
   );
