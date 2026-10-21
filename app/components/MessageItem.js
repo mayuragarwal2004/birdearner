@@ -160,7 +160,8 @@ const MessageItem = ({ messageItem, message, isCurrentUser, media = [], onMessag
 
   const isWorkSubmission = msgData?.isWorkSubmission || messageItem?.messageType === 'WORK_SUBMISSION' || msgData?.submissionStatus;
   const submissionStatus = msgData?.submissionStatus || 'PENDING';
-  const isSupersededSubmission = isWorkSubmission && submissionStatus === 'PENDING' && (msgData.reviewControlActive === false || msgData.isLatestForVersion === false);
+  // Superseded by newer files in the same version. Stays hidden after review too, since review copies the decision to every card of the version.
+  const isSupersededSubmission = isWorkSubmission && (msgData.reviewControlActive === false || msgData.isLatestForVersion === false);
 
   // If this message item is a superseded Work Submission message with no attachments or text, hide the entire bubble and timestamp
   if (isSupersededSubmission && (!messageItem?.attachments || messageItem.attachments.length === 0) && (!message || !message.trim())) {
@@ -317,7 +318,7 @@ const MessageItem = ({ messageItem, message, isCurrentUser, media = [], onMessag
         if (!isWorkSubmission) return null;
 
         // Hide previous unreviewed submission review buttons completely when superseded by newer attachments
-        if (submissionStatus === 'PENDING' && (msgData.reviewControlActive === false || msgData.isLatestForVersion === false)) {
+        if (msgData.reviewControlActive === false || msgData.isLatestForVersion === false) {
           return null;
         }
 
