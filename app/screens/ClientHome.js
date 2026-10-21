@@ -42,15 +42,10 @@ const DEEP_PURPLE = "#4B0082";
 const placeholderImageURL = "https://picsum.photos/seed/";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const PROMO_WIDTH = SCREEN_WIDTH - 40;
-
-// Card images are cropped by Cloudinary to the exact box they are shown in (cover, no letterboxing).
-// Sizes are 3x the on-screen box so they stay sharp on high-density screens.
-const BANNER_IMAGE_BOX = { w: 1000, h: 360 };
-const OFFER_IMAGE_BOX = { w: 540, h: 258 };
-const cardImageUrl = (url, box) =>
-  typeof url === "string" && url.includes("res.cloudinary.com/") && url.includes("/image/upload/")
-    ? url.replace("/image/upload/", `/image/upload/c_fill,w_${box.w},h_${box.h},q_auto,f_auto/`)
-    : url;
+// Every banner has this height, so the image and the text band fit in the same card size
+const PROMO_HEIGHT = 340;
+// Fixed height of the text band under an image banner, so the image area is the same size on every banner
+const PROMO_BAND_HEIGHT = 120;
 
 const formatSchedule = (deadline) => {
   if (!deadline) return "Schedule not set";
@@ -567,7 +562,7 @@ const ClientHomeScreen = () => {
         <View style={{ marginBottom: 16 }}>
           <KeyboardAwareScrollView
             horizontal
-            style={{ height: 220 }}
+            style={{ height: PROMO_HEIGHT }}
             pagingEnabled
             showsHorizontalScrollIndicator={false}
             onScroll={onPromoScroll}
@@ -622,16 +617,50 @@ const ClientHomeScreen = () => {
                 </View>
               );
 
-              // Banners with an admin image: image on top, text sits below it on the card background
+              // Banners with an admin image: the image sits on top, with the title, subtitle and button below it.
+              // The admin's background colour is used behind the image, the text and the button.
+              const bannerBackground = promo.backgroundColor || (isDark ? "#2A2034" : "#F3EAFF");
               if (promo.imageUrl) {
                 return (
-                  <TouchableOpacity key={promo.id} activeOpacity={0.92} onPress={onBannerPress} style={bannerStyle}>
-                    <Image
-                      source={{ uri: apiService.loadImageURI(cardImageUrl(promo.imageUrl, BANNER_IMAGE_BOX)) }}
-                      style={styles.promoImage}
-                      resizeMode="cover"
-                    />
-                    {bannerCopy}
+                  <TouchableOpacity
+                    key={promo.id}
+                    activeOpacity={0.92}
+                    onPress={onBannerPress}
+                    style={[styles.promoCard, { width: PROMO_WIDTH, backgroundColor: bannerBackground }]}
+                  >
+                    <View style={[styles.promoImageBox, { backgroundColor: bannerBackground }]}>
+                      <Image
+                        source={{ uri: apiService.loadImageURI(promo.imageUrl) }}
+                        style={styles.promoImage}
+                        resizeMode="cover"
+                      />
+                    </View>
+                    <View style={[styles.promoOverlay, { backgroundColor: bannerBackground }]}>
+                      <View style={styles.promoOverlayText}>
+                        <Text
+                          numberOfLines={2}
+                          style={[styles.promoOverlayTitle, promo.textColor ? { color: promo.textColor } : null]}
+                        >
+                          {promo.title}
+                        </Text>
+                        {!!promo.subtitle && (
+                          <Text
+                            numberOfLines={1}
+                            style={[styles.promoOverlaySubtitle, promo.textColor ? { color: promo.textColor, opacity: 0.85 } : null]}
+                          >
+                            {promo.subtitle}
+                          </Text>
+                        )}
+                      </View>
+                      <View
+                        style={[
+                          styles.promoOverlayCta,
+                          promo.accentColor ? { backgroundColor: promo.accentColor } : null,
+                        ]}
+                      >
+                        <Text style={styles.promoOverlayCtaText}>{`${promo.ctaLabel || "Book now"} ›`}</Text>
+                      </View>
+                    </View>
                   </TouchableOpacity>
                 );
               }
@@ -759,7 +788,7 @@ const ClientHomeScreen = () => {
                     </Text>
                   )}
                   {!!offer.ctaLabel && (
-                    <View style={styles.offerCta}>
+                    <View style={[styles.offerCta, offer.accentColor ? { backgroundColor: offer.accentColor } : null]}>
                       <Text style={styles.offerCtaText}>{offer.ctaLabel}</Text>
                     </View>
                   )}
@@ -774,13 +803,6 @@ const ClientHomeScreen = () => {
                   onPress={onCardPress}
                   activeOpacity={0.88}
                 >
-                  {!!offer.imageUrl && (
-                    <Image
-                      source={{ uri: apiService.loadImageURI(cardImageUrl(offer.imageUrl, OFFER_IMAGE_BOX)) }}
-                      style={styles.offerImage}
-                      resizeMode="cover"
-                    />
-                  )}
                   <View style={styles.offerBody}>{cardContent}</View>
                 </TouchableOpacity>
               );
@@ -943,12 +965,49 @@ const getStyles = (currentTheme, isDark, bottomInset = 0) => {
       borderRadius: 16,
       overflow: "hidden",
       backgroundColor: soft,
-      height: 220,
+      height: PROMO_HEIGHT,
       alignSelf: "flex-start",
+    },
+    promoImageBox: {
+      height: PROMO_HEIGHT - PROMO_BAND_HEIGHT,
     },
     promoImage: {
       width: "100%",
-      height: 120,
+      height: "100%",
+    },
+    promoOverlay: {
+      height: PROMO_BAND_HEIGHT,
+      justifyContent: "center",
+      alignItems: "flex-start",
+      gap: 10,
+      overflow: "hidden",
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+    },
+    promoOverlayText: {
+      alignSelf: "stretch",
+    },
+    promoOverlayTitle: {
+      color: "#1F1F1F",
+      fontSize: 15,
+      fontWeight: "700",
+      lineHeight: 20,
+    },
+    promoOverlaySubtitle: {
+      color: "#5F6368",
+      fontSize: 11,
+      marginTop: 3,
+    },
+    promoOverlayCta: {
+      backgroundColor: "#AECBFA",
+      borderRadius: 999,
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+    },
+    promoOverlayCtaText: {
+      color: "#1F1F1F",
+      fontSize: 13,
+      fontWeight: "700",
     },
     promoCopy: {
       flex: 1,
@@ -1142,13 +1201,9 @@ const getStyles = (currentTheme, isDark, bottomInset = 0) => {
     },
     offerCard: {
       width: 180,
-      height: 230,
+      height: 170,
       borderRadius: 14,
       overflow: "hidden",
-    },
-    offerImage: {
-      width: "100%",
-      height: 86,
     },
     offerBody: {
       flex: 1,

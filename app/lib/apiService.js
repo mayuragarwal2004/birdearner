@@ -3,13 +3,13 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 
-const DEV_API_BASE_URL = "https://talked-just-projectors-turned.trycloudflare.com/api";
+const DEV_API_BASE_URL = "https://highly-bold-dressing-transform.trycloudflare.com/api";
 // const DEV_API_BASE_URL = "https://api.birdearner.com/api";
 
 const PROD_API_BASE_URL = "https://api.birdearner.com/api";
 const API_BASE_URL = __DEV__ ? DEV_API_BASE_URL : PROD_API_BASE_URL;
 
-
+// in freelancer wallet page ,check how withdrawal balance, totaol earning is calculated 
 // Endpoints where 401 means bad credentials / public auth flow — not an expired session
 const PUBLIC_AUTH_ENDPOINTS = [
   "/auth/login",
