@@ -11,6 +11,11 @@ const JobRequirementStack = () => (
       options={{ headerShown: false }}
     />
     <Stack.Screen
+      name="JobDrafts"
+      getComponent={() => require('../screens/JobDrafts').default}
+      options={{ headerShown: false }}
+    />
+    <Stack.Screen
       name="JobDetails"
       getComponent={() => require('../screens/JobDetails').default}
       options={{ headerShown: false }}

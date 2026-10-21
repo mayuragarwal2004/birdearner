@@ -9,7 +9,8 @@ const DEV_API_BASE_URL = "https://analytical-builders-diego-island.trycloudflare
 const PROD_API_BASE_URL = "https://api.birdearner.com/api";
 const API_BASE_URL = __DEV__ ? DEV_API_BASE_URL : PROD_API_BASE_URL;
 
-// for remote jobs only -> when freelancer make submission with eash submission there are 
+// on create job page  of client side this is kills option when we type skills and press enter the the current skill must be added and open next field to type new skill
+
 // Endpoints where 401 means bad credentials / public auth flow — not an expired session
 const PUBLIC_AUTH_ENDPOINTS = [
   "/auth/login",

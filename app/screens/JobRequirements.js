@@ -52,6 +52,7 @@ import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
 import * as Location from "expo-location";
 import MapView, { PROVIDER_GOOGLE, Marker } from "react-native-maps";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getJobDrafts, getJobDraft, saveJobDraft, deleteJobDraft } from "../lib/jobDrafts";
 import { useFocusEffect } from "@react-navigation/native";
 import apiService from "../lib/apiService";
 import { useTheme } from "../context/ThemeContext";
@@ -64,9 +65,8 @@ import { getJobFormValidationError, JOB_VALIDATION } from "../lib/jobValidation"
 const { calculateBirdFee } = require("../utils/feeCalculator");
 
 const PURPLE = "#7B2CFF";
-const DRAFT_KEY = "jobRequirementsDraft";
 
-const JobRequirementsScreen = ({ navigation }) => {
+const JobRequirementsScreen = ({ navigation, route }) => {
   const [jobLocation, setJobLocation] = useState("");
   const [workDurationDays, setWorkDurationDays] = useState(1); // 1, 2, or 3 days
   const [budget, setBudget] = useState("");
@@ -82,6 +82,10 @@ const JobRequirementsScreen = ({ navigation }) => {
   const [isRecording, setIsRecording] = useState(false);
   // The recorded voice note (file uri), sent with the job so the freelancer can listen to it
   const [voiceNote, setVoiceNote] = useState(null);
+  // The saved draft (stored on this phone), shown as a card on the page
+  const [draftCount, setDraftCount] = useState(0);
+  // The draft this form was opened from; saving updates that draft
+  const [editingDraftId, setEditingDraftId] = useState(null);
   const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const audioRecorderRef = useRef(audioRecorder);
   audioRecorderRef.current = audioRecorder;
@@ -236,10 +240,13 @@ const JobRequirementsScreen = ({ navigation }) => {
 
   useEffect(() => {
     fetchWalletData();
-    loadDraft();
+    refreshDraftCount();
     fetchAvailableCoupons();
 
-    const unsubscribe = navigation.addListener("focus", fetchWalletData);
+    const unsubscribe = navigation.addListener("focus", () => {
+      fetchWalletData();
+      refreshDraftCount();
+    });
     return unsubscribe;
   }, [navigation]);
 
@@ -285,31 +292,46 @@ const JobRequirementsScreen = ({ navigation }) => {
     }
   }, [serviceId, selectedCoupon]);
 
-  const loadDraft = async () => {
+  // Opening a draft from the drafts list passes its id; the form is then filled from that draft
+  useEffect(() => {
+    if (route?.params?.draftId) openDraft(route.params.draftId);
+  }, [route?.params?.draftId]);
+
+  // Fills the form from a saved draft
+  const applyDraft = (draft) => {
+    if (draft.jobTitle) setJobTitle(draft.jobTitle);
+    if (draft.jobDes) setJobDes(draft.jobDes);
+    if (draft.budget) setBudget(String(draft.budget));
+    if (Array.isArray(draft.skills) && draft.skills.length) setSkills(draft.skills);
+    if (draft.jobType) {
+      setJobType(draft.jobType);
+      setIsOnSite(draft.jobType === "On-site");
+    }
+    if (draft.paymentMethod) setPaymentMethod(draft.paymentMethod);
+    if (draft.jobLocation) setJobLocation(draft.jobLocation);
+    if (draft.latitude != null) setLatitude(draft.latitude);
+    if (draft.longitude != null) setLongitude(draft.longitude);
+    if (draft.serviceId) setServiceId(draft.serviceId);
+    if (draft.freelancerType) setFrelancerType(draft.freelancerType);
+    if (draft.workDurationDays) setWorkDurationDays(Number(draft.workDurationDays));
+    if (draft.selectedSavedAddressId) {
+      setSelectedSavedAddressId(draft.selectedSavedAddressId);
+    }
+    if (draft.voiceNote) setVoiceNote(draft.voiceNote);
+  };
+
+  // Opens one draft from the drafts list: its details fill the form, and saving updates that draft
+  const openDraft = async (draftId) => {
     try {
-      const raw = await AsyncStorage.getItem(DRAFT_KEY);
-      if (!raw) return;
-      const draft = JSON.parse(raw);
-      if (draft.jobTitle) setJobTitle(draft.jobTitle);
-      if (draft.jobDes) setJobDes(draft.jobDes);
-      if (draft.budget) setBudget(String(draft.budget));
-      if (Array.isArray(draft.skills) && draft.skills.length) setSkills(draft.skills);
-      if (draft.jobType) {
-        setJobType(draft.jobType);
-        setIsOnSite(draft.jobType === "On-site");
+      const draft = await getJobDraft(draftId);
+      if (!draft) {
+        Alert.alert("Draft not found", "This draft may have been deleted.");
+        return;
       }
-      if (draft.paymentMethod) setPaymentMethod(draft.paymentMethod);
-      if (draft.jobLocation) setJobLocation(draft.jobLocation);
-      if (draft.latitude != null) setLatitude(draft.latitude);
-      if (draft.longitude != null) setLongitude(draft.longitude);
-      if (draft.serviceId) setServiceId(draft.serviceId);
-      if (draft.freelancerType) setFrelancerType(draft.freelancerType);
-      if (draft.workDurationDays) setWorkDurationDays(Number(draft.workDurationDays));
-      if (draft.selectedSavedAddressId) {
-        setSelectedSavedAddressId(draft.selectedSavedAddressId);
-      }
+      setEditingDraftId(draft.id);
+      applyDraft(draft);
     } catch (error) {
-      console.error("Failed to load draft:", error);
+      console.error("Failed to open draft:", error);
     }
   };
 
@@ -878,23 +900,35 @@ const JobRequirementsScreen = ({ navigation }) => {
     return true;
   };
 
+  // Number of saved drafts (shown on the drafts card)
+  const refreshDraftCount = async () => {
+    try {
+      const drafts = await getJobDrafts();
+      setDraftCount(drafts.length);
+    } catch (error) {
+      console.error("Failed to read drafts:", error);
+    }
+  };
+
   const handleSaveDraft = async () => {
     try {
       const hasAttachments = portfolioImages.length > 0;
-      await AsyncStorage.setItem(
-        DRAFT_KEY,
-        JSON.stringify({
+      const saved = await saveJobDraft(
+        {
           ...formData,
           selectedSavedAddressId,
           // Local file URIs are not reliable across app restarts
           portfolioImages: [],
-        })
+        },
+        editingDraftId
       );
+      setEditingDraftId(saved.id);
+      refreshDraftCount();
       Alert.alert(
         "Draft saved",
         hasAttachments
-          ? "Your job details were saved. Attachments are not stored in drafts — re-add them before submit if needed."
-          : "Your job details were saved as a draft."
+          ? "Your job details were saved to Drafts. Attachments are not stored in drafts — re-add them before submit if needed."
+          : "Your job details were saved to Drafts."
       );
     } catch (error) {
       Alert.alert("Error", `Failed to save draft: ${error.message}`);
@@ -906,7 +940,7 @@ const JobRequirementsScreen = ({ navigation }) => {
 
     if (jobType === "On-site") {
       if (latitude && longitude) {
-        await AsyncStorage.removeItem(DRAFT_KEY);
+        if (editingDraftId) await deleteJobDraft(editingDraftId);
         navigation.navigate("JobDetails", { formData: { ...formData, selectedCoupon } });
       } else {
         Alert.alert("Validation Error", "Please set the job location coordinates.");
@@ -920,7 +954,7 @@ const JobRequirementsScreen = ({ navigation }) => {
         longitude: 0,
         selectedCoupon,
       };
-      await AsyncStorage.removeItem(DRAFT_KEY);
+      if (editingDraftId) await deleteJobDraft(editingDraftId);
       navigation.navigate("JobDetails", { formData: updatedFormData });
     }
   };
@@ -1260,6 +1294,21 @@ const JobRequirementsScreen = ({ navigation }) => {
           />
         }
       >
+        {/* Drafts entry: opens the list of saved drafts */}
+        {draftCount > 0 && (
+          <TouchableOpacity
+            onPress={() => navigation.navigate("JobDrafts")}
+            activeOpacity={0.8}
+            style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "#F5F3FF", borderRadius: 12, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: "#DDD6FE" }}
+          >
+            <Ionicons name="document-text-outline" size={20} color={PURPLE} />
+            <Text style={{ flex: 1, fontWeight: "700", color: "#4C1D95", fontSize: 14 }}>
+              Saved drafts ({draftCount})
+            </Text>
+            <Ionicons name="chevron-forward" size={18} color={PURPLE} />
+          </TouchableOpacity>
+        )}
+
         {/* Remote / On-site toggle */}
         <View style={styles.segment}>
           <TouchableOpacity

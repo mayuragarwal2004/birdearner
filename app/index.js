@@ -256,6 +256,7 @@ function MainTabs() {
     "JobPriority",
     "JobDescription",
     "BookmarkedJobs",
+    "JobDrafts",
     "Offers",
     "EditServices",
     "ReviewGive",
