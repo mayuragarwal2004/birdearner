@@ -3,7 +3,7 @@ import { View, TouchableOpacity, Text, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../context/ThemeContext";
-import PrivacyPolicyContent from "../components/PrivacyPolicyContent";
+import TermsAndConditionsContent from "../components/TermsAndConditionsContent";
 
 const TermsAndConditionsScreen = ({ navigation }) => {
   const { theme, themeStyles } = useTheme();
@@ -37,7 +37,7 @@ const TermsAndConditionsScreen = ({ navigation }) => {
         </Text>
       </View>
 
-      <PrivacyPolicyContent />
+      <TermsAndConditionsContent />
     </SafeAreaView>
   );
 };

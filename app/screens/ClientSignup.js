@@ -1030,8 +1030,20 @@ const ClientSignup = ({ navigation, route }) => {
                   />
                   <Text style={styles.checkboxText}>
                     I confirm that the information provided is true and filled by me. I have read and agree to the{" "}
-                    <Text style={styles.purpleLinkText}>terms & conditions</Text> and{" "}
-                    <Text style={styles.purpleLinkText}>policies</Text>.
+                    <Text
+                      style={styles.purpleLinkText}
+                      onPress={() => navigation.navigate("TermsAndConditions")}
+                    >
+                      terms & conditions
+                    </Text>{" "}
+                    and{" "}
+                    <Text
+                      style={styles.purpleLinkText}
+                      onPress={() => navigation.navigate("PrivacyPolicy")}
+                    >
+                      privacy policy
+                    </Text>
+                    .
                   </Text>
                 </View>
 

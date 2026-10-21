@@ -264,7 +264,14 @@ const PortfolioScreen = ({ navigation, route }) => {
           color={agreeTnC ? "#ff9800" : undefined}
         />
         <Text style={styles.checkboxLabel}>
-          I agree upon all the <Text style={styles.link}>T&C</Text> and proceed.
+          I agree upon all the{" "}
+          <Text
+            style={styles.link}
+            onPress={() => navigation.navigate("TermsAndConditions")}
+          >
+            T&C
+          </Text>{" "}
+          and proceed.
         </Text>
       </View>
 

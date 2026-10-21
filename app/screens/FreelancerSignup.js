@@ -2488,8 +2488,19 @@ const FreelancerSignup = ({ navigation, route }) => {
                   />
                   <Text style={styles.checkboxText}>
                     I agree to the{" "}
-                    <Text style={styles.purpleLinkText}>Terms and Conditions</Text> and{" "}
-                    <Text style={styles.purpleLinkText}>Privacy Policy</Text>
+                    <Text
+                      style={styles.purpleLinkText}
+                      onPress={() => navigation.navigate("TermsAndConditions")}
+                    >
+                      Terms and Conditions
+                    </Text>{" "}
+                    and{" "}
+                    <Text
+                      style={styles.purpleLinkText}
+                      onPress={() => navigation.navigate("PrivacyPolicy")}
+                    >
+                      Privacy Policy
+                    </Text>
                   </Text>
                 </View>
 
