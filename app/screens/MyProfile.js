@@ -134,9 +134,9 @@ export default function ProfileScreen({ navigation }) {
   const [refreshing, setRefreshing] = useState(false);
   const [images, setImages] = useState([]);
   const [activeTab, setActiveTab] = useState("About");
-  // Purple header only on the Portfolio tab
-  const onPortfolio = activeTab === "Portfolio";
-  const HeroWrapper = onPortfolio ? LinearGradient : View;
+  // Purple header on every tab
+  const purpleHero = true;
+  const HeroWrapper = purpleHero ? LinearGradient : View;
   const [userServices, setUserServices] = useState([]);
   const [reviews, setReviews] = useState([]);
   const [reviewStats, setReviewStats] = useState(null);
@@ -340,17 +340,17 @@ export default function ProfileScreen({ navigation }) {
         }
         showsVerticalScrollIndicator={false}
       >
-        <HeroWrapper style={[styles.hero, onPortfolio && { marginBottom: -60, paddingBottom: 84 }]} {...(onPortfolio ? { colors: ["#4B0082", "#4B0082", "#C4B5E8", "#F5F2FB"], locations: [0, 0.6, 0.85, 1], start: { x: 0.5, y: 0 }, end: { x: 0.5, y: 1 } } : {})}>
+        <HeroWrapper style={[styles.hero, purpleHero && { marginBottom: -60, paddingBottom: 84 }]} {...(purpleHero ? { colors: ["#4B0082", "#4B0082", "#C4B5E8", "#F5F2FB"], locations: [0, 0.6, 0.85, 1], start: { x: 0.5, y: 0 }, end: { x: 0.5, y: 1 } } : {})}>
           <View style={styles.topBar}>
             <TouchableOpacity
               style={styles.iconButton}
               onPress={() => navigation.navigate("Settings")}
             >
-              <MaterialIcons name="settings" size={26} color={onPortfolio ? "#FFFFFF" : PURPLE} />
+              <MaterialIcons name="settings" size={26} color={purpleHero ? "#FFFFFF" : PURPLE} />
             </TouchableOpacity>
             <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
-              <MaterialIcons name="share" size={23} color={onPortfolio ? "#FFFFFF" : PURPLE} />
-              <Text style={[styles.shareText, onPortfolio && styles.onPurpleText]}>Share profile</Text>
+              <MaterialIcons name="share" size={23} color={purpleHero ? "#FFFFFF" : PURPLE} />
+              <Text style={[styles.shareText, purpleHero && styles.onPurpleText]}>Share profile</Text>
             </TouchableOpacity>
           </View>
 
@@ -378,11 +378,11 @@ export default function ProfileScreen({ navigation }) {
             />
           </TouchableOpacity>
 
-          <Text style={[styles.nameText, onPortfolio && styles.onPurpleText]}>{displayName}</Text>
+          <Text style={[styles.nameText, purpleHero && styles.onPurpleText]}>{displayName}</Text>
 
           {/* Freelancer level, shown between the name and the role badge */}
           {role === "FREELANCER" && (
-            <Text style={[styles.profileLevelLine, onPortfolio && styles.onPurpleText]}>
+            <Text style={[styles.profileLevelLine, purpleHero && styles.onPurpleText]}>
               Level {data?.level ?? 1}
             </Text>
           )}

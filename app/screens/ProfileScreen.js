@@ -381,7 +381,7 @@ export default function ProfileScreen({ route, navigation }) {
       >
         <ProfileHero
           uiStyles={uiStyles}
-          onPortfolio={activeTab === "Portfolio"}
+          purpleHero
           profileData={profileData}
           displayName={displayName}
           profileTitle={profileTitle}
@@ -450,9 +450,9 @@ function ProfileHero({
   onBack,
   onShare,
   onPhotoPress,
-  onPortfolio,
+  purpleHero,
 }) {
-  const HeroWrapper = onPortfolio ? LinearGradient : View;
+  const HeroWrapper = purpleHero ? LinearGradient : View;
   const rawPhoto =
     profileData?.profilePhoto ||
     profileData?.user?.profilePhoto ||
@@ -462,14 +462,14 @@ function ProfileHero({
   const isClientProfile = profileData?.role === "CLIENT";
 
   return (
-    <HeroWrapper style={[uiStyles.hero, onPortfolio && { marginBottom: -60, paddingBottom: 76 }]} {...(onPortfolio ? { colors: ["#4B0082", "#4B0082", "#C4B5E8", "#F5F2FB"], locations: [0, 0.6, 0.85, 1], start: { x: 0.5, y: 0 }, end: { x: 0.5, y: 1 } } : {})}>
+    <HeroWrapper style={[uiStyles.hero, purpleHero && { marginBottom: -60, paddingBottom: 76 }]} {...(purpleHero ? { colors: ["#4B0082", "#4B0082", "#C4B5E8", "#F5F2FB"], locations: [0, 0.6, 0.85, 1], start: { x: 0.5, y: 0 }, end: { x: 0.5, y: 1 } } : {})}>
       <View style={uiStyles.topBar}>
         <TouchableOpacity style={uiStyles.iconButton} onPress={onBack}>
-          <MaterialIcons name="arrow-back" size={24} color={onPortfolio ? "#FFFFFF" : "#101114"} />
+          <MaterialIcons name="arrow-back" size={24} color={purpleHero ? "#FFFFFF" : "#101114"} />
         </TouchableOpacity>
         <TouchableOpacity style={uiStyles.shareButton} onPress={onShare}>
-          <MaterialIcons name="share" size={20} color={onPortfolio ? "#FFFFFF" : PURPLE} />
-          <Text style={[uiStyles.shareText, onPortfolio && uiStyles.onPurpleText]}>Share profile</Text>
+          <MaterialIcons name="share" size={20} color={purpleHero ? "#FFFFFF" : PURPLE} />
+          <Text style={[uiStyles.shareText, purpleHero && uiStyles.onPurpleText]}>Share profile</Text>
         </TouchableOpacity>
       </View>
 
@@ -488,11 +488,11 @@ function ProfileHero({
         <View style={[uiStyles.statusDot, !available && uiStyles.statusDotMuted]} />
       </TouchableOpacity>
 
-      <Text style={[uiStyles.name, onPortfolio && uiStyles.onPurpleText]}>{displayName}</Text>
+      <Text style={[uiStyles.name, purpleHero && uiStyles.onPurpleText]}>{displayName}</Text>
 
       {/* Freelancer level, shown between the name and the role badge */}
       {!isClientProfile && (
-        <Text style={[uiStyles.levelText, onPortfolio && uiStyles.onPurpleText]}>
+        <Text style={[uiStyles.levelText, purpleHero && uiStyles.onPurpleText]}>
           Level {profileData?.level ?? 1}
         </Text>
       )}
