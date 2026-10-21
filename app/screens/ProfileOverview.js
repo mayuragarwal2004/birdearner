@@ -139,13 +139,13 @@ const ProfileOverview = ({ navigation }) => {
               <View style={styles.insightsIconCircle}>
                 <ChartBar size={20} color="#FFF" weight="fill" />
               </View>
-              <View>
+              <View style={{ flexShrink: 1 }}>
                 <Text style={styles.insightsTitle}>Performance Insights</Text>
                 <Text style={styles.insightsSubtitle}>Track your progress & improve your stats</Text>
               </View>
             </View>
             <TouchableOpacity style={styles.dropdownBtn} onPress={() => setShowFilter(true)}>
-              <Text style={styles.dropdownText}>{selectedFilter}</Text>
+              <Text style={styles.dropdownText} numberOfLines={1}>{selectedFilter}</Text>
               <CaretDown size={14} color="#FFF" weight="bold" style={{ marginLeft: 4 }} />
             </TouchableOpacity>
           </LinearGradient>
@@ -330,7 +330,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 16,
-    paddingBottom: 110,
+    paddingBottom: 20,
   },
   topLevelCard: {
     borderRadius: 24,
@@ -492,6 +492,9 @@ const styles = StyleSheet.create({
   insightsHeaderLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
+    flexShrink: 1,
+    marginRight: 8,
   },
   insightsIconCircle: {
     width: 38,
@@ -518,6 +521,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 16,
+    flexShrink: 0,
   },
   dropdownText: {
     color: '#FFF',
@@ -650,7 +654,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 14,
     borderRadius: 16,
-    marginBottom: 16,
   },
   bannerTrophyCircle: {
     width: 32,
