@@ -1,4 +1,5 @@
 import KeyboardAwareScrollView from "../components/KeyboardAwareScrollView";
+import { LinearGradient } from "expo-linear-gradient";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
@@ -483,13 +484,24 @@ const ClientHomeScreen = () => {
     );
   };
 
+  // Header fades from deep purple into the page background, so it blends into the search bar and banner area
+  const headerColors = isDark
+    ? ["#1B1028", "#1B1028", "#1B1028", "#1B1028"]
+    : ["#2A0B5C", "#3F1584", "#6A3BB8", "#8E63CC", "#C2AEE8", "#F7F5FB"];
+
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
       <StatusBar
         barStyle="light-content"
-        backgroundColor={isDark ? "#1B1028" : DEEP_PURPLE}
+        backgroundColor={isDark ? "#1B1028" : "#2A0B5C"}
       />
-      <View style={styles.headerBand}>
+      <LinearGradient
+        colors={headerColors}
+        locations={[0, 0.4, 0.6, 0.74, 0.88, 1]}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+        style={styles.headerBand}
+      >
         <View style={styles.headerTop}>
           <TouchableOpacity
             style={styles.locationBlock}
@@ -542,7 +554,7 @@ const ClientHomeScreen = () => {
             />
           </TouchableOpacity>
         </View>
-      </View>
+      </LinearGradient>
 
       <KeyboardAwareScrollView
         style={styles.mainScroll}
@@ -856,14 +868,11 @@ const getStyles = (currentTheme, isDark, bottomInset = 0) => {
   return StyleSheet.create({
     safeArea: {
       flex: 1,
-      backgroundColor: isDark ? "#1B1028" : DEEP_PURPLE,
+      backgroundColor: isDark ? "#1B1028" : "#2A0B5C",
     },
     headerBand: {
-      backgroundColor: isDark ? "#1B1028" : DEEP_PURPLE,
       paddingHorizontal: 16,
-      paddingBottom: 14,
-      borderBottomLeftRadius: 20,
-      borderBottomRightRadius: 20,
+      paddingBottom: 40,
     },
     headerTop: {
       flexDirection: "row",
@@ -955,7 +964,7 @@ const getStyles = (currentTheme, isDark, bottomInset = 0) => {
     },
     mainScroll: {
       flex: 1,
-      backgroundColor: surface,
+      backgroundColor: isDark ? surface : "#F7F5FB",
     },
     promoPager: {
       paddingHorizontal: 16,
