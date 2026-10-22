@@ -149,6 +149,8 @@ const ClientHomeScreen = () => {
   const [scratchCards, setScratchCards] = useState([]);
   const [scratchModalId, setScratchModalId] = useState(null);
   const [loadingPromos, setLoadingPromos] = useState(true);
+  // Header bottom edge (including the status-bar inset), so the page background starts right under the header's fade
+  const [headerBottom, setHeaderBottom] = useState(0);
 
   const servicesRef = useRef(null);
   const { userData, userProfile } = useAuth();
@@ -496,6 +498,7 @@ const ClientHomeScreen = () => {
         backgroundColor={isDark ? "#1B1028" : "#2A0B5C"}
       />
       <LinearGradient
+        onLayout={(event) => setHeaderBottom(event.nativeEvent.layout.y + event.nativeEvent.layout.height)}
         colors={headerColors}
         locations={[0, 0.4, 0.6, 0.74, 0.88, 1]}
         start={{ x: 0.5, y: 0 }}
@@ -555,6 +558,11 @@ const ClientHomeScreen = () => {
           </TouchableOpacity>
         </View>
       </LinearGradient>
+
+      {/* Light page background under the scroll, so the header fade shows through behind the top of the banner */}
+      {!isDark && headerBottom > 0 && (
+        <View pointerEvents="none" style={[styles.pageBase, { top: headerBottom }]} />
+      )}
 
       <KeyboardAwareScrollView
         style={styles.mainScroll}
@@ -964,7 +972,16 @@ const getStyles = (currentTheme, isDark, bottomInset = 0) => {
     },
     mainScroll: {
       flex: 1,
-      backgroundColor: isDark ? surface : "#F7F5FB",
+      // Pulls the banner up under the header's light fade, so the gap below the search bar is smaller
+      marginTop: -32,
+      backgroundColor: isDark ? surface : "transparent",
+    },
+    pageBase: {
+      position: "absolute",
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: "#F7F5FB",
     },
     promoPager: {
       paddingHorizontal: 16,
