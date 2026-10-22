@@ -10,7 +10,7 @@ import {
   View,
 } from "react-native";
 import SafeSpinner from "../components/SafeSpinner";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { Briefcase, CalendarBlank, CurrencyInr } from "phosphor-react-native";
 import { format, isValid } from "date-fns";
@@ -159,7 +159,7 @@ const FreelancerJobHistory = ({ navigation }) => {
   );
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
+    <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={22} color={isDark ? "#FFFFFF" : PURPLE} />
@@ -308,6 +308,8 @@ function MetaItem({ styles, icon, label }) {
 }
 
 function JobOptionsModal({ visible, job, styles, onClose, onSelect }) {
+  // The sheet sits in its own Modal, so it needs the system navigation bar inset itself
+  const insets = useSafeAreaInsets();
   return (
     <Modal
       animationType="fade"
@@ -316,7 +318,7 @@ function JobOptionsModal({ visible, job, styles, onClose, onSelect }) {
       onRequestClose={onClose}
     >
       <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={onClose}>
-        <TouchableOpacity style={styles.actionSheet} activeOpacity={1}>
+        <TouchableOpacity style={[styles.actionSheet, { paddingBottom: Math.max(insets.bottom, 16) + 12 }]} activeOpacity={1}>
           <View style={styles.sheetHandle} />
           <Text style={styles.modalTitle} numberOfLines={2}>
             {job?.jobTitle || "Job options"}
