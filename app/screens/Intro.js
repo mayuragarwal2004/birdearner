@@ -10,16 +10,9 @@ import {
 import SafeSpinner from '../components/SafeSpinner';
 import * as SplashScreen from 'expo-splash-screen';
 import { useAuth } from '../context/NewAuthContext';
-import { InstagramLogoIcon, XLogoIcon } from "phosphor-react-native";
-import { Linking, Alert } from "react-native"; 
 
 const Intro = ({ navigation }) => {
   const { user, userData, loading } = useAuth();
-
-  // Hide native splash once Intro has painted (replaces the black gap)
-  useEffect(() => {
-    SplashScreen.hideAsync().catch(() => {});
-  }, []);
 
   const navigateToNextScreen = () => {
     if (user) {
@@ -27,53 +20,21 @@ const Intro = ({ navigation }) => {
         navigation.replace("OtpVerification", { mode: "attach" });
         return;
       }
-      // User is authenticated, go to main tabs
       navigation.replace('MainTabs');
     } else {
-      // User is not authenticated, go to login
       navigation.replace('Login');
     }
   };
 
-  const handleSocialMediaPress = async (platform) => {
-    let url = "";
-    
-    switch (platform) {
-      case "instagram":
-        url = "https://www.instagram.com/thebirdearner/";
-        break;
-      case "x":
-        url = "https://x.com/birdearner";
-        break;
-      default:
-        return;
-    }
-
-    try {
-      const supported = await Linking.canOpenURL(url);
-      if (supported) {
-        await Linking.openURL(url);
-      } else {
-        Alert.alert(
-          "Unable to open link",
-          `Cannot open ${platform} at this time. Please try again later.`
-        );
-      }
-    } catch (error) {
-      console.error("Error opening social media link:", error);
-      Alert.alert(
-        "Error",
-        `Failed to open ${platform}. Please try again later.`
-      );
-    }
-  };
-
+  // Keep the native splash (logo + name) up the whole time so the user only
+  // ever sees one branded screen, then reveal Login / MainTabs underneath.
   useEffect(() => {
     if (loading) {
       return;
     }
 
-    const timer = setTimeout(() => {
+    const timer = setTimeout(async () => {
+      await SplashScreen.hideAsync().catch(() => {});
       navigateToNextScreen();
     }, __DEV__ ? 150 : 900);
 
@@ -83,28 +44,30 @@ const Intro = ({ navigation }) => {
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: "#4B0082" }]}>
       <View style={[styles.container, { backgroundColor: "#4B0082" }]}>
-        {/* Development Skip Button */}
         {__DEV__ && (
           <TouchableOpacity 
             style={styles.skipButton}
-            onPress={navigateToNextScreen}
+            onPress={async () => {
+              await SplashScreen.hideAsync().catch(() => {});
+              navigateToNextScreen();
+            }}
             activeOpacity={0.7}
           >
             <Text style={styles.skipButtonText}>Skip (Dev)</Text>
           </TouchableOpacity>
         )}
 
-        {/* Logo */}
-        <Image 
-          source={require('../assets/logo11.png')} 
-          style={styles.logo} 
-          resizeMode="contain"
-        />
+        {/* Same logo as Login, with app name — matches native splash */}
+        <View style={styles.logoCircle}>
+          <Image 
+            source={require('../../assets/login-logo.png')} 
+            style={styles.logo} 
+            resizeMode="contain"
+          />
+        </View>
 
-        {/* App Name */}
         <Text style={[styles.title, { color: "white" }]}>BirdEARNER</Text>
 
-        {/* Loading Indicator */}
         {loading && (
           <SafeSpinner 
             color="white" 
@@ -143,30 +106,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  logo: {
+  logoCircle: {
     width: 100,
     height: 100,
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 20,
+  },
+  logo: {
+    width: "100%",
+    height: "100%",
   },
   title: {
     fontSize: 32,
     fontWeight: "bold",
   },
-  subtitle: {
-    fontSize: 16,
-    marginBottom: 40,
-    textAlign: 'center',
-  },
   loadingIndicator: {
     marginTop: 20,
     marginBottom: 20,
-  },
-  socialContainer: {
-    flexDirection: "row",
-    marginTop: 40,
-  },
-  socialIcon: {
-    marginHorizontal: 10,
   },
 });
 

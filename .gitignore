@@ -93,3 +93,5 @@ yarn-error.*
 google-services.json
 GoogleService-Info.plist
 service-account.json
+
+expo-constants+57.0.20.patch

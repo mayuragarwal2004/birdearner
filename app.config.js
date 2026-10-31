@@ -11,7 +11,7 @@ export default {
         // Keep the native root view branded while JS boots (avoids black flash)
         backgroundColor: "#4B0082",
         splash: {
-            image: "./assets/logo.png",
+            image: "./assets/splash-logo-name.png",
             resizeMode: "contain",
             backgroundColor: "#4B0082",
         },
@@ -108,7 +108,7 @@ export default {
             [
                 "expo-splash-screen",
                 {
-                    image: "./assets/logo.png",
+                    image: "./assets/splash-logo-name.png",
                     resizeMode: "contain",
                     backgroundColor: "#4B0082",
                 },
