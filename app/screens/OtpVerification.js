@@ -18,6 +18,11 @@ import { LinearGradient } from "expo-linear-gradient";
 import * as LucideIcons from "lucide-react-native";
 import Toast from "react-native-toast-message";
 import apiService from "../lib/apiService";
+import { useAuth } from "../context/NewAuthContext";
+import {
+  resetToMainApp,
+  resetToRoleSelect,
+} from "../lib/navigationRef";
 
 const getIcon = (name) => LucideIcons[name]?.default || LucideIcons[name];
 const Phone = getIcon("Phone");
@@ -31,7 +36,9 @@ const validateMobile = (mobile) => {
 };
 
 const OtpVerification = ({ navigation, route }) => {
-  const { mobile: initialMobile, role } = route.params || {};
+  const { mobile: initialMobile, role, mode } = route.params || {};
+  const isAttachMode = mode === "attach";
+  const { applyAttachedMobile } = useAuth();
   const [mobile, setMobile] = useState(initialMobile || "");
   const [otp, setOtp] = useState("");
   const [otpDigits, setOtpDigits] = useState(["", "", "", "", "", ""]);
@@ -132,6 +139,28 @@ const OtpVerification = ({ navigation, route }) => {
 
     setIsLoading(true);
     try {
+      if (isAttachMode) {
+        const data = await apiService.attachMobile(mobile, otp);
+        if (!data.success) {
+          showToast("error", "Error", data.message || "Invalid OTP");
+          return;
+        }
+
+        showToast("success", "Success", "Mobile number verified successfully");
+        const result = await applyAttachedMobile(data.data || { mobile });
+
+        // Defer until navigator remounts from phone-gate → auth
+        setTimeout(() => {
+          if (result.next === "role") {
+            resetToRoleSelect();
+          } else if (result.next === "main") {
+            resetToMainApp();
+          }
+          // role-modal: AuthProvider modal handles dual-role selection
+        }, 50);
+        return;
+      }
+
       const data = await apiService.verifyMobile(mobile, otp);
 
       if (data.success) {
@@ -186,13 +215,15 @@ const OtpVerification = ({ navigation, route }) => {
             contentContainerStyle={styles.scrollContainer}
             keyboardShouldPersistTaps="handled"
           >
-            {/* Header Back Button */}
-            <TouchableOpacity
-              style={styles.headerBackButton}
-              onPress={() => navigation.goBack()}
-            >
-              <ArrowLeft size={24} color="#FFFFFF" />
-            </TouchableOpacity>
+            {/* Header Back Button — hidden in attach gate (must verify phone) */}
+            {!isAttachMode && (
+              <TouchableOpacity
+                style={styles.headerBackButton}
+                onPress={() => navigation.goBack()}
+              >
+                <ArrowLeft size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+            )}
 
             {/* Circular Header Icon Badge */}
             <View style={styles.headerBadgeContainer}>
@@ -204,7 +235,9 @@ const OtpVerification = ({ navigation, route }) => {
             <Text style={styles.heading}>Verify Your Mobile Number</Text>
             <Text style={styles.subtitle}>
               {!isOtpSent
-                ? "Enter your mobile number to receive a 6-digit OTP code"
+                ? isAttachMode
+                  ? "Add and verify your mobile number to continue using BirdEarner"
+                  : "Enter your mobile number to receive a 6-digit OTP code"
                 : `We've sent a 6-digit verification code to ${mobile}`}
             </Text>
 

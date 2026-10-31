@@ -34,6 +34,7 @@ import {
   XLogo,
   Globe
 } from "phosphor-react-native";
+import * as AppleAuthentication from "expo-apple-authentication";
 import { useAuth } from "../context/NewAuthContext";
 import Toast from "react-native-toast-message";
 
@@ -60,8 +61,17 @@ const Login = ({ navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [isAppleLoading, setIsAppleLoading] = useState(false);
+  const [appleAuthAvailable, setAppleAuthAvailable] = useState(false);
   
-  const { login, googleLogin } = useAuth();
+  const { login, googleLogin, appleLogin } = useAuth();
+
+  React.useEffect(() => {
+    if (Platform.OS !== "ios") return;
+    AppleAuthentication.isAvailableAsync()
+      .then(setAppleAuthAvailable)
+      .catch(() => setAppleAuthAvailable(false));
+  }, []);
 
   const handleInputChange = (field, value) => {
     setCredentials({ ...credentials, [field]: value });
@@ -166,6 +176,27 @@ const Login = ({ navigation }) => {
       showToast("error", "Google Login Failed", error.message || "Something went wrong. Please try again.");
     } finally {
       setIsGoogleLoading(false);
+    }
+  };
+
+  const handleAppleLogin = async () => {
+    setIsAppleLoading(true);
+    try {
+      const result = await appleLogin();
+      if (result) {
+        showToast("success", "Login Successful!", "Welcome back!");
+      }
+    } catch (error) {
+      console.log("Apple Login Error:", error.message);
+      if (!String(error.message || "").toLowerCase().includes("cancelled")) {
+        showToast(
+          "error",
+          "Apple Login Failed",
+          error.message || "Something went wrong. Please try again."
+        );
+      }
+    } finally {
+      setIsAppleLoading(false);
     }
   };
 
@@ -290,11 +321,34 @@ const Login = ({ navigation }) => {
               <View style={styles.dividerLine} />
             </View>
 
-            {/* Google Login Button */}
+            {/* Sign in with Apple (Guideline 4.8 — required when offering Google) */}
+            {appleAuthAvailable && (
+              <View style={styles.appleButtonWrap}>
+                {isAppleLoading ? (
+                  <View style={styles.appleLoading}>
+                    <SafeSpinner color="#FFFFFF" size={18} />
+                  </View>
+                ) : (
+                  <AppleAuthentication.AppleAuthenticationButton
+                    buttonType={
+                      AppleAuthentication.AppleAuthenticationButtonType.CONTINUE
+                    }
+                    buttonStyle={
+                      AppleAuthentication.AppleAuthenticationButtonStyle.WHITE
+                    }
+                    cornerRadius={25}
+                    style={styles.appleButton}
+                    onPress={handleAppleLogin}
+                  />
+                )}
+              </View>
+            )}
+
+            {/* Google Login Button — opens in-app auth session (Guideline 4) */}
             <TouchableOpacity
               style={styles.googleButton}
               onPress={handleGoogleLogin}
-              disabled={isGoogleLoading}
+              disabled={isGoogleLoading || isAppleLoading}
               activeOpacity={0.8}
             >
               <View style={styles.googleButtonContent}>
@@ -512,6 +566,23 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "transparent",
+  },
+  appleButtonWrap: {
+    width: "100%",
+    maxWidth: 320,
+    marginBottom: 12,
+  },
+  appleButton: {
+    width: "100%",
+    height: 50,
+  },
+  appleLoading: {
+    width: "100%",
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: "#000",
+    alignItems: "center",
+    justifyContent: "center",
   },
   googleButton: {
     width: "100%",

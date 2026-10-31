@@ -582,38 +582,45 @@ export function App() {
     };
 
     const setupMessageHandlers = () => {
-      const messaging = getMessaging();
+      try {
+        const messaging = getMessaging();
 
-      // Handle initial notification when app was opened from killed state
-      getInitialNotification(messaging).then(async (remoteMessage) => {
-        if (remoteMessage) {
-          console.log("Notification caused app to open from quit state:", remoteMessage);
-          // Navigate based on data if needed
-        }
-      });
-
-      // Handle notification when app is opened from background
-      const onNotificationOpenedAppSub = onNotificationOpenedApp(messaging, async (remoteMessage) => {
-        console.log("Notification caused app to open from background:", remoteMessage);
-        // Navigate based on data if needed
-      });
-
-      // Handle foreground messages
-      const onMessageSub = onMessage(messaging, async (remoteMessage) => {
-        // Show Toast for foreground message instead of Alert
-        Toast.show({
-          type: 'info',
-          text1: remoteMessage?.notification?.title || "New Notification",
-          text2: remoteMessage?.notification?.body,
-          position: 'top',
-          visibilityTime: 4000,
+        // Handle initial notification when app was opened from killed state
+        getInitialNotification(messaging).then(async (remoteMessage) => {
+          if (remoteMessage) {
+            console.log("Notification caused app to open from quit state:", remoteMessage);
+            // Navigate based on data if needed
+          }
+        }).catch((error) => {
+          console.error("Error reading initial notification:", error);
         });
-      });
 
-      return () => {
-        onNotificationOpenedAppSub();
-        onMessageSub();
-      };
+        // Handle notification when app is opened from background
+        const onNotificationOpenedAppSub = onNotificationOpenedApp(messaging, async (remoteMessage) => {
+          console.log("Notification caused app to open from background:", remoteMessage);
+          // Navigate based on data if needed
+        });
+
+        // Handle foreground messages
+        const onMessageSub = onMessage(messaging, async (remoteMessage) => {
+          // Show Toast for foreground message instead of Alert
+          Toast.show({
+            type: 'info',
+            text1: remoteMessage?.notification?.title || "New Notification",
+            text2: remoteMessage?.notification?.body,
+            position: 'top',
+            visibilityTime: 4000,
+          });
+        });
+
+        return () => {
+          onNotificationOpenedAppSub();
+          onMessageSub();
+        };
+      } catch (error) {
+        console.error("Error setting up push message handlers:", error);
+        return () => {};
+      }
     };
 
     let cleanupHandlers = () => {};
@@ -639,15 +646,38 @@ export function App() {
     headerBackTitle: "Back",
   };
 
+  const needsPhoneVerification = Boolean(userData && !userData.mobile);
+  const navigatorKey = needsPhoneVerification
+    ? "phone-gate"
+    : userData
+      ? "auth"
+      : "guest";
+  // Phone gate must open on OTP. Logged-in remounts go to MainTabs (skip Intro flash).
+  const initialRouteName = needsPhoneVerification
+    ? "OtpVerification"
+    : userData
+      ? "MainTabs"
+      : "Intro";
+
   return (
     <Stack.Navigator
+      key={navigatorKey}
       screenOptions={{ headerShown: false }}
-      initialRouteName="Intro"
+      initialRouteName={initialRouteName}
     >
-      {/* Intro/Splash Screen - Always shown first */}
-      <Stack.Screen name="Intro" component={IntroScreen} />
+      {/* Intro/Splash Screen - Always shown first (except phone gate) */}
+      {!needsPhoneVerification && (
+        <Stack.Screen name="Intro" component={IntroScreen} />
+      )}
 
-      {userData ? (
+      {needsPhoneVerification ? (
+        // Must verify mobile before any other authenticated screen
+        <Stack.Screen
+          name="OtpVerification"
+          getComponent={getOtpVerificationScreen}
+          initialParams={{ mode: "attach" }}
+        />
+      ) : userData ? (
         // Authenticated Stack - Route directly to role dashboard
         <>
           {/* Main App Tabs - Available after profile setup */}

@@ -13,6 +13,7 @@ const API_BASE_URL = __DEV__ ? DEV_API_BASE_URL : PROD_API_BASE_URL;
 const PUBLIC_AUTH_ENDPOINTS = [
   "/auth/login",
   "/auth/google",
+  "/auth/apple",
   "/auth/send-verification-otp",
   "/auth/verify-email",
   "/auth/forgot-password",
@@ -402,6 +403,15 @@ class ApiService {
     return response;
   }
 
+  // Link a verified mobile to the logged-in user (Google/Apple / missing-phone gate)
+  async attachMobile(mobile, otp) {
+    const response = await this.makeRequest("/auth/attach-mobile", {
+      method: "POST",
+      body: JSON.stringify({ mobile, otp }),
+    });
+    return response;
+  }
+
   // Upload image to backend Cloudinary service
   async uploadImage(imageFile, category) {
     if (!imageFile || !imageFile.uri) {
@@ -681,6 +691,22 @@ class ApiService {
     }
 
     throw new Error("Google login failed");
+  }
+
+  async appleLogin({ identityToken, fullName, email }) {
+    const response = await this.makeRequest("/auth/apple", {
+      method: "POST",
+      body: JSON.stringify({ identityToken, fullName, email }),
+    });
+
+    if (response.success && response.data) {
+      await this.setAuthToken(response.data.token);
+      const { token, ...userData } = response.data;
+      await AsyncStorage.setItem("userData", JSON.stringify(userData));
+      return response.data;
+    }
+
+    throw new Error(response.message || "Apple login failed");
   }
 
   async register(userData) {

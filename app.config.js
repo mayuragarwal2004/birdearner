@@ -3,7 +3,6 @@ export default {
         owner: "birdearner",
         name: "BirdEarner",
         slug: "birdearner",
-        newArchEnabled: false,
         scheme: "birdearner",
         version: "1.1.2",
         orientation: "portrait",
@@ -19,9 +18,11 @@ export default {
         ios: {
             bundleIdentifier: "com.birdearner.birdearner",
             supportsTablet: false,
+            usesAppleSignIn: true,
             googleServicesFile: "./GoogleService-Info.plist",
             entitlements: {
                 "aps-environment": "production",
+                "com.apple.developer.applesignin": ["Default"],
             },
             infoPlist: {
                 ITSAppUsesNonExemptEncryption: false,
@@ -65,6 +66,8 @@ export default {
                     ios: {
                         useFrameworks: "static",
                         deploymentTarget: "16.4",
+                        // Required for App Store review on newer iOS versions.
+                        enableSceneSupport: true,
                         // RNFirebase pods need static linking under use_frameworks.
                         forceStaticLinking: ["RNFBApp", "RNFBMessaging"],
                     },
@@ -99,6 +102,7 @@ export default {
             "expo-notifications",
             "expo-status-bar",
             "expo-web-browser",
+            "expo-apple-authentication",
             "react-native-video",
             "expo-speech-recognition",
             [

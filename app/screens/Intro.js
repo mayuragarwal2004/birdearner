@@ -14,7 +14,7 @@ import { InstagramLogoIcon, XLogoIcon } from "phosphor-react-native";
 import { Linking, Alert } from "react-native"; 
 
 const Intro = ({ navigation }) => {
-  const { user, loading } = useAuth();
+  const { user, userData, loading } = useAuth();
 
   // Hide native splash once Intro has painted (replaces the black gap)
   useEffect(() => {
@@ -23,6 +23,10 @@ const Intro = ({ navigation }) => {
 
   const navigateToNextScreen = () => {
     if (user) {
+      if (userData && !userData.mobile) {
+        navigation.replace("OtpVerification", { mode: "attach" });
+        return;
+      }
       // User is authenticated, go to main tabs
       navigation.replace('MainTabs');
     } else {
@@ -74,7 +78,7 @@ const Intro = ({ navigation }) => {
     }, __DEV__ ? 150 : 900);
 
     return () => clearTimeout(timer);
-  }, [loading, user]);
+  }, [loading, user, userData?.mobile]);
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: "#4B0082" }]}>

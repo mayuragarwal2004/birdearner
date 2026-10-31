@@ -12,29 +12,47 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
-  Linking,
+  Platform,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as WebBrowser from "expo-web-browser";
+import * as AppleAuthentication from "expo-apple-authentication";
 import apiService from "../lib/apiService";
 import { getDeviceInfo } from "../lib/deviceInfo";
 import Toast from "react-native-toast-message";
-import { resetToLogin } from "../lib/navigationRef";
+import { resetToLogin, resetToAttachPhone } from "../lib/navigationRef";
 
-const parseIdTokenFromUrl = (urlStr) => {
-  if (!urlStr) return null;
-  try {
-    const hashIdx = urlStr.indexOf("#");
-    const queryIdx = urlStr.indexOf("?");
-    let paramsStr = "";
-    if (hashIdx !== -1) {
-      paramsStr = urlStr.substring(hashIdx + 1);
-    } else if (queryIdx !== -1) {
-      paramsStr = urlStr.substring(queryIdx + 1);
-    }
-    const parsed = new URLSearchParams(paramsStr);
-    return parsed.get("id_token");
-  } catch (e) {
+const redirectToPhoneGateIfNeeded = (data) => {
+  if (data && !data.mobile) {
+    setTimeout(() => resetToAttachPhone(), 0);
+  }
+};
+
+// Completes auth sessions started with openAuthSessionAsync (in-app browser).
+WebBrowser.maybeCompleteAuthSession();
+
+const APP_GOOGLE_REDIRECT = "birdearner://google-auth";
+
+const parseOAuthCallbackUrl = (urlStr) => {
+  if (!urlStr || !urlStr.startsWith(APP_GOOGLE_REDIRECT)) {
     return null;
+  }
+  try {
+    const parsedUrl = new URL(urlStr);
+    const dataParam = parsedUrl.searchParams.get("data");
+    const errorParam = parsedUrl.searchParams.get("error");
+    if (errorParam) {
+      throw new Error("Google sign-in failed: " + decodeURIComponent(errorParam));
+    }
+    if (!dataParam) {
+      throw new Error("No user data received from Google sign-in");
+    }
+    return JSON.parse(decodeURIComponent(dataParam));
+  } catch (e) {
+    if (e.message?.startsWith("Google sign-in failed") || e.message?.startsWith("No user data")) {
+      throw e;
+    }
+    throw new Error("Failed to parse Google sign-in response");
   }
 };
 
@@ -380,15 +398,18 @@ export const AuthProvider = ({ children }) => {
 
         // Handle dual-role scenario
         if (freelancerProfile && clientProfile) {
-          // User has both roles, show selection modal
           updateRoleOptions(completeUserData);
-          setRoleSelectionVisible(true);
-
-          // Store user data but don't set userData yet (wait for role selection)
+          // Always persist; phone gate may need userData before role pick
+          setUserData(completeUserData);
           await AsyncStorage.setItem(
             "userData",
             JSON.stringify(completeUserData)
           );
+          if (!completeUserData.mobile) {
+            redirectToPhoneGateIfNeeded(completeUserData);
+          } else {
+            setRoleSelectionVisible(true);
+          }
           return loginResponse;
         } else if (freelancerProfile) {
           // Only freelancer profile
@@ -401,6 +422,7 @@ export const AuthProvider = ({ children }) => {
             "userProfile",
             JSON.stringify(freelancerProfile)
           );
+          redirectToPhoneGateIfNeeded(userData);
         } else if (clientProfile) {
           // Only client profile
           const role = determineUserRole(completeUserData, "CLIENT");
@@ -412,6 +434,7 @@ export const AuthProvider = ({ children }) => {
             "userProfile",
             JSON.stringify(clientProfile)
           );
+          redirectToPhoneGateIfNeeded(userData);
         } else {
           // No profile found, set basic user data without role
           setUserData(completeUserData);
@@ -420,22 +443,141 @@ export const AuthProvider = ({ children }) => {
             "userData",
             JSON.stringify(completeUserData)
           );
+          redirectToPhoneGateIfNeeded(completeUserData);
         }
 
         return loginResponse;
       }
   };
 
-  // Google Login function
+  // Persist OAuth login payload (Google / Apple) into local session state.
+  const applyOAuthSession = async (response) => {
+    if (!response || !response.token) {
+      throw new Error("Sign-in completed but no user data was returned.");
+    }
+
+    await apiService.setAuthToken(response.token);
+    await AsyncStorage.setItem("authToken", response.token);
+
+    setUser(response);
+    setAuthToken(response.token);
+
+    let freelancerProfile =
+      response.freelancer && response.freelancer.id ? response.freelancer : null;
+    let clientProfile = response.client && response.client.id ? response.client : null;
+
+    if (!freelancerProfile) {
+      try {
+        const fetchedFreelancer = await apiService.getFreelancerProfile(response.id);
+        if (fetchedFreelancer && fetchedFreelancer.id) {
+          freelancerProfile = fetchedFreelancer;
+        }
+      } catch (error) {
+        console.log("No freelancer profile found");
+      }
+    }
+
+    if (!clientProfile) {
+      try {
+        const fetchedClient = await apiService.getClientProfile(response.id);
+        if (fetchedClient && fetchedClient.id) {
+          clientProfile = fetchedClient;
+        }
+      } catch (error) {
+        console.log("No client profile found");
+      }
+    }
+
+    const completeUserData = {
+      ...response,
+      freelancer: freelancerProfile,
+      client: clientProfile,
+    };
+
+    if (freelancerProfile && clientProfile) {
+      updateRoleOptions(completeUserData);
+      setUserData(completeUserData);
+      await AsyncStorage.setItem("userData", JSON.stringify(completeUserData));
+      if (!completeUserData.mobile) {
+        redirectToPhoneGateIfNeeded(completeUserData);
+      } else {
+        setRoleSelectionVisible(true);
+      }
+      return response;
+    }
+
+    if (freelancerProfile) {
+      const role = determineUserRole(completeUserData, "FREELANCER");
+      const userDataStored = { ...completeUserData, role };
+      setUserData(userDataStored);
+      setUserProfile(freelancerProfile);
+      await AsyncStorage.setItem("userData", JSON.stringify(userDataStored));
+      await AsyncStorage.setItem("userProfile", JSON.stringify(freelancerProfile));
+      redirectToPhoneGateIfNeeded(userDataStored);
+    } else if (clientProfile) {
+      const role = determineUserRole(completeUserData, "CLIENT");
+      const userDataStored = { ...completeUserData, role };
+      setUserData(userDataStored);
+      setUserProfile(clientProfile);
+      await AsyncStorage.setItem("userData", JSON.stringify(userDataStored));
+      await AsyncStorage.setItem("userProfile", JSON.stringify(clientProfile));
+      redirectToPhoneGateIfNeeded(userDataStored);
+    } else {
+      setUserData(completeUserData);
+      setUserProfile(null);
+      await AsyncStorage.setItem("userData", JSON.stringify(completeUserData));
+      redirectToPhoneGateIfNeeded(completeUserData);
+    }
+
+    return response;
+  };
+
+  // After OTP attach-mobile succeeds — patch session and decide next route.
+  const applyAttachedMobile = async (attachedUser) => {
+    const mobile = attachedUser?.mobile;
+    if (!mobile) {
+      throw new Error("Mobile number missing after verification");
+    }
+
+    const base = userData || user || {};
+    const updatedUserData = {
+      ...base,
+      ...attachedUser,
+      mobile,
+      freelancer: base.freelancer,
+      client: base.client,
+      role: base.role,
+      token: base.token || attachedUser.token,
+    };
+
+    setUser((prev) => (prev ? { ...prev, ...attachedUser, mobile } : attachedUser));
+    setUserData(updatedUserData);
+    await AsyncStorage.setItem("userData", JSON.stringify(updatedUserData));
+
+    const hasFreelancer = !!(updatedUserData.freelancer && updatedUserData.freelancer.id);
+    const hasClient = !!(updatedUserData.client && updatedUserData.client.id);
+
+    if (hasFreelancer && hasClient) {
+      updateRoleOptions(updatedUserData);
+      setRoleSelectionVisible(true);
+      return { next: "role-modal" };
+    }
+    if (!hasFreelancer && !hasClient) {
+      return { next: "role" };
+    }
+    return { next: "main" };
+  };
+
+  // Google Login — uses in-app ASWebAuthenticationSession (Guideline 4).
   const googleLogin = async () => {
     try {
       const clientId =
         process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID ||
         "750433749399-vuco9j5gh6t7rii1cmpt1avbsjgq2fi3.apps.googleusercontent.com";
 
-      const appRedirectScheme = "birdearner://google-auth";
       const apiBaseUrl = apiService.getBaseUrl();
-      const backendCallbackUrl = apiBaseUrl.replace(/\/api$/, "") + "/api/auth/google/callback";
+      const backendCallbackUrl =
+        apiBaseUrl.replace(/\/api$/, "") + "/api/auth/google/callback";
 
       const authUrl =
         "https://accounts.google.com/o/oauth2/v2/auth?" +
@@ -449,152 +591,67 @@ export const AuthProvider = ({ children }) => {
           state: backendCallbackUrl,
         }).toString();
 
-      console.log("[Google OAuth] clientId:", clientId);
-      console.log("[Google OAuth] callbackUrl:", backendCallbackUrl);
-      console.log("[Google OAuth] authUrl:", authUrl);
+      const result = await WebBrowser.openAuthSessionAsync(
+        authUrl,
+        APP_GOOGLE_REDIRECT
+      );
 
-      const userData = await new Promise(async (resolve, reject) => {
-        let subscription = null;
-        const timeout = setTimeout(() => {
-          if (subscription) subscription.remove();
-          reject(new Error("Google sign-in timed out. Please try again."));
-        }, 120000);
-
-        const handleUrl = ({ url }) => {
-          if (url && url.startsWith("birdearner://google-auth")) {
-            clearTimeout(timeout);
-            if (subscription) subscription.remove();
-            try {
-              const parsedUrl = new URL(url);
-              const dataParam = parsedUrl.searchParams.get("data");
-              const errorParam = parsedUrl.searchParams.get("error");
-
-              if (errorParam) {
-                reject(new Error("Google sign-in failed: " + decodeURIComponent(errorParam)));
-                return;
-              }
-
-              if (dataParam) {
-                resolve(JSON.parse(decodeURIComponent(dataParam)));
-              } else {
-                reject(new Error("No user data received from Google sign-in"));
-              }
-            } catch (e) {
-              reject(new Error("Failed to parse Google sign-in response"));
-            }
-          }
-        };
-
-        try {
-          subscription = Linking.addEventListener("url", handleUrl);
-
-          const initialUrl = await Linking.getInitialURL().catch(() => null);
-          if (initialUrl && initialUrl.startsWith("birdearner://google-auth")) {
-            try {
-              const parsedUrl = new URL(initialUrl);
-              const dataParam = parsedUrl.searchParams.get("data");
-              const errorParam = parsedUrl.searchParams.get("error");
-
-              if (errorParam) {
-                clearTimeout(timeout);
-                if (subscription) subscription.remove();
-                reject(new Error("Google sign-in failed: " + decodeURIComponent(errorParam)));
-                return;
-              }
-
-              if (dataParam) {
-                clearTimeout(timeout);
-                if (subscription) subscription.remove();
-                resolve(JSON.parse(decodeURIComponent(dataParam)));
-                return;
-              }
-            } catch (e) {}
-          }
-
-          await Linking.openURL(authUrl);
-        } catch (err) {
-          clearTimeout(timeout);
-          if (subscription) subscription.remove();
-          reject(err);
-        }
-      });
-
-      if (!userData || !userData.token) {
-        throw new Error("Google sign-in completed but no user data was returned.");
+      if (result.type === "cancel" || result.type === "dismiss") {
+        throw new Error("Google sign-in was cancelled.");
       }
 
-      await apiService.setAuthToken(userData.token);
-      await AsyncStorage.setItem("authToken", userData.token);
-
-      const response = userData;
-
-      if (response) {
-        setUser(response);
-        if (response.token) {
-          setAuthToken(response.token);
-        }
-
-        let freelancerProfile = (response.freelancer && response.freelancer.id) ? response.freelancer : null;
-        let clientProfile = (response.client && response.client.id) ? response.client : null;
-
-        if (!freelancerProfile) {
-          try {
-            const fetchedFreelancer = await apiService.getFreelancerProfile(response.id);
-            if (fetchedFreelancer && fetchedFreelancer.id) {
-              freelancerProfile = fetchedFreelancer;
-            }
-          } catch (error) {
-            console.log("No freelancer profile found");
-          }
-        }
-
-        if (!clientProfile) {
-          try {
-            const fetchedClient = await apiService.getClientProfile(response.id);
-            if (fetchedClient && fetchedClient.id) {
-              clientProfile = fetchedClient;
-            }
-          } catch (error) {
-            console.log("No client profile found");
-          }
-        }
-
-        const completeUserData = {
-          ...response,
-          freelancer: freelancerProfile,
-          client: clientProfile,
-        };
-
-        if (freelancerProfile && clientProfile) {
-          updateRoleOptions(completeUserData);
-          setRoleSelectionVisible(true);
-          await AsyncStorage.setItem("userData", JSON.stringify(completeUserData));
-          return response;
-        } else if (freelancerProfile) {
-          const role = determineUserRole(completeUserData, "FREELANCER");
-          const userDataStored = { ...completeUserData, role };
-          setUserData(userDataStored);
-          setUserProfile(freelancerProfile);
-          await AsyncStorage.setItem("userData", JSON.stringify(userDataStored));
-          await AsyncStorage.setItem("userProfile", JSON.stringify(freelancerProfile));
-        } else if (clientProfile) {
-          const role = determineUserRole(completeUserData, "CLIENT");
-          const userDataStored = { ...completeUserData, role };
-          setUserData(userDataStored);
-          setUserProfile(clientProfile);
-          await AsyncStorage.setItem("userData", JSON.stringify(userDataStored));
-          await AsyncStorage.setItem("userProfile", JSON.stringify(clientProfile));
-        } else {
-          setUserData(completeUserData);
-          setUserProfile(null);
-          await AsyncStorage.setItem("userData", JSON.stringify(completeUserData));
-        }
-
-        return response;
+      if (result.type !== "success" || !result.url) {
+        throw new Error("Google sign-in failed. Please try again.");
       }
+
+      const userData = parseOAuthCallbackUrl(result.url);
+      return await applyOAuthSession(userData);
     } catch (error) {
       console.error("Google login error:", error);
       throw new Error(error.message || "Google login failed. Please try again.");
+    }
+  };
+
+  // Sign in with Apple — required when offering third-party login (Guideline 4.8).
+  const appleLogin = async () => {
+    try {
+      if (Platform.OS !== "ios") {
+        throw new Error("Sign in with Apple is only available on iOS.");
+      }
+
+      const available = await AppleAuthentication.isAvailableAsync();
+      if (!available) {
+        throw new Error("Sign in with Apple is not available on this device.");
+      }
+
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+
+      if (!credential.identityToken) {
+        throw new Error("Apple did not return an identity token.");
+      }
+
+      const fullName = [credential.fullName?.givenName, credential.fullName?.familyName]
+        .filter(Boolean)
+        .join(" ");
+
+      const response = await apiService.appleLogin({
+        identityToken: credential.identityToken,
+        fullName: fullName || null,
+        email: credential.email || null,
+      });
+
+      return await applyOAuthSession(response);
+    } catch (error) {
+      if (error?.code === "ERR_REQUEST_CANCELED") {
+        throw new Error("Apple sign-in was cancelled.");
+      }
+      console.error("Apple login error:", error);
+      throw new Error(error.message || "Apple login failed. Please try again.");
     }
   };
 
@@ -1091,6 +1148,8 @@ export const AuthProvider = ({ children }) => {
     login,
     verifyTwoFactorLogin,
     googleLogin,
+    appleLogin,
+    applyAttachedMobile,
     register,
     logout,
     createFreelancerProfile,
@@ -1115,6 +1174,8 @@ export const AuthProvider = ({ children }) => {
     login,
     verifyTwoFactorLogin,
     googleLogin,
+    appleLogin,
+    applyAttachedMobile,
     register,
     logout,
     createFreelancerProfile,
