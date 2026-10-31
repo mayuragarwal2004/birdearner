@@ -299,6 +299,7 @@ function MainTabs() {
     "ClientSignup",
     "FreelancerSignup",
     "OtpVerification",
+    "AccountDetailsUpdate",
   ];
 
   const hideTabBar = Boolean(currentRoute && hiddenRoutes.includes(currentRoute));

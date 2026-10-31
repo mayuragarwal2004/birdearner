@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import SafeSpinner from "./SafeSpinner";
 import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
 import * as Location from "expo-location";
@@ -64,9 +65,11 @@ const AddressPickerModal = ({
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
   const isDark = theme === "dark";
+  const insets = useSafeAreaInsets();
+  const bottomPad = Math.max(insets.bottom, Platform.OS === "android" ? 16 : 12) + 12;
   const styles = useMemo(
-    () => getStyles(currentTheme, isDark),
-    [currentTheme, isDark]
+    () => getStyles(currentTheme, isDark, bottomPad),
+    [currentTheme, isDark, bottomPad]
   );
 
   const [showForm, setShowForm] = useState(false);
@@ -302,7 +305,11 @@ const AddressPickerModal = ({
           </View>
 
           {showForm ? (
-            <KeyboardAwareScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+            <KeyboardAwareScrollView
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={styles.sheetScrollContent}
+            >
               <Text style={styles.fieldLabel}>Save as</Text>
               <View style={styles.labelRow}>
                 {LABELS.map((item) => (
@@ -441,7 +448,10 @@ const AddressPickerModal = ({
               </TouchableOpacity>
             </KeyboardAwareScrollView>
           ) : (
-            <KeyboardAwareScrollView showsVerticalScrollIndicator={false}>
+            <KeyboardAwareScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.sheetScrollContent}
+            >
               <TouchableOpacity
                 style={styles.actionCard}
                 onPress={async () => {
@@ -559,7 +569,7 @@ const AddressPickerModal = ({
   );
 };
 
-const getStyles = (theme, isDark) => {
+const getStyles = (theme, isDark, bottomPad = 28) => {
   const surface = theme.background || "#fff";
   const card = theme.cardBackground || (isDark ? "#1A1A1A" : "#fff");
   const text = theme.text || "#101114";
@@ -580,8 +590,12 @@ const getStyles = (theme, isDark) => {
       borderTopLeftRadius: 24,
       borderTopRightRadius: 24,
       paddingHorizontal: 18,
-      paddingBottom: 28,
+      paddingBottom: bottomPad,
       paddingTop: 10,
+    },
+    sheetScrollContent: {
+      paddingBottom: 8,
+      flexGrow: 1,
     },
     handle: {
       alignSelf: "center",

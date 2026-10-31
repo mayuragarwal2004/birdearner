@@ -218,14 +218,18 @@ const AccountDetailsUpdateScreen = ({ navigation, route }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
       {/* Header */}
       <View style={styles.headerRow}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={currentTheme.text || "#1E293B"} />
+          <Ionicons name="arrow-back" size={22} color={currentTheme.text || "#1E293B"} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Edit Account Credentials</Text>
-        <View style={{ width: 40 }} />
+        <View style={styles.headerTitleContainer}>
+          <Text style={styles.headerTitle} numberOfLines={1}>
+            Edit Account Credentials
+          </Text>
+        </View>
+        <View style={styles.headerRightSpacer} />
       </View>
 
       <KeyboardControllerAvoidingView
@@ -568,9 +572,9 @@ const getStyles = (currentTheme, isDark, bottomInset = 0) =>
     headerRow: {
       flexDirection: "row",
       alignItems: "center",
-      justifyContent: "space-between",
-      paddingHorizontal: 16,
-      paddingVertical: 12,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      minHeight: 52,
       borderBottomWidth: 1,
       borderBottomColor: currentTheme.border || "#E2E8F0",
       backgroundColor: currentTheme.surface || "#FFFFFF",
@@ -579,18 +583,29 @@ const getStyles = (currentTheme, isDark, bottomInset = 0) =>
       width: 40,
       height: 40,
       borderRadius: 20,
-      justify: "center",
+      justifyContent: "center",
       alignItems: "center",
     },
+    headerTitleContainer: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 8,
+    },
     headerTitle: {
-      fontSize: 18,
+      fontSize: 17,
       fontWeight: "700",
       color: currentTheme.text || "#0F172A",
+      textAlign: "center",
+    },
+    headerRightSpacer: {
+      width: 40,
+      height: 40,
     },
     scrollView: {
       paddingHorizontal: 16,
       paddingTop: 16,
-      paddingBottom: (Platform.OS === "ios" ? 85 : 70) + bottomInset,
+      paddingBottom: 24,
     },
     profileCard: {
       backgroundColor: currentTheme.surface || "#FFFFFF",
