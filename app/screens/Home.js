@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import DraggableFab from "../components/DraggableFab";
-import { FontAwesome, Ionicons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import {
   Bell,
   Crown,
@@ -552,11 +552,11 @@ const HomeScreen = () => {
         )}
       </ScrollView>
 
-      {/* Floating Chat Icon: drag it anywhere on screen */}
+      {/* Floating inbox — same size/position/icon as ClientHome */}
       <DraggableFab
-        size={56}
-        backgroundColor="#3B0764"
-        initialRight={20}
+        size={52}
+        backgroundColor="#4B0082"
+        initialRight={16}
         initialBottom={(Platform.OS === "ios" ? 85 : 70) + insets.bottom + 12}
         topLimit={insets.top + 8}
         onPress={() =>
@@ -567,7 +567,7 @@ const HomeScreen = () => {
           )
         }
       >
-        <FontAwesome name="comments" size={26} color="#fff" />
+        <ChatCircleText size={26} color="#FFFFFF" weight="fill" />
       </DraggableFab>
     </SafeAreaView>
   );

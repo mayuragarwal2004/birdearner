@@ -833,8 +833,8 @@ const ClientHomeScreen = () => {
 
       <DraggableFab
         onPress={openInbox}
-        size={48}
-        backgroundColor={DEEP_PURPLE}
+        size={52}
+        backgroundColor="#4B0082"
         initialRight={16}
         initialBottom={(Platform.OS === "ios" ? 85 : 70) + insets.bottom + 12}
         topLimit={insets.top + 8}
