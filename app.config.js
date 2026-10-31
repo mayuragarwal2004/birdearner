@@ -14,6 +14,7 @@ export default {
             image: "./assets/splash-logo-name.png",
             resizeMode: "contain",
             backgroundColor: "#4B0082",
+            imageWidth: 360,
         },
         ios: {
             bundleIdentifier: "com.birdearner.birdearner",
@@ -111,6 +112,7 @@ export default {
                     image: "./assets/splash-logo-name.png",
                     resizeMode: "contain",
                     backgroundColor: "#4B0082",
+                    imageWidth: 360,
                 },
             ],
         ],
