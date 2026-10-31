@@ -62,7 +62,7 @@ const FeedbackScreen = ({ navigation, route }) => {
   const [formData, setFormData] = useState({
     name: userData?.fullName || "",
     email: userData?.email || "",
-    phone: userData?.phoneNumber || "",
+    phone: userData?.mobile || userData?.phoneNumber || "",
     subject: "",
     message: "",
   });
@@ -212,7 +212,7 @@ const FeedbackScreen = ({ navigation, route }) => {
     setFormData({
       name: userData?.fullName || "",
       email: userData?.email || "",
-      phone: userData?.phoneNumber || "",
+      phone: userData?.mobile || userData?.phoneNumber || "",
       subject: "",
       message: "",
     });

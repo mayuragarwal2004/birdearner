@@ -246,12 +246,8 @@ const JobDescriptionScreen = ({ route, navigation }) => {
         method: "POST",
         body: JSON.stringify({
           reason: reportReason,
-          details: [
-            `Job posting reported (Job ID: ${job?.id || job?.jobId || "N/A"}, Title: ${job?.title || "N/A"}).`,
-            details.trim(),
-          ]
-            .filter(Boolean)
-            .join(" "),
+          jobId: job?.id || job?.jobId || undefined,
+          details: details.trim() || undefined,
           reportedUserId: job?.clientUserId || undefined,
         }),
       });
