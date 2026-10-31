@@ -113,7 +113,7 @@ const FREELANCER_TYPE_OPTIONS = [
 ];
 
 const PROFICIENCY_LEVELS = [
-  { label: "Select level", value: "" },
+  { label: "Level", value: "" },
   { label: "Native", value: "Native" },
   { label: "Fluent", value: "Fluent" },
   { label: "Conversational", value: "Conversational" },
@@ -1898,29 +1898,30 @@ const FreelancerSignup = ({ navigation, route }) => {
                 {/* 9. Languages You Speak */}
                 <Text style={styles.sectionNumberTitle}>9. Languages You Speak</Text>
                 <View style={styles.langInputCardContainer}>
-                  <View style={styles.gridRow}>
-                    <View style={[styles.gridCol, { flex: 1.3 }]}>
-                      <View style={styles.inputContainer}>
+                  <View style={styles.langInputRow}>
+                    <View style={styles.langNameField}>
+                      <View style={styles.langFieldBox}>
                         <TextInput
-                          style={styles.textInput}
+                          style={styles.langFieldInput}
                           placeholderTextColor={isDark ? "#888888" : "#A098AE"}
-                          placeholder="Enter a language (e.g. English)"
+                          placeholder="Enter a language"
                           value={languageInput}
                           onChangeText={setLanguageInput}
                         />
                       </View>
                     </View>
-                    <View style={[styles.gridCol, { flex: 1.1 }]}>
+                    <View style={styles.langLevelField}>
                       <PickerModal
                         items={PROFICIENCY_LEVELS}
                         value={selectedProficiency}
                         onValueChange={(v) => setSelectedProficiency(v)}
-                        placeholder="Select level"
-                        style={{ marginVertical: 0 }}
+                        placeholder="Level"
+                        style={styles.langPickerWrap}
+                        innerStyle={styles.langPickerInner}
                       />
                     </View>
                     <TouchableOpacity
-                      style={styles.smallAddButton}
+                      style={styles.langAddButton}
                       onPress={addLanguage}
                       activeOpacity={0.85}
                     >
@@ -1931,18 +1932,21 @@ const FreelancerSignup = ({ navigation, route }) => {
 
                   {/* Added Languages Label & Pills */}
                   <Text style={styles.addedLanguagesLabel}>Added Languages</Text>
-                  <View style={styles.tagsWrapper}>
+                  <View style={styles.langTagsWrapper}>
                     {languageList.map((lang, idx) => (
                       <View key={idx} style={styles.langTagBadge}>
-                        <Text style={styles.langTagTitle}>{lang.name}</Text>
+                        <Text style={styles.langTagTitle} numberOfLines={1}>
+                          {lang.name}
+                        </Text>
                         <View style={styles.langTagLevelBox}>
                           <Text style={styles.langTagLevelText}>{lang.level}</Text>
                         </View>
                         <TouchableOpacity
                           onPress={() => removeLanguage(idx)}
                           style={styles.tagRemoveBtn}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                         >
-                          <X size={12} color="#6D28D9" />
+                          <X size={14} color="#6D28D9" />
                         </TouchableOpacity>
                       </View>
                     ))}
@@ -3036,16 +3040,68 @@ const getStyles = (currentTheme, isDark) => StyleSheet.create({
     backgroundColor: isDark ? "#2A2A2A" : "#FAFAFC",
     borderWidth: 1,
     borderColor: isDark ? "#3A3A3A" : "#E9E3F4",
-    borderRadius: 16,
-    padding: 12,
-    marginBottom: 16,
+    borderRadius: 12,
+    padding: 8,
+    marginBottom: 12,
+  },
+  langInputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 4,
+  },
+  langNameField: {
+    flex: 1.4,
+    minWidth: 0,
+    justifyContent: "center",
+  },
+  langLevelField: {
+    flex: 0.9,
+    minWidth: 0,
+    justifyContent: "center",
+  },
+  langFieldBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: isDark ? "#2A2A2A" : "#FFFFFF",
+    borderWidth: 1,
+    borderColor: isDark ? "#3A3A3A" : "#E9E3F4",
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    height: 44,
+  },
+  langFieldInput: {
+    flex: 1,
+    fontSize: 13.5,
+    color: isDark ? "#FFFFFF" : "#1F1D2B",
+    paddingVertical: 0,
+    includeFontPadding: false,
+  },
+  langPickerWrap: {
+    marginVertical: 0,
+    marginBottom: 0,
+  },
+  langPickerInner: {
+    height: 44,
+    minHeight: 44,
+    paddingVertical: 0,
+  },
+  langAddButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#6D28D9",
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    height: 44,
+    justifyContent: "center",
+    flexShrink: 0,
   },
   addedLanguagesLabel: {
     fontSize: 12,
     fontWeight: "600",
     color: isDark ? "#FFFFFF" : "#1F1D2B",
-    marginTop: 8,
-    marginBottom: 6,
+    marginTop: 4,
+    marginBottom: 4,
   },
   smallAddButton: {
     flexDirection: "row",
@@ -3055,6 +3111,7 @@ const getStyles = (currentTheme, isDark) => StyleSheet.create({
     borderRadius: 14,
     height: 52,
     justifyContent: "center",
+    flexShrink: 0,
   },
   smallAddButtonText: {
     color: "#FFFFFF",
@@ -3068,33 +3125,45 @@ const getStyles = (currentTheme, isDark) => StyleSheet.create({
     gap: 8,
     marginVertical: 4,
   },
+  langTagsWrapper: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    marginTop: 0,
+    marginBottom: 0,
+  },
   langTagBadge: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: isDark ? "#3A2A55" : "#F3E8FF",
-    borderRadius: 20,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
+    borderRadius: 18,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
     borderWidth: 1,
     borderColor: isDark ? "#4A3A65" : "#E9E3F4",
+    gap: 6,
   },
   langTagTitle: {
     fontSize: 13,
     fontWeight: "600",
     color: isDark ? "#FFFFFF" : "#1F1D2B",
-    marginRight: 6,
+    lineHeight: 16,
+    includeFontPadding: false,
   },
   langTagLevelBox: {
     backgroundColor: isDark ? "#4A3A65" : "#E9D5FF",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: 8,
-    marginRight: 6,
+    justifyContent: "center",
+    alignItems: "center",
   },
   langTagLevelText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "700",
     color: isDark ? "#DDD6FE" : "#5B21B6",
+    lineHeight: 14,
+    includeFontPadding: false,
   },
   tagRemoveBtn: {
     padding: 2,

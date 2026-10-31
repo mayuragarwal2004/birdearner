@@ -230,13 +230,19 @@ export const AuthProvider = ({ children }) => {
 
         // Keep ApiService token in sync with storage (critical for authenticated calls)
         await apiService.setAuthToken(storedAuthToken);
-
-        setUser(cachedUserData);
-        setUserData(cachedUserData);
-        setUserProfile(cachedProfile);
         setAuthToken(storedAuthToken);
-        updateRoleOptions(cachedUserData);
-        setLoading(false);
+
+        // If cache is missing mobile, wait for a fresh fetch before unlocking UI.
+        // Otherwise the phone-gate flashes/sticks even when DB already has mobile.
+        const cacheMissingMobile = !cachedUserData?.mobile;
+
+        if (!cacheMissingMobile) {
+          setUser(cachedUserData);
+          setUserData(cachedUserData);
+          setUserProfile(cachedProfile);
+          updateRoleOptions(cachedUserData);
+          setLoading(false);
+        }
 
         try {
           const freshUserData = await apiService.getUserById(cachedUserData.id);
@@ -298,6 +304,15 @@ export const AuthProvider = ({ children }) => {
             "Using cached session; background refresh failed:",
             error.message
           );
+          // Refresh failed — fall back to cache so the user is not stuck loading
+          if (cacheMissingMobile) {
+            setUser(cachedUserData);
+            setUserData(cachedUserData);
+            setUserProfile(cachedProfile);
+            updateRoleOptions(cachedUserData);
+          }
+        } finally {
+          setLoading(false);
         }
       } else {
         await apiService.setAuthToken(null);

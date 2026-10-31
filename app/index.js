@@ -676,6 +676,7 @@ export function App() {
           name="OtpVerification"
           getComponent={getOtpVerificationScreen}
           initialParams={{ mode: "attach" }}
+          options={{ gestureEnabled: false, headerBackVisible: false }}
         />
       ) : userData ? (
         // Authenticated Stack - Route directly to role dashboard

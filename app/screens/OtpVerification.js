@@ -1,6 +1,6 @@
 import { KeyboardAvoidingView as KeyboardControllerAvoidingView } from "react-native-keyboard-controller";
 import KeyboardAwareScrollView from "../components/KeyboardAwareScrollView";
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
   Platform,
   ScrollView,
   StatusBar,
+  BackHandler,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import SafeSpinner from "../components/SafeSpinner";
@@ -38,7 +39,7 @@ const validateMobile = (mobile) => {
 const OtpVerification = ({ navigation, route }) => {
   const { mobile: initialMobile, role, mode } = route.params || {};
   const isAttachMode = mode === "attach";
-  const { applyAttachedMobile } = useAuth();
+  const { applyAttachedMobile, logout, user, userData, refreshUserData } = useAuth();
   const [mobile, setMobile] = useState(initialMobile || "");
   const [otp, setOtp] = useState("");
   const [otpDigits, setOtpDigits] = useState(["", "", "", "", "", ""]);
@@ -50,6 +51,78 @@ const OtpVerification = ({ navigation, route }) => {
   const showToast = (type, text1, text2) => {
     Toast.show({ type, text1, text2, position: "top" });
   };
+
+  const proceedAfterAttach = useCallback(async (attachedUser) => {
+    const result = await applyAttachedMobile(attachedUser);
+    setTimeout(() => {
+      if (result.next === "role") {
+        resetToRoleSelect();
+      } else if (result.next === "main") {
+        resetToMainApp();
+      }
+    }, 50);
+  }, [applyAttachedMobile]);
+
+  const handleSafeBack = useCallback(() => {
+    if (isAttachMode) {
+      // Phone gate is the only screen — goBack has nowhere to go.
+      logout();
+      return;
+    }
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    }
+  }, [isAttachMode, logout, navigation]);
+
+  // Block Android hardware back from dispatching GO_BACK with an empty stack
+  useEffect(() => {
+    if (!isAttachMode) return undefined;
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      logout();
+      return true;
+    });
+    return () => sub.remove();
+  }, [isAttachMode, logout]);
+
+  useEffect(() => {
+    navigation.setOptions?.({
+      gestureEnabled: !isAttachMode,
+      headerBackVisible: !isAttachMode,
+    });
+  }, [isAttachMode, navigation]);
+
+  // Stale session: DB already has mobile but local userData doesn't — leave the gate.
+  useEffect(() => {
+    if (!isAttachMode) return undefined;
+    let cancelled = false;
+
+    const syncIfAlreadyLinked = async () => {
+      try {
+        if (userData?.mobile) {
+          await proceedAfterAttach(userData);
+          return;
+        }
+        const userId = userData?.id || user?.id;
+        if (!userId) return;
+
+        const fresh = await apiService.getUserById(userId);
+        if (cancelled || !fresh?.mobile) return;
+
+        showToast("success", "Verified", "Your mobile number is already linked");
+        await proceedAfterAttach(fresh);
+        if (typeof refreshUserData === "function") {
+          refreshUserData().catch(() => {});
+        }
+      } catch (error) {
+        console.warn("Attach gate sync failed:", error?.message || error);
+      }
+    };
+
+    syncIfAlreadyLinked();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAttachMode, userData?.id, userData?.mobile, user?.id, proceedAfterAttach, refreshUserData]);
 
   const handleOtpDigitChange = (text, index) => {
     const cleanDigit = text.replace(/[^0-9]/g, "");
@@ -146,18 +219,14 @@ const OtpVerification = ({ navigation, route }) => {
           return;
         }
 
-        showToast("success", "Success", "Mobile number verified successfully");
-        const result = await applyAttachedMobile(data.data || { mobile });
-
-        // Defer until navigator remounts from phone-gate → auth
-        setTimeout(() => {
-          if (result.next === "role") {
-            resetToRoleSelect();
-          } else if (result.next === "main") {
-            resetToMainApp();
-          }
-          // role-modal: AuthProvider modal handles dual-role selection
-        }, 50);
+        showToast(
+          "success",
+          "Success",
+          data.alreadyLinked
+            ? "Mobile number already linked"
+            : "Mobile number verified successfully"
+        );
+        await proceedAfterAttach(data.data || { mobile });
         return;
       }
 
@@ -219,7 +288,7 @@ const OtpVerification = ({ navigation, route }) => {
             {!isAttachMode && (
               <TouchableOpacity
                 style={styles.headerBackButton}
-                onPress={() => navigation.goBack()}
+                onPress={handleSafeBack}
               >
                 <ArrowLeft size={24} color="#FFFFFF" />
               </TouchableOpacity>
@@ -330,10 +399,12 @@ const OtpVerification = ({ navigation, route }) => {
 
             <TouchableOpacity
               style={styles.goBackButton}
-              onPress={() => navigation.goBack()}
+              onPress={handleSafeBack}
               activeOpacity={0.7}
             >
-              <Text style={styles.goBackButtonText}>Go Back</Text>
+              <Text style={styles.goBackButtonText}>
+                {isAttachMode ? "Sign out" : "Go Back"}
+              </Text>
             </TouchableOpacity>
           </KeyboardAwareScrollView>
         </KeyboardControllerAvoidingView>
