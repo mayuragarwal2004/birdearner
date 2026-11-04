@@ -1666,7 +1666,7 @@ const FreelancerSignup = ({ navigation, route }) => {
 
                 {/* 2. Choose Freelancer Type */}
                 <Text style={styles.sectionNumberTitle}>2. Choose Freelancer Type <Text style={styles.requiredText}>*</Text></Text>
-                <View style={styles.gridRow}>
+                <View style={styles.typeGridRow}>
                   <TouchableOpacity
                     style={[
                       styles.freelancerTypeCard,
@@ -1678,13 +1678,13 @@ const FreelancerSignup = ({ navigation, route }) => {
                     <View style={styles.typeIconBox}>
                       <Laptop size={20} color="#7C3AED" />
                     </View>
-                    <View style={{ flex: 1, paddingRight: 4 }}>
+                    <View style={{ flex: 1, paddingRight: 2, minWidth: 0 }}>
                       <Text style={styles.typeCardTitle}>Remote</Text>
                       <Text style={styles.typeCardSubtext}>Work from anywhere</Text>
                     </View>
                     <View
                       style={[
-                        styles.radioCircle,
+                        styles.typeRadioCircle,
                         workType === "remote" && styles.radioCircleSelected,
                       ]}
                     >
@@ -1703,13 +1703,13 @@ const FreelancerSignup = ({ navigation, route }) => {
                     <View style={styles.typeIconBox}>
                       <MapPin size={20} color="#7C3AED" />
                     </View>
-                    <View style={{ flex: 1, paddingRight: 4 }}>
+                    <View style={{ flex: 1, paddingRight: 2, minWidth: 0 }}>
                       <Text style={styles.typeCardTitle}>On-site</Text>
                       <Text style={styles.typeCardSubtext}>Work at a specific location</Text>
                     </View>
                     <View
                       style={[
-                        styles.radioCircle,
+                        styles.typeRadioCircle,
                         workType === "onsite" && styles.radioCircleSelected,
                       ]}
                     >
@@ -2936,6 +2936,13 @@ const getStyles = (currentTheme, isDark) => StyleSheet.create({
   gridCol: {
     flex: 1,
   },
+  // Dedicated row for the Remote / On-site cards only (keeps the shared
+  // `gridRow` untouched so the Location and Skills rows are unaffected)
+  typeGridRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 8,
+  },
   freelancerTypeCard: {
     flex: 1,
     flexDirection: "row",
@@ -2944,7 +2951,8 @@ const getStyles = (currentTheme, isDark) => StyleSheet.create({
     borderWidth: 1.5,
     borderColor: isDark ? "#3A3A3A" : "#E9E3F4",
     borderRadius: 16,
-    padding: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
     minHeight: 70,
   },
   freelancerTypeCardSelected: {
@@ -2952,22 +2960,39 @@ const getStyles = (currentTheme, isDark) => StyleSheet.create({
     backgroundColor: isDark ? "#3A2A55" : "#F5F0FF",
   },
   typeIconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: 28,
+    height: 28,
+    borderRadius: 9,
     backgroundColor: isDark ? "#3A2A55" : "#F3E8FF",
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 8,
+    marginRight: 6,
   },
   typeCardTitle: {
     fontSize: 14,
     fontWeight: "700",
     color: isDark ? "#FFFFFF" : "#1F1D2B",
+    flexShrink: 1,
+    lineHeight: 18,
   },
   typeCardSubtext: {
     fontSize: 11,
     color: isDark ? "#AAA" : "#8E8EA9",
+    flexShrink: 1,
+    lineHeight: 15,
+    marginTop: 2,
+  },
+  // Dedicated radio for the Remote / On-site cards only (keeps the shared
+  // `radioCircle` untouched so the Gender radios keep their original size)
+  typeRadioCircle: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: isDark ? "#555" : "#D4C5ED",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 2,
   },
   radioGroupRow: {
     flexDirection: "row",
