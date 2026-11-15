@@ -391,7 +391,10 @@ const JobRequirementsScreen = ({ navigation, route }) => {
     }
   };
 
-  const navigateToWallet = () => navigation.navigate("WalletClient");
+  // Insufficient-balance top-up goes straight to the Payment screen: the
+  // Client Wallet no longer has an Add Amount button, so routing there would
+  // be a dead end. The Payment screen is registered in this stack.
+  const navigateToWallet = () => navigation.navigate("Payment");
 
   const setJobMode = (onSite) => {
     setIsOnSite(onSite);

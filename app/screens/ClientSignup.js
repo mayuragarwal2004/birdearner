@@ -35,6 +35,7 @@ const ShieldCheck = getIcon("ShieldCheck");
 const Calendar = getIcon("Calendar");
 const MapPin = getIcon("MapPin");
 const Building = getIcon("Building");
+const Hash = getIcon("Hash");
 const Globe = getIcon("Globe");
 const FileText = getIcon("FileText");
 const Map = getIcon("Map");
@@ -119,6 +120,8 @@ const createSchema = (mode) => {
   const baseSchema = {
     designation: z.string().optional(),
     heading: z.string().optional(),
+    addressLine1: z.string().optional(),
+    addressLine2: z.string().optional(),
     city: z.string().optional(),
     state: z.string().optional(),
     zipCode: z.string().optional(),
@@ -165,13 +168,22 @@ const ClientSignup = ({ navigation, route }) => {
     title,
   } = route.params || {};
 
-  const rawClient = profileData || userProfile || userData?.client;
-  const initialClient = {
-    ...rawClient,
-    profilePhoto: userData?.profilePhoto || rawClient?.profilePhoto,
-    dob: userData?.dob || rawClient?.dob,
-    gender: userData?.gender || rawClient?.gender,
-  };
+  // Account-level identity (name, email, mobile) always comes from the
+  // account (userData/user/route params) and stays prefilled below.
+  // Profile-specific data is loaded from `profileData` (Edit Profile) or the
+  // existing profile of this type. When creating a second profile
+  // (mode === "create") NO profile data is loaded, so every profile-specific
+  // field starts blank and nothing is copied from the first profile.
+  const rawClient =
+    mode === "create" ? null : profileData || userProfile || userData?.client;
+  const initialClient = rawClient
+    ? {
+        ...rawClient,
+        profilePhoto: userData?.profilePhoto || rawClient?.profilePhoto,
+        dob: userData?.dob || rawClient?.dob,
+        gender: userData?.gender || rawClient?.gender,
+      }
+    : null;
 
   const schema = createSchema(mode);
   const [step, setStep] = useState(mode === "signup" ? 1 : 2);
@@ -190,6 +202,8 @@ const ClientSignup = ({ navigation, route }) => {
     termsAccepted: initialClient?.termsAccepted || false,
     designation: initialClient?.organizationType || "",
     heading: initialClient?.companyName || "",
+    addressLine1: initialClient?.addressLine1 || "",
+    addressLine2: initialClient?.addressLine2 || "",
     zipCode: initialClient?.zipcode ? initialClient.zipcode.toString() : "",
     city: initialClient?.city || "",
     state: initialClient?.state || "",
@@ -232,6 +246,8 @@ const ClientSignup = ({ navigation, route }) => {
         full_name: userData?.fullName || user?.fullName || prevForm.full_name,
         designation: dataSource.organizationType || prevForm.designation,
         heading: dataSource.companyName || prevForm.heading,
+        addressLine1: dataSource.addressLine1 || prevForm.addressLine1,
+        addressLine2: dataSource.addressLine2 || prevForm.addressLine2,
         city: dataSource.city || prevForm.city,
         state: dataSource.state || prevForm.state,
         zipCode: dataSource.zipcode
@@ -537,6 +553,8 @@ const ClientSignup = ({ navigation, route }) => {
           email: user?.email,
           organizationType: cleanedForm.designation,
           companyName: cleanedForm.heading,
+          addressLine1: cleanedForm.addressLine1,
+          addressLine2: cleanedForm.addressLine2,
           city: cleanedForm.city,
           state: cleanedForm.state,
           zipcode: cleanedForm.zipCode ? parseInt(cleanedForm.zipCode) : null,
@@ -597,6 +615,11 @@ const ClientSignup = ({ navigation, route }) => {
             delete clientUpdateData[key];
           }
         });
+
+        // Address lines are set after cleanup so an emptied field is sent as
+        // null (explicit clear) instead of being dropped as an empty string.
+        clientUpdateData.addressLine1 = cleanedForm.addressLine1 || null;
+        clientUpdateData.addressLine2 = cleanedForm.addressLine2 || null;
 
         result = await apiService.updateClientProfile(
           user?.client?.id,
@@ -912,46 +935,64 @@ const ClientSignup = ({ navigation, route }) => {
                   ))}
                 </View>
 
-                {/* 4. Full Address */}
+                {/* 4. Full Address — two stacked, full-width address lines */}
                 <Text style={styles.sectionNumberTitle}>4. Full Address</Text>
-                <View style={styles.gridRow}>
-                  <View style={styles.gridCol}>
-                    <View style={styles.inputContainer}>
-                      <View style={styles.iconBox}>
-                        <MapPin size={20} color="#7C3AED" />
-                      </View>
-                      <TextInput
-                        style={styles.textInput}
-                        placeholderTextColor={isDark ? "#888888" : "#A098AE"}
-                        placeholder="Address"
-                        value={form.city}
-                        onChangeText={(v) =>
-                          setForm({ ...form, city: v, autoFilledLocation: false })
-                        }
-                      />
-                    </View>
+                <View style={[styles.inputContainer, styles.addressInputContainer]}>
+                  <View style={styles.iconBox}>
+                    <MapPin size={20} color="#7C3AED" />
                   </View>
-                  <View style={styles.gridCol}>
-                    <View style={styles.inputContainer}>
-                      <View style={styles.iconBox}>
-                        <Building size={20} color="#7C3AED" />
-                      </View>
-                      <TextInput
-                        style={styles.textInput}
-                        placeholderTextColor={isDark ? "#888888" : "#A098AE"}
-                        placeholder="Address Line 2"
-                        value={form.heading}
-                        onChangeText={(v) => setForm({ ...form, heading: v })}
-                      />
-                    </View>
+                  <TextInput
+                    style={[styles.textInput, styles.addressTextInput]}
+                    placeholderTextColor={isDark ? "#888888" : "#A098AE"}
+                    placeholder="Address Line 1"
+                    value={form.addressLine1}
+                    onChangeText={(v) =>
+                      setForm({ ...form, addressLine1: v })
+                    }
+                    multiline
+                    textAlignVertical="top"
+                  />
+                </View>
+
+                <View style={[styles.inputContainer, styles.addressInputContainer]}>
+                  <View style={styles.iconBox}>
+                    <Building size={20} color="#7C3AED" />
                   </View>
+                  <TextInput
+                    style={[styles.textInput, styles.addressTextInput]}
+                    placeholderTextColor={isDark ? "#888888" : "#A098AE"}
+                    placeholder="Address Line 2"
+                    value={form.addressLine2}
+                    onChangeText={(v) =>
+                      setForm({ ...form, addressLine2: v })
+                    }
+                    multiline
+                    textAlignVertical="top"
+                  />
+                </View>
+
+                {/* City — separate DB field, only ever set manually or by
+                    pincode auto-fill; never receives address-line text */}
+                <View style={styles.inputContainer}>
+                  <View style={styles.iconBox}>
+                    <Map size={20} color="#7C3AED" />
+                  </View>
+                  <TextInput
+                    style={styles.textInput}
+                    placeholderTextColor={isDark ? "#888888" : "#A098AE"}
+                    placeholder="City"
+                    value={form.city}
+                    onChangeText={(v) =>
+                      setForm({ ...form, city: v, autoFilledLocation: false })
+                    }
+                  />
                 </View>
 
                 <View style={styles.gridRow}>
                   <View style={styles.gridCol}>
                     <View style={styles.inputContainer}>
                       <View style={styles.iconBox}>
-                        <Mail size={20} color="#7C3AED" />
+                        <Hash size={20} color="#7C3AED" />
                       </View>
                       <TextInput
                         style={styles.textInput}
@@ -1212,6 +1253,12 @@ const getStyles = (currentTheme, isDark) => StyleSheet.create({
     alignItems: "center",
     marginRight: 8,
   },
+  // Address line containers: taller box, icon aligned to the first text line
+  addressInputContainer: {
+    alignItems: "flex-start",
+    minHeight: 64,
+    paddingTop: 10,
+  },
   countryCodeBox: {
     flexDirection: "row",
     alignItems: "center",
@@ -1234,6 +1281,12 @@ const getStyles = (currentTheme, isDark) => StyleSheet.create({
     fontSize: 13.5,
     color: isDark ? "#FFFFFF" : "#1F1D2B",
     paddingVertical: 8,
+  },
+  // Stacked address lines: taller box so long addresses fit comfortably
+  addressTextInput: {
+    minHeight: 44,
+    paddingTop: 10,
+    paddingBottom: 10,
   },
   eyeIconButton: {
     padding: 6,

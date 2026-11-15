@@ -296,13 +296,24 @@ const FreelancerSignup = ({ navigation, route }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const rawFreelancer = profileData || userProfile || userData?.freelancer;
-  const initialFreelancer = normalizeFreelancerData({
-    ...rawFreelancer,
-    profilePhoto: userData?.profilePhoto || rawFreelancer?.profilePhoto,
-    dob: userData?.dob || rawFreelancer?.dob,
-    gender: userData?.gender || rawFreelancer?.gender,
-  });
+  // Account-level identity (name, email, mobile) always comes from the
+  // account (userData/user/route params) and stays prefilled below.
+  // Profile-specific data is loaded from `profileData` (Edit Profile) or this
+  // user's existing freelancer profile. When creating a second profile
+  // (mode === "create") NO profile data is loaded, so every profile-specific
+  // field starts blank and nothing is copied from the first profile.
+  const rawFreelancer =
+    mode === "create" ? null : profileData || userProfile || userData?.freelancer;
+  const initialFreelancer = normalizeFreelancerData(
+    rawFreelancer
+      ? {
+          ...rawFreelancer,
+          profilePhoto: userData?.profilePhoto || rawFreelancer.profilePhoto,
+          dob: userData?.dob || rawFreelancer.dob,
+          gender: userData?.gender || rawFreelancer.gender,
+        }
+      : null
+  );
 
   const [availableServices, setAvailableServices] = useState([]);
   const [selectedServices, setSelectedServices] = useState(

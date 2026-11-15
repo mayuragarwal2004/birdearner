@@ -72,7 +72,18 @@ const SettingsScreen = ({ navigation }) => {
   const [switchingRole, setSwitchingRole] = useState(false);
 
   const role = userData?.role;
-  const hasBothProfiles = !!userData?.freelancer && !!userData?.client;
+  // Profile existence is driven by actual profile records, not by merely
+  // opening a setup screen — a setup screen only counts as done once the
+  // profile record exists (userData.client / userData.freelancer).
+  const hasClientProfile = !!userData?.client;
+  const hasFreelancerProfile = !!userData?.freelancer;
+  const hasBothProfiles = hasClientProfile && hasFreelancerProfile;
+  // The one profile that is still missing (null when both exist)
+  const missingProfile = !hasClientProfile
+    ? "CLIENT"
+    : !hasFreelancerProfile
+      ? "FREELANCER"
+      : null;
   const nextRole = role === "FREELANCER" ? "CLIENT" : "FREELANCER";
   const rawProfilePhoto =
     userProfile?.profilePhoto ||
@@ -104,8 +115,16 @@ const SettingsScreen = ({ navigation }) => {
     };
   }, [role, userProfile]);
 
-  const walletRoute = role === "CLIENT" ? "WalletClient" : "WalletFreelancer";
-  const transactionHistoryRoute = role === "CLIENT" ? "TransactionHistoryClient" : "TransactionHistoryFreelancer";
+  // Wallet/history routing: only an explicit FREELANCER role may open the
+  // freelancer wallet (it contains the Withdraw button and the ₹99 warning).
+  // Every other state — CLIENT, lowercase, or a role that has not resolved
+  // yet (the login API returns no role field) — gets the withdraw-free
+  // Client wallet, so withdrawal UI can never surface for a client session.
+  // The role is normalized because the rest of the app compares it
+  // case-insensitively (index.js lowercases before comparing).
+  const isFreelancerRole = (role || "").toUpperCase() === "FREELANCER";
+  const walletRoute = isFreelancerRole ? "WalletFreelancer" : "WalletClient";
+  const transactionHistoryRoute = isFreelancerRole ? "TransactionHistoryFreelancer" : "TransactionHistoryClient";
 
   const navigateTo = (routeName, params) => {
     if (!routeName) return;
@@ -126,6 +145,23 @@ const SettingsScreen = ({ navigation }) => {
 
   const handleEditProfile = () => {
     navigateTo(editProfileOption.stack_name, editProfileOption.params);
+  };
+
+  // Opens the missing profile's setup screen. Opening the screen is NOT
+  // profile completion — hasBothProfiles only flips once the new profile
+  // record is actually created and returned by refreshUserData.
+  const handleSetupProfile = () => {
+    if (missingProfile === "CLIENT") {
+      navigation.navigate("ClientSignup", {
+        mode: "create",
+        title: "Create Client Profile",
+      });
+    } else if (missingProfile === "FREELANCER") {
+      navigation.navigate("FreelancerSignup", {
+        mode: "create",
+        title: "Create Freelancer Profile",
+      });
+    }
   };
 
   const handleViewProfile = () => {
@@ -371,11 +407,11 @@ const SettingsScreen = ({ navigation }) => {
             <Text style={styles.switchLabel}>
               {hasBothProfiles
                 ? `Switch to ${nextRole === "CLIENT" ? "Client" : "Freelancer"}`
-                : `Setup ${nextRole === "CLIENT" ? "Client" : "Freelancer"} Profile`}
+                : `Setup ${missingProfile === "CLIENT" ? "Client" : "Freelancer"} Profile`}
             </Text>
             {switchingRole ? (
               <SafeSpinner size="small" color="#FFFFFF" />
-            ) : (
+            ) : hasBothProfiles ? (
               <Switch
                 value={role === "FREELANCER"}
                 onValueChange={handleRoleSwitch}
@@ -383,6 +419,16 @@ const SettingsScreen = ({ navigation }) => {
                 thumbColor="#FFFFFF"
                 ios_backgroundColor="#46454D"
               />
+            ) : (
+              <TouchableOpacity
+                style={styles.setupArrow}
+                onPress={handleSetupProfile}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={`Setup ${missingProfile === "CLIENT" ? "Client" : "Freelancer"} Profile`}
+              >
+                <Text style={styles.setupArrowText}>→</Text>
+              </TouchableOpacity>
             )}
           </View>
         </ImageBackground>
@@ -561,6 +607,19 @@ const getStyles = (currentTheme, isDark, bottomInset = 0) => {
     switchLabel: {
       color: "#FFFFFF",
       fontSize: 15,
+      fontWeight: "700",
+    },
+    setupArrow: {
+      minWidth: 44,
+      minHeight: 44,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "flex-end",
+      paddingRight: 4,
+    },
+    setupArrowText: {
+      color: "#FFFFFF",
+      fontSize: 22,
       fontWeight: "700",
     },
     section: {
