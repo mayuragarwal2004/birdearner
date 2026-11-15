@@ -17,7 +17,6 @@ import {
   Warning,
   CaretRight,
   ArrowDown,
-  Sparkle,
   ArrowUpRight,
   ArrowDownLeft,
 } from "phosphor-react-native";
@@ -226,7 +225,6 @@ const WalletFreelancerScreen = ({ navigation }) => {
               <View style={styles.walletIconCircle}>
                 <Wallet size={22} color="#FFFFFF" weight="fill" />
               </View>
-              <Sparkle size={18} color="#E9D5FF" weight="fill" />
             </View>
 
             <Text style={styles.balanceLabel}>Available Balance</Text>

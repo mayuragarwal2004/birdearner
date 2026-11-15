@@ -14,7 +14,6 @@ import {
   ArrowLeft,
   ClockCounterClockwise,
   Wallet,
-  Sparkle,
   CaretRight,
   ArrowUpRight,
   ArrowDownLeft,
@@ -215,7 +214,6 @@ const WalletClientScreen = ({ navigation }) => {
                 <View style={styles.walletIconCircle}>
                   <Wallet size={22} color="#FFFFFF" weight="fill" />
                 </View>
-                <Sparkle size={18} color="#E9D5FF" weight="fill" />
               </View>
 
               <Text style={styles.balanceLabel}>Total Balance</Text>
