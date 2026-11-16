@@ -6,6 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/NewAuthContext';
 import apiService from '../lib/apiService';
+import { calculateLevel } from '../lib/levels';
 
 const ProfileOverview = ({ navigation }) => {
   const { theme, themeStyles } = useTheme();
@@ -33,8 +34,8 @@ const ProfileOverview = ({ navigation }) => {
     fetchStatsData();
   }, [user?.id, selectedFilter]);
 
-  // Level comes from the freelancer's saved level (not from a rank label or fixed text)
-  const level = Math.max(Number(statsData?.profile?.level) || 1, 1);
+  // Level is derived from total XP using the backend thresholds (see lib/levels.js)
+  const level = Math.max(calculateLevel(statsData?.profile?.xp), 1);
   // The track always shows five levels: 1-5, then 6-10, then 11-15, and so on
   const WINDOW_SIZE = 5;
   const windowStart = Math.floor((level - 1) / WINDOW_SIZE) * WINDOW_SIZE + 1;

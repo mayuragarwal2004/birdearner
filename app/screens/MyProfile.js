@@ -2,6 +2,8 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useAuth } from "../context/NewAuthContext";
 import { Linking } from "react-native";
 import { useTheme } from "../context/ThemeContext";
+import { getProfileHeroGradient } from "../lib/heroGradient";
+import { calculateLevel } from "../lib/levels";
 import React, { useEffect, useState } from "react";
 import {
   View,
@@ -142,6 +144,8 @@ export default function ProfileScreen({ navigation }) {
   const [reviewStats, setReviewStats] = useState(null);
 
   const role = userData?.role;
+  // Level derived from total XP (backend thresholds mirrored in lib/levels.js)
+  const currentLevel = calculateLevel(data?.xp);
 
   // Update local data when userProfile changes in context
   useEffect(() => {
@@ -210,6 +214,7 @@ export default function ProfileScreen({ navigation }) {
 
   const { theme, themeStyles } = useTheme();
   const currentTheme = themeStyles[theme];
+  const isDark = !!currentTheme.isDark;
   const styles = getStyles(currentTheme);
 
   const formattedDate = formatMemberSince(data?.createdAt || userData?.createdAt);
@@ -334,13 +339,13 @@ export default function ProfileScreen({ navigation }) {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={["#3b006b"]}
+            colors={isDark ? ["#A78BFA"] : ["#3b006b"]}
             progressBackgroundColor={currentTheme.cardBackground || "#fff"}
           />
         }
         showsVerticalScrollIndicator={false}
       >
-        <HeroWrapper style={[styles.hero, purpleHero && { marginBottom: -60, paddingBottom: 84 }]} {...(purpleHero ? { colors: ["#4B0082", "#4B0082", "#C4B5E8", "#F5F2FB"], locations: [0, 0.6, 0.85, 1], start: { x: 0.5, y: 0 }, end: { x: 0.5, y: 1 } } : {})}>
+        <HeroWrapper style={[styles.hero, purpleHero && { marginBottom: -60, paddingBottom: 84 }]} {...(purpleHero ? getProfileHeroGradient(isDark) : {})}>
           <View style={styles.topBar}>
             <TouchableOpacity
               style={styles.iconButton}
@@ -383,7 +388,7 @@ export default function ProfileScreen({ navigation }) {
           {/* Freelancer level, shown between the name and the role badge */}
           {role === "FREELANCER" && (
             <Text style={[styles.profileLevelLine, purpleHero && styles.onPurpleText]}>
-              Level {data?.level ?? 1}
+              Level {currentLevel}
             </Text>
           )}
 
@@ -466,7 +471,7 @@ export default function ProfileScreen({ navigation }) {
                       styles={styles}
                       icon="leaderboard"
                       label="Level"
-                      value={`Lev. ${data?.level || 1} ${getBadgeLabel(data?.level).replace(" Badge", "")}`}
+                      value={`Lev. ${currentLevel} ${getBadgeLabel(currentLevel).replace(" Badge", "")}`}
                     />
                     <InfoRow
                       styles={styles}
@@ -867,7 +872,10 @@ function InfoRow({ styles, icon, label, value }) {
 }
 
 const getStyles = (currentTheme) => {
-  const surface = currentTheme.background || "#FFFFFF";
+  const isDark = !!currentTheme.isDark;
+  // Dark Mode uses a true-black page background (#000000) so the hero gradient
+  // (which fades to #000000) blends seamlessly into the screen — not grey.
+  const surface = isDark ? "#000000" : currentTheme.background || "#FFFFFF";
   const card = currentTheme.cardBackground || surface;
   const text = currentTheme.text || TEXT;
   const muted = currentTheme.subText || MUTED;
@@ -1042,7 +1050,7 @@ const getStyles = (currentTheme) => {
       width: 90,
       height: 90,
       borderRadius: 10,
-      backgroundColor: "#F4F5F7",
+      backgroundColor: isDark ? "#2A2A2A" : "#F4F5F7",
       alignItems: "center",
       justifyContent: "center",
       overflow: "hidden",
@@ -1079,7 +1087,7 @@ const getStyles = (currentTheme) => {
       fontWeight: "400",
     },
     priceText: {
-      color: PURPLE,
+      color: isDark ? "#A78BFA" : PURPLE,
       fontSize: 16,
       fontWeight: "700",
     },
@@ -1249,7 +1257,7 @@ const getStyles = (currentTheme) => {
       lineHeight: 20,
     },
     portfolioContainer: {
-      backgroundColor: "#FFFFFF",
+      backgroundColor: isDark ? card : "#FFFFFF",
       borderRadius: 16,
       padding: 14,
       shadowColor: "#000",
@@ -1267,7 +1275,7 @@ const getStyles = (currentTheme) => {
       width: "48.5%",
       height: 200,
       borderRadius: 12,
-      backgroundColor: "#F5F3FA",
+      backgroundColor: isDark ? "#241D36" : "#F5F3FA",
       alignItems: "center",
       justifyContent: "center",
       overflow: "hidden",
@@ -1281,7 +1289,7 @@ const getStyles = (currentTheme) => {
       width: "100%",
       height: 95,
       borderRadius: 12,
-      backgroundColor: "#F5F3FA",
+      backgroundColor: isDark ? "#241D36" : "#F5F3FA",
       alignItems: "center",
       justifyContent: "center",
       overflow: "hidden",
@@ -1295,7 +1303,7 @@ const getStyles = (currentTheme) => {
       width: "31.5%",
       aspectRatio: 1,
       borderRadius: 12,
-      backgroundColor: "#F5F3FA",
+      backgroundColor: isDark ? "#241D36" : "#F5F3FA",
       alignItems: "center",
       justifyContent: "center",
       overflow: "hidden",
@@ -1304,7 +1312,7 @@ const getStyles = (currentTheme) => {
       width: "100%",
       height: 56,
       borderRadius: 12,
-      backgroundColor: "#F5F3FA",
+      backgroundColor: isDark ? "#241D36" : "#F5F3FA",
       alignItems: "center",
       justifyContent: "center",
       overflow: "hidden",
@@ -1318,7 +1326,7 @@ const getStyles = (currentTheme) => {
       paddingHorizontal: 6,
       fontSize: 11,
       fontWeight: "600",
-      color: "#6D28D9",
+      color: isDark ? "#C4B5FF" : "#6D28D9",
       textAlign: "center",
     },
     plusIcon: {
@@ -1383,34 +1391,34 @@ const getStyles = (currentTheme) => {
       marginTop: 18,
     },
     aboutDescription: {
-      color: "#6B7280",
+      color: isDark ? muted : "#6B7280",
       fontSize: 14,
       lineHeight: 21,
       marginBottom: 16,
     },
     infoList: {
       borderTopWidth: 1,
-      borderTopColor: "#F3F4F6",
+      borderTopColor: isDark ? border : "#F3F4F6",
       marginBottom: 16,
     },
     infoRow: {
       minHeight: 48,
       paddingVertical: 12,
       borderBottomWidth: 1,
-      borderBottomColor: "#F3F4F6",
+      borderBottomColor: isDark ? border : "#F3F4F6",
       flexDirection: "row",
       alignItems: "center",
     },
     infoLabel: {
       flex: 1.2,
-      color: "#4B5563",
+      color: isDark ? muted : "#4B5563",
       fontSize: 14,
       fontWeight: "400",
       marginLeft: 12,
     },
     infoValue: {
       flex: 1.8,
-      color: "#111827",
+      color: isDark ? text : "#111827",
       fontSize: 14,
       fontWeight: "400",
       textAlign: "right",
@@ -1426,11 +1434,11 @@ const getStyles = (currentTheme) => {
       paddingVertical: 7,
       borderRadius: 20,
       borderWidth: 1,
-      borderColor: "#E9D5FF",
-      backgroundColor: "#FBF8FF",
+      borderColor: isDark ? "#453568" : "#E9D5FF",
+      backgroundColor: isDark ? "#241A3E" : "#FBF8FF",
     },
     skillText: {
-      color: "#8B5CF6",
+      color: isDark ? "#A78BFA" : "#8B5CF6",
       fontSize: 13,
       fontWeight: "500",
     },
@@ -1510,7 +1518,7 @@ const getStyles = (currentTheme) => {
       flex: 1,
       justifyContent: "center",
       alignItems: "center",
-      backgroundColor: currentTheme.background,
+      backgroundColor: surface,
     },
 
     modalContainer: {

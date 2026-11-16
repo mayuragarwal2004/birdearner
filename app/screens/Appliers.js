@@ -21,6 +21,7 @@ import {
 } from "phosphor-react-native";
 import { useTheme } from "../context/ThemeContext";
 import apiService from "../lib/apiService";
+import { calculateLevel } from "../lib/levels";
 
 const PURPLE = "#7B2CFF";
 const SOFT_PURPLE = "#F3EAFF";
@@ -195,7 +196,7 @@ const AppliersScreen = ({ navigation, route }) => {
           <MetaChip
             styles={styles}
             icon={<Medal size={14} color={accent} />}
-            label={`Level ${item.level || 1}`}
+            label={`Level ${calculateLevel(item.xp)}`}
           />
         </View>
 

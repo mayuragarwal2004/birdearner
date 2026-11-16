@@ -3,7 +3,14 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 
-const DEV_API_BASE_URL = "https://moderator-intervals-jake-connected.trycloudflare.com/api";
+// Dev backend address. This must be reachable FROM THE PHONE, so use the
+// machine's LAN IP (the phone and this machine must be on the same Wi-Fi).
+// The previous value was a Cloudflare *quick-tunnel* URL: those hostnames are
+// regenerated on every `cloudflared tunnel --url ...` restart, so the old one
+// stopped resolving and every request failed with "Network request failed".
+// To use a tunnel instead, start cloudflared and paste its fresh
+// https://<random>.trycloudflare.com/api URL here.
+const DEV_API_BASE_URL = "http://10.189.45.249:3001/api";
 //const DEV_API_BASE_URL = "https://api.birdearner.com/api";
 
 const PROD_API_BASE_URL = "https://api.birdearner.com/api";
@@ -292,8 +299,8 @@ class ApiService {
       // If Cloudflare URL returned HTML or failed in dev mode, try local API port 3001 fallback
       if (isHtmlOrBadGateway && __DEV__ && !url.includes(":3001")) {
         const fallbackHosts = Platform.OS === 'android'
-          ? ["http://10.0.2.2:3001/api", "http://192.168.1.106:3001/api", "http://192.168.1.106:3000/api", "http://localhost:3001/api"]
-          : ["http://localhost:3001/api", "http://192.168.1.106:3001/api", "http://192.168.1.106:3000/api", "http://10.0.2.2:3001/api"];
+          ? ["http://10.189.45.249:3001/api", "http://10.0.2.2:3001/api", "http://localhost:3001/api"]
+          : ["http://10.189.45.249:3001/api", "http://localhost:3001/api", "http://10.0.2.2:3001/api"];
 
         console.log(`[API] primary failed for ${endpoint}, trying local fallback hosts...`);
         for (const fallbackHost of fallbackHosts) {
@@ -447,8 +454,8 @@ class ApiService {
       if (typeof __DEV__ !== "undefined" && __DEV__) {
         uploadHosts = uploadHosts.concat(
           Platform.OS === "android"
-            ? ["http://10.0.2.2:3001/api", "http://192.168.1.106:3001/api", "http://localhost:3001/api"]
-            : ["http://localhost:3001/api", "http://192.168.1.106:3001/api", "http://10.0.2.2:3001/api"]
+            ? ["http://10.189.45.249:3001/api", "http://10.0.2.2:3001/api", "http://localhost:3001/api"]
+            : ["http://10.189.45.249:3001/api", "http://localhost:3001/api", "http://10.0.2.2:3001/api"]
         );
       }
 
@@ -2253,8 +2260,8 @@ class ApiService {
       // Dev fallback: dead Cloudflare tunnel (530/HTML/network) -> local API, same as makeRequest
       if ((!outcome || !outcome.res.ok) && typeof __DEV__ !== "undefined" && __DEV__ && !this.baseURL.includes(":3001")) {
         const fbHosts = Platform.OS === "android"
-          ? ["http://10.0.2.2:3001/api", "http://192.168.1.106:3001/api", "http://localhost:3001/api"]
-          : ["http://localhost:3001/api", "http://192.168.1.106:3001/api", "http://10.0.2.2:3001/api"];
+          ? ["http://10.189.45.249:3001/api", "http://10.0.2.2:3001/api", "http://localhost:3001/api"]
+          : ["http://10.189.45.249:3001/api", "http://localhost:3001/api", "http://10.0.2.2:3001/api"];
         console.log("[Upload] primary upload failed, trying local fallback hosts...");
         for (const fb of fbHosts) {
           const fbOutcome = await postUpload(`${fb}/upload?category=${category}`, 20000);

@@ -22,6 +22,7 @@ import Toast from "react-native-toast-message";
 import { useAuth } from "../context/NewAuthContext";
 import { useTheme } from "../context/ThemeContext";
 import apiService from "../lib/apiService";
+import { calculateLevel } from "../lib/levels";
 
 const PURPLE = "#7B2CFF";
 const DEEP_PURPLE = "#1B1028";
@@ -491,7 +492,7 @@ function ProfileHero({
       {/* Freelancer level, shown between the name and the role badge */}
       {!isClientProfile && (
         <Text style={[uiStyles.levelText, purpleHero && uiStyles.onPurpleText]}>
-          Level {profileData?.level ?? 1}
+          Level {calculateLevel(profileData?.xp)}
         </Text>
       )}
 
@@ -607,6 +608,9 @@ function AboutTab({ uiStyles, profileData, services, certifications, selectedSer
 
   const languages = parseArray(profileData?.languages);
 
+  // Level derived from total XP (backend thresholds mirrored in lib/levels.js)
+  const currentLevel = calculateLevel(profileData?.xp);
+
   return (
     <View style={uiStyles.section}>
       <Text style={uiStyles.sectionTitle}>About me</Text>
@@ -625,7 +629,7 @@ function AboutTab({ uiStyles, profileData, services, certifications, selectedSer
           uiStyles={uiStyles}
           icon="leaderboard"
           label="Level"
-          value={`Lev. ${profileData?.level || 1} ${getBadgeLabel(profileData?.level).replace(" Badge", "")}`}
+          value={`Lev. ${currentLevel} ${getBadgeLabel(currentLevel).replace(" Badge", "")}`}
         />
         <InfoRow
           uiStyles={uiStyles}

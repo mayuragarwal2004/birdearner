@@ -16,6 +16,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useAuth } from "../context/NewAuthContext";
 import { useTheme } from "../context/ThemeContext";
 import apiService from "../lib/apiService";
+import { calculateLevel } from "../lib/levels";
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
@@ -68,13 +69,6 @@ const LeaderboardScreen = () => {
         });
     };
 
-    const formatXP = (xp) => {
-        if (!xp) return "0";
-        if (xp >= 1000000) return (xp / 1000000).toFixed(1) + "M";
-        if (xp >= 1000) return (xp / 1000).toFixed(1) + "K";
-        return xp;
-    };
-
     const TopThree = ({ data }) => {
         const renderPodiumItem = (item, position) => {
             if (!item) return null;
@@ -116,7 +110,7 @@ const LeaderboardScreen = () => {
                     <Text style={styles.podiumName} numberOfLines={1}>
                         {item.isCurrentUser ? "You" : item.full_name || "Unknown"}
                     </Text>
-                    <Text style={styles.podiumXP}>{formatXP(item.xp)} XP</Text>
+                    <Text style={styles.podiumXP}>Lvl {calculateLevel(item.xp)}</Text>
                 </View>
             );
         };
@@ -170,7 +164,7 @@ const LeaderboardScreen = () => {
 
             <View style={styles.listScore}>
                 <View style={styles.xpBadge}>
-                    <Text style={styles.xpText}>{formatXP(item.xp)} XP</Text>
+                    <Text style={styles.xpText}>Lvl {calculateLevel(item.xp)}</Text>
                 </View>
             </View>
         </View>

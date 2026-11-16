@@ -1,5 +1,6 @@
 import KeyboardAwareScrollView from "../components/KeyboardAwareScrollView";
 import { LinearGradient } from "expo-linear-gradient";
+import { getClientHeaderGradient } from "../lib/heroGradient";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
@@ -486,23 +487,23 @@ const ClientHomeScreen = () => {
     );
   };
 
-  // Header fades from deep purple into the page background, so it blends into the search bar and banner area
-  const headerColors = isDark
-    ? ["#1B1028", "#1B1028", "#1B1028", "#1B1028"]
-    : ["#2A0B5C", "#3F1584", "#6A3BB8", "#8E63CC", "#C2AEE8", "#F7F5FB"];
+  // Header fades from deep purple into the page background, so it blends into the search bar and banner area.
+  // Dark Mode uses the same shared background design as the Freelancer Profile
+  // hero (lib/heroGradient): deep purple → violet → true black.
+  const headerGradient = getClientHeaderGradient(isDark);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
       <StatusBar
         barStyle="light-content"
-        backgroundColor={isDark ? "#1B1028" : "#2A0B5C"}
+        backgroundColor={headerGradient.colors[0]}
       />
       <LinearGradient
         onLayout={(event) => setHeaderBottom(event.nativeEvent.layout.y + event.nativeEvent.layout.height)}
-        colors={headerColors}
-        locations={[0, 0.4, 0.6, 0.74, 0.88, 1]}
-        start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 1 }}
+        colors={headerGradient.colors}
+        locations={headerGradient.locations}
+        start={headerGradient.start}
+        end={headerGradient.end}
         style={styles.headerBand}
       >
         <View style={styles.headerTop}>
@@ -866,7 +867,9 @@ const ClientHomeScreen = () => {
 };
 
 const getStyles = (currentTheme, isDark, bottomInset = 0) => {
-  const surface = currentTheme.background || "#FFFFFF";
+  // True-black page in Dark Mode so the header gradient (which fades to
+  // #000000) blends straight into the scroll area — not grey #121212.
+  const surface = isDark ? "#000000" : currentTheme.background || "#FFFFFF";
   const card = currentTheme.cardBackground || (isDark ? "#1A1A1A" : "#FFFFFF");
   const text = currentTheme.text || "#101114";
   const muted = currentTheme.subText || "#656B7A";
@@ -876,7 +879,8 @@ const getStyles = (currentTheme, isDark, bottomInset = 0) => {
   return StyleSheet.create({
     safeArea: {
       flex: 1,
-      backgroundColor: isDark ? "#1B1028" : "#2A0B5C",
+      // Matches the header gradient's top colour in both themes
+      backgroundColor: getClientHeaderGradient(isDark).colors[0],
     },
     headerBand: {
       paddingHorizontal: 16,

@@ -66,6 +66,15 @@ const { calculateBirdFee } = require("../utils/feeCalculator");
 
 const PURPLE = "#7B2CFF";
 
+// Saved-address pager shows exactly 2 cards per swipeable page
+const SAVED_ADDRESS_GAP = 8;
+
+function chunkIntoPairs(list) {
+  const pages = [];
+  for (let i = 0; i < list.length; i += 2) pages.push(list.slice(i, i + 2));
+  return pages;
+}
+
 const JobRequirementsScreen = ({ navigation, route }) => {
   const [jobLocation, setJobLocation] = useState("");
   const [workDurationDays, setWorkDurationDays] = useState(1); // 1, 2, or 3 days
@@ -116,6 +125,19 @@ const JobRequirementsScreen = ({ navigation, route }) => {
   });
   const [addressPickerOpen, setAddressPickerOpen] = useState(false);
   const [selectedSavedAddressId, setSelectedSavedAddressId] = useState(null);
+  // Measured width of the saved-address row so each page fits exactly 2 cards
+  const [savedAddressRowWidth, setSavedAddressRowWidth] = useState(0);
+  const savedAddressCardWidth =
+    savedAddressRowWidth > 0 ? (savedAddressRowWidth - SAVED_ADDRESS_GAP) / 2 : 0;
+  // Which swipe page is visible — drives the slide dots below the cards
+  const [savedAddressPageIndex, setSavedAddressPageIndex] = useState(0);
+  const handleSavedAddressScroll = (event) => {
+    if (savedAddressRowWidth <= 0) return;
+    const next = Math.round(
+      event.nativeEvent.contentOffset.x / savedAddressRowWidth
+    );
+    if (next !== savedAddressPageIndex) setSavedAddressPageIndex(next);
+  };
   const [couponInput, setCouponInput] = useState("");
 
   const { userData } = useAuth();
@@ -178,6 +200,9 @@ const JobRequirementsScreen = ({ navigation, route }) => {
       })
       .slice(0, 6);
   }, [addresses]);
+
+  // Slide dots: one per 2-card page (only meaningful with 3+ addresses)
+  const savedAddressPageCount = chunkIntoPairs(addressChips).length;
 
   useEffect(() => {
     validateBudget(budget);
@@ -515,7 +540,7 @@ const JobRequirementsScreen = ({ navigation, route }) => {
     }
   };
 
-  /** Always use GPS to get current location (used by "Use Current Location" button). */
+  /** Always use GPS to get current location (used by "My Location" button). */
   const useCurrentLocationOnly = async () => {
     setLocationLoading(true);
     try {
@@ -1386,60 +1411,111 @@ const JobRequirementsScreen = ({ navigation, route }) => {
               </TouchableOpacity>
             </View>
 
+            {/* Saved addresses: exactly 2 cards per swipeable page. */}
             {addressChips.length > 0 && (
-              <KeyboardAwareScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.savedAddressChips}
+              <View
+                onLayout={(e) =>
+                  setSavedAddressRowWidth(e.nativeEvent.layout.width)
+                }
               >
-                {addressChips.map((address) => {
-                  const active = selectedSavedAddressId === address.id;
-                  return (
-                    <TouchableOpacity
-                      key={address.id}
-                      style={[
-                        styles.savedAddressChip,
-                        active && styles.savedAddressChipActive,
-                      ]}
-                      onPress={() => applySavedAddress(address)}
-                      activeOpacity={0.85}
-                    >
-                      <MapPin
-                        size={14}
-                        color={active ? "#FFFFFF" : accent}
-                        weight="fill"
-                      />
-                      <View style={styles.savedAddressChipText}>
-                        <Text
-                          style={[
-                            styles.savedAddressChipLabel,
-                            active && styles.savedAddressChipLabelActive,
-                          ]}
-                          numberOfLines={1}
-                        >
-                          {address.label || "Address"}
-                        </Text>
-                        <Text
-                          style={[
-                            styles.savedAddressChipSub,
-                            active && styles.savedAddressChipSubActive,
-                          ]}
-                          numberOfLines={1}
-                        >
-                          {formatShortAddress(address)}
-                        </Text>
+                {savedAddressCardWidth > 0 && (
+                  <KeyboardAwareScrollView
+                    horizontal
+                    pagingEnabled
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.savedAddressChips}
+                    onScroll={handleSavedAddressScroll}
+                    scrollEventThrottle={32}
+                  >
+                    {chunkIntoPairs(addressChips).map((pair, pageIndex) => (
+                      <View
+                        key={`address-page-${pageIndex}`}
+                        style={[
+                          styles.savedAddressPage,
+                          { width: savedAddressRowWidth },
+                        ]}
+                      >
+                        {pair.map((address) => {
+                          const active = selectedSavedAddressId === address.id;
+                          return (
+                            <TouchableOpacity
+                              key={address.id}
+                              style={[
+                                styles.savedAddressChip,
+                                { width: savedAddressCardWidth },
+                                active && styles.savedAddressChipActive,
+                              ]}
+                              onPress={() => applySavedAddress(address)}
+                              activeOpacity={0.85}
+                            >
+                              <MapPin
+                                size={14}
+                                color={active ? "#FFFFFF" : accent}
+                                weight="fill"
+                              />
+                              <View style={styles.savedAddressChipText}>
+                                <Text
+                                  style={[
+                                    styles.savedAddressChipLabel,
+                                    active && styles.savedAddressChipLabelActive,
+                                  ]}
+                                  numberOfLines={1}
+                                >
+                                  {address.label || "Address"}
+                                </Text>
+                                <Text
+                                  style={[
+                                    styles.savedAddressChipSub,
+                                    active && styles.savedAddressChipSubActive,
+                                  ]}
+                                  numberOfLines={1}
+                                >
+                                  {formatShortAddress(address)}
+                                </Text>
+                              </View>
+                            </TouchableOpacity>
+                          );
+                        })}
                       </View>
-                    </TouchableOpacity>
-                  );
-                })}
-                <TouchableOpacity
-                  style={styles.addAddressChip}
-                  onPress={() => setAddressPickerOpen(true)}
-                >
-                  <Ionicons name="add" size={18} color={PURPLE} />
-                  <Text style={styles.addAddressChipText}>Add / manage</Text>
-                </TouchableOpacity>
-              </KeyboardAwareScrollView>
+                    ))}
+                  </KeyboardAwareScrollView>
+                )}
+
+                {/* Slide dots below the cards — only with 3+ addresses (2 = one
+                    full page, nothing to swipe). In-flow so card sizing, spacing
+                    and swipe gestures stay exactly as before. */}
+                {addressChips.length > 2 && (
+                  <View style={styles.savedAddressDotsRow}>
+                    {Array.from({ length: savedAddressPageCount }).map(
+                      (_, dotIndex) => (
+                        <View
+                          key={`address-dot-${dotIndex}`}
+                          style={[
+                            styles.savedAddressDot,
+                            dotIndex ===
+                              Math.min(
+                                savedAddressPageIndex,
+                                savedAddressPageCount - 1
+                              ) && styles.savedAddressDotActive,
+                          ]}
+                        />
+                      )
+                    )}
+                  </View>
+                )}
+              </View>
+            )}
+
+            {/* "+ Add" lives in its own full-width row BELOW the swipeable cards */}
+            {addressChips.length > 0 && (
+              <TouchableOpacity
+                style={styles.addAddressButton}
+                onPress={() => setAddressPickerOpen(true)}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="add" size={20} color={PURPLE} />
+                <Text style={styles.addAddressButtonText}>Add / manage</Text>
+              </TouchableOpacity>
             )}
 
             <View style={styles.inputRow}>
@@ -1467,8 +1543,8 @@ const JobRequirementsScreen = ({ navigation, route }) => {
                 disabled={locationLoading}
               >
                 <PaperPlaneTilt size={18} color="#fff" weight="fill" />
-                <Text style={styles.primaryLocationBtnText}>
-                  {locationLoading ? "Detecting..." : "Use Current Location"}
+                <Text style={styles.primaryLocationBtnText} numberOfLines={1}>
+                  {locationLoading ? "Detecting..." : "My Location"}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -2229,12 +2305,15 @@ const getStyles = (currentTheme, isDark, bottomInset = 0) => {
       fontWeight: "700",
     },
     savedAddressChips: {
-      gap: 8,
       paddingBottom: 8,
+    },
+    // One swipeable page = exactly 2 cards, sized to the measured row width
+    savedAddressPage: {
+      flexDirection: "row",
+      gap: SAVED_ADDRESS_GAP,
     },
     savedAddressChip: {
       maxWidth: 200,
-      minWidth: 130,
       borderRadius: 12,
       borderWidth: 1,
       borderColor: border,
@@ -2244,11 +2323,29 @@ const getStyles = (currentTheme, isDark, bottomInset = 0) => {
       flexDirection: "row",
       alignItems: "center",
       gap: 8,
-      marginRight: 6,
     },
     savedAddressChipActive: {
       backgroundColor: PURPLE,
       borderColor: PURPLE,
+    },
+    // Slide dots below the cards: track which 2-card page is visible
+    savedAddressDotsRow: {
+      flexDirection: "row",
+      alignSelf: "center",
+      gap: 6,
+      marginTop: 2,
+      marginBottom: 6,
+    },
+    savedAddressDot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: PURPLE,
+      opacity: 0.28,
+    },
+    savedAddressDotActive: {
+      width: 16, // active dot stretches into a pill
+      opacity: 1,
     },
     savedAddressChipText: {
       flex: 1,
@@ -2271,21 +2368,25 @@ const getStyles = (currentTheme, isDark, bottomInset = 0) => {
     savedAddressChipSubActive: {
       color: "rgba(255,255,255,0.85)",
     },
-    addAddressChip: {
+    // Full-width "+ Add" button below the cards — same field styling as inputRow
+    addAddressButton: {
+      alignSelf: "stretch",
+      minHeight: 48,
       borderRadius: 12,
       borderWidth: 1,
-      borderColor: PURPLE,
-      borderStyle: "dashed",
-      backgroundColor: soft,
-      paddingHorizontal: 12,
-      paddingVertical: 10,
+      borderColor: border,
+      backgroundColor: card,
+      paddingHorizontal: 16,
       flexDirection: "row",
       alignItems: "center",
-      gap: 6,
+      justifyContent: "center",
+      gap: 8,
+      marginTop: 2,
+      marginBottom: 10,
     },
-    addAddressChipText: {
+    addAddressButtonText: {
       color: PURPLE,
-      fontSize: 13,
+      fontSize: 14,
       fontWeight: "700",
     },
     label: {
@@ -2806,6 +2907,7 @@ const getStyles = (currentTheme, isDark, bottomInset = 0) => {
       color: "#fff",
       fontSize: 14,
       fontWeight: "600",
+      flexShrink: 1,
     },
     secondaryLocationBtn: {
       flex: 1,

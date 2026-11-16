@@ -34,6 +34,7 @@ import { useAuth } from "../context/NewAuthContext";
 import { useTheme } from "../context/ThemeContext";
 import { useNavigation } from "@react-navigation/native";
 import apiService from "../lib/apiService";
+import { calculateLevel } from "../lib/levels";
 
 const parseArray = (value) => {
   if (!value) return [];
@@ -117,7 +118,9 @@ const HomeScreen = () => {
   // Profile stats (level, success score, rating, flags, response rate) from the same API the overview page uses
   const [profileStats, setProfileStats] = useState(null);
   const successScore = profileStats?.stats?.successScore ?? 0;
-  const freelancerLevel = profileStats?.profile?.level ?? "-";
+  const freelancerLevel = profileStats?.profile
+    ? calculateLevel(profileStats.profile.xp)
+    : "-";
   const averageRating = Number(profileStats?.stats?.averageRating || 0).toFixed(1);
   const responseRate = profileStats?.stats?.responseRate ?? 0;
   const flagsDisplay =
