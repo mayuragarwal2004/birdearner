@@ -477,11 +477,6 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     borderRadius: 12,
     backgroundColor: "#8B2BF5",
-    shadowColor: "#A855F7",
-    shadowOpacity: 0.55,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 10,
   },
   loginButton: {
     height: 56,
